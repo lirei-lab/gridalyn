@@ -1,37 +1,74 @@
-# %%
+"""Download OSM building footprints and build a tutorial grid.
 
+This example requires network access to OpenStreetMap/Overpass. For offline
+smoke tests, use ``filter_buildings_by_polygon.py`` or the governed demo
+projects under ``projects/``.
+"""
+
+from __future__ import annotations
+
+import argparse
 import os
 from typing import Any, Dict
 
-from pandapower.diagnostic import diagnostic
 
-from gridalyn.adapters.geojson import BuildingDownloader
-from gridalyn.core.graph import PowerGridGraph
-from gridalyn.viz.interactive import GridPlotter
-from gridalyn.simulators.powerflow.builder import PandapowerGridBuilder
+DEFAULT_POLYGON_COORDS = [
+    [-72.62417036110914, 46.34726673598499],
+    [-72.61452837213456, 46.35379678880483],
+    [-72.61013276391213, 46.354794761027705],
+    [-72.58624610343783, 46.339943052357285],
+    [-72.58659312513969, 46.33910452912204],
+    [-72.59730468715948, 46.32824092363754],
+    [-72.6237240054993, 46.34619741748094],
+    [-72.62417036110914, 46.34726673598499],
+]
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--polygon-file",
+        default=None,
+        help="Optional JSON/GeoJSON polygon file. Defaults to the Trois-Rivieres demo polygon.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="examples/generated/outputs",
+        help="Directory for downloaded footprints, maps, and graph artifacts.",
+    )
+    parser.add_argument(
+        "--buildings-output",
+        default="osm_buildings.geojson",
+        help="Filename for the downloaded OSM building footprints.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
     """
     This script demonstrates the creation of a power grid graph,
     its visualization, and the building of a pandapower model.
     """
+    args = build_parser().parse_args(argv)
+
+    from pandapower.diagnostic import diagnostic
+
+    from gridalyn.interfaces.viz.interactive import GridPlotter
+    from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
+    from gridalyn.twin.core.graph import PowerGridGraph
+    from gridalyn.twin.geoprocess import BuildingDownloader, load_polygon_coordinates
+
     # Step 0: Configure input file
-    polygon_coordinates = [
-        [-72.62417036110914, 46.34726673598499],
-        [-72.61452837213456, 46.35379678880483],
-        [-72.61013276391213, 46.354794761027705],
-        [-72.58624610343783, 46.339943052357285],
-        [-72.58659312513969, 46.33910452912204],
-        [-72.59730468715948, 46.32824092363754],
-        [-72.6237240054993, 46.34619741748094],
-        [-72.62417036110914, 46.34726673598499],
-    ]
+    polygon_coordinates = (
+        load_polygon_coordinates(args.polygon_file)
+        if args.polygon_file
+        else [tuple(coord) for coord in DEFAULT_POLYGON_COORDS]
+    )
 
     downloader = BuildingDownloader()
-    output_dir = "examples/generated/outputs"
+    output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, "osm_buildings.geojson")
+    output_file = os.path.join(output_dir, args.buildings_output)
     downloader.download_buildings(
         tuple(tuple(float(c) for c in coord) for coord in polygon_coordinates),  # type: ignore[misc, arg-type]
         output_file,
@@ -153,4 +190,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-# %%
