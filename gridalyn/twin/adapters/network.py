@@ -14,6 +14,7 @@ import pandas as pd
 
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.projects.workflows.digital_twin.base_metadata import write_base_metadata
+from gridalyn.foundation import ArtifactLayout
 
 
 BASE_TABLE_FILENAMES = {
@@ -249,9 +250,10 @@ def _adapter_id_from_name(adapter_name: str) -> str:
 
 
 def _validation_report_path(*, out_dir: Path, root: Path) -> Path:
+    layout = ArtifactLayout(root)
     try:
-        out_dir.resolve().relative_to((root / "digital_twin" / "base").resolve())
-        return root / "digital_twin" / "reports" / "network_adapter_validation_report.json"
+        out_dir.resolve().relative_to(layout.base.resolve())
+        return layout.reports / "network_adapter_validation_report.json"
     except ValueError:
         return out_dir / "network_adapter_validation_report.json"
 

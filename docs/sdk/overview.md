@@ -43,7 +43,7 @@ preserving old scripts during the migration.
 ```python
 from gridalyn import twin, operations
 
-repository = twin.NetworkModelRepository("digital_twin/base")
+repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 clearing = operations.build_locational_clearing(...)
 ```
 
@@ -58,10 +58,10 @@ For the stable import list and output conventions, read
 
 Compatibility aliases are registered by `gridalyn` so old import paths continue
 to work during the transition. New code should prefer the seven-module
-vocabulary unless a narrower compatibility path is clearer.
+vocabulary unless a narrower  is clearer.
 
 For workspace paths, prefer `GridalynWorkspace` and `ArtifactLayout` from
-`gridalyn.foundation` instead of constructing `digital_twin/*` paths manually.
+`gridalyn.foundation` instead of constructing `instances/default/digital_twin/*` paths manually.
 
 ## Command Rule
 

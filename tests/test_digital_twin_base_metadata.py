@@ -32,7 +32,7 @@ class DigitalTwinBaseMetadataTest(unittest.TestCase):
     def test_builds_repository_centric_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            base = root / "digital_twin" / "base"
+            base = root / "instances" / "default" / "digital_twin" / "base"
             base.mkdir(parents=True)
             self._write_base_model(base)
 
@@ -69,7 +69,7 @@ class DigitalTwinBaseMetadataTest(unittest.TestCase):
     def test_write_base_metadata_materializes_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            base = root / "digital_twin" / "base"
+            base = root / "instances" / "default" / "digital_twin" / "base"
             base.mkdir(parents=True)
             self._write_base_model(base)
 

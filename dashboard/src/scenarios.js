@@ -22,7 +22,7 @@ function conventionalPaths(id) {
   return Object.fromEntries(
     Object.entries(FILE_KINDS).map(([kind, suffix]) => [
       kind,
-      `/digital_twin/timeseries/${id}_${suffix}.parquet`,
+      `/instances/default/digital_twin/timeseries/${id}_${suffix}.parquet`,
     ])
   );
 }
@@ -55,7 +55,7 @@ function normalizeSemanticGraph(manifest) {
     nodeCount: manifest.node_count ?? null,
     edgeCount: manifest.edge_count ?? null,
     valid: manifest.validation?.valid ?? null,
-    manifestPath: '/digital_twin/semantic/graph_manifest.json',
+    manifestPath: '/instances/default/digital_twin/semantic/graph_manifest.json',
     artifacts: manifest.artifacts || {},
   };
 }
@@ -169,7 +169,7 @@ export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetMan
 }
 
 export async function loadScenarioManifest(fetchImpl = fetch) {
-  const res = await fetchImpl('/digital_twin/scenarios/index.json');
+  const res = await fetchImpl('/instances/default/digital_twin/scenarios/index.json');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const manifest = await res.json();
   return {
@@ -186,11 +186,11 @@ async function loadJsonOrNull(fetchImpl, path) {
 
 export async function loadScenarioCatalog(fetchImpl = fetch) {
   const [dashboardCatalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] = await Promise.all([
-    loadJsonOrNull(fetchImpl, '/digital_twin/dashboard/catalog.json'),
-    loadJsonOrNull(fetchImpl, '/digital_twin/scenarios/index.json'),
-    loadJsonOrNull(fetchImpl, '/digital_twin/timeseries/powerflow_smoke_summary.json'),
-    loadJsonOrNull(fetchImpl, '/digital_twin/scenarios/asset_registry_summary.json'),
-    loadJsonOrNull(fetchImpl, '/digital_twin/semantic/graph_manifest.json'),
+    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/dashboard/catalog.json'),
+    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/scenarios/index.json'),
+    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/timeseries/powerflow_smoke_summary.json'),
+    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/scenarios/asset_registry_summary.json'),
+    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/semantic/graph_manifest.json'),
   ]);
   if (dashboardCatalog?.scenarios?.length > 0) {
     return buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest);

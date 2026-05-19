@@ -13,7 +13,7 @@ class NetworkImpactCatalogTest(unittest.TestCase):
     def test_build_catalog_groups_reports_by_scenario(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            labels = root / "digital_twin" / "flexibility" / "labels.json"
+            labels = root / "instances" / "default" / "digital_twin" / "flexibility" / "labels.json"
             verification = root / "projects" / "flexibility_cls" / "outputs" / "reports" / "verification.json"
             labels.parent.mkdir(parents=True)
             verification.parent.mkdir(parents=True)
@@ -34,7 +34,7 @@ class NetworkImpactCatalogTest(unittest.TestCase):
         self.assertEqual(catalog["scenarios"]["S4"]["status"], "available")
         self.assertEqual(
             catalog["scenarios"]["S4"]["reports"]["physicsLabels"],
-            "/digital_twin/flexibility/labels.json",
+            "/instances/default/digital_twin/flexibility/labels.json",
         )
         self.assertEqual(
             catalog["scenarios"]["S4"]["reports"]["physicsVerification"],
@@ -43,7 +43,7 @@ class NetworkImpactCatalogTest(unittest.TestCase):
 
     def test_write_catalog_creates_parent_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "digital_twin" / "flexibility" / "network_impact_catalog.json"
+            path = Path(tmp) / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json"
 
             written = write_network_impact_catalog(
                 path,

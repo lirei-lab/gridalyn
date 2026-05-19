@@ -57,7 +57,7 @@ The current system already has several strong platform ingredients:
 
 | Area | Current capability |
 | --- | --- |
-| Digital twin artifacts | `digital_twin/base`, `models`, `scenarios`, `timeseries`, `flexibility`, `semantic`, `reports`, `dashboard`. |
+| Digital twin artifacts | `instances/default/digital_twin/base`, `models`, `scenarios`, `timeseries`, `flexibility`, `semantic`, `reports`, `dashboard`. |
 | Network generation | Synthetic grid and building network generation from GeoJSON-like inputs. |
 | Simulation | Pandapower execution and scenario powerflow outputs. |
 | Building models | PyCity-style building, zone, device, end-use, and scenario-device overlays. |
@@ -69,7 +69,7 @@ The current system already has several strong platform ingredients:
 The main remaining weakness is legacy naming gravity: old research and
 compatibility folders still exist in the repository. The public platform surface
 should keep those out of the main architecture and point users to `gridalyn`,
-`projects/`, and `digital_twin/`.
+`projects/`, and `instances/default/digital_twin/`.
 
 ## Target Capability Architecture
 
@@ -149,7 +149,7 @@ projects/
     scripts/
     outputs/
 
-digital_twin/
+instances/default/digital_twin/
   base/
   models/
   scenarios/
@@ -173,7 +173,7 @@ evolves.
 **Work:**
 
 - keep public demo projects reproducible and independent;
-- keep `digital_twin/*` artifact contracts stable;
+- keep `instances/default/digital_twin/*` artifact contracts stable;
 - keep compatibility imports passing while reusable logic migrates;
 - keep public docs centered on the platform, not legacy study history;
 - run the release checks after every architecture step.
@@ -202,9 +202,9 @@ and validation report.
 
 **Update current artifacts:**
 
-- `digital_twin/base/metadata.json`;
+- `instances/default/digital_twin/base/metadata.json`;
 - `projects/*/outputs/manifests/project_run_manifest.json`;
-- `digital_twin/reports/canonical/*`;
+- `instances/default/digital_twin/reports/canonical/*`;
 - dashboard catalog metadata.
 
 **Tests:**
@@ -217,7 +217,7 @@ and validation report.
 **Status:**
 
 - `gridalyn.foundation.platform.governance` defines `ModelVersion` and `StudyRun`.
-- `digital_twin/base/metadata.json` includes `model_version_id` and a structured
+- `instances/default/digital_twin/base/metadata.json` includes `model_version_id` and a structured
   `model_version` object.
 - Project dry runs and executions include a structured `study_run` object in
   `project_run_manifest.json`.
@@ -242,10 +242,10 @@ it remains local Parquet/JSON.
 
 **Update current artifacts:**
 
-- `digital_twin/base`;
-- `digital_twin/scenarios`;
-- `digital_twin/semantic`;
-- `digital_twin/dashboard/catalog.json`.
+- `instances/default/digital_twin/base`;
+- `instances/default/digital_twin/scenarios`;
+- `instances/default/digital_twin/semantic`;
+- `instances/default/digital_twin/dashboard/catalog.json`.
 
 **Tests:**
 

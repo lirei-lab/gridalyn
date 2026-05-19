@@ -39,7 +39,7 @@ Gridalyn has three durable source-of-truth layers:
 | --- | --- | --- |
 | `configs/` | reusable grid and geography configuration | generated outputs |
 | `projects/<name>/` | reproducible workflow contracts, scripts, outputs, reports, figures | reusable library logic or dashboard application code |
-| `instances/default/digital_twin/` | default materialized twin instance consumed by dashboards, semantics, reports, and applications; exposed at the compatibility path `digital_twin/` | private notebooks or editorial drafts |
+| `instances/default/digital_twin/` | default materialized twin instance consumed by dashboards, semantics, reports, and applications | private notebooks or editorial drafts |
 
 `examples/` is tutorial material. It is not the runtime backend for governed
 projects.

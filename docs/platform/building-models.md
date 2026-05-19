@@ -26,7 +26,7 @@ stable Parquet contract first.
 ## Outputs
 
 ```text
-digital_twin/models/
+instances/default/digital_twin/models/
   building_models.parquet
   thermal_zones.parquet
   device_registry.parquet
@@ -74,11 +74,11 @@ from pathlib import Path
 
 from gridalyn.assets import load_base_inputs, write_building_model_artifacts
 
-buildings, connectivity = load_base_inputs(Path("digital_twin/base"))
+buildings, connectivity = load_base_inputs(Path("instances/default/digital_twin/base"))
 manifest = write_building_model_artifacts(
     buildings,
     connectivity,
-    out_dir=Path("digital_twin/models"),
+    out_dir=Path("instances/default/digital_twin/models"),
 )
 ```
 
@@ -101,7 +101,7 @@ tables = synthesize_building_model_tables(buildings, connectivity)
 scenario_tables = synthesize_scenario_device_tables(
     tables["building_models"],
     tables["device_registry"],
-    pd.read_parquet("digital_twin/scenarios/asset_registry.parquet"),
+    pd.read_parquet("instances/default/digital_twin/scenarios/asset_registry.parquet"),
 )
 ```
 

@@ -22,11 +22,11 @@ from gridalyn.workflows.flexibility.spatial_powerflow_validation import (
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_PROVIDERS = ROOT / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_SELECTIONS = ROOT / "digital_twin" / "flexibility" / "locational_clearing_selections.parquet"
-DEFAULT_CLEARING_REPORT = ROOT / "digital_twin" / "flexibility" / "locational_flexibility_clearing_report.json"
-DEFAULT_DISPATCH_OUT = ROOT / "digital_twin" / "flexibility" / "locational_clearing_dispatch.parquet"
-DEFAULT_REPORT_OUT = ROOT / "digital_twin" / "flexibility" / "locational_clearing_verification_report.json"
+DEFAULT_PROVIDERS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
+DEFAULT_SELECTIONS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_clearing_selections.parquet"
+DEFAULT_CLEARING_REPORT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_flexibility_clearing_report.json"
+DEFAULT_DISPATCH_OUT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_clearing_dispatch.parquet"
+DEFAULT_REPORT_OUT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_clearing_verification_report.json"
 
 
 def _relpath(path: Path) -> str:

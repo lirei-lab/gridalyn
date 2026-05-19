@@ -10,7 +10,7 @@ so the same assets can be queried as a graph and later migrated to FalkorDB.
 The active profile is:
 
 ```text
-digital_twin/semantic/profile_north_america.json
+instances/default/digital_twin/semantic/profile_north_america.json
 ```
 
 The profile is North America-first:
@@ -36,10 +36,10 @@ crosswalk if an integration requires it.
 The graph build writes:
 
 ```text
-digital_twin/semantic/nodes.parquet
-digital_twin/semantic/edges.parquet
-digital_twin/semantic/graph_manifest.json
-digital_twin/semantic/validation_report.json
+instances/default/digital_twin/semantic/nodes.parquet
+instances/default/digital_twin/semantic/edges.parquet
+instances/default/digital_twin/semantic/graph_manifest.json
+instances/default/digital_twin/semantic/validation_report.json
 ```
 
 The graph uses stable IDs such as:
@@ -121,7 +121,7 @@ The minimum relationship vocabulary is:
 ## Market Management Layer
 
 The semantic graph now includes the operational flexibility-management layer
-generated from `digital_twin/flexibility/provider_registry.parquet`.
+generated from `instances/default/digital_twin/flexibility/provider_registry.parquet`.
 
 Current generated counts:
 
@@ -168,18 +168,18 @@ Generate the graph:
 ```bash
 uv run gridalyn semantic build \
   --profile north_america \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --flexibility-dir digital_twin/flexibility \
-  --timeseries-dir digital_twin/timeseries \
-  --out-dir digital_twin/semantic
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --flexibility-dir instances/default/digital_twin/flexibility \
+  --timeseries-dir instances/default/digital_twin/timeseries \
+  --out-dir instances/default/digital_twin/semantic
 ```
 
 Validate it:
 
 ```bash
 uv run gridalyn semantic validate \
-  --semantic-dir digital_twin/semantic
+  --semantic-dir instances/default/digital_twin/semantic
 ```
 
 The validator checks:

@@ -15,11 +15,11 @@ from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.twin.semantic.mappings import build_semantic_graph, write_profile
 
 
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
-DEFAULT_FLEXIBILITY_DIR = ROOT / "digital_twin" / "flexibility"
-DEFAULT_TIMESERIES_DIR = ROOT / "digital_twin" / "timeseries"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "semantic"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
+DEFAULT_FLEXIBILITY_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
+DEFAULT_TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "semantic"
 
 
 def _load_json_or_empty(path: Path) -> dict[str, Any]:

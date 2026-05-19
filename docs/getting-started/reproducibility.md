@@ -40,7 +40,7 @@ Expected result:
 ```
 
 If the command reports generated files under `projects/*/outputs`,
-`digital_twin/**/*.parquet`, `examples/generated/*`, `dashboard/public`, or
+`instances/default/digital_twin/**/*.parquet`, `examples/generated/*`, `dashboard/public`, or
 compiled document outputs, remove those files from the source change before
 committing.
 

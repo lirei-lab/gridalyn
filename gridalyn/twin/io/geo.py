@@ -10,8 +10,8 @@ from shapely.geometry import Point, LineString
 def _warn_legacy_kepler_export() -> None:
     warnings.warn(
         "Kepler/dashboard-public exporters are legacy. Current dashboard data "
-        "should be published through digital_twin/timeseries and "
-        "digital_twin/dashboard/catalog.json.",
+        "should be published through instances/default/digital_twin/timeseries and "
+        "instances/default/digital_twin/dashboard/catalog.json.",
         DeprecationWarning,
         stacklevel=3,
     )

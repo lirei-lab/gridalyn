@@ -9,11 +9,17 @@ def test_artifact_layout_defines_platform_roots(tmp_path: Path) -> None:
     assert layout.configs == tmp_path / "configs"
     assert layout.instances == tmp_path / "instances"
     assert layout.default_instance == tmp_path / "instances" / "default"
-    assert layout.digital_twin == tmp_path / "digital_twin"
-    assert layout.cache == tmp_path / "digital_twin" / "cache"
-    assert layout.base == tmp_path / "digital_twin" / "base"
-    assert layout.flexibility == tmp_path / "digital_twin" / "flexibility"
-    assert layout.operations == tmp_path / "digital_twin" / "operations"
+    assert layout.digital_twin == tmp_path / "instances" / "default" / "digital_twin"
+    assert layout.cache == tmp_path / "instances" / "default" / "digital_twin" / "cache"
+    assert layout.base == tmp_path / "instances" / "default" / "digital_twin" / "base"
+    assert (
+        layout.flexibility
+        == tmp_path / "instances" / "default" / "digital_twin" / "flexibility"
+    )
+    assert (
+        layout.operations
+        == tmp_path / "instances" / "default" / "digital_twin" / "operations"
+    )
     assert layout.project("demo") == tmp_path / "projects" / "demo"
     assert layout.project_outputs("demo") == tmp_path / "projects" / "demo" / "outputs"
 

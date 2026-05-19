@@ -35,13 +35,13 @@ flow below shows how the current implementation realizes those capabilities.
 
 ```mermaid
 flowchart LR
-  A[Source adapters] --> B[digital_twin/base]
-  B --> C[digital_twin/scenarios]
-  B --> T[digital_twin/timeseries]
-  B --> S[digital_twin/semantic]
+  A[Source adapters] --> B[instances/default/digital_twin/base]
+  B --> C[instances/default/digital_twin/scenarios]
+  B --> T[instances/default/digital_twin/timeseries]
+  B --> S[instances/default/digital_twin/semantic]
   C --> T
   C --> S
-  T --> R[digital_twin/reports]
+  T --> R[instances/default/digital_twin/reports]
   S --> R
 
   P[projects/* workflows] -. read/write .-> B
@@ -61,14 +61,14 @@ flowchart LR
 | Layer | Responsibility | Main artifacts |
 | --- | --- | --- |
 | Core SDK | Generate and load grid/building topology, adapters, pandapower models, reports, and workflows | `gridalyn/foundation`, `gridalyn/twin`, `gridalyn/assets`, `gridalyn/simulation`, `gridalyn/operations`, `gridalyn/projects`, `gridalyn/interfaces` |
-| Digital twin base | Static assets and connectivity | `digital_twin/base/*.parquet` |
-| Scenario layer | Adoption, DER participation, controllable asset roles, and scenario metadata | `digital_twin/scenarios/*.json`, `asset_registry.parquet` |
-| Time-series layer | Per-scenario load, DER, dispatch, and powerflow outputs | `digital_twin/timeseries/*.parquet` |
-| Flexibility provider layer | Network-aware Soft/Hard CLS provider registry and sensitivity | `digital_twin/flexibility/*` |
+| Digital twin base | Static assets and connectivity | `instances/default/digital_twin/base/*.parquet` |
+| Scenario layer | Adoption, DER participation, controllable asset roles, and scenario metadata | `instances/default/digital_twin/scenarios/*.json`, `asset_registry.parquet` |
+| Time-series layer | Per-scenario load, DER, dispatch, and powerflow outputs | `instances/default/digital_twin/timeseries/*.parquet` |
+| Flexibility provider layer | Network-aware Soft/Hard CLS provider registry and sensitivity | `instances/default/digital_twin/flexibility/*` |
 | Network impact surrogate | GNN-ready graph/features and fast provider impact predictions | `network_impact_*.parquet`, `network_graph_*.parquet` |
-| Semantic graph | North America ontology-aligned relationship index | `digital_twin/semantic/*` |
+| Semantic graph | North America ontology-aligned relationship index | `instances/default/digital_twin/semantic/*` |
 | Project layer | Public reproducibility contract for executable case projects | `projects/*`, including minimal, IEEE 33-bus, GeoJSON, DER, market, RL, and flexibility demos |
-| Reports | Canonical JSON summaries with input hashes | `digital_twin/reports/canonical`, `projects/*/outputs/reports` |
+| Reports | Canonical JSON summaries with input hashes | `instances/default/digital_twin/reports/canonical`, `projects/*/outputs/reports` |
 | Dashboard | Static browser visualization served by Nginx | `dashboard/` |
 
 See [Core Package Architecture](../development/core-package-architecture.md) for the package-level
@@ -78,25 +78,25 @@ tutorial datasets, caches, and generated artifacts.
 ## Current Source of Truth
 
 - Use project workspaces as the source of governance for reproducible studies.
-  A project starts before `digital_twin/base`: it declares the raw geography,
+  A project starts before `instances/default/digital_twin/base`: it declares the raw geography,
   grid synthesis configuration, workflow stages, generated artifacts, and
   validation requirements.
-- Use `digital_twin/base` for physical asset counts, buses, lines, transformers, buildings, and connectivity.
-- Use `digital_twin/scenarios/asset_registry.parquet` for scenario/building/EV/CLS participation.
-- Use `digital_twin/flexibility/network_impact_predictions.parquet` for fast
+- Use `instances/default/digital_twin/base` for physical asset counts, buses, lines, transformers, buildings, and connectivity.
+- Use `instances/default/digital_twin/scenarios/asset_registry.parquet` for scenario/building/EV/CLS participation.
+- Use `instances/default/digital_twin/flexibility/network_impact_predictions.parquet` for fast
   provider impact screening; validate final dispatch with pandapower.
-- Use `digital_twin/flexibility/locational_clearing_*.parquet` and
+- Use `instances/default/digital_twin/flexibility/locational_clearing_*.parquet` and
   the relevant project or canonical report to trace
   which provider offers were selected for each transformer constraint event.
 - Use the locational clearing verification report to
   verify the selected locational dispatch with pandapower before treating it as
   an operational result.
-- Use `digital_twin/semantic/graph_manifest.json` for semantic graph health and counts.
+- Use `instances/default/digital_twin/semantic/graph_manifest.json` for semantic graph health and counts.
 - Use `projects/<name>/outputs/manifests/project_run_manifest.json` for
   project-stage report discovery.
 - Use `gridalyn project verify <project>` as the publication gate for project
   contract validation, required artifacts, and objective-level sense checks.
-- Use `digital_twin/reports/canonical/digital_twin_report_manifest.json` for operational digital-twin report discovery.
+- Use `instances/default/digital_twin/reports/canonical/digital_twin_report_manifest.json` for operational digital-twin report discovery.
 
 ## Project Workspaces
 
@@ -108,7 +108,7 @@ by Kubernetes and Argo-style systems.
 
 Workspace paths can be resolved from the project folder or the repository root.
 Larger workflows may use `spec.pathBase: repo`, so their manifests can use
-readable top-level paths like `projects/...`, `digital_twin/...`, and
+readable top-level paths like `projects/...`, `instances/default/digital_twin/...`, and
 `configs/...`.
 
 The digital twin base is therefore a generated canonical artifact, not the

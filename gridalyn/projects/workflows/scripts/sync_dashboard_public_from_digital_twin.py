@@ -1,7 +1,8 @@
 """
-Sync legacy dashboard/public Kepler Parquet files from digital-twin outputs.
+Sync legacy dashboard/public Kepler Parquet files from default instance outputs.
 
-The dashboard now reads scenario-aware data directly from digital_twin/, but the
+The dashboard now reads scenario-aware data directly from
+instances/default/digital_twin/, but the
 legacy Kepler files are still used by consistency checks and static notebooks.
 This script keeps those files derived from the same source of truth.
 """
@@ -15,8 +16,8 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_TIMESERIES_DIR = ROOT / "digital_twin" / "timeseries"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
 DEFAULT_PUBLIC_DIR = ROOT / "dashboard" / "public"
 
 
@@ -77,7 +78,10 @@ def sync_dashboard_public(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Sync dashboard/public Kepler Parquet files from digital_twin outputs."
+        description=(
+            "Sync dashboard/public Kepler Parquet files from "
+            "instances/default/digital_twin outputs."
+        )
     )
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)
@@ -92,7 +96,8 @@ def main() -> None:
     if not args.allow_legacy_dashboard_public:
         raise SystemExit(
             "Refusing to write dashboard/public by default. The current dashboard "
-            "uses digital_twin/dashboard/catalog.json and digital_twin/timeseries. "
+            "uses instances/default/digital_twin/dashboard/catalog.json and "
+            "instances/default/digital_twin/timeseries. "
             "Pass --allow-legacy-dashboard-public for archived demos."
         )
 

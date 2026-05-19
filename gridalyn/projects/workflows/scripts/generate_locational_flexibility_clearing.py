@@ -18,13 +18,13 @@ from gridalyn.operations.market.locational_clearing import (
 )
 
 
-DEFAULT_PROVIDERS = ROOT / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_IMPACT = ROOT / "digital_twin" / "flexibility" / "network_impact_predictions.parquet"
-DEFAULT_TRANSFORMERS = ROOT / "digital_twin" / "base" / "grid_transformers.parquet"
-DEFAULT_OVERLOAD_REPORT = ROOT / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
-DEFAULT_TRANSFORMER_TIMESERIES = ROOT / "digital_twin" / "timeseries" / "S4_powerflow_transformers.parquet"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "flexibility"
-DEFAULT_REPORT_PATH = ROOT / "digital_twin" / "flexibility" / "locational_flexibility_clearing_report.json"
+DEFAULT_PROVIDERS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
+DEFAULT_IMPACT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_predictions.parquet"
+DEFAULT_TRANSFORMERS = ROOT / "instances" / "default" / "digital_twin" / "base" / "grid_transformers.parquet"
+DEFAULT_OVERLOAD_REPORT = ROOT / "instances" / "default" / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
+DEFAULT_TRANSFORMER_TIMESERIES = ROOT / "instances" / "default" / "digital_twin" / "timeseries" / "S4_powerflow_transformers.parquet"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
+DEFAULT_REPORT_PATH = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_flexibility_clearing_report.json"
 
 
 def _relpath(path: Path) -> str:

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 function digitalTwinStaticPlugin() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
   const roots = {
-    '/digital_twin': path.join(root, 'instances', 'default', 'digital_twin'),
+    '/instances/default/digital_twin': path.join(root, 'instances', 'default', 'digital_twin'),
     '/projects': path.join(root, 'projects'),
   }
 

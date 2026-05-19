@@ -31,8 +31,7 @@ The initial viable release focuses on a compact, publishable core:
 - `instances/default/digital_twin/`: the default materialized twin instance
   with canonical Parquet and JSON contracts for base topology, scenarios,
   timeseries, flexibility, semantic graph, reports, and dashboard catalog
-  metadata. The root `digital_twin` path remains as a compatibility symlink
-  and public dashboard URL prefix;
+  metadata;
 - `dashboard/`: browser application that consumes generated catalog and report
   artifacts;
 - `examples/tutorials/data/minimal/`: a tiny tracked demo dataset for smoke
@@ -77,8 +76,6 @@ instances/
       semantic/
       reports/
       dashboard/
-
-digital_twin -> instances/default/digital_twin
 ```
 
 ## Install

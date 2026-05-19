@@ -13,8 +13,8 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-BASE_DIR = ROOT / "digital_twin" / "base"
-TIMESERIES_DIR = ROOT / "digital_twin" / "timeseries"
+BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
 
 
 def _load_json(path: Path) -> dict:

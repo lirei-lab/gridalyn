@@ -112,7 +112,7 @@ This layer makes every artifact traceable and publishable.
 - `projects/*/project.yaml`
 - `projects/*/workflow.yaml`
 - `projects/*/outputs/manifests`
-- `digital_twin/reports`
+- `instances/default/digital_twin/reports`
 
 **Design rule:** generated outputs are acceptable only when their source inputs,
 model version, run context, and validation state can be traced.
@@ -140,10 +140,10 @@ of simulation leftovers.
 - `gridalyn.twin.network`
 - `gridalyn.twin.adapters`
 - `gridalyn.twin.semantic`
-- `digital_twin/base`
-- `digital_twin/scenarios`
-- `digital_twin/timeseries`
-- `digital_twin/semantic`
+- `instances/default/digital_twin/base`
+- `instances/default/digital_twin/scenarios`
+- `instances/default/digital_twin/timeseries`
+- `instances/default/digital_twin/semantic`
 
 **Design rule:** solvers, dashboards, reports, and markets consume the twin
 through stable IDs and repositories, not through ad hoc file assumptions.
@@ -168,8 +168,8 @@ This layer describes asset behavior and controllability.
 - `gridalyn.assets`
 - `gridalyn.assets.modeling`
 - `gridalyn.assets.datagen`
-- `digital_twin/models`
-- `digital_twin/scenarios/asset_registry.parquet`
+- `instances/default/digital_twin/models`
+- `instances/default/digital_twin/scenarios/asset_registry.parquet`
 - project output profiles under `projects/*/outputs/data`
 
 **Design rule:** an asset model should explain what can happen, what can be
@@ -196,7 +196,7 @@ This layer answers the physical question: what happens to the grid?
 - `gridalyn.simulation.simulators`
 - `gridalyn.simulation.analytics.network_impact`
 - `projects/*/outputs/json/pandapower_validation.json`
-- `digital_twin/flexibility/network_impact_*`
+- `instances/default/digital_twin/flexibility/network_impact_*`
 
 **Design rule:** market logic may use fast estimates, but final operational
 claims must be explainable against physical validation or a calibrated surrogate
@@ -225,7 +225,7 @@ the twin and asset models into decisions.
 
 - `gridalyn.operations`
 - `gridalyn.operations.market`
-- `digital_twin/flexibility`
+- `instances/default/digital_twin/flexibility`
 - `projects/*/outputs/json/ev_summary_results.json`
 - `projects/*/outputs/reports/stage_4_realtime_dispatch_report.json`
 
@@ -278,7 +278,7 @@ This layer is what users and external systems touch.
 - `gridalyn.interfaces`
 - `gridalyn.interfaces.cli`
 - `dashboard`
-- `digital_twin/dashboard`
+- `instances/default/digital_twin/dashboard`
 - `docs`
 
 **Design rule:** applications consume declared artifacts and APIs. They should
@@ -378,7 +378,7 @@ platform boundary to be explicit:
 ```python
 from gridalyn import foundation, twin, assets, simulation, operations
 
-repository = twin.NetworkModelRepository("digital_twin/base")
+repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 policy_report = foundation.check_artifact_policy(".")
 ```
 

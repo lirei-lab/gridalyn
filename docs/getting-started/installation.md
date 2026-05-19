@@ -91,7 +91,6 @@ configs/                 reusable grid and geography configuration
 gridalyn/                canonical Python SDK package and namespace
 projects/                governed reproducible workflows
 instances/default/       default local digital-twin instance
-digital_twin             compatibility symlink to the default instance
 dashboard/               browser application source
 docs/                    MkDocs source
 examples/                tutorials and compatibility wrappers

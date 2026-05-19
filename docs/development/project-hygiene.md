@@ -1,8 +1,7 @@
 # Project Hygiene
 
 The canonical runtime state for the default digital twin instance lives under
-`instances/default/digital_twin/`. The root `digital_twin` path is a symlink
-kept for compatibility with existing commands and dashboard URLs. Generated
+`instances/default/digital_twin/`. Generated
 local experiments, one-off debug scripts, and embedded database files should
 not be committed as project source.
 
@@ -18,16 +17,16 @@ Both paths are now ignored by `.gitignore`.
 
 ## Current Source Of Truth
 
-Use these logical folders for active workflows. They resolve through the
-`digital_twin` compatibility symlink into `instances/default/digital_twin`:
+Use these logical folders for active workflows. They live inside the default
+runtime instance at `instances/default/digital_twin/`:
 
-- `digital_twin/base`: static grid and building assets.
-- `digital_twin/scenarios`: scenario and asset registry metadata.
-- `digital_twin/timeseries`: scenario power-flow and load traces.
-- `digital_twin/dashboard/catalog.json`: dashboard scenario catalog.
-- `digital_twin/semantic`: semantic graph artifacts.
-- `digital_twin/reports`: canonical grid reports.
-- `digital_twin/flexibility`: provider registry, network sensitivity, and
+- `instances/default/digital_twin/base`: static grid and building assets.
+- `instances/default/digital_twin/scenarios`: scenario and asset registry metadata.
+- `instances/default/digital_twin/timeseries`: scenario power-flow and load traces.
+- `instances/default/digital_twin/dashboard/catalog.json`: dashboard scenario catalog.
+- `instances/default/digital_twin/semantic`: semantic graph artifacts.
+- `instances/default/digital_twin/reports`: canonical grid reports.
+- `instances/default/digital_twin/flexibility`: provider registry, network sensitivity, and
   network-impact surrogate artifacts.
 
 ## Legacy Export Boundary
@@ -52,8 +51,8 @@ DigitalTwinManager(
 ```
 
 New work should publish dashboard state through
-`digital_twin/dashboard/catalog.json` and the scenario Parquet files under
-`digital_twin/timeseries`.
+`instances/default/digital_twin/dashboard/catalog.json` and the scenario Parquet files under
+`instances/default/digital_twin/timeseries`.
 
 Kepler/dashboard-public exporters in `gridalyn.io.geo` are also legacy
 publication helpers. They emit a deprecation warning and should only be used for
@@ -93,8 +92,8 @@ uv run gridalyn twin build --dry-run --skip-heavy
 uv run gridalyn twin build --include-network-impact
 ```
 
-The orchestrator writes `digital_twin/reports/digital_twin_build_manifest.json`
-and keeps generated artifacts inside the canonical `digital_twin/` contract.
+The orchestrator writes `instances/default/digital_twin/reports/digital_twin_build_manifest.json`
+and keeps generated artifacts inside the canonical `instances/default/digital_twin/` contract.
 
 ## Removed Paper Snapshot
 
@@ -105,7 +104,7 @@ Carlo snapshots:
 - `substation_powerflow_mc.parquet`.
 
 Those files duplicated data that now belongs under
-`projects/flexibility_cls/outputs/data` or `digital_twin/timeseries`.
+`projects/flexibility_cls/outputs/data` or `instances/default/digital_twin/timeseries`.
 `MonteCarloSimulationManager.export_to_parquet()` no longer defaults to
 `paper/data`; callers must pass an explicit output directory only for legacy
 reproducibility snapshots.
@@ -120,7 +119,7 @@ current digital-twin contract.
   of versioning it.
 - `dashboard/public/`: removed from the active tree. It was a legacy
   Kepler/static dashboard bundle; the current dashboard reads mounted
-  `digital_twin/` and `projects/*/outputs/` artifacts.
+  `instances/default/digital_twin/` and `projects/*/outputs/` artifacts.
 - `examples/generated/outputs/`: tutorial-only generated maps or caches from
   examples. Project runtime caches belong under `projects/*/outputs/cache`.
 - `examples/generated/cache/` and root `cache/`: request/download cache JSON files.
@@ -129,8 +128,7 @@ current digital-twin contract.
 
 Do not remove the default twin instance wholesale because it is the canonical
 platform artifact layer. Its physical home is
-`instances/default/digital_twin/`; the root `digital_twin` symlink exists so
-older commands and dashboard URLs continue to work. Project-generated data
+`instances/default/digital_twin/`. Project-generated data
 belongs under `projects/*/outputs`; it is not the active dashboard or package
 source path.
 

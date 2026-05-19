@@ -18,8 +18,8 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_TIMESERIES_DIR = ROOT / "digital_twin" / "timeseries"
-DEFAULT_OUT = ROOT / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
+DEFAULT_TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
+DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
 DEFAULT_SCENARIOS = ["S0", "S1", "S2", "S3", "S4"]
 
 

@@ -77,7 +77,7 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
             commands,
         )
         self.assertIn(
-            "digital_twin/flexibility/network_impact_physics_verification_report.json",
+            "instances/default/digital_twin/flexibility/network_impact_physics_verification_report.json",
             commands["generate_network_impact_physics_verification_report"],
         )
 

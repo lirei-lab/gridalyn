@@ -17,10 +17,10 @@ test('buildDashboardScenarioCatalog uses generic grid metrics and explicit paths
         label: 'Winter Peak',
         description: 'Cold-weather peak load case',
         paths: {
-          nodes: 'digital_twin/custom/winter_nodes.parquet',
-          lines: 'digital_twin/custom/winter_lines.parquet',
-          transformers: 'digital_twin/custom/winter_transformers.parquet',
-          power: 'digital_twin/custom/winter_power.parquet',
+          nodes: 'instances/default/digital_twin/custom/winter_nodes.parquet',
+          lines: 'instances/default/digital_twin/custom/winter_lines.parquet',
+          transformers: 'instances/default/digital_twin/custom/winter_transformers.parquet',
+          power: 'instances/default/digital_twin/custom/winter_power.parquet',
         },
         metrics: {
           grid_peak_mw: 12.3,
@@ -30,7 +30,7 @@ test('buildDashboardScenarioCatalog uses generic grid metrics and explicit paths
           trafo_max_loading_percent: 91.2,
         },
         extensions: {
-          network_impact: '/digital_twin/flexibility/network_impact_catalog.json',
+          network_impact: '/instances/default/digital_twin/flexibility/network_impact_catalog.json',
         },
       },
     ],
@@ -42,8 +42,8 @@ test('buildDashboardScenarioCatalog uses generic grid metrics and explicit paths
   assert.equal(catalog[0].subtitle, 'Cold-weather peak load case');
   assert.equal(catalog[0].gridMetrics.grid_peak_mw, 12.3);
   assert.equal(catalog[0].ext_grid_peak_mw, 12.3);
-  assert.equal(catalog[0].paths.nodes, '/digital_twin/custom/winter_nodes.parquet');
-  assert.equal(catalog[0].extensions.network_impact, '/digital_twin/flexibility/network_impact_catalog.json');
+  assert.equal(catalog[0].paths.nodes, '/instances/default/digital_twin/custom/winter_nodes.parquet');
+  assert.equal(catalog[0].extensions.network_impact, '/instances/default/digital_twin/flexibility/network_impact_catalog.json');
 });
 
 test('buildScenarioCatalog merges scenario metadata, summaries, asset registry, semantic graph, and explicit paths', () => {
@@ -64,10 +64,10 @@ test('buildScenarioCatalog merges scenario metadata, summaries, asset registry, 
         ext_grid_peak_mw: 12.3,
         v_min_pu: 0.945,
         paths: {
-          nodes: 'digital_twin/custom/winter_nodes.parquet',
-          lines: 'digital_twin/custom/winter_lines.parquet',
-          transformers: 'digital_twin/custom/winter_transformers.parquet',
-          power: 'digital_twin/custom/winter_power.parquet',
+          nodes: 'instances/default/digital_twin/custom/winter_nodes.parquet',
+          lines: 'instances/default/digital_twin/custom/winter_lines.parquet',
+          transformers: 'instances/default/digital_twin/custom/winter_transformers.parquet',
+          power: 'instances/default/digital_twin/custom/winter_power.parquet',
         },
       },
     ],
@@ -100,7 +100,7 @@ test('buildScenarioCatalog merges scenario metadata, summaries, asset registry, 
   assert.equal(catalog[0].semanticGraph.profile, 'north_america');
   assert.equal(catalog[0].semanticGraph.nodeCount, 120);
   assert.equal(catalog[0].semanticGraph.valid, true);
-  assert.equal(catalog[0].paths.nodes, '/digital_twin/custom/winter_nodes.parquet');
+  assert.equal(catalog[0].paths.nodes, '/instances/default/digital_twin/custom/winter_nodes.parquet');
 });
 
 test('buildScenarioCatalog includes summary-only scenarios with conventional metadata', () => {
@@ -111,7 +111,7 @@ test('buildScenarioCatalog includes summary-only scenarios with conventional met
   assert.equal(catalog.length, 1);
   assert.equal(catalog[0].id, 'Outage_N1');
   assert.equal(catalog[0].label, 'Outage_N1');
-  assert.equal(catalog[0].paths.lines, '/digital_twin/timeseries/Outage_N1_powerflow_lines.parquet');
+  assert.equal(catalog[0].paths.lines, '/instances/default/digital_twin/timeseries/Outage_N1_powerflow_lines.parquet');
 });
 
 test('scenarioIdsFromManifest keeps the legacy fallback when no manifest exists', () => {

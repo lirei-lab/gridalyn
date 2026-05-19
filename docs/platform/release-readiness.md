@@ -25,7 +25,7 @@ capabilities. None of them is the platform boundary.
 | Area | Public v0.1 commitment |
 | --- | --- |
 | Core SDK | `gridalyn` Python package with network, adapter, modeling, analytics, market, semantic, reporting, project, workflow, and CLI modules. |
-| Network model | Repository API over generated `digital_twin/base` Parquet artifacts, with endpoint and connectivity validation. |
+| Network model | Repository API over generated `instances/default/digital_twin/base` Parquet artifacts, with endpoint and connectivity validation. |
 | Adapters | Synthetic pandapower adapter and CIM-like Parquet adapter with descriptor metadata. |
 | Project workflows | `project.yaml` and `workflow.yaml` contracts using `apiVersion`, `kind`, `metadata`, and `spec`. |
 | Demo workflows | `projects/*` cover minimal grids, benchmark feeders, GeoJSON synthesis, prosumer markets, DER optimization, RL voltage control, and flexibility operations. |

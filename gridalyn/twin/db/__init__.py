@@ -26,7 +26,7 @@ _LEGACY_DB_EXPORTS = {
 def __getattr__(name: str):
     if name in _LEGACY_DB_EXPORTS:
         warnings.warn(
-            f"gridalyn.twin.db.{name} is legacy. Use digital_twin/* artifacts and "
+            f"gridalyn.twin.db.{name} is legacy. Use instances/default/digital_twin/* artifacts and "
             "gridalyn.twin.db.FederatedGraphAdapter for current graph workflows.",
             DeprecationWarning,
             stacklevel=2,

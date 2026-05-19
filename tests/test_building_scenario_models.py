@@ -143,7 +143,7 @@ class BuildingScenarioModelsTest(unittest.TestCase):
     def test_write_scenario_model_artifacts_writes_manifest_and_summary(self):
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            out_dir = root / "digital_twin" / "models" / "scenarios"
+            out_dir = root / "instances" / "default" / "digital_twin" / "models" / "scenarios"
             manifest = write_scenario_model_artifacts(
                 _building_models(),
                 _base_devices(),
@@ -166,7 +166,7 @@ class BuildingScenarioModelsTest(unittest.TestCase):
             self.assertEqual(manifest["scenario_counts"]["S1"]["evse_devices"], 1)
             self.assertEqual(
                 manifest["artifacts"]["S1_device_registry"],
-                "digital_twin/models/scenarios/S1_device_registry.parquet",
+                "instances/default/digital_twin/models/scenarios/S1_device_registry.parquet",
             )
             self.assertTrue((out_dir / "S1_device_registry.parquet").exists())
             self.assertTrue((out_dir / "scenario_summary.parquet").exists())

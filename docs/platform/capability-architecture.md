@@ -98,7 +98,7 @@ This layer makes results trustworthy.
 - `projects/*/project.yaml`
 - `projects/*/workflow.yaml`
 - `projects/*/outputs/manifests`
-- `digital_twin/reports`
+- `instances/default/digital_twin/reports`
 
 **Current P0 contract:** the platform now exposes first-class `ModelVersion`
 and `StudyRun` objects. Base digital-twin metadata stores `model_version_id`
@@ -126,10 +126,10 @@ capability, not a byproduct of simulations.
 - `gridalyn.twin`
 - `gridalyn.twin.adapters`
 - `gridalyn.twin.semantic`
-- `digital_twin/base`
-- `digital_twin/scenarios`
-- `digital_twin/timeseries`
-- `digital_twin/semantic`
+- `instances/default/digital_twin/base`
+- `instances/default/digital_twin/scenarios`
+- `instances/default/digital_twin/timeseries`
+- `instances/default/digital_twin/semantic`
 
 **Near-term gap:** digital twin artifacts are strong, but we need a cleaner
 distinction between base state, current state, planned state, and study-case
@@ -157,8 +157,8 @@ assets, spaces, state variables, action variables, models, and parameters.
 
 - `gridalyn.assets`
 - `gridalyn.assets.datagen`
-- `digital_twin/models`
-- `digital_twin/scenarios/asset_registry.parquet`
+- `instances/default/digital_twin/models`
+- `instances/default/digital_twin/scenarios/asset_registry.parquet`
 - project output profiles under `projects/*/outputs/data`
 
 **Near-term gap:** the platform has useful models, but lacks explicit
@@ -185,7 +185,7 @@ or operation is applied?
 - `gridalyn.simulation.simulators`
 - `gridalyn.simulation.analytics.network_impact`
 - `projects/*/outputs/json/pandapower_validation.json`
-- `digital_twin/flexibility/network_impact_*`
+- `instances/default/digital_twin/flexibility/network_impact_*`
 
 **Near-term gap:** simulations and surrogates should share a common
 `GridEnvironment` interface so a workflow can swap between fast estimation and
@@ -214,7 +214,7 @@ hidden inside a modeling or experiment layer.
 
 - `gridalyn.operations`
 - `gridalyn.operations.market`
-- `digital_twin/flexibility`
+- `instances/default/digital_twin/flexibility`
 - `projects/*/outputs/json/ev_summary_results.json`
 - `projects/*/outputs/reports/stage_4_realtime_dispatch_report.json`
 
@@ -277,7 +277,7 @@ This layer is what users and external systems touch.
 
 - `gridalyn.interfaces.cli`
 - `dashboard`
-- `digital_twin/dashboard`
+- `instances/default/digital_twin/dashboard`
 - `docs`
 
 **Near-term gap:** the dashboard should become a general network and operations
@@ -294,7 +294,7 @@ present.
 | Simulation And Validation | `gridalyn.simulation` | Add environment abstraction and surrogate/physics comparison contracts. |
 | Flexibility Market And Operations | `gridalyn.operations` | Keep market mechanics reusable and expose utility-facing operation facades. Add graph-aware aggregators, portfolio selection, and operational KPIs. |
 | Problems And Experiments | `gridalyn.projects` | Package studies as reproducible problem definitions. |
-| Applications And Interfaces | `gridalyn.interfaces`, `dashboard`, `digital_twin/dashboard` | Keep UI and CLI consuming canonical contracts. |
+| Applications And Interfaces | `gridalyn.interfaces`, `dashboard`, `instances/default/digital_twin/dashboard` | Keep UI and CLI consuming canonical contracts. |
 
 ## Transition Rule
 

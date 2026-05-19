@@ -1124,10 +1124,10 @@ def build_semantic_graph(
             "scenarios": int(len(scenario_ids)),
         },
         "artifacts": {
-            "nodes": "digital_twin/semantic/nodes.parquet",
-            "edges": "digital_twin/semantic/edges.parquet",
-            "profile": "digital_twin/semantic/profile_north_america.json",
-            "validation_report": "digital_twin/semantic/validation_report.json",
+            "nodes": "instances/default/digital_twin/semantic/nodes.parquet",
+            "edges": "instances/default/digital_twin/semantic/edges.parquet",
+            "profile": "instances/default/digital_twin/semantic/profile_north_america.json",
+            "validation_report": "instances/default/digital_twin/semantic/validation_report.json",
         },
     }
     expected_counts = {"buildings": 3235, "buses": 3562, "lines": 3398, "transformers": 163, "scenarios": 5}

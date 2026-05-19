@@ -13,7 +13,8 @@ class DigitalTwinManager:
     to vectorized time-series Simulation Matrices (DuckDB/Parquet).
 
     Deprecated:
-        The canonical digital-twin contract now lives under `digital_twin/`.
+        The canonical digital-twin contract now lives under
+        `instances/default/digital_twin/`.
         This manager is kept only for legacy Falkor/DuckDB experiments and
         should not be used to publish dashboard data or canonical twin state.
     """
@@ -25,9 +26,9 @@ class DigitalTwinManager:
         allow_legacy_dashboard_public_export: bool = False,
     ):
         warnings.warn(
-            "DigitalTwinManager is legacy. Use digital_twin/{base,scenarios,timeseries,"
-            "semantic,reports} artifacts and gridalyn.twin.db.federated_graph_adapter "
-            "for current workflows.",
+            "DigitalTwinManager is legacy. Use instances/default/digital_twin/"
+            "{base,scenarios,timeseries,semantic,reports} artifacts and "
+            "gridalyn.twin.db.federated_graph_adapter for current workflows.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -35,7 +36,8 @@ class DigitalTwinManager:
         self.allow_legacy_dashboard_public_export = allow_legacy_dashboard_public_export
         
         # Dedicated persistent local database directory for legacy experiments.
-        # Keep it out of tracked `data/`; canonical twin artifacts live in `digital_twin/`.
+        # Keep it out of tracked `data/`; canonical twin artifacts live under
+        # `instances/default/digital_twin/`.
         self.scope_dir = os.path.join(gridalyn_root, ".cache", "twins", self.twin_id)
         os.makedirs(self.scope_dir, exist_ok=True)
         
@@ -43,8 +45,8 @@ class DigitalTwinManager:
         self.db_filepath = os.path.join(self.scope_dir, f"{self.twin_id}_falkor.db")
         self.falkor = FalkorAdapter(db_filepath=self.db_filepath, graph_name=self.twin_id)
 
-        # Legacy DuckDB pipeline. Current dashboard flows read `digital_twin/timeseries`
-        # directly through the scenario catalog instead.
+        # Legacy DuckDB pipeline. Current dashboard flows read the default
+        # instance timeseries through the scenario catalog instead.
         self.simulation_dir = os.path.join(gridalyn_root, "paper", "data")
         self.duck = DuckAdapter(data_dir=self.simulation_dir)
 
@@ -104,7 +106,8 @@ class DigitalTwinManager:
             raise RuntimeError(
                 "DigitalTwinManager.export_web_snapshot is legacy and would write "
                 "dashboard/public/data. Current dashboards should consume "
-                "digital_twin/dashboard/catalog.json plus digital_twin/timeseries. "
+                "instances/default/digital_twin/dashboard/catalog.json plus "
+                "instances/default/digital_twin/timeseries. "
                 "Pass allow_legacy_dashboard_public_export=True only for archived demos."
             )
         print(f"[{self.twin_id}] Serializing entire project scope out toward the external Dashboard...")

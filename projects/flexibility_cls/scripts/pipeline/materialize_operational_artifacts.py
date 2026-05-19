@@ -24,9 +24,11 @@ from gridalyn.operations.flexibility import (  # noqa: E402
     build_settlement_records,
 )
 from gridalyn.operations.runs import build_operation_run, write_operation_run  # noqa: E402
+from gridalyn.foundation import ArtifactLayout  # noqa: E402
 
 
-DEFAULT_FLEX_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_FLEX_DIR = DEFAULT_LAYOUT.flexibility
 DEFAULT_OUT_DIR = ROOT / "projects" / "flexibility_cls" / "outputs" / "operations"
 DEFAULT_REPORT_PATH = (
     ROOT
@@ -57,7 +59,8 @@ def materialize_operational_artifacts(
 ) -> dict[str, Path]:
     """Write project-local operational Parquet artifacts and KPI report."""
     root = root.resolve()
-    flexibility_dir = (flexibility_dir or (root / "digital_twin" / "flexibility")).resolve()
+    layout = ArtifactLayout(root)
+    flexibility_dir = (flexibility_dir or layout.flexibility).resolve()
     out_dir = (
         out_dir
         or (root / "projects" / "flexibility_cls" / "outputs" / "operations")
@@ -224,7 +227,7 @@ def _clearing_method(events: pd.DataFrame) -> str:
 
 
 def _model_version_id(root: Path) -> str | None:
-    metadata_path = root / "digital_twin" / "base" / "metadata.json"
+    metadata_path = ArtifactLayout(root).base / "metadata.json"
     if not metadata_path.exists():
         return None
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -255,7 +258,7 @@ def _study_run_id(root: Path) -> str | None:
 
 
 def _scenario_ids(root: Path, active_scenario_id: str) -> list[str]:
-    index_path = root / "digital_twin" / "scenarios" / "index.json"
+    index_path = ArtifactLayout(root).scenarios / "index.json"
     if not index_path.exists():
         return [active_scenario_id]
     try:

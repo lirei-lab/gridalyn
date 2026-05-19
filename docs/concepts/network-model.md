@@ -24,11 +24,11 @@ thermal loading, and downstream grouping.
 
 ## Current Implementation
 
-- Static assets are materialized in `digital_twin/base`.
-- Scenario participation is materialized in `digital_twin/scenarios`.
+- Static assets are materialized in `instances/default/digital_twin/base`.
+- Scenario participation is materialized in `instances/default/digital_twin/scenarios`.
 - Topology-aware provider and network-impact artifacts are materialized in
-  `digital_twin/flexibility`.
-- Ontology-aligned relationships are materialized in `digital_twin/semantic`.
+  `instances/default/digital_twin/flexibility`.
+- Ontology-aligned relationships are materialized in `instances/default/digital_twin/semantic`.
 - Python access is exposed through `gridalyn.twin` and cross-cutting
   `gridalyn.foundation` helpers.
 

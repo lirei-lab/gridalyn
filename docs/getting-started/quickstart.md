@@ -124,14 +124,14 @@ Build the semantic graph when you need ontology-aligned artifacts:
 ```bash
 uv run gridalyn semantic build \
   --profile north_america \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --flexibility-dir digital_twin/flexibility \
-  --timeseries-dir digital_twin/timeseries \
-  --out-dir digital_twin/semantic
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --flexibility-dir instances/default/digital_twin/flexibility \
+  --timeseries-dir instances/default/digital_twin/timeseries \
+  --out-dir instances/default/digital_twin/semantic
 
 uv run gridalyn semantic validate \
-  --semantic-dir digital_twin/semantic
+  --semantic-dir instances/default/digital_twin/semantic
 ```
 
 Build the dashboard only after the data contracts are valid:

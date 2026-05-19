@@ -49,8 +49,7 @@ The detailed responsibility map is in the
   `gridalyn.assets`, `gridalyn.simulation`, `gridalyn.operations`,
   `gridalyn.projects`, and `gridalyn.interfaces`;
 - project contracts under `projects/<name>/`;
-- default digital-twin instance artifacts under `instances/default/digital_twin/`,
-  exposed through the compatibility path `digital_twin/`;
+- default digital-twin instance artifacts under `instances/default/digital_twin/`;
 - canonical reports and project manifests;
 - documentation and artifact policy checks.
 

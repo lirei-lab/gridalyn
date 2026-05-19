@@ -368,7 +368,7 @@ class MonteCarloSimulationManager(Interface):
 
         This is a legacy snapshot helper. Active project and digital-twin
         workflows should use project output data directories and
-        `digital_twin/timeseries`.
+        `instances/default/digital_twin/timeseries`.
         Callers that still need the old two-file snapshot must pass `out_dir`
         explicitly, for example through `simulation.legacy_mc_export_dir`.
 

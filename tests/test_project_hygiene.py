@@ -325,8 +325,6 @@ class ProjectHygieneTest(unittest.TestCase):
             "examples/generated/cache/",
             "projects/*/outputs/",
             "dashboard/public/",
-            "digital_twin/**/*.parquet",
-            "digital_twin/timeseries/",
             "instances/*/digital_twin/**/*.parquet",
             "instances/*/digital_twin/timeseries/",
             "manuscripts/**/*.aux",
@@ -338,6 +336,18 @@ class ProjectHygieneTest(unittest.TestCase):
         missing = [pattern for pattern in required_patterns if pattern not in gitignore]
 
         self.assertEqual([], missing)
+
+    def test_root_digital_twin_alias_is_not_tracked(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            ["git", "ls-files", "digital_twin"],
+            cwd=repo_root,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual("", result.stdout.strip())
 
     def test_ai_agent_state_is_not_tracked(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -598,7 +608,7 @@ class ProjectHygieneTest(unittest.TestCase):
                 "examples/generated/cache/tmy_trois_rivieres.pkl",
                 "examples/generated/cache/raw_response.json",
                 "projects/flexibility_cls/outputs/reports/study_run_manifest.json",
-                "digital_twin/timeseries/S4_ev_load.parquet",
+                "instances/default/digital_twin/timeseries/S4_ev_load.parquet",
                 "manuscripts/ev_capacity_limitation/paper/main.pdf",
             ],
         )

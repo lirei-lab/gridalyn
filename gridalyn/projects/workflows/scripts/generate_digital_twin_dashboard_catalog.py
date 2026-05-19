@@ -16,14 +16,14 @@ from gridalyn.interfaces.reporting.dashboard_catalog import (
 from gridalyn.twin.network import NetworkModelRepository
 
 
-DEFAULT_SCENARIO_INDEX = ROOT / "digital_twin" / "scenarios" / "index.json"
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_POWERFLOW_SUMMARY = ROOT / "digital_twin" / "timeseries" / "powerflow_smoke_summary.json"
-DEFAULT_OUT = ROOT / "digital_twin" / "dashboard" / "catalog.json"
+DEFAULT_SCENARIO_INDEX = ROOT / "instances" / "default" / "digital_twin" / "scenarios" / "index.json"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_POWERFLOW_SUMMARY = ROOT / "instances" / "default" / "digital_twin" / "timeseries" / "powerflow_smoke_summary.json"
+DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "dashboard" / "catalog.json"
 DEFAULT_EXTENSIONS = {
-    "network_impact": ROOT / "digital_twin" / "flexibility" / "network_impact_catalog.json",
-    "clearing_scorecard": ROOT / "digital_twin" / "flexibility" / "flexibility_clearing_scorecard.json",
-    "operations": ROOT / "digital_twin" / "operations" / "operations_catalog.json",
+    "network_impact": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json",
+    "clearing_scorecard": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "flexibility_clearing_scorecard.json",
+    "operations": ROOT / "instances" / "default" / "digital_twin" / "operations" / "operations_catalog.json",
 }
 
 

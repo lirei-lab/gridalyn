@@ -10,12 +10,12 @@ which validation checks passed.
 | Layer | Typical path | Purpose |
 | --- | --- | --- |
 | Source data | `configs/`, project `inputs/`, external data folders | Raw or configured inputs used to build the model. |
-| Digital twin base | `digital_twin/base/` | Static network and asset model snapshots. |
-| Scenario layer | `digital_twin/scenarios/`, project scenario outputs | Scenario metadata, asset roles, adoption levels, and controllability assumptions. |
-| Time-series layer | `digital_twin/timeseries/`, project `outputs/data/` | Simulation, forecast, load, EV, and dispatch profiles. |
-| Flexibility layer | `digital_twin/flexibility/`, project flexibility outputs | Providers, aggregators, offers, clearing decisions, dispatch, settlement, and network-impact artifacts. |
-| Semantic layer | `digital_twin/semantic/` | Ontology-aligned nodes, edges, profiles, and validation reports. |
-| Reports | `digital_twin/reports/`, project `outputs/reports/` | Stable JSON contracts consumed by dashboards, audits, tests, and external review. |
+| Digital twin base | `instances/default/digital_twin/base/` | Static network and asset model snapshots. |
+| Scenario layer | `instances/default/digital_twin/scenarios/`, project scenario outputs | Scenario metadata, asset roles, adoption levels, and controllability assumptions. |
+| Time-series layer | `instances/default/digital_twin/timeseries/`, project `outputs/data/` | Simulation, forecast, load, EV, and dispatch profiles. |
+| Flexibility layer | `instances/default/digital_twin/flexibility/`, project flexibility outputs | Providers, aggregators, offers, clearing decisions, dispatch, settlement, and network-impact artifacts. |
+| Semantic layer | `instances/default/digital_twin/semantic/` | Ontology-aligned nodes, edges, profiles, and validation reports. |
+| Reports | `instances/default/digital_twin/reports/`, project `outputs/reports/` | Stable JSON contracts consumed by dashboards, audits, tests, and external review. |
 | Manifests | project `outputs/manifests/` | Run-level lineage, stage status, artifact inventory, and regression metadata. |
 
 ## Contract Rules

@@ -1,8 +1,8 @@
-const DEFAULT_CATALOG_PATH = '/digital_twin/flexibility/network_impact_catalog.json';
+const DEFAULT_CATALOG_PATH = '/instances/default/digital_twin/flexibility/network_impact_catalog.json';
 
 const LEGACY_REPORT_PATHS = {
-  physicsLabels: '/digital_twin/flexibility/network_impact_physics_labels_report.json',
-  physicsSurrogate: '/digital_twin/flexibility/network_impact_physics_surrogate_report.json',
+  physicsLabels: '/instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json',
+  physicsSurrogate: '/instances/default/digital_twin/flexibility/network_impact_physics_surrogate_report.json',
   topologyVerification: '/projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json',
   physicsVerification: '/projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json',
 };

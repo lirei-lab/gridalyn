@@ -2,7 +2,6 @@
 // domain folders. This keeps previously opened browser tabs usable.
 var legacyPathRedirects = {
    '/architecture/': '/platform/architecture/',
-   '/digital_twin/': '/platform/digital-twin/',
    '/reports/': '/platform/reports/',
    '/flexibility_market_operation/': '/flexibility/clearing/',
    '/flexibility_providers/': '/flexibility/providers-and-aggregators/',

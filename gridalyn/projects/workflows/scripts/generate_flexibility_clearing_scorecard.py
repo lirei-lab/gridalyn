@@ -15,7 +15,7 @@ from gridalyn.operations.market.scorecard import (
 )
 
 
-DEFAULT_REPORT_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_REPORT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
 DEFAULT_TOPOLOGY_REPORT = DEFAULT_REPORT_DIR / "network_impact_verification_report.json"
 DEFAULT_PHYSICS_REPORT = DEFAULT_REPORT_DIR / "network_impact_physics_verification_report.json"
 DEFAULT_MARKET_REPORT = DEFAULT_REPORT_DIR / "market_clearing_report.json"

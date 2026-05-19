@@ -78,11 +78,11 @@ readable:
 
 ```yaml
 projects/minimal_grid_project/outputs/reports/minimal_grid_report.json
-digital_twin/base/buildings.parquet
+instances/default/digital_twin/base/buildings.parquet
 configs/geography/tr01.json
 ```
 
-Avoid nested relative paths such as `../../digital_twin/...` in published
+Avoid nested relative paths such as `../../instances/default/digital_twin/...` in published
 project manifests.
 
 ## Report Validation

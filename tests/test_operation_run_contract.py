@@ -22,7 +22,7 @@ class OperationRunContractTest(unittest.TestCase):
             clearing_method="surrogate",
             status="completed",
             input_artifacts={
-                "provider_registry": "digital_twin/flexibility/provider_registry.parquet",
+                "provider_registry": "instances/default/digital_twin/flexibility/provider_registry.parquet",
             },
             output_artifacts={
                 "dispatch_instructions": "projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet",
@@ -41,7 +41,7 @@ class OperationRunContractTest(unittest.TestCase):
         self.assertEqual(payload["scenario_id"], "S4")
         self.assertEqual(payload["governance"]["network_model_version_id"], "model:sha256:test")
         self.assertEqual(payload["governance"]["study_run_id"], "run:ev:test")
-        self.assertEqual(payload["input_artifacts"]["provider_registry"], "digital_twin/flexibility/provider_registry.parquet")
+        self.assertEqual(payload["input_artifacts"]["provider_registry"], "instances/default/digital_twin/flexibility/provider_registry.parquet")
         self.assertEqual(payload["output_artifacts"]["dispatch_instructions"], "projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet")
         self.assertEqual(payload["kpi_report"], "projects/flexibility_cls/outputs/reports/operational_kpi_report.json")
         self.assertTrue(validate_operation_run(payload).valid)
@@ -73,7 +73,7 @@ class OperationRunContractTest(unittest.TestCase):
                 scenario_id="S4",
                 network_model_version_id="model:sha256:test",
                 study_run_id=None,
-                input_artifacts={"requirements": "digital_twin/flexibility/locational_clearing_events.parquet"},
+                input_artifacts={"requirements": "instances/default/digital_twin/flexibility/locational_clearing_events.parquet"},
                 output_artifacts={"settlement_records": "projects/flexibility_cls/outputs/operations/settlement_records.parquet"},
                 kpi_report="projects/flexibility_cls/outputs/reports/operational_kpi_report.json",
             )

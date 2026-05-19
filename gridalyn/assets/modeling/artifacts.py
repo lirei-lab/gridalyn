@@ -33,7 +33,7 @@ def _relative(path: Path, root: Path) -> str:
         return str(path)
 
 
-def load_base_inputs(base_dir: Path = Path("digital_twin/base")) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+def load_base_inputs(base_dir: Path = Path("instances/default/digital_twin/base")) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     """Load canonical digital-twin building inputs."""
 
     model = NetworkModelRepository.from_parquet(base_dir).load_model()
@@ -45,7 +45,7 @@ def write_building_model_artifacts(
     buildings: pd.DataFrame,
     connectivity: pd.DataFrame | None = None,
     *,
-    out_dir: Path = Path("digital_twin/models"),
+    out_dir: Path = Path("instances/default/digital_twin/models"),
     root: Path = Path("."),
     profile: str = NORTH_AMERICA_RESIDENTIAL_PROFILE,
     tables: dict[str, pd.DataFrame] | None = None,
@@ -84,8 +84,8 @@ def write_building_model_artifacts(
             "evse_devices": evse_devices,
         },
         "inputs": {
-            "buildings": "digital_twin/base/buildings.parquet",
-            "connectivity": "digital_twin/base/building_grid_connectivity.parquet",
+            "buildings": "instances/default/digital_twin/base/buildings.parquet",
+            "connectivity": "instances/default/digital_twin/base/building_grid_connectivity.parquet",
         },
         "artifacts": artifacts,
         "root": ".",

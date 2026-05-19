@@ -5,21 +5,15 @@ workflows, the dashboard, and semantic graph tooling. It is not a database
 service; it is a materialized workspace of Parquet and JSON artifacts that can
 later be loaded into DuckDB, FalkorDB, or another operational backend.
 
-The physical default instance lives at:
+The default runtime instance lives at:
 
 ```text
 instances/default/digital_twin/
 ```
 
-The repository root also keeps:
-
-```text
-digital_twin -> instances/default/digital_twin
-```
-
-That symlink preserves the existing CLI defaults and dashboard URL prefix
-(`/digital_twin/...`) while making the architecture clearer: `digital_twin` is
-an instance artifact, not SDK source code.
+This is the only default digital-twin path. Commands, tests, documentation, and
+dashboard mounts should resolve through `ArtifactLayout` or explicit
+`instances/<name>/digital_twin/` paths, not through a repository-root alias.
 
 ## Directory Contract
 
@@ -88,14 +82,10 @@ instances/default/digital_twin/
 ## Build Orchestration
 
 Use `gridalyn twin` as the top-level regeneration entrypoint when rebuilding
-the canonical artifacts. For compatibility, current commands still write
-through the root `digital_twin` path; the symlink resolves those writes into
-`instances/default/digital_twin`.
-
-The stable contract remains centered on the same logical paths:
-`digital_twin/base`, `digital_twin/scenarios`, `digital_twin/timeseries`,
-`digital_twin/models`, `digital_twin/flexibility`, `digital_twin/semantic`,
-`digital_twin/reports`, and `digital_twin/dashboard/catalog.json`.
+the canonical artifacts. The stable contract is centered on:
+`instances/default/digital_twin/base`, `instances/default/digital_twin/scenarios`, `instances/default/digital_twin/timeseries`,
+`instances/default/digital_twin/models`, `instances/default/digital_twin/flexibility`, `instances/default/digital_twin/semantic`,
+`instances/default/digital_twin/reports`, and `instances/default/digital_twin/dashboard/catalog.json`.
 
 Preview the ordered build without writing heavy simulation outputs:
 
@@ -119,12 +109,12 @@ For fast CI or local checks, combine `--skip-heavy` with
 `--include-network-impact`; this skips pandapower-heavy sampling while still
 planning the semantic, dashboard, report, and surrogate metadata steps.
 
-Every run writes `digital_twin/reports/digital_twin_build_manifest.json` with
+Every run writes `instances/default/digital_twin/reports/digital_twin_build_manifest.json` with
 the planned/executed steps and canonical downstream artifacts.
 
 ## Base Assets
 
-`digital_twin/base` describes the static network:
+`instances/default/digital_twin/base` describes the static network:
 
 - `buildings.parquet`: one row per building/load instance with `building_id`, `load_id`, `pandapower_load`, location, area, static load, and seeds.
 - `building_grid_connectivity.parquet`: maps buildings and loads to load buses, LV clusters, feeder buses, and transformers.
@@ -141,7 +131,7 @@ of duplicating topology joins:
 ```python
 from gridalyn.twin import NetworkModelRepository
 
-repo = NetworkModelRepository.from_parquet("digital_twin/base")
+repo = NetworkModelRepository.from_parquet("instances/default/digital_twin/base")
 model = repo.load_model()
 integrity = repo.validate_integrity()
 ```
@@ -188,7 +178,7 @@ standard, source format, declared capabilities, artifact existence, model
 counts, and topology validation results.
 
 Dashboard catalogs read `model_version_id` and `model_version` from
-`digital_twin/base/metadata.json` when a network repository is available, so
+`instances/default/digital_twin/base/metadata.json` when a network repository is available, so
 visualized scenarios can be traced back to the exact model snapshot.
 
 The registry also exposes `cim_parquet` through
@@ -199,7 +189,7 @@ RDF/XML importer.
 
 ## Building Model Layer
 
-`digital_twin/models` turns static building rows into simulation-ready building
+`instances/default/digital_twin/models` turns static building rows into simulation-ready building
 entities. It follows a pyCity-style decomposition without introducing a pyCity
 runtime dependency:
 
@@ -239,7 +229,7 @@ or simulated building data.
 
 ## Dashboard Catalog
 
-`digital_twin/dashboard/catalog.json` is the general-purpose UI contract for the
+`instances/default/digital_twin/dashboard/catalog.json` is the general-purpose UI contract for the
 grid viewer. It is intentionally study-agnostic:
 
 - scenario labels and descriptions;
@@ -276,7 +266,7 @@ For S4 in the current generated dataset:
 
 ## Powerflow Time Series
 
-`digital_twin/timeseries` stores scenario-specific simulation results:
+`instances/default/digital_twin/timeseries` stores scenario-specific simulation results:
 
 - `S*_ev_load.parquet`: EV load by building/load and timestamp.
 - `S*_powerflow_nodes.parquet`: bus voltage results.
@@ -328,7 +318,7 @@ The provider layer turns scenario roles into network-aware controllable assets:
   applying selected provider reductions to the S4 building and EV load matrices
   for pandapower replay.
 
-When `digital_twin/models/scenarios` exists, providers include:
+When `instances/default/digital_twin/models/scenarios` exists, providers include:
 
 - `scenario_device_ids`: the scenario HVAC/EVSE device rows behind the provider;
 - `device_ids`: base device IDs;
@@ -343,9 +333,9 @@ Generate it with:
 
 ```bash
 uv run gridalyn market providers \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --out-dir digital_twin/flexibility
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 This layer does not yet replace aggregate clearing engines. It provides the
@@ -356,9 +346,9 @@ Generate the GNN-ready impact surrogate:
 ```bash
 uv run gridalyn market surrogate \
   --scenario-id S4 \
-  --provider-registry digital_twin/flexibility/provider_registry.parquet \
-  --sensitivity digital_twin/flexibility/network_sensitivity.parquet \
-  --out-dir digital_twin/flexibility
+  --provider-registry instances/default/digital_twin/flexibility/provider_registry.parquet \
+  --sensitivity instances/default/digital_twin/flexibility/network_sensitivity.parquet \
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 The surrogate is a fast screening layer. Pandapower remains the authority for
@@ -376,7 +366,7 @@ uv run gridalyn market locational-clearing \
 This derives transformer-specific requirements from overload time series,
 selects providers by local deliverability-adjusted offer cost, writes provider
 selection Parquet tables, and emits
-`digital_twin/flexibility/locational_flexibility_clearing_report.json`.
+`instances/default/digital_twin/flexibility/locational_flexibility_clearing_report.json`.
 
 Replay those selections through pandapower:
 
@@ -385,8 +375,8 @@ uv run gridalyn market verify-clearing \
   --scenario-id S4
 ```
 
-This writes `digital_twin/flexibility/locational_clearing_dispatch.parquet` and
-`digital_twin/flexibility/locational_clearing_verification_report.json`. The
+This writes `instances/default/digital_twin/flexibility/locational_clearing_dispatch.parquet` and
+`instances/default/digital_twin/flexibility/locational_clearing_verification_report.json`. The
 verification report is the physical authority for the locational clearing MVP:
 it compares unmanaged load against the selected provider dispatch with AC power
 flow metrics for voltage, line loading, transformer loading, overload counts,
@@ -421,7 +411,7 @@ uv run gridalyn market network-impact-catalog
 
 ## Operational Reports
 
-The older direct report `digital_twin/reports/mv_lv_transformer_overload_report.json` is still useful, but new consumers should prefer canonical reports under `digital_twin/reports/canonical`.
+The older direct report `instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json` is still useful, but new consumers should prefer canonical reports under `instances/default/digital_twin/reports/canonical`.
 
 Canonical reports include:
 
@@ -439,14 +429,14 @@ Generate semantic graph artifacts:
 ```bash
 uv run gridalyn semantic build \
   --profile north_america \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --flexibility-dir digital_twin/flexibility \
-  --timeseries-dir digital_twin/timeseries \
-  --out-dir digital_twin/semantic
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --flexibility-dir instances/default/digital_twin/flexibility \
+  --timeseries-dir instances/default/digital_twin/timeseries \
+  --out-dir instances/default/digital_twin/semantic
 ```
 
-When `digital_twin/flexibility/provider_registry.parquet` is present, the
+When `instances/default/digital_twin/flexibility/provider_registry.parquet` is present, the
 semantic graph also indexes the market-management layer: aggregators,
 portfolios, providers, offers, and constraint zones. This lets FalkorDB/DuckDB
 consumers ask which providers belong to an aggregator, which contract each
@@ -457,8 +447,8 @@ Validate semantic graph:
 
 ```bash
 uv run gridalyn semantic validate \
-  --semantic-dir digital_twin/semantic \
-  --scenario-dir digital_twin/scenarios
+  --semantic-dir instances/default/digital_twin/semantic \
+  --scenario-dir instances/default/digital_twin/scenarios
 ```
 
 Build canonical digital-twin reports:

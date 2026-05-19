@@ -29,9 +29,9 @@ workspace = workspace_from_path("projects/demo/scripts")
 workspace.root                         # repository or source-archive root
 workspace.layout.configs               # configs
 workspace.layout.default_instance      # instances/default
-workspace.layout.base                  # digital_twin/base
-workspace.layout.flexibility           # digital_twin/flexibility
-workspace.layout.operations            # digital_twin/operations
+workspace.layout.base                  # instances/default/digital_twin/base
+workspace.layout.flexibility           # instances/default/digital_twin/flexibility
+workspace.layout.operations            # instances/default/digital_twin/operations
 workspace.project_path("demo")         # projects/demo
 ```
 
@@ -41,7 +41,7 @@ It uses Git metadata when available and falls back to Gridalyn source markers
 and clean public checkouts work the same way.
 
 Project workflows may override paths, but default platform commands should use
-the canonical `configs/`, `instances/`, `projects/`, and `digital_twin/*`
+the canonical `configs/`, `instances/`, `projects/`, and `instances/default/digital_twin/*`
 roots. Use `GridalynWorkspace(root)` only when the caller already knows the
 exact workspace root.
 

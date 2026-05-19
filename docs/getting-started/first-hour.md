@@ -26,7 +26,7 @@ The important distinction is:
 | --- | --- |
 | `gridalyn/` | Reusable SDK and platform capability. |
 | `projects/<name>/` | Governed executable study using SDK capabilities. |
-| `digital_twin/` and `instances/default/digital_twin/` | Canonical materialized twin artifacts. |
+| `instances/default/digital_twin/` | Canonical materialized twin artifacts. |
 | `docs/` | Public explanation of platform contracts, not a narrative for one demo. |
 
 ## 2. Verify The Workspace

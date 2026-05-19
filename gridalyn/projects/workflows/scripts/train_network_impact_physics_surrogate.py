@@ -19,9 +19,9 @@ from gridalyn.simulation.analytics.network_impact.physics_model import (
 )
 
 
-DEFAULT_TRAINING = ROOT / "digital_twin" / "flexibility" / "network_impact_training.parquet"
-DEFAULT_LABELS = ROOT / "digital_twin" / "flexibility" / "network_impact_physics_labels.parquet"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_TRAINING = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_training.parquet"
+DEFAULT_LABELS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_labels.parquet"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
 
 
 def _relpath(path: Path) -> str:

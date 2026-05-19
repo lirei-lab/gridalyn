@@ -18,8 +18,8 @@ from gridalyn.assets.modeling.assets import (
 DEFAULT_SOFT_PARTICIPATION_RATE = 0.30
 
 
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
 DEFAULT_OUT_PATH = DEFAULT_SCENARIO_DIR / "asset_registry.parquet"
 DEFAULT_SUMMARY_PATH = DEFAULT_SCENARIO_DIR / "asset_registry_summary.json"
 

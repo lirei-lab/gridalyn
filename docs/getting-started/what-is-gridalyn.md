@@ -28,8 +28,7 @@ platform boundary is broader than any one demo:
 
 - reusable logic belongs in the Gridalyn SDK;
 - executable studies belong in `projects/<name>/`;
-- canonical twin artifacts belong in `instances/default/digital_twin/`
-  and remain available through the compatibility path `digital_twin/`;
+- canonical twin artifacts belong in `instances/default/digital_twin/`;
 - project-specific generated artifacts belong in project `outputs/`;
 - dashboards and reports consume explicit artifacts, not study-specific hidden
   assumptions.

@@ -39,7 +39,7 @@ be avoided unless they represent a durable platform capability.
 Recent cleanup moved the generic Network Impact, locational clearing,
 scorecard, dashboard extension, topology-cache, and workspace-validation
 defaults away from `projects/flexibility_cls`. Generic Gridalyn code now uses
-`digital_twin/cache`, `digital_twin/flexibility`, and `digital_twin/operations`
+`instances/default/digital_twin/cache`, `instances/default/digital_twin/flexibility`, and `instances/default/digital_twin/operations`
 as platform artifact roots. Project-specific routes must be supplied by project
 workflows, CLI arguments, or project manifests.
 

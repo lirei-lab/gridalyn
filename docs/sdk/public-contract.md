@@ -13,7 +13,7 @@ from gridalyn import foundation, projects, twin
 
 project = projects.load_project("projects/flexibility_cls")
 workspace = foundation.validate_workspace(".")
-repository = twin.NetworkModelRepository("digital_twin/base")
+repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```
 
 These imports are intended for project scripts, tests, applications, and

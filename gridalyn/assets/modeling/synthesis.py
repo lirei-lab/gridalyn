@@ -16,7 +16,7 @@ from gridalyn.assets.modeling.devices import evse_device_for_building, hvac_devi
 
 
 SOURCE_STANDARD = "pycity-inspired"
-BUILDINGS_SOURCE_TABLE = "digital_twin/base/buildings.parquet"
+BUILDINGS_SOURCE_TABLE = "instances/default/digital_twin/base/buildings.parquet"
 
 
 def _none_if_missing(value: object) -> str | None:

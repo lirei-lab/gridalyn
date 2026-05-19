@@ -24,7 +24,7 @@ The physical SDK tree is organized around seven platform modules:
 Anything tied to a particular public study belongs under `projects/`.
 Tutorial datasets belong under `examples/tutorials/data`.
 Generated artifacts belong under declared output folders such as
-`projects/*/outputs`, `digital_twin/*`, or `examples/generated`.
+`projects/*/outputs`, `instances/default/digital_twin/*`, or `examples/generated`.
 
 ## Compatibility Imports
 
@@ -114,7 +114,7 @@ from gridalyn import foundation, projects, twin
 
 project = projects.load_project("projects/flexibility_cls")
 report = foundation.check_artifact_policy(".")
-repository = twin.NetworkModelRepository("digital_twin/base")
+repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```
 
 Synthetic grid generation from building footprints should use the GeoJSON

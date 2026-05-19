@@ -98,7 +98,7 @@ class BuildingModelingTest(unittest.TestCase):
 
     def test_write_building_model_artifacts_writes_manifest_and_parquet(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            out_dir = Path(tmpdir) / "digital_twin" / "models"
+            out_dir = Path(tmpdir) / "instances" / "default" / "digital_twin" / "models"
             manifest = write_building_model_artifacts(
                 buildings=self._sample_buildings(),
                 connectivity=self._sample_connectivity(),
@@ -115,7 +115,7 @@ class BuildingModelingTest(unittest.TestCase):
             self.assertTrue((out_dir / "end_use_loads.parquet").exists())
 
             saved = json.loads((out_dir / "building_model_manifest.json").read_text())
-            self.assertEqual(saved["artifacts"]["building_models"], "digital_twin/models/building_models.parquet")
+            self.assertEqual(saved["artifacts"]["building_models"], "instances/default/digital_twin/models/building_models.parquet")
             self.assertEqual(saved["counts"]["building_models"], 2)
 
     def test_load_base_inputs_uses_network_repository(self):
@@ -138,7 +138,7 @@ class BuildingModelingTest(unittest.TestCase):
             FakeRepository,
             create=True,
         ), patch.object(pd, "read_parquet", side_effect=AssertionError("raw base parquet read")):
-            buildings, connectivity = load_base_inputs(Path("digital_twin/base"))
+            buildings, connectivity = load_base_inputs(Path("instances/default/digital_twin/base"))
 
         self.assertEqual(list(buildings["building_id"]), ["building:1", "building:2"])
         self.assertIsNotNone(connectivity)

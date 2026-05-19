@@ -24,7 +24,7 @@ The run manifest records which stages executed and which artifacts were written.
 ## Shared Digital Twin Reports
 
 Some reports are shared across applications and are written under
-`digital_twin/reports/`. Use the reporting entrypoint when refreshing those
+`instances/default/digital_twin/reports/`. Use the reporting entrypoint when refreshing those
 contracts:
 
 ```bash

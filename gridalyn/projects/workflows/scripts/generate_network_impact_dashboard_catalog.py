@@ -15,13 +15,13 @@ from gridalyn.simulation.analytics.network_impact.catalog import (
 )
 
 
-DEFAULT_SCENARIO_INDEX = ROOT / "digital_twin" / "scenarios" / "index.json"
-DEFAULT_OUT = ROOT / "digital_twin" / "flexibility" / "network_impact_catalog.json"
+DEFAULT_SCENARIO_INDEX = ROOT / "instances" / "default" / "digital_twin" / "scenarios" / "index.json"
+DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json"
 DEFAULT_REPORTS = {
-    "physicsLabels": ROOT / "digital_twin" / "flexibility" / "network_impact_physics_labels_report.json",
-    "physicsSurrogate": ROOT / "digital_twin" / "flexibility" / "network_impact_physics_surrogate_report.json",
-    "topologyVerification": ROOT / "digital_twin" / "flexibility" / "network_impact_verification_report.json",
-    "physicsVerification": ROOT / "digital_twin" / "flexibility" / "network_impact_physics_verification_report.json",
+    "physicsLabels": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_labels_report.json",
+    "physicsSurrogate": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_surrogate_report.json",
+    "topologyVerification": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_verification_report.json",
+    "physicsVerification": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_verification_report.json",
 }
 
 

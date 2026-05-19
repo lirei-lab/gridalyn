@@ -16,12 +16,12 @@ from gridalyn.simulation.analytics.network_impact.provider_shadow import (
 )
 
 
-DEFAULT_DISPATCH = ROOT / "digital_twin" / "flexibility" / "market_dispatch_timeseries.parquet"
-DEFAULT_PROVIDERS = ROOT / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_SENSITIVITY = ROOT / "digital_twin" / "flexibility" / "network_sensitivity.parquet"
-DEFAULT_TRANSFORMERS = ROOT / "digital_twin" / "base" / "grid_transformers.parquet"
-DEFAULT_OVERLOAD_REPORT = ROOT / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
-DEFAULT_OUT = ROOT / "digital_twin" / "flexibility" / "provider_selection_shadow_report.json"
+DEFAULT_DISPATCH = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "market_dispatch_timeseries.parquet"
+DEFAULT_PROVIDERS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
+DEFAULT_SENSITIVITY = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_sensitivity.parquet"
+DEFAULT_TRANSFORMERS = ROOT / "instances" / "default" / "digital_twin" / "base" / "grid_transformers.parquet"
+DEFAULT_OVERLOAD_REPORT = ROOT / "instances" / "default" / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
+DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_selection_shadow_report.json"
 
 
 def _relpath(path: Path) -> str:

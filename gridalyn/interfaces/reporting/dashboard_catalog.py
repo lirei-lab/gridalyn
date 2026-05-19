@@ -40,7 +40,7 @@ def _paths(scenario_id: str, summary: dict[str, Any], root: Path) -> dict[str, s
     paths = {}
     for kind, suffix in FILE_KINDS.items():
         paths[kind] = _web_path(
-            declared.get(kind) or f"digital_twin/timeseries/{scenario_id}_{suffix}.parquet",
+            declared.get(kind) or f"instances/default/digital_twin/timeseries/{scenario_id}_{suffix}.parquet",
             root,
         )
     return paths

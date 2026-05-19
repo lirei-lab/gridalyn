@@ -15,8 +15,8 @@ from gridalyn.twin.semantic.mappings import north_america_profile
 from gridalyn.twin.semantic.validation import validate_semantic_graph, write_validation_report
 
 
-DEFAULT_SEMANTIC_DIR = ROOT / "digital_twin" / "semantic"
-DEFAULT_SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
+DEFAULT_SEMANTIC_DIR = ROOT / "instances" / "default" / "digital_twin" / "semantic"
+DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
 
 
 def _load_json(path: Path) -> dict[str, Any]:

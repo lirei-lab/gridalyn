@@ -13,7 +13,7 @@ larger flexibility operations stack.
 ## Why Projects Exist
 
 The digital twin base is generated from raw geography and grid configuration.
-That means the project contract must start before `digital_twin/base`; it owns
+That means the project contract must start before `instances/default/digital_twin/base`; it owns
 the full chain from input configuration to final reports.
 
 Use projects to avoid hidden dependencies on notebooks, tutorial scripts, or
@@ -25,7 +25,7 @@ private publication folders.
 | --- | --- | --- |
 | `configs/` | shared configuration | reusable input configuration, not generated outputs |
 | `projects/<name>/` | project owner | executable workflow contract, scripts, outputs, reports, figures |
-| `digital_twin/` | platform artifact layer | canonical Parquet/JSON contracts consumed by dashboards and applications |
+| `instances/default/digital_twin/` | platform artifact layer | canonical Parquet/JSON contracts consumed by dashboards and applications |
 | `gridalyn/` | platform SDK | reusable logic only; no case-study outputs |
 | `examples/` | tutorial owner | examples and compatibility wrappers only; not a project runtime backend |
 
@@ -46,8 +46,8 @@ projects/<project_name>/
 ```
 
 The generated outputs are project-local by default. Shared platform artifacts
-such as `digital_twin/base`, `digital_twin/scenarios`, `digital_twin/semantic`,
-and `digital_twin/dashboard/catalog.json` remain in the repository-level
+such as `instances/default/digital_twin/base`, `instances/default/digital_twin/scenarios`, `instances/default/digital_twin/semantic`,
+and `instances/default/digital_twin/dashboard/catalog.json` remain in the repository-level
 digital twin directories.
 
 ## `project.yaml`

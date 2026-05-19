@@ -35,7 +35,7 @@ class DashboardCatalogTest(unittest.TestCase):
                     "n_lines": 99,
                     "n_transformers": 4,
                     "paths": {
-                        "nodes": "digital_twin/custom/nodes.parquet",
+                        "nodes": "instances/default/digital_twin/custom/nodes.parquet",
                     },
                 }
             ]
@@ -43,8 +43,8 @@ class DashboardCatalogTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            network_impact = root / "digital_twin" / "flexibility" / "network_impact_catalog.json"
-            operations = root / "digital_twin" / "operations" / "operations_catalog.json"
+            network_impact = root / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json"
+            operations = root / "instances" / "default" / "digital_twin" / "operations" / "operations_catalog.json"
             network_impact.parent.mkdir(parents=True)
             operations.parent.mkdir(parents=True)
             network_impact.write_text("{}", encoding="utf-8")
@@ -67,15 +67,18 @@ class DashboardCatalogTest(unittest.TestCase):
         self.assertEqual(scenario["metrics"]["load_peak_mw"], 11.9)
         self.assertEqual(scenario["topology_counts"]["n_buses"], 100)
         self.assertNotIn("ev_penetration_pct", scenario["metrics"])
-        self.assertEqual(scenario["extensions"]["network_impact"], "/digital_twin/flexibility/network_impact_catalog.json")
+        self.assertEqual(
+            scenario["extensions"]["network_impact"],
+            "/instances/default/digital_twin/flexibility/network_impact_catalog.json",
+        )
         self.assertEqual(
             scenario["extensions"]["operations"],
-            "/digital_twin/operations/operations_catalog.json",
+            "/instances/default/digital_twin/operations/operations_catalog.json",
         )
 
     def test_write_dashboard_catalog_creates_parent_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "digital_twin" / "dashboard" / "catalog.json"
+            path = Path(tmp) / "instances" / "default" / "digital_twin" / "dashboard" / "catalog.json"
             written = write_dashboard_catalog(path, {"report_id": "digital_twin_dashboard_catalog"})
 
             self.assertEqual(written, path)
@@ -85,12 +88,12 @@ class DashboardCatalogTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         self.assertEqual(
             DEFAULT_EXTENSIONS["operations"].relative_to(repo_root).as_posix(),
-            "digital_twin/operations/operations_catalog.json",
+            "instances/default/digital_twin/operations/operations_catalog.json",
         )
 
     def test_build_dashboard_catalog_uses_network_repository_counts_as_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
-            base = Path(tmp) / "digital_twin" / "base"
+            base = Path(tmp) / "instances" / "default" / "digital_twin" / "base"
             base.mkdir(parents=True)
             pd.DataFrame([{"bus_id": "bus:0"}, {"bus_id": "bus:1"}]).to_parquet(
                 base / "grid_buses.parquet"

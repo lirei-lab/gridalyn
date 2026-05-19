@@ -11,14 +11,16 @@ class DashboardExporter:
     static endpoints so the Frontend UI (e.g. Vite) can mount them seamlessly.
 
     Deprecated:
-        The dashboard now reads `digital_twin/dashboard/catalog.json` and
-        scenario Parquet files mounted from `digital_twin/`. This exporter is
-        retained only for legacy demos that still target `dashboard/public`.
+        The dashboard now reads `instances/default/digital_twin/dashboard/catalog.json`
+        and scenario Parquet files mounted from the default digital-twin
+        instance. This exporter is retained only for legacy demos that still
+        target `dashboard/public`.
     """
     def __init__(self, public_dir: str = "dashboard/public/data"):
         warnings.warn(
             "DashboardExporter is legacy. Publish dashboard data through "
-            "digital_twin/dashboard/catalog.json and digital_twin/timeseries instead.",
+            "instances/default/digital_twin/dashboard/catalog.json and "
+            "instances/default/digital_twin/timeseries instead.",
             DeprecationWarning,
             stacklevel=2,
         )

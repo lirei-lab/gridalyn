@@ -162,7 +162,7 @@ class SemanticGraphTest(unittest.TestCase):
                 "scenarios": [
                     {
                         "scenario_id": "S4",
-                        "paths": {"nodes": "digital_twin/timeseries/S4_powerflow_nodes.parquet"},
+                        "paths": {"nodes": "instances/default/digital_twin/timeseries/S4_powerflow_nodes.parquet"},
                     }
                 ]
             },
@@ -170,7 +170,7 @@ class SemanticGraphTest(unittest.TestCase):
                 "scenarios": [
                     {
                         "scenario_id": "S4",
-                        "path": "digital_twin/timeseries/S4_ev_load.parquet",
+                        "path": "instances/default/digital_twin/timeseries/S4_ev_load.parquet",
                     }
                 ]
             },

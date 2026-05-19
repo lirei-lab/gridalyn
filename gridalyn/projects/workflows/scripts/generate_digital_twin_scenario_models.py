@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[4]
 from gridalyn.assets.modeling import write_scenario_model_artifacts
 
 
-DEFAULT_MODELS_DIR = ROOT / "digital_twin" / "models"
-DEFAULT_SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
+DEFAULT_MODELS_DIR = ROOT / "instances" / "default" / "digital_twin" / "models"
+DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
 DEFAULT_OUT_DIR = DEFAULT_MODELS_DIR / "scenarios"
 
 

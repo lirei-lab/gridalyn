@@ -22,9 +22,9 @@ from gridalyn.simulation.analytics.network_impact.surrogate import (
 )
 
 
-DEFAULT_PROVIDER_REGISTRY = ROOT / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_SENSITIVITY = ROOT / "digital_twin" / "flexibility" / "network_sensitivity.parquet"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_PROVIDER_REGISTRY = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
+DEFAULT_SENSITIVITY = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_sensitivity.parquet"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
 
 
 def _relpath(path: Path) -> str:

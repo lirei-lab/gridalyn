@@ -208,10 +208,11 @@ class CanonicalReportsTest(unittest.TestCase):
     def test_build_digital_twin_reports_standardizes_network_and_semantic_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            reports_dir = root / "digital_twin" / "reports"
-            semantic_dir = root / "digital_twin" / "semantic"
-            scenarios_dir = root / "digital_twin" / "scenarios"
-            out_dir = root / "digital_twin" / "reports" / "canonical"
+            twin_dir = root / "instances" / "default" / "digital_twin"
+            reports_dir = twin_dir / "reports"
+            semantic_dir = twin_dir / "semantic"
+            scenarios_dir = twin_dir / "scenarios"
+            out_dir = twin_dir / "reports" / "canonical"
             reports_dir.mkdir(parents=True)
             semantic_dir.mkdir(parents=True)
             scenarios_dir.mkdir(parents=True)
@@ -235,7 +236,7 @@ class CanonicalReportsTest(unittest.TestCase):
 
             self.assertTrue((out_dir / "network_capacity_report.json").exists())
             self.assertTrue((out_dir / "semantic_graph_report.json").exists())
-            self.assertEqual(manifest["reports"]["semantic_graph"], "digital_twin/reports/canonical/semantic_graph_report.json")
+            self.assertEqual(manifest["reports"]["semantic_graph"], "instances/default/digital_twin/reports/canonical/semantic_graph_report.json")
 
 
 if __name__ == "__main__":

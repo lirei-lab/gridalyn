@@ -13,8 +13,8 @@ from gridalyn.assets.modeling import load_base_inputs, write_building_model_arti
 from gridalyn.assets.modeling.archetypes import NORTH_AMERICA_RESIDENTIAL_PROFILE
 
 
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "models"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "models"
 
 
 def generate_building_models(

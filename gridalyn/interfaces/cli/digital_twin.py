@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--manifest",
         type=Path,
-        default=ROOT / "digital_twin" / "reports" / "digital_twin_build_manifest.json",
+        default=ROOT / "instances" / "default" / "digital_twin" / "reports" / "digital_twin_build_manifest.json",
     )
     build.set_defaults(handler=handle_build)
 

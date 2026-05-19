@@ -160,17 +160,6 @@ projects/*/outputs/
 # examples/outputs
 
 # Gridalyn generated digital twin artifacts
-digital_twin/**/*.parquet
-digital_twin/**/*.pkl
-digital_twin/**/*.npy
-digital_twin/**/*.npz
-digital_twin/timeseries/
-digital_twin/flexibility/*.parquet
-digital_twin/semantic/*.parquet
-digital_twin/models/**/*.parquet
-
-# Instance-local generated digital twin artifacts. The root `digital_twin`
-# symlink is kept for compatibility, but the physical workspace lives here.
 instances/*/digital_twin/**/*.parquet
 instances/*/digital_twin/**/*.pkl
 instances/*/digital_twin/**/*.npy

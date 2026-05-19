@@ -75,7 +75,7 @@ test('normalizeNetworkImpactReports tolerates missing reports', () => {
 test('loadNetworkImpactReports loads scenario-specific reports from catalog', async () => {
   const responses = new Map([
     [
-      '/digital_twin/flexibility/network_impact_catalog.json',
+      '/instances/default/digital_twin/flexibility/network_impact_catalog.json',
       {
         scenarios: {
           S1: {
@@ -133,7 +133,7 @@ test('loadNetworkImpactReports loads scenario-specific reports from catalog', as
   assert.equal(loaded.scenarios.S4.labels.n_samples, 12);
   assert.equal(loaded.scenarios.S4.physics.total_delivered_mwh, 1.2);
   assert.deepEqual(requested, [
-    '/digital_twin/flexibility/network_impact_catalog.json',
+    '/instances/default/digital_twin/flexibility/network_impact_catalog.json',
     '/custom/S4_labels.json',
     '/custom/S4_verification.json',
   ]);

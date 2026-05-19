@@ -65,7 +65,7 @@ class ArtifactLayout:
 
     @property
     def digital_twin(self) -> Path:
-        return self.root / "digital_twin"
+        return self.default_instance / "digital_twin"
 
     @property
     def cache(self) -> Path:

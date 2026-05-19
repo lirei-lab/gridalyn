@@ -40,21 +40,21 @@ Generate the layer with:
 ```bash
 uv run gridalyn market surrogate \
   --scenario-id S4 \
-  --provider-registry digital_twin/flexibility/provider_registry.parquet \
-  --sensitivity digital_twin/flexibility/network_sensitivity.parquet \
-  --out-dir digital_twin/flexibility
+  --provider-registry instances/default/digital_twin/flexibility/provider_registry.parquet \
+  --sensitivity instances/default/digital_twin/flexibility/network_sensitivity.parquet \
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 The command writes:
 
 ```text
-digital_twin/flexibility/network_graph_nodes.parquet
-digital_twin/flexibility/network_graph_edges.parquet
-digital_twin/flexibility/network_node_features.parquet
-digital_twin/flexibility/network_edge_features.parquet
-digital_twin/flexibility/network_impact_training.parquet
-digital_twin/flexibility/network_impact_predictions.parquet
-digital_twin/flexibility/network_impact_surrogate_report.json
+instances/default/digital_twin/flexibility/network_graph_nodes.parquet
+instances/default/digital_twin/flexibility/network_graph_edges.parquet
+instances/default/digital_twin/flexibility/network_node_features.parquet
+instances/default/digital_twin/flexibility/network_edge_features.parquet
+instances/default/digital_twin/flexibility/network_impact_training.parquet
+instances/default/digital_twin/flexibility/network_impact_predictions.parquet
+instances/default/digital_twin/flexibility/network_impact_surrogate_report.json
 ```
 
 Current S4 generation produces:
@@ -183,8 +183,8 @@ uv run gridalyn market perturbation-samples \
 The command writes:
 
 ```text
-digital_twin/flexibility/network_impact_physics_labels.parquet
-digital_twin/flexibility/network_impact_physics_labels_report.json
+instances/default/digital_twin/flexibility/network_impact_physics_labels.parquet
+instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json
 ```
 
 Each row is one provider/timestep/constraint perturbation replayed through
@@ -231,16 +231,16 @@ Train the first physics-backed selector table with:
 ```bash
 uv run gridalyn market train-physics-surrogate \
   --scenario-id S4 \
-  --training-path digital_twin/flexibility/network_impact_training.parquet \
-  --labels-path digital_twin/flexibility/network_impact_physics_labels.parquet \
-  --out-dir digital_twin/flexibility
+  --training-path instances/default/digital_twin/flexibility/network_impact_training.parquet \
+  --labels-path instances/default/digital_twin/flexibility/network_impact_physics_labels.parquet \
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 The command writes:
 
 ```text
-digital_twin/flexibility/network_impact_physics_predictions.parquet
-digital_twin/flexibility/network_impact_physics_surrogate_report.json
+instances/default/digital_twin/flexibility/network_impact_physics_predictions.parquet
+instances/default/digital_twin/flexibility/network_impact_physics_surrogate_report.json
 ```
 
 The v1 model is `tabular_physics_lookup_v1`. It uses direct
@@ -265,8 +265,8 @@ Validate the physics-backed predictions with:
 ```bash
 uv run gridalyn market verify-network-impact \
   --scenario-id S4 \
-  --predictions-path digital_twin/flexibility/network_impact_physics_predictions.parquet \
-  --out-path digital_twin/flexibility/network_impact_physics_verification_report.json
+  --predictions-path instances/default/digital_twin/flexibility/network_impact_physics_predictions.parquet \
+  --out-path instances/default/digital_twin/flexibility/network_impact_physics_verification_report.json
 ```
 
 Current S4 comparison:
@@ -350,7 +350,7 @@ After report generation, refresh the scenario-aware dashboard catalog:
 uv run gridalyn market network-impact-catalog
 ```
 
-The catalog writes `digital_twin/flexibility/network_impact_catalog.json`. It
+The catalog writes `instances/default/digital_twin/flexibility/network_impact_catalog.json`. It
 marks scenarios with available report artifacts separately from scenarios whose
 Network Impact validation has not been generated yet, so the dashboard does not
 reuse S4 metrics for S0-S3.

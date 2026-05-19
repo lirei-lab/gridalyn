@@ -18,10 +18,10 @@ from gridalyn.operations.market.providers import (
 )
 
 
-DEFAULT_BASE_DIR = ROOT / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
-DEFAULT_MODELS_DIR = ROOT / "digital_twin" / "models"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
+DEFAULT_MODELS_DIR = ROOT / "instances" / "default" / "digital_twin" / "models"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
 
 
 def _relpath(path: Path) -> str:

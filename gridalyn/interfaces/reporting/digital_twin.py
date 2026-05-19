@@ -8,6 +8,7 @@ from typing import Any
 
 ROOT = Path(__file__).parents[3]
 
+from gridalyn.foundation import ArtifactLayout
 from gridalyn.interfaces.reporting.schemas import (
     canonical_report,
     load_json,
@@ -28,10 +29,11 @@ def build_digital_twin_reports(
     out_dir: Path | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
-    out_dir = (out_dir or (root / "digital_twin" / "reports" / "canonical")).resolve()
-    reports_dir = root / "digital_twin" / "reports"
-    semantic_dir = root / "digital_twin" / "semantic"
-    scenarios_dir = root / "digital_twin" / "scenarios"
+    layout = ArtifactLayout(root)
+    out_dir = (out_dir or (layout.reports / "canonical")).resolve()
+    reports_dir = layout.reports
+    semantic_dir = layout.semantic
+    scenarios_dir = layout.scenarios
 
     transformer_path = reports_dir / "mv_lv_transformer_overload_report.json"
     semantic_manifest_path = semantic_dir / "graph_manifest.json"
@@ -77,7 +79,7 @@ def build_digital_twin_reports(
             "soft_assignment_seed": asset_summary.get("soft_assignment_seed"),
         },
         artifacts={
-            "asset_registry": "digital_twin/scenarios/asset_registry.parquet",
+            "asset_registry": "instances/default/digital_twin/scenarios/asset_registry.parquet",
             "asset_registry_summary": relpath(asset_summary_path, root)
             if asset_summary_path.exists()
             else None,

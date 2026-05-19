@@ -75,12 +75,12 @@ to renderer metadata even when numerical results are unchanged.
 
 ```text
 projects/flexibility_cls/   # executable project/workflow and outputs
-digital_twin/                     # canonical network/scenario artifacts
+instances/default/digital_twin/                     # canonical network/scenario artifacts
 gridalyn/                         # reusable library and workflow code
 examples/                         # tutorials only, not a project dependency
 ```
 
-The project may consume reusable `gridalyn` and `digital_twin` artifacts, but it
+The project may consume reusable `gridalyn` and `instances/default/digital_twin` artifacts, but it
 does not depend on any legacy runtime backend.
 
 ## Synthetic Network Source
@@ -212,7 +212,7 @@ and what must validate. Python remains responsible for the numerical model and
 grid generation logic.
 
 With `pathBase: repo`, commands and artifacts use top-level paths such as
-`projects/flexibility_cls/scripts/...` and `digital_twin/base`, avoiding
+`projects/flexibility_cls/scripts/...` and `instances/default/digital_twin/base`, avoiding
 nested `../../` paths from the project folder.
 
 ## Current Stage Flow
@@ -310,9 +310,9 @@ interruption or limiting.
 
 Spatial validation consumes:
 
-- `digital_twin/scenarios/asset_registry.parquet`;
+- `instances/default/digital_twin/scenarios/asset_registry.parquet`;
 - `projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet`;
-- `digital_twin/timeseries/S4_ev_load.parquet`;
+- `instances/default/digital_twin/timeseries/S4_ev_load.parquet`;
 - the project-owned synthetic pandapower topology cache under
   `projects/flexibility_cls/outputs/cache`.
 

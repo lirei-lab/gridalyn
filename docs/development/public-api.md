@@ -50,7 +50,7 @@ directly.
 ```python
 from gridalyn.network import NetworkModelRepository
 
-repo = NetworkModelRepository.from_parquet("digital_twin/base")
+repo = NetworkModelRepository.from_parquet("instances/default/digital_twin/base")
 model = repo.load_model()
 downstream = repo.get_downstream("transformer:25")
 feeder = repo.get_feeder("bus:3260")
@@ -70,19 +70,19 @@ supports static base-network artifacts and returns typed result objects for:
 | `NetworkIntegrityReport` | Endpoint, load, building, and connectivity validation summary. |
 
 Consumers should prefer this repository over ad hoc joins against
-`digital_twin/base`. That keeps dashboards, market logic, semantic export, and
+`instances/default/digital_twin/base`. That keeps dashboards, market logic, semantic export, and
 future real-data adapters aligned around the same topology contract.
 
 ## Base Twin Metadata API
 
 Use `gridalyn.workflows.digital_twin.base_metadata` when a workflow writes or
-validates a `digital_twin/base` snapshot.
+validates a `instances/default/digital_twin/base` snapshot.
 
 ```python
 from gridalyn.workflows.digital_twin.base_metadata import write_base_metadata
 
 write_base_metadata(
-    base_dir=Path("digital_twin/base"),
+    base_dir=Path("instances/default/digital_twin/base"),
     root=Path("."),
     config_path=Path("configs/grid/config.json"),
     config_hash="...",
@@ -97,7 +97,7 @@ rather than only the exporter’s in-memory state.
 ## Network Adapter API
 
 Use `gridalyn.adapters.network` when a workflow needs to convert a source
-network representation into the canonical `digital_twin/base` tables.
+network representation into the canonical `instances/default/digital_twin/base` tables.
 
 ```python
 from pathlib import Path
@@ -115,7 +115,7 @@ adapter = registry.create(
     config_path=Path("configs/grid/config.json"),
 )
 descriptor = describe_network_source_adapter(adapter)
-result = adapter.export(out_dir=Path("digital_twin/base"), root=Path("."))
+result = adapter.export(out_dir=Path("instances/default/digital_twin/base"), root=Path("."))
 ```
 
 Current adapter implementations include:
@@ -173,7 +173,7 @@ adapter = registry.create(
     "cim_parquet",
     source_dir=Path("path/to/cim_parquet"),
 )
-result = adapter.export(out_dir=Path("digital_twin/base"), root=Path("."))
+result = adapter.export(out_dir=Path("instances/default/digital_twin/base"), root=Path("."))
 ```
 
 The CLI wrapper can resolve the same adapter:
@@ -182,7 +182,7 @@ The CLI wrapper can resolve the same adapter:
 uv run python -m gridalyn.workflows.scripts.export_digital_twin_base \
   --adapter-id cim_parquet \
   --source-dir path/to/cim_parquet \
-  --out-dir digital_twin/base
+  --out-dir instances/default/digital_twin/base
 ```
 
 Use `gridalyn.adapters.validation` when writing a validation report for a custom
@@ -192,8 +192,8 @@ adapter:
 from gridalyn.adapters.validation import write_network_adapter_validation_report
 
 write_network_adapter_validation_report(
-    path=Path("digital_twin/reports/network_adapter_validation_report.json"),
-    base_dir=Path("digital_twin/base"),
+    path=Path("instances/default/digital_twin/reports/network_adapter_validation_report.json"),
+    base_dir=Path("instances/default/digital_twin/base"),
     root=Path("."),
     source_adapter="CustomAdapter",
     source_standard="custom",
@@ -277,7 +277,7 @@ operation_run = build_operation_run(
     scenario_id="S4",
     network_model_version_id="model:sha256:...",
     study_run_id="run:...",
-    input_artifacts={"provider_registry": "digital_twin/flexibility/provider_registry.parquet"},
+    input_artifacts={"provider_registry": "instances/default/digital_twin/flexibility/provider_registry.parquet"},
     output_artifacts={"dispatch_instructions": "projects/my_case/outputs/operations/dispatch_instructions.parquet"},
     kpi_report="projects/my_case/outputs/reports/operational_kpi_report.json",
 )

@@ -14,9 +14,9 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
     def test_materializer_writes_operation_tables_and_kpi_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            input_dir = root / "digital_twin" / "flexibility"
+            input_dir = root / "instances" / "default" / "digital_twin" / "flexibility"
             input_dir.mkdir(parents=True)
-            base_dir = root / "digital_twin" / "base"
+            base_dir = root / "instances" / "default" / "digital_twin" / "base"
             base_dir.mkdir(parents=True)
             manifests_dir = root / "projects" / "flexibility_cls" / "outputs" / "manifests"
             manifests_dir.mkdir(parents=True)

@@ -12,8 +12,8 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-BASE_DIR = ROOT / "digital_twin" / "base"
-SCENARIO_DIR = ROOT / "digital_twin" / "scenarios"
+BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
+SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
 SCENARIOS = {
     "S0": 0,
     "S1": 10,

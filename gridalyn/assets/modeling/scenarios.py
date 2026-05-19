@@ -12,7 +12,7 @@ import pandas as pd
 
 
 SCENARIO_SOURCE_STANDARD = "pycity-inspired-scenario-overlay"
-ASSET_REGISTRY_SOURCE_TABLE = "digital_twin/scenarios/asset_registry.parquet"
+ASSET_REGISTRY_SOURCE_TABLE = "instances/default/digital_twin/scenarios/asset_registry.parquet"
 
 
 def _bool_value(value: object) -> bool:
@@ -264,7 +264,7 @@ def write_scenario_model_artifacts(
     base_device_registry: pd.DataFrame,
     asset_registry: pd.DataFrame,
     *,
-    out_dir: Path = Path("digital_twin/models/scenarios"),
+    out_dir: Path = Path("instances/default/digital_twin/models/scenarios"),
     root: Path = Path("."),
     scenario_id: str | None = None,
 ) -> dict[str, Any]:
@@ -332,8 +332,8 @@ def write_scenario_model_artifacts(
         },
         "scenario_counts": scenario_counts,
         "inputs": {
-            "building_models": "digital_twin/models/building_models.parquet",
-            "base_device_registry": "digital_twin/models/device_registry.parquet",
+            "building_models": "instances/default/digital_twin/models/building_models.parquet",
+            "base_device_registry": "instances/default/digital_twin/models/device_registry.parquet",
             "asset_registry": ASSET_REGISTRY_SOURCE_TABLE,
         },
         "artifacts": artifacts,

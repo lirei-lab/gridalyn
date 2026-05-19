@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from gridalyn.foundation import ArtifactLayout
+
 
 def _step(name: str, command: list[str], *, heavy: bool = False, optional: bool = False) -> dict[str, Any]:
     return {
@@ -78,9 +80,9 @@ def build_digital_twin_steps(
                         "gridalyn.interfaces.cli.flexibility",
                         "verify-network-impact",
                         "--predictions-path",
-                        "digital_twin/flexibility/network_impact_physics_predictions.parquet",
+                        "instances/default/digital_twin/flexibility/network_impact_physics_predictions.parquet",
                         "--out-path",
-                        "digital_twin/flexibility/network_impact_physics_verification_report.json",
+                        "instances/default/digital_twin/flexibility/network_impact_physics_verification_report.json",
                     ],
                     heavy=True,
                     optional=True,
@@ -119,11 +121,11 @@ def build_manifest(
         "steps": steps,
         "results": results,
         "artifacts": {
-            "dashboard_catalog": "digital_twin/dashboard/catalog.json",
-            "building_model_manifest": "digital_twin/models/building_model_manifest.json",
-            "scenario_model_manifest": "digital_twin/models/scenarios/scenario_model_manifest.json",
-            "semantic_manifest": "digital_twin/semantic/graph_manifest.json",
-            "canonical_report_manifest": "digital_twin/reports/canonical/digital_twin_report_manifest.json",
+            "dashboard_catalog": "instances/default/digital_twin/dashboard/catalog.json",
+            "building_model_manifest": "instances/default/digital_twin/models/building_model_manifest.json",
+            "scenario_model_manifest": "instances/default/digital_twin/models/scenarios/scenario_model_manifest.json",
+            "semantic_manifest": "instances/default/digital_twin/semantic/graph_manifest.json",
+            "canonical_report_manifest": "instances/default/digital_twin/reports/canonical/digital_twin_report_manifest.json",
         },
         "root": ".",
     }
@@ -149,6 +151,7 @@ def run_digital_twin_build(
         skip_heavy=skip_heavy,
         include_network_impact=include_network_impact,
     )
+    layout = ArtifactLayout(root)
     results: list[dict[str, Any]] = []
     for step in steps:
         display_command = ["python", *step["command"]]
@@ -168,14 +171,14 @@ def run_digital_twin_build(
         if completed.returncode != 0 and not (continue_on_error or step["optional"]):
             manifest = build_manifest(steps, root=root, dry_run=dry_run, results=results)
             write_build_manifest(
-                manifest_path or root / "digital_twin" / "reports" / "digital_twin_build_manifest.json",
+                manifest_path or layout.reports / "digital_twin_build_manifest.json",
                 manifest,
             )
             raise RuntimeError(f"Digital twin build step failed: {step['name']} ({completed.returncode})")
 
     manifest = build_manifest(steps, root=root, dry_run=dry_run, results=results)
     write_build_manifest(
-        manifest_path or root / "digital_twin" / "reports" / "digital_twin_build_manifest.json",
+        manifest_path or layout.reports / "digital_twin_build_manifest.json",
         manifest,
     )
     return manifest

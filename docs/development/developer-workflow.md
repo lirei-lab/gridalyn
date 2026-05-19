@@ -61,18 +61,18 @@ Generate the semantic graph:
 ```bash
 uv run gridalyn semantic build \
   --profile north_america \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --flexibility-dir digital_twin/flexibility \
-  --timeseries-dir digital_twin/timeseries \
-  --out-dir digital_twin/semantic
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --flexibility-dir instances/default/digital_twin/flexibility \
+  --timeseries-dir instances/default/digital_twin/timeseries \
+  --out-dir instances/default/digital_twin/semantic
 ```
 
 Validate graph semantics:
 
 ```bash
 uv run gridalyn semantic validate \
-  --semantic-dir digital_twin/semantic
+  --semantic-dir instances/default/digital_twin/semantic
 ```
 
 Generate locational clearing artifacts:
@@ -105,8 +105,8 @@ uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 
 Large simulation runs update many generated outputs:
 
-- `digital_twin/reports/canonical/`;
-- `digital_twin/semantic/`;
+- `instances/default/digital_twin/reports/canonical/`;
+- `instances/default/digital_twin/semantic/`;
 - `projects/flexibility_cls/outputs/`;
 - root `site/` when MkDocs builds.
 

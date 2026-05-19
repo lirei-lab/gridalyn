@@ -44,7 +44,7 @@ Current project report files include:
 Digital twin canonical reports live under:
 
 ```text
-digital_twin/reports/canonical/
+instances/default/digital_twin/reports/canonical/
 ```
 
 Current digital twin reports include:

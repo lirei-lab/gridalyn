@@ -16,17 +16,17 @@ Generate the provider artifacts with:
 
 ```bash
 uv run gridalyn market providers \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --out-dir digital_twin/flexibility
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 The command writes:
 
 ```text
-digital_twin/flexibility/provider_registry.parquet
-digital_twin/flexibility/network_sensitivity.parquet
-digital_twin/flexibility/provider_registry_summary.json
+instances/default/digital_twin/flexibility/provider_registry.parquet
+instances/default/digital_twin/flexibility/network_sensitivity.parquet
+instances/default/digital_twin/flexibility/provider_registry_summary.json
 ```
 
 After the provider layer exists, generate the GNN-ready impact surrogate:
@@ -34,7 +34,7 @@ After the provider layer exists, generate the GNN-ready impact surrogate:
 ```bash
 uv run gridalyn market surrogate \
   --scenario-id S4 \
-  --out-dir digital_twin/flexibility
+  --out-dir instances/default/digital_twin/flexibility
 ```
 
 That command adds graph, feature, training, prediction, and report artifacts
@@ -188,10 +188,10 @@ It derives active transformer requirements from
 `network_impact_predictions.parquet`, and writes:
 
 ```text
-digital_twin/flexibility/locational_clearing_events.parquet
-digital_twin/flexibility/locational_clearing_selections.parquet
-digital_twin/flexibility/locational_clearing_summary.json
-digital_twin/flexibility/locational_flexibility_clearing_report.json
+instances/default/digital_twin/flexibility/locational_clearing_events.parquet
+instances/default/digital_twin/flexibility/locational_clearing_selections.parquet
+instances/default/digital_twin/flexibility/locational_clearing_summary.json
+instances/default/digital_twin/flexibility/locational_flexibility_clearing_report.json
 ```
 
 Current S4 run over `transformer:64`, `transformer:99`, and
@@ -212,8 +212,8 @@ This replays `locational_clearing_selections.parquet` on the S4 pandapower
 network and writes:
 
 ```text
-digital_twin/flexibility/locational_clearing_dispatch.parquet
-digital_twin/flexibility/locational_clearing_verification_report.json
+instances/default/digital_twin/flexibility/locational_clearing_dispatch.parquet
+instances/default/digital_twin/flexibility/locational_clearing_verification_report.json
 ```
 
 The current S4 verification shows `0.0208 MWh` delivered, `0.0012 MWh`
@@ -257,7 +257,7 @@ uv run gridalyn market shadow-report \
 ```
 
 The report uses the top transformer constraints from
-`digital_twin/reports/mv_lv_transformer_overload_report.json`, maps them to
+`instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json`, maps them to
 `transformer:*` IDs, and runs provider selection for each timestep where the
 aggregate dispatch requests Soft or Hard CLS.
 
@@ -289,7 +289,7 @@ uv run gridalyn market verify-network-impact \
 It writes:
 
 ```text
-digital_twin/flexibility/network_impact_verification_report.json
+instances/default/digital_twin/flexibility/network_impact_verification_report.json
 ```
 
 The report compares unmanaged load, current aggregate CLS, topology-only
@@ -304,11 +304,11 @@ The semantic graph consumes `provider_registry.parquet` when generated with:
 ```bash
 uv run gridalyn semantic build \
   --profile north_america \
-  --base-dir digital_twin/base \
-  --scenario-dir digital_twin/scenarios \
-  --flexibility-dir digital_twin/flexibility \
-  --timeseries-dir digital_twin/timeseries \
-  --out-dir digital_twin/semantic
+  --base-dir instances/default/digital_twin/base \
+  --scenario-dir instances/default/digital_twin/scenarios \
+  --flexibility-dir instances/default/digital_twin/flexibility \
+  --timeseries-dir instances/default/digital_twin/timeseries \
+  --out-dir instances/default/digital_twin/semantic
 ```
 
 It creates explicit market-management nodes:

@@ -31,12 +31,12 @@ from gridalyn.projects.workflows.scripts.generate_provider_selection_shadow_repo
 from gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow import _run_powerflow
 
 
-DEFAULT_PROVIDERS = ROOT / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_PREDICTIONS = ROOT / "digital_twin" / "flexibility" / "network_impact_predictions.parquet"
-DEFAULT_DISPATCH = ROOT / "digital_twin" / "flexibility" / "market_dispatch_timeseries.parquet"
-DEFAULT_TRANSFORMERS = ROOT / "digital_twin" / "base" / "grid_transformers.parquet"
-DEFAULT_OVERLOAD_REPORT = ROOT / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
-DEFAULT_OUT_DIR = ROOT / "digital_twin" / "flexibility"
+DEFAULT_PROVIDERS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
+DEFAULT_PREDICTIONS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_predictions.parquet"
+DEFAULT_DISPATCH = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "market_dispatch_timeseries.parquet"
+DEFAULT_TRANSFORMERS = ROOT / "instances" / "default" / "digital_twin" / "base" / "grid_transformers.parquet"
+DEFAULT_OVERLOAD_REPORT = ROOT / "instances" / "default" / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
+DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
 
 
 def _relpath(path: Path) -> str:
