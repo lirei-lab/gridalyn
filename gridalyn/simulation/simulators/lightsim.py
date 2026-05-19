@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandapower as pp
 
@@ -18,7 +20,13 @@ class LightSimPowerflowAdapter:
                 "Install gridalyn with the simulation dependencies."
             ) from exc
         self.net = net
-        self.grid = init_from_pandapower(net)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message='LightSim has not found any generators tagged as "slack bus".*',
+                category=UserWarning,
+            )
+            self.grid = init_from_pandapower(net)
         self._last_voltage = np.ones(len(net.bus), dtype=complex)
 
     def reset(self) -> None:

@@ -109,7 +109,9 @@ class PandapowerGridBuilder:
             "tap_step_percent": float(transformer_config.get("tap_step_percent", 1.25)),
             "tap_step_degree": float(transformer_config.get("tap_step_degree", 0)),
             "tap_pos": int(transformer_config.get("tap_pos", 0)),
-            "tap_phase_shifter": bool(transformer_config.get("tap_phase_shifter", False)),
+            "tap_phase_shifter": bool(
+                transformer_config.get("tap_phase_shifter", False)
+            ),
         }
         pp.create_std_type(self.net, params, name=std_type, element="trafo")
 
@@ -151,7 +153,9 @@ class PandapowerGridBuilder:
                 geodata_list.append((data["x"], data["y"]))
 
         if valid_nodes:
-            self.logger.info(f"Vectorizing creation of {len(valid_nodes)} {voltage_level.upper()} buses...")
+            self.logger.info(
+                f"Vectorizing creation of {len(valid_nodes)} {voltage_level.upper()} buses..."
+            )
             bus_indices = pp.create_buses(
                 self.net,
                 len(valid_nodes),
@@ -168,12 +172,12 @@ class PandapowerGridBuilder:
         to_buses = []
         lengths_km = []
         names = []
-        
+
         for source, target, _edge_data in graph.edges(data=True):
             if source in node_to_bus_mapping and target in node_to_bus_mapping:
                 from_buses.append(node_to_bus_mapping[source])
                 to_buses.append(node_to_bus_mapping[target])
-                
+
                 from_pos = (graph.nodes[source]["y"], graph.nodes[source]["x"])
                 to_pos = (graph.nodes[target]["y"], graph.nodes[target]["x"])
                 length_km = max(
@@ -186,7 +190,9 @@ class PandapowerGridBuilder:
         added_lines = len(from_buses)
 
         if added_lines > 0:
-            self.logger.info(f"Vectorizing creation of {added_lines} {voltage_level.upper()} lines...")
+            self.logger.info(
+                f"Vectorizing creation of {added_lines} {voltage_level.upper()} lines..."
+            )
             pp.create_lines(
                 self.net,
                 from_buses,
@@ -304,42 +310,50 @@ class PandapowerGridBuilder:
                 hv_buses.append(high_bus)
                 lv_buses.append(low_bus)
                 names.append(f"Transformer_{high_node}_to_{low_node}")
-                
+
         added_transformers = len(hv_buses)
 
         if added_transformers > 0:
-            self.logger.info(f"Vectorizing creation of {added_transformers} {high_level.upper()}-{low_level.upper()} transformers...")
-            
+            self.logger.info(
+                f"Vectorizing creation of {added_transformers} {high_level.upper()}-{low_level.upper()} transformers..."
+            )
+
             # Using single dataframe concat methodology to mass-insert transformers
-            transformer_df = pd.DataFrame({
-                "hv_bus": hv_buses,
-                "lv_bus": lv_buses,
-                "std_type": transformer_config["std_type"],
-                "name": names,
-                "in_service": True,
-                "parallel": 1,
-                "df": 1.0,
-                "tap_pos": float("nan"),
-            })
-            
+            transformer_df = pd.DataFrame(
+                {
+                    "hv_bus": hv_buses,
+                    "lv_bus": lv_buses,
+                    "std_type": transformer_config["std_type"],
+                    "name": names,
+                    "in_service": True,
+                    "parallel": 1,
+                    "df": 1.0,
+                    "tap_pos": float("nan"),
+                }
+            )
+
             # Retrieve trafo specs to populate native sn_mva, vn_hv, vn_lv etc
-            std_type_params = pp.std_types.load_std_type(self.net, transformer_config["std_type"], "trafo")
-            
+            std_type_params = pp.std_types.load_std_type(
+                self.net, transformer_config["std_type"], "trafo"
+            )
+
             # Combine the parameters so they are written perfectly via pp.create_transformer
             for key, val in std_type_params.items():
                 transformer_df[key] = val
-                
-            self.net.trafo = pd.concat([self.net.trafo, transformer_df], ignore_index=True)
-            
+
+            self.net.trafo = pd.concat(
+                [self.net.trafo, transformer_df], ignore_index=True
+            )
+
             # Update pp types/dtypes correctly
             self.net.trafo["in_service"] = self.net.trafo["in_service"].astype(bool)
             tap_phase = self.net.trafo.get("tap_phase_shifter")
             if tap_phase is None:
                 self.net.trafo["tap_phase_shifter"] = False
             else:
-                self.net.trafo["tap_phase_shifter"] = (
-                    tap_phase.fillna(False).infer_objects(copy=False).astype(bool)
-                )
+                tap_phase = tap_phase.copy()
+                tap_phase.loc[tap_phase.isna()] = False
+                self.net.trafo["tap_phase_shifter"] = tap_phase.astype(bool)
 
         self.logger.info(
             f"Successfully added {added_transformers} {high_level.upper()}-{low_level.upper()} "
@@ -439,7 +453,7 @@ class PandapowerGridBuilder:
             )
 
         unmatched_buildings = []
-        
+
         lv_buses = []
         p_mws = []
         q_mvars = []
@@ -461,7 +475,7 @@ class PandapowerGridBuilder:
             p_mws.append(building_data.get("p_mw", 0))
             q_mvars.append(building_data.get("q_mvar", 0))
             names.append(f"Load_{building_node}")
-            
+
         load_count = len(lv_buses)
 
         if load_count > 0:

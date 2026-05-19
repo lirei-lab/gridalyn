@@ -48,6 +48,8 @@ def build_voltage_control_feeder(
         bus=int(der.pv_bus_id),
         p_mw=0.0,
         q_mvar=0.0,
+        min_q_mvar=0.0,
+        max_q_mvar=0.0,
         name="pv_plant",
         type="PV",
     )
@@ -56,6 +58,8 @@ def build_voltage_control_feeder(
         bus=int(der.battery_bus_id),
         p_mw=0.0,
         q_mvar=0.0,
+        min_q_mvar=0.0,
+        max_q_mvar=0.0,
         name="battery_discharge",
         type="battery",
     )
@@ -80,7 +84,9 @@ def voltage_control_assets_to_frame(
             "initial_soc_mwh": float(asset.battery.initial_soc_mwh),
             "min_soc_mwh": float(asset.battery.min_soc_mwh),
             "max_soc_mwh": float(asset.max_soc_mwh),
-            "action_space_mw": ";".join(str(float(value)) for value in asset.action_space_mw),
+            "action_space_mw": ";".join(
+                str(float(value)) for value in asset.action_space_mw
+            ),
         }
         for asset in assets
     ]
@@ -122,7 +128,9 @@ def _validate_voltage_control_der(
     if der.pv_capacity_mw < 0:
         raise ValueError("VoltageControlDERSpec.pv_capacity_mw must be non-negative")
     if der.max_soc_mwh < der.battery.min_soc_mwh:
-        raise ValueError("max_soc_mwh must be greater than or equal to battery.min_soc_mwh")
+        raise ValueError(
+            "max_soc_mwh must be greater than or equal to battery.min_soc_mwh"
+        )
     if der.battery.initial_soc_mwh < der.battery.min_soc_mwh:
         raise ValueError("battery.initial_soc_mwh must respect battery.min_soc_mwh")
     if der.battery.initial_soc_mwh > der.max_soc_mwh:

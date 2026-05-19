@@ -22,10 +22,10 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 from geopy.distance import geodesic
+from pyproj import Transformer
 from scipy.sparse.csgraph import minimum_spanning_tree
 from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
-from shapely.geometry import Point
 
 from gridalyn.twin.core.ontology import create_node_payload
 
@@ -70,8 +70,8 @@ class PowerGridGraph:
         graph_mv_buses (nx.Graph): A NetworkX graph of the medium-voltage buses
             and their connections.
         graph_hv_buses (nx.Graph): A NetworkX graph of the high-voltage buses
-            and their connections.ditto 
-            
+            and their connections.ditto
+
         labels_lv (np.ndarray): Cluster labels for the low-voltage buses, used to
             group them into LV networks.
         labels_mv (np.ndarray): Cluster labels for the medium-voltage buses, used
@@ -178,13 +178,21 @@ class PowerGridGraph:
 
         # Project to Web Mercator for accurate area calculation
         buildings_projected = buildings.to_crs(epsg=3857)
-        buildings_projected["centroid"] = buildings_projected.geometry.centroid
+        projected_centroids = buildings_projected.geometry.centroid
         buildings["area"] = buildings_projected.geometry.area
 
         # Convert back to WGS84 for standard lat/lon coordinates
-        buildings["centroid"] = buildings_projected["centroid"].to_crs(epsg=4326)
-        buildings["centroid_x"] = buildings["centroid"].x  # Longitude
-        buildings["centroid_y"] = buildings["centroid"].y  # Latitude
+        centroid_to_wgs84 = Transformer.from_crs(
+            buildings_projected.crs,
+            "EPSG:4326",
+            always_xy=True,
+        )
+        centroid_x, centroid_y = centroid_to_wgs84.transform(
+            projected_centroids.x.to_list(),
+            projected_centroids.y.to_list(),
+        )
+        buildings["centroid_x"] = centroid_x  # Longitude
+        buildings["centroid_y"] = centroid_y  # Latitude
 
         # Create result DataFrame with renamed columns
         result = buildings[["unique_id", "centroid_x", "centroid_y", "area"]].copy()
@@ -220,14 +228,16 @@ class PowerGridGraph:
         """Return metric clustering coordinates while preserving lon/lat nodes."""
         if not self.clustering_crs:
             return lon_lat_points
-        geometry = [
-            Point(float(lon), float(lat))
-            for lon, lat in lon_lat_points
-        ]
-        gdf = gpd.GeoDataFrame(geometry=geometry, crs="EPSG:4326").to_crs(
-            self.clustering_crs
+        transformer = Transformer.from_crs(
+            "EPSG:4326",
+            self.clustering_crs,
+            always_xy=True,
         )
-        return np.array([(geom.x, geom.y) for geom in gdf.geometry])
+        x_points, y_points = transformer.transform(
+            lon_lat_points[:, 0].tolist(),
+            lon_lat_points[:, 1].tolist(),
+        )
+        return np.column_stack((x_points, y_points))
 
     def _validate_cluster_inputs(
         self, points: np.ndarray, n_clusters: int, childs: Optional[List[int]]
@@ -286,7 +296,7 @@ class PowerGridGraph:
                 y=float(point[1]),
                 node_type=node_prefix,
                 cluster=int(labels[i]),
-                child=childs[i]
+                child=childs[i],
             )
             graph.add_node(node_id, **payload)
 
@@ -307,7 +317,7 @@ class PowerGridGraph:
                 x=float(center[0]),
                 y=float(center[1]),
                 node_type=cluster_prefix,
-                cluster=i
+                cluster=i,
             )
             graph.add_node(node_id, **payload)
 
@@ -331,10 +341,10 @@ class PowerGridGraph:
             cluster_prefix: Prefix for cluster center names
         """
         cluster_points = points[labels == cluster_id]
-        
+
         # Compute the Delaunay triangulation to infer street-corridor topological adjacencies
         from scipy.spatial import Delaunay
-        
+
         # If less than 4 points, Delaunay fails on coplanar, so fallback to full cdist
         if len(cluster_points) < 4:
             dist_matrix = cdist(cluster_points, cluster_points)
@@ -343,12 +353,14 @@ class PowerGridGraph:
                 tri = Delaunay(cluster_points)
                 indptr, indices = tri.vertex_neighbor_vertices
                 dist_matrix = np.zeros((len(cluster_points), len(cluster_points)))
-                
+
                 for k in range(len(cluster_points)):
-                    neighbors = indices[indptr[k]:indptr[k+1]]
+                    neighbors = indices[indptr[k] : indptr[k + 1]]
                     for n in neighbors:
                         # Euclidean distance *only* along Delaunay bounds
-                        dist_matrix[k, n] = np.linalg.norm(cluster_points[k] - cluster_points[n])
+                        dist_matrix[k, n] = np.linalg.norm(
+                            cluster_points[k] - cluster_points[n]
+                        )
             except Exception as e:
                 # Fallback if points are strictly collinear
                 dist_matrix = cdist(cluster_points, cluster_points)
@@ -370,17 +382,17 @@ class PowerGridGraph:
 
         # Link cluster center to the topologically optimal load center (Betweenness)
         cluster_center = f"{cluster_prefix}_{cluster_id}"
-        
+
         if len(sub_graph.nodes) > 0:
-            # Find the topological center using closeness centrality 
+            # Find the topological center using closeness centrality
             # to minimize voltage drop across all radial arms
             centrality = nx.closeness_centrality(sub_graph, distance="weight")
             optimal_node = max(centrality, key=centrality.get)
-            
+
             # Snap the abstract transformer location to this optimal node geometrically
             graph.nodes[cluster_center]["x"] = graph.nodes[optimal_node]["x"]
             graph.nodes[cluster_center]["y"] = graph.nodes[optimal_node]["y"]
-            
+
             # Add negligible service drop link
             graph.add_edge(optimal_node, cluster_center, weight=0.1)
         elif len(cluster_nodes) == 1:
@@ -491,7 +503,7 @@ class PowerGridGraph:
             max_load_per_building (float): The maximum installed non-coincident load per building in kW.
             mv_lv_transformer_capacity (float): The capacity of the MV-LV
                 transformers in kW.
-            capacity_utilization_factor (float): Target ratio of maximum transformer 
+            capacity_utilization_factor (float): Target ratio of maximum transformer
                 load vs rated capacity (e.g. 0.8 for 80% loading). Defaults to 0.60.
             diversity_factor_lv (float): Factor representing peak coincidence at LV level.
             avg_load_per_building (float): Legacy alias for
@@ -520,15 +532,18 @@ class PowerGridGraph:
         if mv_lv_transformer_capacity is None:
             raise ValueError("mv_lv_transformer_capacity is required")
         num_buildings = len(self.building_centroids)
-        
+
         total_installed_grid_power = num_buildings * max_load_per_building
-        
+
         # Sum of non-coincident peaks is total_installed_grid_power.
         # Coincident peak = Non-Coincident Peak / Diversity Factor
         coincident_peak_kw = total_installed_grid_power / diversity_factor_lv
-        
+
         num_lv_transformers = int(
-            np.ceil(coincident_peak_kw / (mv_lv_transformer_capacity * capacity_utilization_factor))
+            np.ceil(
+                coincident_peak_kw
+                / (mv_lv_transformer_capacity * capacity_utilization_factor)
+            )
         )
 
         self.graph_lv_buses, self.labels_lv = self.create_cluster_graph(
@@ -541,8 +556,8 @@ class PowerGridGraph:
         return self.graph_lv_buses
 
     def create_mv_graph(
-        self, 
-        mv_lv_transformer_capacity: float, 
+        self,
+        mv_lv_transformer_capacity: float,
         hv_mv_transformer_capacity: float,
         diversity_factor_mv: float = 1.3,
         num_mv_substations: int | None = None,
@@ -586,11 +601,15 @@ class PowerGridGraph:
         )
 
         if num_mv_substations is None:
-            total_mv_load = (len(lv_transformer_positions) * mv_lv_transformer_capacity) / diversity_factor_mv
-            num_mv_substations = int(np.ceil(total_mv_load / hv_mv_transformer_capacity))
+            total_mv_load = (
+                len(lv_transformer_positions) * mv_lv_transformer_capacity
+            ) / diversity_factor_mv
+            num_mv_substations = int(
+                np.ceil(total_mv_load / hv_mv_transformer_capacity)
+            )
         else:
             num_mv_substations = int(num_mv_substations)
-        
+
         # Ensure at least 1 substation
         num_mv_substations = max(1, num_mv_substations)
 
@@ -614,10 +633,10 @@ class PowerGridGraph:
         return self.graph_mv_buses
 
     def create_hv_substation_graph(
-        self, 
-        hv_mv_transformer_capacity: float, 
+        self,
+        hv_mv_transformer_capacity: float,
         hv_substation_capacity: float,
-        diversity_factor_hv: float = 1.1
+        diversity_factor_hv: float = 1.1,
     ) -> nx.Graph:
         """Creates the high-voltage (HV) substation graph from MV feeder positions.
 
@@ -659,9 +678,11 @@ class PowerGridGraph:
 
         childs = [data["cluster"] for _node, data in mv_feeder_nodes]
 
-        total_hv_load = (len(mv_substation_positions) * hv_mv_transformer_capacity) / diversity_factor_hv
+        total_hv_load = (
+            len(mv_substation_positions) * hv_mv_transformer_capacity
+        ) / diversity_factor_hv
         num_hv_substations = int(np.ceil(total_hv_load / hv_substation_capacity))
-        
+
         # Ensure at least 1 substation
         num_hv_substations = max(1, num_hv_substations)
 
@@ -676,7 +697,10 @@ class PowerGridGraph:
         return self.graph_hv_buses
 
     def create_building_graph(
-        self, max_load_per_building: float = 25.0, reactive_power_ratio: float = 0.1, diversity_factor_lv: float = 5.0
+        self,
+        max_load_per_building: float = 25.0,
+        reactive_power_ratio: float = 0.1,
+        diversity_factor_lv: float = 5.0,
     ) -> nx.Graph:
         """Creates a building graph from the LV bus graph.
 
@@ -700,25 +724,23 @@ class PowerGridGraph:
             ValueError: If the LV graph has not been initialized.
         """
         if self.graph_lv_buses is None:
-            raise ValueError(
-                "LV graph must be created before creating building graph"
-            )
+            raise ValueError("LV graph must be created before creating building graph")
 
         # Create a copy of graph_lv_buses and update node types to "building"
         self.graph_buildings = self.graph_lv_buses.copy()
-        
+
         # We need to relabel the dict keys from 'lv_bus_idx' -> 'building_idx'
         mapping = {}
-        
+
         building_idx = 0
         for node, data in self.graph_buildings.nodes(data=True):
             if data.get("type", "").startswith("lv_bus"):
                 new_name = node.replace("lv_bus", "building")
                 mapping[node] = new_name
-                
+
                 # Assign the properly smoothed non-coincident building demand peak
                 load_kw = max_load_per_building / diversity_factor_lv
-                
+
                 # Update attributes with Pydantic validation
                 payload = create_node_payload(
                     node_id=new_name,
@@ -728,12 +750,12 @@ class PowerGridGraph:
                     cluster=data.get("cluster"),
                     child=data.get("child"),
                     load_kw=load_kw,
-                    load_kvar=load_kw * reactive_power_ratio
+                    load_kvar=load_kw * reactive_power_ratio,
                 )
                 data.clear()
                 data.update(payload)
                 building_idx += 1
-                
+
         nx.relabel_nodes(self.graph_buildings, mapping, copy=False)
 
         self.logger.info(
@@ -951,19 +973,19 @@ class PowerGridGraph:
             raise ValueError(
                 "The merged_graph is not initialized. Please run merge_graphs() first."
             )
-            
+
         # Scrub NoneType values since GraphML specification strictly forbids them
         clean_graph = self.merged_graph.copy()
         for node, data in clean_graph.nodes(data=True):
             for k, v in list(data.items()):
                 if v is None:
                     data[k] = ""
-                    
+
         for u, v, data in clean_graph.edges(data=True):
             for k, val in list(data.items()):
                 if val is None:
                     data[k] = ""
-                    
+
         nx.write_graphml(clean_graph, filepath)
         self.logger.info(f"Merged graph exported to GraphML format at {filepath}")
 
