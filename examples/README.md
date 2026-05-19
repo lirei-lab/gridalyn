@@ -1,8 +1,8 @@
 # Examples
 
 `examples/` is for tutorials and exploratory demos only. The directory is
-organized so a new user can distinguish learning material from compatibility
-wrappers and generated state.
+organized so a new user can distinguish learning material from generated local
+state.
 
 Stable platform commands live under `gridalyn.interfaces.cli`:
 
@@ -27,7 +27,7 @@ uv run gridalyn-dashboard catalog
 
 The `verify-clearing` smoke command assumes `projects/flexibility_cls` has been
 run. The shorter `gridalyn-flex verify-clearing --scenario-id S4` form targets a
-materialized `digital_twin/` instance.
+materialized `instances/default/digital_twin/` instance.
 
 ## Tutorial Scripts
 
@@ -52,32 +52,6 @@ See the docs tutorial
 `docs/tutorials/synthetic-network-from-geojson.md` for the recommended
 OSMnx/Microsoft workflow.
 
-## Compatibility Scripts
-
-`examples/compat/` contains thin wrappers only. They preserve older script paths
-while delegating operational logic to `gridalyn.workflows.scripts` or to a
-stable workflow module. New automation should use the CLI modules above instead
-of calling these files directly.
-
-When a production script is migrated, its reusable implementation should live
-under `gridalyn.workflows`. For example,
-`generate_digital_twin_ev_scenarios.py`,
-`generate_digital_twin_ev_timeseries.py`, and
-`generate_locational_clearing_verification_report.py` are now wrappers around
-workflow modules.
-
-Compatibility wrappers should stay small enough to audit at a glance. The test
-suite enforces this boundary so `examples/compat` does not become a parallel
-production API.
-
-Examples of commands being migrated:
-
-- digital twin artifact generation;
-- EV scenario and timeseries generation;
-- semantic graph generation and validation;
-- flexibility provider, locational clearing, and network impact workflows;
-- dashboard catalog generation.
-
 ## Generated State
 
 `examples/generated/cache` and `examples/generated/outputs` are local generated
@@ -94,7 +68,6 @@ configuration for projects or digital-twin workflows.
 examples/
   tutorials/          # readable learning examples
   data_acquisition/   # OSMNX/building download and filtering examples
-  compat/             # temporary wrappers for old production script paths
   generated/          # generated example outputs and request caches
 ```
 
@@ -108,6 +81,5 @@ uv sync --extra cim
 
 ## Contributing
 
-When adding a new operational command, add it under `gridalyn.interfaces.cli` or a workflow
-module first. Add a wrapper in `examples/` only if backwards compatibility is
-needed.
+When adding a new operational command, add it under `gridalyn.interfaces.cli` or
+a workflow module. Do not add production wrappers under `examples/`.

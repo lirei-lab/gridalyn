@@ -7,6 +7,10 @@ import importlib
 import json
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.foundation.platform.validation import validate_workspace
 
 

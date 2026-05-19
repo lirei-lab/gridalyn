@@ -11,11 +11,6 @@ from gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow import (
 
 
 class LocationalVerificationWorkflowTest(unittest.TestCase):
-    def test_example_wrapper_imports_workflow_main(self):
-        import examples.compat.generate_locational_clearing_verification_report as wrapper
-
-        self.assertIs(wrapper.main, locational_verification.main)
-
     def test_flexibility_cli_routes_verify_clearing_to_workflow(self):
         with patch.object(locational_verification, "main", return_value=0) as main:
             result = flexibility.main(["verify-clearing", "--scenario-id", "S4"])

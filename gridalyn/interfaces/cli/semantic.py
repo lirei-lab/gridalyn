@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from gridalyn.interfaces.cli.compat import run_module_as_script
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
+from gridalyn.interfaces.cli.script_runner import run_module_as_script
 
 ROOT = Path(__file__).resolve().parents[3]
 

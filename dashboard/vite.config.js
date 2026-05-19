@@ -58,6 +58,7 @@ export default defineConfig({
     exclude: ['@duckdb/duckdb-wasm'],
   },
   build: {
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       onwarn(warning, warn) {
         // Suppress missing .map file warnings from DuckDB npm package

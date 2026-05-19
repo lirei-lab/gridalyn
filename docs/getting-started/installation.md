@@ -93,7 +93,7 @@ projects/                governed reproducible workflows
 instances/default/       default local digital-twin instance
 dashboard/               browser application source
 docs/                    MkDocs source
-examples/                tutorials and compatibility wrappers
+examples/                tutorials and data-acquisition examples
 ```
 
 Generated simulations can update many figures, Parquet files, and JSON reports.

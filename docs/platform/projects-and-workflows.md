@@ -27,7 +27,7 @@ private publication folders.
 | `projects/<name>/` | project owner | executable workflow contract, scripts, outputs, reports, figures |
 | `instances/default/digital_twin/` | platform artifact layer | canonical Parquet/JSON contracts consumed by dashboards and applications |
 | `gridalyn/` | platform SDK | reusable logic only; no case-study outputs |
-| `examples/` | tutorial owner | examples and compatibility wrappers only; not a project runtime backend |
+| `examples/` | tutorial owner | tutorials and data-acquisition examples only; not a project runtime backend |
 
 ## Project Layout
 

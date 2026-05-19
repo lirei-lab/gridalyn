@@ -86,9 +86,8 @@ gridalyn.projects       project.yaml/workflow.yaml, workflows, regressions
 gridalyn.interfaces     CLI, report/dashboard contracts, graph/UI interfaces
 ```
 
-Legacy scripts and compatibility wrappers should call these modules instead of
-reimplementing workflow logic. New case studies should start in `projects/`,
-not in `examples/`.
+Script entrypoints should call these modules instead of reimplementing workflow
+logic. New case studies should start in `projects/`, not in `examples/`.
 
 Reusable path handling belongs in `gridalyn.foundation`:
 
@@ -152,9 +151,9 @@ Historical study scripts have been absorbed into governed project workspaces.
 New code should use the platform package or project-local scripts, and no SDK
 module should import project runtime logic.
 
-`examples/compat` and `gridalyn.projects.workflows.scripts` are compatibility
-wrapper layers. Stable commands in `gridalyn.interfaces.cli` should dispatch to
-SDK functions or thin workflow modules, and reusable behavior should continue
+`gridalyn.projects.workflows.scripts` contains script entrypoints, not domain
+logic. Stable commands in `gridalyn.interfaces.cli` should dispatch to SDK
+functions or thin workflow modules, and reusable behavior should continue
 moving toward `gridalyn.twin`, `gridalyn.operations`, `gridalyn.simulation`, or
 `gridalyn.assets`. This keeps the dependency direction correct: examples and
 projects may depend on `gridalyn`, but the SDK must not depend on them.
@@ -171,8 +170,7 @@ Those tests check that:
 
 - `gridalyn/foundation/data` only tracks discovery code;
 - tracked `gridalyn` and `gridalyn` files do not include generated cache/output directories;
-- `examples/compat` files remain thin wrappers rather than production scripts;
-- CLI modules dispatch to package modules instead of `examples/compat` paths;
+- CLI modules dispatch to package modules and workflow entrypoints;
 - the datagen weather cache defaults outside the package tree;
 - Monte Carlo exports do not default to publication or paper data paths.
 

@@ -6,6 +6,10 @@ import argparse
 import json
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.foundation.platform.projects import (
     init_project,
     load_project,

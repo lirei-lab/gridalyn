@@ -5,6 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.foundation.platform.artifacts import check_artifact_policy
 from gridalyn.foundation.platform.workspace import workspace_from_path
 

@@ -2,8 +2,8 @@ import sys
 import unittest
 from unittest.mock import mock_open, patch
 
-from examples.compat import sync_dashboard_public_from_digital_twin
 from examples.tutorials import create_grid_with_datagen_parallel
+from gridalyn.workflows.scripts import sync_dashboard_public_from_digital_twin
 
 
 class LegacyDashboardPublicGuardsTest(unittest.TestCase):

@@ -1,7 +1,9 @@
 import unittest
 import tomllib
+from unittest import mock
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
 from gridalyn.interfaces.cli import dashboard, digital_twin, flexibility, gridalyn as gridalyn_cli, platform, project, semantic
 
 
@@ -14,40 +16,28 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertTrue(args.dry_run)
         self.assertTrue(args.skip_heavy)
 
-    def test_build_wrapper_imports_cli_main(self):
-        import examples.compat.build_digital_twin as wrapper
-
-        self.assertIs(wrapper.main, digital_twin.main)
-
-    def test_build_wrapper_preserves_legacy_arguments(self):
-        import examples.compat.build_digital_twin as wrapper
-
-        self.assertEqual(
-            wrapper.normalize_argv(["--dry-run", "--skip-heavy"]),
-            ["build", "--dry-run", "--skip-heavy"],
-        )
-        self.assertEqual(
-            wrapper.normalize_argv(["dashboard-catalog"]),
-            ["dashboard-catalog"],
-        )
-
-    def test_compat_scripts_are_thin_wrappers(self):
-        compat_dir = Path("examples/compat")
-        oversized = []
-        for path in sorted(compat_dir.glob("*.py")):
-            if path.name == "__init__.py":
-                continue
-            lines = path.read_text().splitlines()
-            if len(lines) > 25:
-                oversized.append(f"{path.as_posix()}:{len(lines)}")
-
-        self.assertEqual([], oversized)
+    def test_examples_do_not_expose_compatibility_wrappers(self):
+        self.assertFalse(Path("examples/compat").exists())
 
     def test_cli_script_handlers_do_not_depend_on_examples_compat(self):
         for module in [digital_twin, flexibility, semantic, dashboard, platform]:
             source = Path(module.__file__).read_text()
             self.assertNotIn("examples/compat", source)
+            self.assertNotIn("interfaces.cli.compat", source)
             self.assertNotIn("run_path", source)
+
+    def test_cli_environment_sets_writable_matplotlib_cache(self):
+        with mock.patch.dict("os.environ", {}, clear=True):
+            configure_cli_environment()
+
+            self.assertIn("MPLCONFIGDIR", __import__("os").environ)
+            self.assertIn("gridalyn-matplotlib", __import__("os").environ["MPLCONFIGDIR"])
+
+    def test_cli_environment_preserves_existing_matplotlib_cache(self):
+        with mock.patch.dict("os.environ", {"MPLCONFIGDIR": "/custom/cache"}, clear=True):
+            configure_cli_environment()
+
+            self.assertEqual(__import__("os").environ["MPLCONFIGDIR"], "/custom/cache")
 
     def test_digital_twin_parser_exposes_artifact_commands(self):
         parser = digital_twin.build_parser()

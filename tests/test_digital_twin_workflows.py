@@ -9,16 +9,6 @@ from gridalyn.workflows.digital_twin import ev_scenarios, ev_timeseries
 
 
 class DigitalTwinWorkflowExtractionTest(unittest.TestCase):
-    def test_scenarios_wrapper_imports_workflow_main(self):
-        import examples.compat.generate_digital_twin_ev_scenarios as wrapper
-
-        self.assertIs(wrapper.main, ev_scenarios.main)
-
-    def test_timeseries_wrapper_imports_workflow_main(self):
-        import examples.compat.generate_digital_twin_ev_timeseries as wrapper
-
-        self.assertIs(wrapper.main, ev_timeseries.main)
-
     def test_digital_twin_cli_routes_scenarios_to_workflow(self):
         with patch.object(ev_scenarios, "main", return_value=0) as main:
             result = digital_twin.main(["scenarios", "--assignment-seed", "123"])

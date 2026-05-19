@@ -1,4 +1,4 @@
-"""Helpers for legacy script compatibility."""
+"""Helpers for invoking workflow modules from CLI subcommands."""
 
 from __future__ import annotations
 

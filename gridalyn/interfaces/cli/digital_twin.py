@@ -6,7 +6,11 @@ import argparse
 import json
 from pathlib import Path
 
-from gridalyn.interfaces.cli.compat import run_module_as_script
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
+from gridalyn.interfaces.cli.script_runner import run_module_as_script
 from gridalyn.twin.geoprocess import (
     clip_buildings_by_polygon,
     download_osm_building_footprints,

@@ -74,10 +74,8 @@ animation code that targeted legacy Kepler Parquet snapshots was removed from
 the package because the dashboard and project reports now consume canonical
 digital-twin artifacts directly.
 
-The legacy tutorial
-`examples/tutorials/create_grid_with_datagen_parallel.py` and compatibility
-wrapper `examples/compat/sync_dashboard_public_from_digital_twin.py` now
-require:
+The legacy tutorial `examples/tutorials/create_grid_with_datagen_parallel.py`
+now requires:
 
 ```bash
 --allow-legacy-dashboard-public
@@ -134,8 +132,8 @@ source path.
 
 ## Examples Cleanup Policy
 
-`examples/` is now organized around public tutorials, data-acquisition demos,
-and temporary compatibility wrappers. Production workflows should use
+`examples/` is now organized around public tutorials and data-acquisition
+demos. Production workflows should use
 `gridalyn.interfaces.cli` commands such as:
 
 ```bash
@@ -145,12 +143,10 @@ uv run gridalyn semantic validate
 uv run gridalyn dashboard catalog
 ```
 
-Compatibility scripts may remain under `examples/compat/` during the migration,
-but new automation should not depend on them. The first extracted workflows are
+Compatibility scripts no longer live under `examples/`. The first extracted workflows are
 `gridalyn.workflows.digital_twin.ev_scenarios`,
 `gridalyn.workflows.digital_twin.ev_timeseries`, and
-`gridalyn.workflows.flexibility.locational_verification`; their corresponding
-`examples/compat/*.py` files are now thin wrappers. Generated Python caches can
+`gridalyn.workflows.flexibility.locational_verification`. Generated Python caches can
 be deleted at any time. Data caches under `examples/generated/cache`,
 `examples/generated/outputs`, or root `cache` are tutorial or local caches and
 must not be project runtime dependencies.
