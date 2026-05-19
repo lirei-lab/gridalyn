@@ -293,8 +293,8 @@ names.
 ## Target Top-Level Modules
 
 The agreed SDK shape is seven large modules. Gridalyn now uses these names as
-the physical top-level package structure. Historical domain imports remain
-available as compatibility aliases while projects and tutorials migrate.
+the physical top-level package structure and public documentation should point
+users to these modules directly.
 
 ```text
 gridalyn/
@@ -320,23 +320,21 @@ gridalyn/
 The module names are intentionally product-oriented. A utility user should be
 able to infer what each area owns without knowing the history of the repository.
 
-## Deeper Migration Order
+## Package Stability Rule
 
-The migration should be gradual and evidence-driven:
+New reusable code should enter the module that owns its capability. Project
+scripts should call those modules, not recreate shared logic locally. When a
+capability is unclear, choose the layer by the artifact it owns:
 
-1. **Foundation first:** move shared governance contracts behind a stable
-   compatibility layer. This reduces risk for every later move.
-2. **Twin second:** consolidate network, topology, semantic, and adapter access
-   around a clearer digital-twin repository contract.
-3. **Operations third:** give flexibility providers, aggregators, clearing,
-   dispatch, settlement, and KPIs one clear operational home.
-4. **Simulation fourth:** separate physical validation engines and surrogate
-   analytics from market logic.
-5. **Assets fifth:** cleanly group building, EV, DER, load, and forecast models.
-6. **Interfaces sixth:** make CLI, reports, dashboard catalogs, graph exports,
-   and future APIs consume stable lower-layer services.
-7. **Projects last:** keep project orchestration thin after reusable logic has
-   already moved into the platform.
+| Artifact or behavior | Owning module |
+| --- | --- |
+| Workspace paths, reports, validation, manifests | `gridalyn.foundation` |
+| Network topology, scenario metadata, semantic graph | `gridalyn.twin` |
+| Building, EV, DER, load, and synthetic asset generation | `gridalyn.assets` |
+| Power-flow, thermal, voltage, and surrogate validation | `gridalyn.simulation` |
+| Providers, clearing, dispatch, settlement, and KPIs | `gridalyn.operations` |
+| Project contracts, runners, regressions, sense checks | `gridalyn.projects` |
+| CLI, dashboard/catalog, report, graph, and visualization surfaces | `gridalyn.interfaces` |
 
 Every deeper package move should include import adapters, tests, and
 documentation updates. The public CLI, project workflows, and seven top-level

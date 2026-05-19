@@ -53,10 +53,10 @@ The detailed responsibility map is in the
 - canonical reports and project manifests;
 - documentation and artifact policy checks.
 
-## What Is Transitional
+## What To Treat As Non-Public
 
 - The public platform name, package namespace, and CLI are Gridalyn.
 - Demo workflows prove platform capabilities but should not define the platform
   identity.
-- Some legacy package boundaries are documented so they can be cleaned safely
-  without breaking existing demo projects.
+- Generated outputs, local caches, archived notes, and one-off study scripts are
+  not part of the stable user-facing API.

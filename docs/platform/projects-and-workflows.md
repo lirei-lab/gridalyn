@@ -13,8 +13,9 @@ larger flexibility operations stack.
 ## Why Projects Exist
 
 The digital twin base is generated from raw geography and grid configuration.
-That means the project contract must start before `instances/default/digital_twin/base`; it owns
-the full chain from input configuration to final reports.
+That means the project contract must start before
+`instances/default/digital_twin/base`; it owns the full chain from input
+configuration to final reports.
 
 Use projects to avoid hidden dependencies on notebooks, tutorial scripts, or
 private publication folders.
@@ -62,14 +63,14 @@ Minimal shape:
 apiVersion: gridalyn.io/v1alpha1
 kind: StudyProject
 metadata:
-  name: flexibility_cls
+  name: my_case
   version: 0.1.0
 spec:
   pathBase: repo
   inputs: {}
   artifacts: {}
   workflow:
-    file: projects/flexibility_cls/workflow.yaml
+    file: projects/my_case/workflow.yaml
   validation:
     requiredReports: []
     requiredFigures: []
@@ -87,19 +88,19 @@ named by responsibility, and explicit about inputs and outputs.
 apiVersion: gridalyn.io/v1alpha1
 kind: Workflow
 metadata:
-  name: flexibility_cls
+  name: my_case
 spec:
   stages:
     - id: prepare_topology_cache
-      command: uv run python projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py
+      command: uv run python projects/my_case/scripts/prepare_topology_cache.py
       outputs:
-        - projects/flexibility_cls/outputs/cache/pg_graph_cache.pkl
+        - projects/my_case/outputs/cache/pg_graph_cache.pkl
 
     - id: generate_stochastic_profiles
       needs: [prepare_topology_cache]
-      command: uv run python projects/flexibility_cls/scripts/pipeline/00_generate_stochastic_profiles.py
+      command: uv run python projects/my_case/scripts/generate_stochastic_profiles.py
       outputs:
-        - projects/flexibility_cls/outputs/data/substation_baseline_mc.parquet
+        - projects/my_case/outputs/data/substation_baseline_mc.parquet
 ```
 
 The workflow runner executes stages in declared order, respects dependencies,

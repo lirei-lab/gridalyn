@@ -33,9 +33,7 @@ flowchart LR
 
 The canonical footprint preparation entry point is `gridalyn.twin.adapters`.
 The canonical network-generation entry point is
-`gridalyn.assets.build_synthetic_network_from_geojson`. Historical namespaces
-such as `gridalyn.geoprocess` and `gridalyn.modeling` remain as compatibility
-layers only.
+`gridalyn.assets.build_synthetic_network_from_geojson`.
 
 ## Project API
 

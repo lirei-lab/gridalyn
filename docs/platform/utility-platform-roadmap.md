@@ -66,10 +66,10 @@ The current system already has several strong platform ingredients:
 | Project workflows | `projects/*/project.yaml` and `workflow.yaml`. |
 | Dashboard | General digital twin catalog plus scenario and network impact panels. |
 
-The main remaining weakness is legacy naming gravity: old research and
-compatibility folders still exist in the repository. The public platform surface
-should keep those out of the main architecture and point users to `gridalyn`,
-`projects/`, and `instances/default/digital_twin/`.
+The main remaining weakness is boundary clarity: old research notes and local
+publication material can distract from the platform contract. The public
+surface should keep those out of the main architecture and point users to
+`gridalyn`, `projects/`, and `instances/default/digital_twin/`.
 
 ## Target Capability Architecture
 
@@ -174,8 +174,8 @@ evolves.
 
 - keep public demo projects reproducible and independent;
 - keep `instances/default/digital_twin/*` artifact contracts stable;
-- keep compatibility imports passing while reusable logic migrates;
-- keep public docs centered on the platform, not legacy study history;
+- keep the canonical SDK imports stable while reusable logic evolves;
+- keep public docs centered on the platform, not private study history;
 - run the release checks after every architecture step.
 
 **Exit criteria:**
@@ -456,21 +456,20 @@ reading study scripts.
 | Asset And Flexibility Modeling | Building models, EV scenario overlays, thermal forecast, asset registry. | Explicit spaces and flexibility envelopes. |
 | Simulation And Validation | Pandapower validation, network impact surrogate, consistency reports. | Common environment interface. |
 | Flexibility Market And Operations | Provider registry, locational clearing, operations facade, aggregator portfolios, offers, dispatch, settlement, network constraints, and operational KPIs. | Measured delivery records and dashboard-ready operations catalog. |
-| Problems And Experiments | Governed EV project and regression. | Reusable `Problem` and `Experiment` abstractions. |
+| Problems And Experiments | Governed project workflows and regression. | Reusable `Problem` and `Experiment` abstractions. |
 | Applications And Interfaces | CLI, dashboard catalog, docs. | Utility-facing Network/Operations views. |
 
-## Legacy Runtime Resolution Policy
+## Runtime Boundary Policy
 
-The legacy EV runtime namespace has been removed from the active architecture.
-Active implementation now lives in:
+Active implementation lives in:
 
 - `gridalyn` for reusable platform logic;
 - `projects/flexibility_cls` for executable study workflows;
 - a private or separate publication repository for manuscript material and
   document builds.
 
-New code must not import from a legacy EV runtime namespace or write study
-outputs outside the governed project artifact roots.
+New code must not write study outputs outside the governed project artifact
+roots.
 
 ## Do Not Break
 
@@ -488,7 +487,7 @@ The migration must preserve:
 
 ## Near-Term Execution Order
 
-1. Keep hygiene tests that identify legacy runtime imports into `gridalyn`.
+1. Keep hygiene tests that protect imports into `gridalyn`.
 2. Keep digital-twin build logic in `gridalyn/twin` and project workflow
    orchestration in `gridalyn/projects/workflows`.
 3. Continue hardening provider, clearing, and network impact modules in
@@ -515,4 +514,5 @@ The platform is viable when a developer can:
 7. run analytics;
 8. publish reports and dashboard artifacts;
 9. trace every result to model version, scenario, inputs, and validation status;
-10. do all of the above without importing or depending on a legacy runtime namespace.
+10. do all of the above through the canonical Gridalyn modules and project
+    contracts.

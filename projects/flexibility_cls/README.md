@@ -66,10 +66,11 @@ spec:
 ```
 
 That keeps project manifests readable: `projects/flexibility_cls/...`,
-`digital_twin/...`, and `configs/...` refer to top-level repository paths
+`instances/default/digital_twin/...`, and `configs/...` refer to repository paths
 instead of paths relative to the nested project folder.
 
-The legacy compatibility package is not the runtime backend for this project.
+The project runtime is the Gridalyn SDK plus declared project and instance
+artifacts.
 
 ## Synthetic Network Creation
 

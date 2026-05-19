@@ -80,8 +80,9 @@ gridalyn/                         # reusable library and workflow code
 examples/                         # tutorials only, not a project dependency
 ```
 
-The project may consume reusable `gridalyn` and `instances/default/digital_twin` artifacts, but it
-does not depend on any legacy runtime backend.
+The project may consume reusable `gridalyn` and
+`instances/default/digital_twin` artifacts, but it does not depend on an
+external runtime backend.
 
 ## Synthetic Network Source
 
@@ -96,7 +97,7 @@ spec:
     buildingFootprints:
       source: examples/tutorials/data/buildings_inside_polygon.geojson
     grid:
-      legacyConfig: configs/grid/config.json
+      config: configs/grid/config.json
 ```
 
 The footprint file is a clipped Trois-Rivieres sample used to create the

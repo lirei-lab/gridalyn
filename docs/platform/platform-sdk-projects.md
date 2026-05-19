@@ -4,7 +4,7 @@ Gridalyn separates three concerns that are easy to mix up in research code:
 
 | Layer | What It Is | What Belongs There | What Does Not Belong There |
 | --- | --- | --- | --- |
-| Platform | The governed architecture and artifact contract. | Digital twin roots, IDs, reports, manifests, validation rules, compatibility policy. | One-off study assumptions. |
+| Platform | The governed architecture and artifact contract. | Digital twin roots, IDs, reports, manifests, validation rules, and source-of-truth rules. | One-off study assumptions. |
 | SDK | Reusable Python capabilities under `gridalyn/`. | Network models, GeoJSON preprocessing, simulation helpers, operation contracts, semantic graph builders. | Hard-coded project paths or manuscript outputs. |
 | Projects | Executable case studies under `projects/<name>/`. | `project.yaml`, `workflow.yaml`, local scripts, declared inputs, generated outputs. | Reusable platform logic that another project would need. |
 
@@ -45,8 +45,8 @@ the canonical `configs/`, `instances/`, `projects/`, and `instances/default/digi
 roots. Use `GridalynWorkspace(root)` only when the caller already knows the
 exact workspace root.
 
-## Compatibility Boundary
+## Public Boundary
 
-Historical import paths such as `gridalyn.network` and `gridalyn.modeling`
-remain available for compatibility. New code should use the canonical package
-areas and the `gridalyn` CLI vocabulary.
+New code should use the seven canonical package areas and the `gridalyn` CLI
+vocabulary. Historical cleanup notes belong in Development pages, not in user
+workflows or application contracts.

@@ -17,8 +17,7 @@ repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```
 
 These imports are intended for project scripts, tests, applications, and
-automation. Historical imports such as `gridalyn.platform` and
-`gridalyn.network` remain available for compatibility.
+automation.
 
 ## Domain Modules
 
@@ -41,28 +40,14 @@ The public contract includes seven larger capability areas:
 foundation -> twin -> assets -> simulation -> operations -> projects -> interfaces
 ```
 
-Compatibility imports remain part of the contract for this release so existing
-projects keep running. New code should choose the seven-module surface unless it
-is deliberately maintaining an older workflow:
-
-| Target area | Historical aliases kept for compatibility |
-| --- | --- |
-| Foundation | `gridalyn.platform`, `gridalyn.reporting` |
-| Twin | `gridalyn.network`, `gridalyn.adapters`, `gridalyn.io`, `gridalyn.semantic` |
-| Assets | `gridalyn.modeling`, `gridalyn.datagen` |
-| Simulation | `gridalyn.simulators`, `gridalyn.analytics` |
-| Operations | `gridalyn.operations`, `gridalyn.market` |
-| Projects | `gridalyn.projects`, `gridalyn.workflows` |
-| Interfaces | `gridalyn.interfaces.cli` and dashboard/report/catalog helpers |
-
-The seven modules provide the product vocabulary:
+The seven modules are the product vocabulary:
 
 ```python
 from gridalyn import foundation, twin, assets, simulation, operations, projects, interfaces
 ```
 
-Future deeper moves should keep the old documented import as a compatibility
-path until projects and tutorials have migrated.
+Development notes may track internal cleanup work, but public applications
+should treat these seven modules as the stable import surface.
 
 ## Project Scripts
 
@@ -84,12 +69,12 @@ Use these output folders consistently:
 | --- | --- |
 | `outputs/data/` | Derived analytical tables. |
 | `outputs/figures/` | Figures generated from project data. |
-| `outputs/json/` | Legacy or compatibility JSON outputs when needed. |
+| `outputs/json/` | Auxiliary JSON outputs for project-local stage data. |
 | `outputs/reports/` | Stable JSON reports with the platform report contract. |
 | `outputs/operations/` | Dispatch instructions, operation runs, settlement-ready tables, and operational catalogs. |
 | `outputs/manifests/` | Run manifests and artifact inventories. |
 
-## Compatibility Rule
+## Project Boundary Rule
 
 Do not depend on private helper modules from another project workspace. A study
 can depend on `gridalyn`, declared inputs, and generated artifacts, but not on

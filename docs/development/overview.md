@@ -24,8 +24,7 @@ rules for coding agents.
 <a class="landing-card" href="core-package-architecture/">
 <h3>Repository Layout</h3>
 
-Where platform modules live and how compatibility aliases map to the canonical
-SDK structure.
+Where platform modules live and how canonical SDK boundaries are organized.
 </a>
 
 <a class="landing-card" href="code-structure-audit/">

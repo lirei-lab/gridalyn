@@ -97,7 +97,7 @@ JSON report. Use it to learn the project contract before adding domain logic.
 | Use reusable Python surfaces | [SDK Public Contract](../sdk/public-contract.md) |
 | Build a new study | [Project Template Guide](../projects/template-guide.md) |
 | Understand operational workflows | [Utility Operations](../platform/operations.md) |
-| Compare executable examples | [Run Demo Projects](run-ev-project.md) |
+| Compare executable examples | [Run Demo Projects](run-demo-projects.md) |
 | Publish or review generated outputs | [Reports](../applications/reports.md) |
 
 ## What Not To Do First

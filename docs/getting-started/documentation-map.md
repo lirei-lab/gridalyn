@@ -10,7 +10,7 @@ folders.
 | --- | --- | --- |
 | Understand the product | [Platform Overview](../platform/overview.md) | [Architecture Map](../platform/capability-architecture.md) |
 | Run it locally | [Installation](installation.md) | [Quickstart](quickstart.md) |
-| Reproduce demo projects | [Run Demo Projects](run-ev-project.md) | [Reproducibility Checklist](reproducibility.md) |
+| Reproduce demo projects | [Run Demo Projects](run-demo-projects.md) | [Reproducibility Checklist](reproducibility.md) |
 | Learn the model concepts | [Core Concepts](../concepts/overview.md) | [Network Model](../concepts/network-model.md) |
 | Build with Python | [Python SDK Overview](../sdk/overview.md) | [Public Python API](../development/public-api.md) |
 | Design an operation | [Utility Operations](../platform/operations.md) | [Locational Clearing](../flexibility/clearing.md) |

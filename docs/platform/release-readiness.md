@@ -79,16 +79,17 @@ The public documentation should prioritize the platform in this order:
 6. developer guide, public API, hygiene, and artifact governance;
 7. release readiness and roadmap.
 
-Do not make paper, presentation, or legacy runtime folders part of the main
-navigation. They may exist in the repository for internal continuity, but the
-public product story should be the platform core and its executable workflows.
+Do not make paper, presentation, archive, or private runtime folders part of
+the main navigation. They may exist outside the public path for internal
+continuity, but the product story should be the platform core and its
+executable workflows.
 
 ## Publication Checklist
 
-- README explains Gridalyn, not an old single-library prototype.
+- README explains Gridalyn as a platform, not a single-library prototype.
 - MkDocs navigation starts with user onboarding, architecture, release scope,
   workflows, platform contracts, and development governance.
-- Demo workflows can be validated without reading legacy notes.
+- Demo workflows can be validated from their project contracts and public docs.
 - Generated outputs are ignored unless they are intentionally tiny tutorial
   fixtures.
 - Package metadata does not promise unavailable hosted services.

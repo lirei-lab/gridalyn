@@ -7,8 +7,7 @@ prefer the canonical reports when the same information exists there.
 
 ## Why Reports Exist
 
-The Flexibility CLS project and digital twin pipelines generate many
-artifacts:
+Project workflows and digital twin pipelines generate many artifacts:
 
 - stochastic load samples;
 - thermal forecast and dynamic line or transformer limits;
@@ -18,20 +17,20 @@ artifacts:
 - dashboard scenario summaries;
 - semantic graph validation outputs.
 
-Those artifacts are valuable, but they were historically consumed directly from
-project-specific paths. Canonical reports add a small schema layer so downstream
-tools can discover metrics, provenance, and related files without depending on
-one paper or one scenario naming convention.
+Those artifacts are valuable, but downstream tools need a stable summary layer.
+Canonical reports add a small schema so dashboards, tests, audits, and later
+graph/database consumers can discover metrics, provenance, and related files
+without depending on one project path or one scenario naming convention.
 
 ## Locations
 
-Current Flexibility CLS project reports live under:
+Project reports live under:
 
 ```text
-projects/flexibility_cls/outputs/reports/
+projects/<project>/outputs/reports/
 ```
 
-Current project report files include:
+Common project report files include:
 
 - `study_run_manifest.json`;
 - `stage_1_stochastic_load_report.json`;
@@ -119,10 +118,11 @@ write_manifest(
 
 ## Regeneration
 
-Build current Flexibility CLS project reports:
+Build reports through the owning project workflow:
 
 ```bash
-uv run python projects/flexibility_cls/scripts/reports/build_study_reports.py
+uv run gridalyn project run projects/<project>
+uv run gridalyn project verify projects/<project>
 ```
 
 Build digital twin reports:
@@ -134,7 +134,7 @@ uv run python -m gridalyn.interfaces.reporting.digital_twin
 Run consistency validation:
 
 ```bash
-uv run python projects/flexibility_cls/scripts/pipeline/verify_output_consistency.py
+uv run gridalyn project verify projects/<project>
 ```
 
 The reports are intentionally lightweight. They should not duplicate large time

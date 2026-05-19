@@ -53,8 +53,7 @@ provided. With `write_cache=True`, it also writes `pg_graph_cache.pkl` and
 `pp_net_cache.pkl`, which can be exported through the digital-twin adapter.
 
 The root shortcut `from gridalyn import build_synthetic_network_from_geojson`
-is also supported for project scripts. Historical `gridalyn.modeling` imports
-remain compatibility aliases.
+is also supported for project scripts.
 
 ## Prosumer Energy Assets
 

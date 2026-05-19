@@ -45,7 +45,7 @@ The platform name is Gridalyn. The public interfaces are:
 
 1. [Installation](installation.md)
 2. [Quickstart](quickstart.md)
-3. [Run Demo Projects](run-ev-project.md)
+3. [Run Demo Projects](run-demo-projects.md)
 4. [Capability Architecture](../platform/capability-architecture.md)
 5. [Projects and Workflows](../platform/projects-and-workflows.md)
 6. [Digital Twin Data](../platform/digital-twin.md)

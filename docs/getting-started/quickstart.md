@@ -95,7 +95,7 @@ Pick one path based on what you need to prove:
 | Compact market operation | `uv run gridalyn project verify projects/prosumer_battery_market` | [Prosumer Battery Market Demo](../projects/prosumer-battery-market.md) |
 | Optimization and physical verification | `uv run gridalyn project verify projects/der_voltage_optimization` | [DER Voltage Optimization Demo](../projects/der-voltage-optimization.md) |
 | Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](../projects/rl-voltage-control-lightsim.md) |
-| Larger operations workflow | `uv run gridalyn project verify projects/flexibility_cls` | [Run Demo Projects](run-ev-project.md) |
+| Larger operations workflow | `uv run gridalyn project verify projects/flexibility_cls` | [Run Demo Projects](run-demo-projects.md) |
 
 The larger Flexibility CLS workflow is useful as an end-to-end stress test for
 operations, clearing, dispatch, settlement, reports, and figures. Run it when
@@ -153,5 +153,5 @@ Dashboard details are in [Dashboard](../platform/dashboard.md).
 ## Next Step
 
 Use [First Hour With Gridalyn](first-hour.md) for a guided platform reading
-path, or [Run Demo Projects](run-ev-project.md) when your goal is specifically
+path, or [Run Demo Projects](run-demo-projects.md) when your goal is specifically
 to compare executable examples.

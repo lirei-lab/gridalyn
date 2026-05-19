@@ -22,13 +22,13 @@ spec:
           command: uv run python projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py --input-file projects/flexibility_cls/inputs/buildings.geojson --force-rebuild
     grid:
       powergridConfig: configs/grid/powergrid_config.json
-      legacyConfig: configs/grid/config.json
+      config: configs/grid/config.json
   artifacts:
     digitalTwin:
-      base: digital_twin/base
-      scenarios: digital_twin/scenarios
-      timeseries: digital_twin/timeseries
-      semantic: digital_twin/semantic
+      base: instances/default/digital_twin/base
+      scenarios: instances/default/digital_twin/scenarios
+      timeseries: instances/default/digital_twin/timeseries
+      semantic: instances/default/digital_twin/semantic
     project:
       data: projects/flexibility_cls/outputs/data
       json: projects/flexibility_cls/outputs/json

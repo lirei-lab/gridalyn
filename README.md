@@ -20,14 +20,14 @@ instead of ad hoc scripts.
 
 The canonical Python command-line entrypoint and SDK namespace are `gridalyn`.
 
-## What Is Public In V0.1
+## Public Surface In V0.1
 
 The initial viable release focuses on a compact, publishable core:
 
 - `gridalyn/`: canonical reusable Python SDK package for applications,
   notebooks, project workflows, and utility-facing services;
-- `projects/`: executable demos and study workflows using the same governed
-  project contract;
+- `projects/`: executable demos and study workflows using one governed project
+  contract;
 - `instances/default/digital_twin/`: the default materialized twin instance
   with canonical Parquet and JSON contracts for base topology, scenarios,
   timeseries, flexibility, semantic graph, reports, and dashboard catalog
@@ -37,9 +37,9 @@ The initial viable release focuses on a compact, publishable core:
 - `examples/tutorials/data/minimal/`: a tiny tracked demo dataset for smoke
   tests and tutorials.
 
-No single demo is the identity of the platform. New studies should follow the
-same project contract and reuse `gridalyn` modules rather than copying workflow
-scripts.
+No single demo is the identity of the platform. New studies should reuse
+`gridalyn` modules and follow the same project contract rather than copying
+workflow scripts.
 
 ## Architecture At A Glance
 
@@ -99,22 +99,17 @@ documentation and test tools used by the repository checks.
 
 ## Quickstart
 
-Run the unified workspace validation:
+Run the workspace validation:
 
 ```bash
 uv run gridalyn validate
 ```
 
-Inspect a small demo project:
+Inspect and run the smallest demo project:
 
 ```bash
 uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
-```
-
-Run the demo:
-
-```bash
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
 ```
@@ -147,7 +142,6 @@ uv run gridalyn platform --help
 Domain-specific entrypoints are also installed for script-friendly usage:
 
 ```bash
-uv run gridalyn project --help
 uv run gridalyn-dt --help
 uv run gridalyn-flex --help
 uv run gridalyn-semantic --help
@@ -171,15 +165,15 @@ http://127.0.0.1:8000/
 
 The recommended reading path is:
 
-1. `docs/getting-started/installation.md`
-2. `docs/getting-started/quickstart.md`
-3. `docs/platform/architecture.md`
-4. `docs/platform/capability-architecture.md`
-5. `docs/platform/release-readiness.md`
-6. `docs/platform/projects-and-workflows.md`
-7. `docs/platform/digital-twin.md`
-8. `docs/flexibility/overview.md`
-9. `docs/semantic-layer/semantic-graph.md`
+1. `docs/getting-started/documentation-map.md`
+2. `docs/getting-started/what-is-gridalyn.md`
+3. `docs/getting-started/installation.md`
+4. `docs/getting-started/quickstart.md`
+5. `docs/platform/overview.md`
+6. `docs/platform/capability-architecture.md`
+7. `docs/projects/project-model.md`
+8. `docs/sdk/overview.md`
+9. `docs/platform/release-readiness.md`
 
 ## Release Checks
 

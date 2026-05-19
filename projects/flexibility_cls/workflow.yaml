@@ -171,10 +171,10 @@ spec:
       needs: [validate_study_outputs]
       command: uv run python projects/flexibility_cls/scripts/pipeline/materialize_operational_artifacts.py
       inputs:
-        - digital_twin/flexibility/provider_registry.parquet
-        - digital_twin/flexibility/locational_clearing_events.parquet
-        - digital_twin/flexibility/locational_clearing_selections.parquet
-        - digital_twin/flexibility/network_impact_predictions.parquet
+        - instances/default/digital_twin/flexibility/provider_registry.parquet
+        - instances/default/digital_twin/flexibility/locational_clearing_events.parquet
+        - instances/default/digital_twin/flexibility/locational_clearing_selections.parquet
+        - instances/default/digital_twin/flexibility/network_impact_predictions.parquet
       outputs:
         - projects/flexibility_cls/outputs/operations/network_constraints.parquet
         - projects/flexibility_cls/outputs/operations/flexibility_offers.parquet

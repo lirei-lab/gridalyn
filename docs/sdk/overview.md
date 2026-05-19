@@ -39,10 +39,6 @@ behavior into the Gridalyn SDK and keep project scripts as orchestration.
 For the stable import list and output conventions, read
 [SDK Public Contract](public-contract.md).
 
-Some historical import aliases are still registered for archived scripts, but
-they are not the public surface for new code. The compatibility inventory lives
-in the [Code Structure Audit](../development/code-structure-audit.md).
-
 For workspace paths, prefer `GridalynWorkspace` and `ArtifactLayout` from
 `gridalyn.foundation` instead of constructing `instances/default/digital_twin/*` paths manually.
 
