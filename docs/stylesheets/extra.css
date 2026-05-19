@@ -1,11 +1,23 @@
 :root {
+  --gridalyn-navy: #102039;
+  --gridalyn-navy-deep: #0e192a;
+  --gridalyn-navy-deep-rgb: 14 25 42;
+  --gridalyn-navy-soft: #183253;
   --gridalyn-accent: #2f6fed;
   --gridalyn-accent-soft: color-mix(in srgb, var(--gridalyn-accent) 10%, transparent);
   --gridalyn-card-border: var(--md-default-fg-color--lightest);
   --gridalyn-radius: 0.45rem;
+  --md-primary-fg-color: var(--gridalyn-navy);
+  --md-primary-fg-color--light: var(--gridalyn-navy-soft);
+  --md-primary-fg-color--dark: var(--gridalyn-navy-deep);
+  --md-accent-fg-color: var(--gridalyn-accent);
 }
 
 [data-md-color-scheme="slate"] {
+  --gridalyn-navy: #0d1728;
+  --gridalyn-navy-deep: #09111e;
+  --gridalyn-navy-deep-rgb: 9 17 30;
+  --gridalyn-navy-soft: #142844;
   --gridalyn-accent: #6ea8ff;
 }
 
@@ -18,17 +30,35 @@
   letter-spacing: 0;
 }
 
+.md-header,
+.md-tabs {
+  background-color: var(--gridalyn-navy);
+}
+
+.md-header {
+  box-shadow: 0 0.18rem 0.6rem rgb(var(--gridalyn-navy-deep-rgb) / 0.18);
+}
+
+.md-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .md-tabs__link {
   font-size: 0.72rem;
-  opacity: 0.82;
+  color: rgba(255, 255, 255, 0.78);
+  opacity: 1;
 }
 
 .md-tabs__link--active,
-.md-tabs__link:hover,
+.md-tabs__link:hover {
+  color: #fff;
+  font-weight: 700;
+  opacity: 1;
+}
+
 .md-nav__link--active {
   color: var(--gridalyn-accent);
   font-weight: 700;
-  opacity: 1;
 }
 
 .md-typeset h1 {
@@ -123,7 +153,7 @@ a.md-button.md-button--primary:hover {
   border: 1px solid var(--gridalyn-card-border);
   border-radius: 0.65rem;
   background:
-    linear-gradient(90deg, rgba(14, 25, 42, 0.96), rgba(14, 25, 42, 0.84)),
+    linear-gradient(90deg, rgb(var(--gridalyn-navy-deep-rgb) / 0.96), rgb(var(--gridalyn-navy-deep-rgb) / 0.84)),
     url("../assets/micro-grid.png") center right / cover no-repeat;
   color: #fff;
 }
@@ -438,7 +468,7 @@ a.landing-card:hover {
   .home-hero {
     padding: 1.45rem;
     background:
-      linear-gradient(180deg, rgba(14, 25, 42, 0.96), rgba(14, 25, 42, 0.86)),
+      linear-gradient(180deg, rgb(var(--gridalyn-navy-deep-rgb) / 0.96), rgb(var(--gridalyn-navy-deep-rgb) / 0.86)),
       url("../assets/micro-grid.png") center / cover no-repeat;
   }
 
