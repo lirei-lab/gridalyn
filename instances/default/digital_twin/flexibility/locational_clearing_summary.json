@@ -1,0 +1,66 @@
+{
+  "artifacts": {
+    "events": "locational_clearing_events.parquet",
+    "selections": "locational_clearing_selections.parquet",
+    "summary": "locational_clearing_summary.json"
+  },
+  "clearing_method": "surrogate",
+  "clearing_policy": "independent transformer constraint-event clearing; Soft CLS is preferred before Hard CLS and providers are ranked by local deliverability-adjusted offer cost",
+  "constraint_ids": [
+    "transformer:64",
+    "transformer:99",
+    "transformer:110"
+  ],
+  "constraint_summary": [
+    {
+      "constraint_id": "transformer:110",
+      "event_count": 5,
+      "required_mwh": 0.000994277944350806,
+      "selected_relief_mwh": 0.000994277944350806,
+      "shortfall_mwh": 0.0,
+      "unique_provider_count": 1
+    },
+    {
+      "constraint_id": "transformer:64",
+      "event_count": 24,
+      "required_mwh": 0.019137455507992104,
+      "selected_relief_mwh": 0.019137455507992104,
+      "shortfall_mwh": 0.0,
+      "unique_provider_count": 5
+    },
+    {
+      "constraint_id": "transformer:99",
+      "event_count": 9,
+      "required_mwh": 0.0017937561919020917,
+      "selected_relief_mwh": 0.0017937561919020917,
+      "shortfall_mwh": 0.0,
+      "unique_provider_count": 1
+    }
+  ],
+  "created_at": "2026-05-19T11:33:21.027779+00:00",
+  "dt_h": 0.08333333333333333,
+  "inputs": {
+    "grid_transformers": "instances/default/digital_twin/base/grid_transformers.parquet",
+    "impact": "instances/default/digital_twin/flexibility/network_impact_predictions.parquet",
+    "overload_report": "instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json",
+    "provider_registry": "instances/default/digital_twin/flexibility/provider_registry.parquet",
+    "transformer_timeseries": "instances/default/digital_twin/timeseries/S4_powerflow_transformers.parquet"
+  },
+  "report_id": "locational_flexibility_clearing",
+  "scenario_id": "S4",
+  "schema_version": "1.0",
+  "summary": {
+    "avg_selected_provider_count": 1.6842105263157894,
+    "constraint_count": 3,
+    "constraint_event_count": 38,
+    "delivery_ratio": 1.0,
+    "estimated_cost": 65.77646893273501,
+    "hard_selected_mwh": 0.0,
+    "provider_concentration_top10_pct": 1.0,
+    "required_mwh": 0.021925489644245004,
+    "selected_relief_mwh": 0.021925489644245004,
+    "shortfall_mwh": 0.0,
+    "soft_selected_mwh": 0.021925489644245004,
+    "unique_provider_count": 7
+  }
+}

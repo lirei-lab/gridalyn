@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gridalyn Workflow",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "gridalyn.io/v1alpha1" },
+    "kind": { "const": "Workflow" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stages"],
+      "properties": {
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "command"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-zA-Z0-9_.-]+$" },
+              "command": { "type": "string", "minLength": 1 },
+              "needs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "inputs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "outputs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

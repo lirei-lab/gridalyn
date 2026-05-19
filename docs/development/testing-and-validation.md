@@ -1,0 +1,99 @@
+# Testing And Validation
+
+Use this page as the standard verification path before claiming that the
+platform, a project workflow, or the documentation is healthy.
+
+## Unit And Integration Tests
+
+```bash
+uv run --with pytest python -m pytest -q
+```
+
+## Documentation Build
+
+```bash
+uv run mkdocs build --strict -f docs/mkdocs.yml
+```
+
+## Artifact Policy
+
+```bash
+uv run gridalyn validate
+```
+
+For the stricter project-artifact and regression path:
+
+```bash
+uv run gridalyn validate --check-project-artifacts --regression
+```
+
+## Larger Workflow Regression
+
+```bash
+uv run gridalyn project regression projects/flexibility_cls
+```
+
+## Project Sense Checks
+
+Project validation proves that a workflow is runnable and that declared
+artifacts exist. Sense checks go further: they verify that generated numbers are
+plausible for the objective of each demo.
+
+Run a sense check for one project:
+
+```bash
+uv run gridalyn project sense-check projects/rl_voltage_control_lightsim
+```
+
+The command writes:
+
+```text
+projects/<project>/outputs/reports/project_sense_check_report.json
+```
+
+Use it after regenerating project outputs. Examples of objective-level checks:
+
+| Project | Example checks |
+| --- | --- |
+| `minimal_grid_project` | five buses, four lines, converged power flow, near-nominal voltage. |
+| `ieee_33_bus_demo` | expected benchmark scenario set, EV peak increases demand, PV reduces net demand. |
+| `synthetic_geojson_feeder` | one load per generated building, no isolated nodes, converged synthetic feeder. |
+| `prosumer_battery_market` | rolling horizon is consistent, peak import does not increase, voltage remains safe. |
+| `der_voltage_optimization` | solver is optimal, PV accounting balances, verified voltage limit is met. |
+| `rl_voltage_control_lightsim` | LightSim2Grid backend, reward improves, control reduces voltage deviation. |
+| `flexibility_cls` | five EV scenarios, dynamic limit explicit, Soft/Hard CLS energy present, settlement positive. |
+
+## Agent-Friendly Project Verification
+
+Use `verify` when you want the full project ladder in one JSON payload:
+
+```bash
+uv run gridalyn project verify projects/<project>
+```
+
+It combines:
+
+- project schema and dependency validation;
+- required report and figure artifact checks;
+- project status summary;
+- objective-level sense checks.
+
+## Project Contract Check
+
+```bash
+uv run gridalyn project validate projects/flexibility_cls --check-artifacts
+uv run gridalyn project status projects/flexibility_cls --check-artifacts
+```
+
+## When To Run Which Check
+
+| Change type | Required checks |
+| --- | --- |
+| Documentation-only | `mkdocs build --strict` |
+| Project workflow | project validate, project status, project sense-check |
+| Core Python package | pytest plus any affected project regression |
+| Artifact policy or generated outputs | artifact policy check plus project status |
+| Dashboard catalog or reports | dashboard/report command plus docs link check if documentation changed |
+
+The release checklist combines these checks in
+[Release Readiness](../platform/release-readiness.md).

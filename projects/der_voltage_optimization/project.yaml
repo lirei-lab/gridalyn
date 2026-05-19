@@ -1,0 +1,32 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: der_voltage_optimization
+  version: 0.1.0
+  description: Small synthetic feeder with cvxpy DER dispatch and pandapower voltage verification.
+spec:
+  pathBase: project
+  inputs:
+    sourceNetwork:
+      name: Synthetic 16-bus DER hosting feeder
+      provider: gridalyn project script
+      note: Deterministic high-R/X radial feeder with downstream PV and batteries.
+    optimization:
+      solver: cvxpy
+      product: voltage-constrained DER hosting and battery charging dispatch
+  artifacts:
+    project:
+      data: outputs/data
+      figures: outputs/figures
+      manifests: outputs/manifests
+      operations: outputs/operations
+      reports: outputs/reports
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/der_feeder_report.json
+      - outputs/reports/der_voltage_optimization_report.json
+    requiredFigures:
+      - outputs/figures/der_feeder_voltage_profile.png
+      - outputs/figures/der_voltage_optimization.png

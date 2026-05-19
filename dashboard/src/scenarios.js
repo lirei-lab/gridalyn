@@ -1,0 +1,199 @@
+export const DEFAULT_SCENARIO_IDS = ['S0', 'S1', 'S2', 'S3', 'S4'];
+
+const FILE_KINDS = {
+  nodes: 'powerflow_nodes',
+  lines: 'powerflow_lines',
+  power: 'powerflow_power',
+  transformers: 'powerflow_transformers',
+};
+
+function scenarioSortKey(id) {
+  const match = String(id).match(/^S(\d+)$/);
+  return match ? [Number(match[1]), String(id)] : [10000, String(id)];
+}
+
+function normalizePath(path) {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `/${String(path).replace(/^\/+/, '')}`;
+}
+
+function conventionalPaths(id) {
+  return Object.fromEntries(
+    Object.entries(FILE_KINDS).map(([kind, suffix]) => [
+      kind,
+      `/digital_twin/timeseries/${id}_${suffix}.parquet`,
+    ])
+  );
+}
+
+function normalizePaths(id, paths = {}) {
+  const fallback = conventionalPaths(id);
+  return Object.fromEntries(
+    Object.keys(FILE_KINDS).map(kind => [
+      kind,
+      normalizePath(paths?.[kind]) || fallback[kind],
+    ])
+  );
+}
+
+function scenarioSubtitle(scenario, summary) {
+  const parts = [];
+  const pct = scenario?.ev_penetration_pct ?? summary?.ev_penetration_pct;
+  const nEv = scenario?.n_ev ?? summary?.n_ev;
+  const clsMode = scenario?.cls_mode ?? summary?.cls_mode;
+  if (pct !== undefined && pct !== null) parts.push(`${pct}% EV`);
+  if (nEv !== undefined && nEv !== null) parts.push(`${nEv} EVs`);
+  if (clsMode) parts.push(clsMode);
+  return parts.join(' - ');
+}
+
+function normalizeSemanticGraph(manifest) {
+  if (!manifest) return null;
+  return {
+    profile: manifest.semantic_profile || null,
+    nodeCount: manifest.node_count ?? null,
+    edgeCount: manifest.edge_count ?? null,
+    valid: manifest.validation?.valid ?? null,
+    manifestPath: '/digital_twin/semantic/graph_manifest.json',
+    artifacts: manifest.artifacts || {},
+  };
+}
+
+function normalizeMetrics(metrics = {}) {
+  const grid_peak_mw = metrics.grid_peak_mw ?? metrics.ext_grid_peak_mw ?? null;
+  return {
+    ...metrics,
+    grid_peak_mw,
+    ext_grid_peak_mw: grid_peak_mw,
+    load_peak_mw: metrics.load_peak_mw ?? null,
+    v_min_pu: metrics.v_min_pu ?? null,
+    v_mean_pu: metrics.v_mean_pu ?? null,
+    line_max_loading_percent: metrics.line_max_loading_percent ?? null,
+    trafo_max_loading_percent: metrics.trafo_max_loading_percent ?? null,
+    n_line_overloads: metrics.n_line_overloads ?? null,
+    n_trafo_overloads: metrics.n_trafo_overloads ?? null,
+  };
+}
+
+function normalizeExtensions(extensions = {}) {
+  return Object.fromEntries(
+    Object.entries(extensions || {}).map(([key, value]) => [key, normalizePath(value)])
+  );
+}
+
+export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest = null) {
+  const semanticGraph = normalizeSemanticGraph(semanticManifest);
+  return (dashboardCatalog?.scenarios || [])
+    .filter(scenario => scenario?.scenario_id)
+    .sort((a, b) => {
+      const [ai, as] = scenarioSortKey(a.scenario_id);
+      const [bi, bs] = scenarioSortKey(b.scenario_id);
+      return ai - bi || as.localeCompare(bs);
+    })
+    .map(scenario => {
+      const id = scenario.scenario_id;
+      const metrics = normalizeMetrics(scenario.metrics || {});
+      return {
+        ...scenario,
+        ...metrics,
+        id,
+        scenario_id: id,
+        label: scenario.label || id,
+        subtitle: scenario.description || '',
+        description: scenario.description || '',
+        paths: normalizePaths(id, scenario.paths),
+        gridMetrics: metrics,
+        topologyCounts: scenario.topology_counts || {},
+        extensions: normalizeExtensions(scenario.extensions),
+        semanticGraph,
+      };
+    });
+}
+
+export function scenarioIdsFromManifest(manifest) {
+  const ids = (manifest?.scenarios || [])
+    .map(item => item?.scenario_id)
+    .filter(Boolean);
+  return ids.length > 0 ? ids : DEFAULT_SCENARIO_IDS;
+}
+
+export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetManifest = null, semanticManifest = null) {
+  const byId = new Map();
+  const semanticGraph = normalizeSemanticGraph(semanticManifest);
+  for (const scenario of scenarioManifest?.scenarios || []) {
+    if (scenario?.scenario_id) {
+      byId.set(scenario.scenario_id, { scenario, summary: null, asset: null });
+    }
+  }
+  for (const summary of summaryManifest?.scenarios || []) {
+    if (!summary?.scenario_id) continue;
+    const existing = byId.get(summary.scenario_id) || { scenario: null, summary: null, asset: null };
+    existing.summary = summary;
+    byId.set(summary.scenario_id, existing);
+  }
+  for (const asset of assetManifest?.scenarios || []) {
+    if (!asset?.scenario_id) continue;
+    const existing = byId.get(asset.scenario_id) || { scenario: null, summary: null, asset: null };
+    existing.asset = asset;
+    byId.set(asset.scenario_id, existing);
+  }
+
+  if (byId.size === 0) {
+    for (const id of DEFAULT_SCENARIO_IDS) {
+      byId.set(id, { scenario: { scenario_id: id }, summary: null, asset: null });
+    }
+  }
+
+  return Array.from(byId.entries())
+    .sort(([a], [b]) => {
+      const [ai, as] = scenarioSortKey(a);
+      const [bi, bs] = scenarioSortKey(b);
+      return ai - bi || as.localeCompare(bs);
+    })
+    .map(([id, { scenario, summary, asset }]) => {
+      const paths = normalizePaths(id, summary?.paths || scenario?.paths);
+      const label = scenario?.label || summary?.label || id;
+      return {
+        ...(asset || {}),
+        ...(summary || {}),
+        ...(scenario || {}),
+        id,
+        scenario_id: id,
+        label,
+        subtitle: scenarioSubtitle(scenario, summary),
+        paths,
+        semanticGraph,
+      };
+    });
+}
+
+export async function loadScenarioManifest(fetchImpl = fetch) {
+  const res = await fetchImpl('/digital_twin/scenarios/index.json');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const manifest = await res.json();
+  return {
+    manifest,
+    scenarioIds: scenarioIdsFromManifest(manifest),
+  };
+}
+
+async function loadJsonOrNull(fetchImpl, path) {
+  const res = await fetchImpl(path);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function loadScenarioCatalog(fetchImpl = fetch) {
+  const [dashboardCatalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] = await Promise.all([
+    loadJsonOrNull(fetchImpl, '/digital_twin/dashboard/catalog.json'),
+    loadJsonOrNull(fetchImpl, '/digital_twin/scenarios/index.json'),
+    loadJsonOrNull(fetchImpl, '/digital_twin/timeseries/powerflow_smoke_summary.json'),
+    loadJsonOrNull(fetchImpl, '/digital_twin/scenarios/asset_registry_summary.json'),
+    loadJsonOrNull(fetchImpl, '/digital_twin/semantic/graph_manifest.json'),
+  ]);
+  if (dashboardCatalog?.scenarios?.length > 0) {
+    return buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest);
+  }
+  return buildScenarioCatalog(scenarioManifest, summaryManifest, assetManifest, semanticManifest);
+}

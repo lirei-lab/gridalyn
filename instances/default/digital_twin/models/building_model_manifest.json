@@ -1,0 +1,35 @@
+{
+  "artifacts": {
+    "building_models": "digital_twin/models/building_models.parquet",
+    "device_registry": "digital_twin/models/device_registry.parquet",
+    "end_use_loads": "digital_twin/models/end_use_loads.parquet",
+    "thermal_zones": "digital_twin/models/thermal_zones.parquet"
+  },
+  "counts": {
+    "archetypes": 3,
+    "building_models": 3235,
+    "device_registry": 6470,
+    "end_use_loads": 9705,
+    "evse_devices": 0,
+    "thermal_zones": 3235
+  },
+  "created_at": "2026-05-13T01:53:02.724528+00:00",
+  "environment": {
+    "energy_unit": "kWh",
+    "model_profile": "north_america_residential_v1",
+    "power_unit": "kW",
+    "region": "north_america",
+    "temperature_unit": "degC",
+    "timezone": "America/Toronto",
+    "weather_source": "project_weather_or_typical_meteorological_year"
+  },
+  "inputs": {
+    "buildings": "digital_twin/base/buildings.parquet",
+    "connectivity": "digital_twin/base/building_grid_connectivity.parquet"
+  },
+  "model_profile": "north_america_residential_v1",
+  "report_id": "building_model_manifest",
+  "root": ".",
+  "schema_version": "1.0",
+  "source_standard": "pycity-inspired"
+}

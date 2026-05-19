@@ -1,0 +1,39 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: prosumer_battery_market_workflow
+spec:
+  stages:
+    - id: prepare_workspace
+      command: python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('outputs/data', 'outputs/figures', 'outputs/manifests', 'outputs/operations', 'outputs/reports', 'outputs/cache')]"
+      outputs:
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+    - id: build_synthetic_feeder
+      needs:
+        - prepare_workspace
+      command: python scripts/build_synthetic_feeder.py
+      outputs:
+        - outputs/data/buses.csv
+        - outputs/data/lines.csv
+        - outputs/data/loads.csv
+        - outputs/data/prosumers.csv
+        - outputs/reports/synthetic_feeder_report.json
+        - outputs/figures/synthetic_feeder_voltage_profile.png
+    - id: run_realtime_prosumer_market
+      needs:
+        - build_synthetic_feeder
+      command: python scripts/run_realtime_market.py
+      inputs:
+        - outputs/data/prosumers.csv
+      outputs:
+        - outputs/data/realtime_market_forecast.csv
+        - outputs/operations/realtime_market_clearing.csv
+        - outputs/operations/realtime_market_offers.csv
+        - outputs/operations/battery_dispatch.csv
+        - outputs/data/realtime_powerflow_results.csv
+        - outputs/reports/prosumer_realtime_market_report.json
+        - outputs/figures/prosumer_market_dispatch.png

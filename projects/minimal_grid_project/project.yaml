@@ -1,0 +1,27 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: minimal_grid_project
+  version: 0.1.0
+  description: Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.
+spec:
+  pathBase: project
+  inputs:
+    sourceNetwork:
+      name: Five-bus radial teaching feeder
+      provider: project script
+      note: Built directly with pandapower so new users can inspect the complete workflow in one file.
+  artifacts:
+    project:
+      data: outputs/data
+      figures: outputs/figures
+      manifests: outputs/manifests
+      operations: outputs/operations
+      reports: outputs/reports
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/minimal_grid_report.json
+    requiredFigures:
+      - outputs/figures/minimal_voltage_profile.png

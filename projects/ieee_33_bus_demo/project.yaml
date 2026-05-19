@@ -1,0 +1,29 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: ieee_33_bus_demo
+  version: 0.1.0
+  description: Demo project using the well-known 33-bus distribution feeder available through pandapower.
+spec:
+  pathBase: project
+  inputs:
+    sourceNetwork:
+      name: IEEE 33-bus distribution feeder demo
+      provider: pandapower.networks.case33bw
+      note: The pandapower case is the common Baran-Wu 33-bus radial distribution benchmark.
+  artifacts:
+    project:
+      data: outputs/data
+      figures: outputs/figures
+      manifests: outputs/manifests
+      operations: outputs/operations
+      reports: outputs/reports
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/ieee33_powerflow_report.json
+      - outputs/reports/ieee33_scenario_comparison_report.json
+    requiredFigures:
+      - outputs/figures/ieee33_voltage_profile.png
+      - outputs/figures/ieee33_scenario_voltage_comparison.png

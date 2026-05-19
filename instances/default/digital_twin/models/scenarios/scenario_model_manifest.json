@@ -1,0 +1,92 @@
+{
+  "artifacts": {
+    "S0_device_registry": "digital_twin/models/scenarios/S0_device_registry.parquet",
+    "S1_device_registry": "digital_twin/models/scenarios/S1_device_registry.parquet",
+    "S2_device_registry": "digital_twin/models/scenarios/S2_device_registry.parquet",
+    "S3_device_registry": "digital_twin/models/scenarios/S3_device_registry.parquet",
+    "S4_device_registry": "digital_twin/models/scenarios/S4_device_registry.parquet",
+    "scenario_summary": "digital_twin/models/scenarios/scenario_summary.parquet"
+  },
+  "counts": {
+    "scenario_devices": 12935,
+    "scenarios": 5
+  },
+  "created_at": "2026-05-13T11:28:25.625802+00:00",
+  "inputs": {
+    "asset_registry": "digital_twin/scenarios/asset_registry.parquet",
+    "base_device_registry": "digital_twin/models/device_registry.parquet",
+    "building_models": "digital_twin/models/building_models.parquet"
+  },
+  "manifest_path": "digital_twin/models/scenarios/scenario_model_manifest.json",
+  "report_id": "scenario_model_manifest",
+  "root": ".",
+  "scenario_counts": {
+    "S0": {
+      "available_hard_kw": 0.0,
+      "available_soft_kw": 6291.832527,
+      "ev_buildings": 0,
+      "evse_devices": 0,
+      "hard_cls_evs": 0,
+      "hard_device_rows": 0,
+      "hard_only_evs": 0,
+      "scenario_devices": 1940,
+      "soft_cls_buildings": 970,
+      "soft_device_rows": 1940,
+      "soft_hard_overlap": 0
+    },
+    "S1": {
+      "available_hard_kw": 1244.16,
+      "available_soft_kw": 6291.832527,
+      "ev_buildings": 324,
+      "evse_devices": 324,
+      "hard_cls_evs": 324,
+      "hard_device_rows": 324,
+      "hard_only_evs": 226,
+      "scenario_devices": 2264,
+      "soft_cls_buildings": 970,
+      "soft_device_rows": 1940,
+      "soft_hard_overlap": 98
+    },
+    "S2": {
+      "available_hard_kw": 2484.48,
+      "available_soft_kw": 6291.832527,
+      "ev_buildings": 647,
+      "evse_devices": 647,
+      "hard_cls_evs": 647,
+      "hard_device_rows": 647,
+      "hard_only_evs": 453,
+      "scenario_devices": 2587,
+      "soft_cls_buildings": 970,
+      "soft_device_rows": 1940,
+      "soft_hard_overlap": 194
+    },
+    "S3": {
+      "available_hard_kw": 3724.8,
+      "available_soft_kw": 6291.832527,
+      "ev_buildings": 970,
+      "evse_devices": 970,
+      "hard_cls_evs": 970,
+      "hard_device_rows": 970,
+      "hard_only_evs": 664,
+      "scenario_devices": 2910,
+      "soft_cls_buildings": 970,
+      "soft_device_rows": 1940,
+      "soft_hard_overlap": 306
+    },
+    "S4": {
+      "available_hard_kw": 4968.96,
+      "available_soft_kw": 6291.832527,
+      "ev_buildings": 1294,
+      "evse_devices": 1294,
+      "hard_cls_evs": 1294,
+      "hard_device_rows": 1294,
+      "hard_only_evs": 905,
+      "scenario_devices": 3234,
+      "soft_cls_buildings": 970,
+      "soft_device_rows": 1940,
+      "soft_hard_overlap": 389
+    }
+  },
+  "schema_version": "1.0",
+  "source_standard": "pycity-inspired-scenario-overlay"
+}

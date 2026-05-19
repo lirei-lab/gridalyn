@@ -1,0 +1,197 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: flexibility_cls_pipeline
+  description: Executes the governed EV capacity limitation data pipeline and case-analysis figures.
+spec:
+  stages:
+    - id: prepare_topology_cache
+      command: uv run python projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py
+      inputs:
+        - projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py
+        - projects/flexibility_cls/scripts/config.py
+        - configs/grid/config.json
+      outputs:
+        - projects/flexibility_cls/outputs/cache/pg_graph_cache.pkl
+        - projects/flexibility_cls/outputs/cache/pp_net_cache.pkl
+        - projects/flexibility_cls/outputs/cache/grid_cache_meta.json
+        - projects/flexibility_cls/outputs/cache/building_footprint_validation_report.json
+        - projects/flexibility_cls/outputs/cache/topology_cache_manifest.json
+
+    - id: generate_stochastic_profiles
+      needs: [prepare_topology_cache]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/00_generate_stochastic_profiles.py
+      inputs:
+        - projects/flexibility_cls/scripts/pipeline/00_generate_stochastic_profiles.py
+        - projects/flexibility_cls/scripts/config.py
+        - configs/grid/config.json
+        - projects/flexibility_cls/outputs/cache/pg_graph_cache.pkl
+      outputs:
+        - projects/flexibility_cls/outputs/data/substation_baseline_mc.parquet
+        - projects/flexibility_cls/outputs/data/substation_ev_capability_mc.parquet
+        - projects/flexibility_cls/outputs/json/stochastic_profiles_summary.json
+
+    - id: congestion_forecast
+      needs: [generate_stochastic_profiles]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/01_congestion_forecast.py
+      inputs:
+        - projects/flexibility_cls/outputs/data/substation_baseline_mc.parquet
+        - projects/flexibility_cls/outputs/data/substation_ev_capability_mc.parquet
+      outputs:
+        - projects/flexibility_cls/outputs/data/base_peak_vals.npy
+        - projects/flexibility_cls/outputs/data/s2_peak_vals.npy
+        - projects/flexibility_cls/outputs/data/congestion_temporal_bounds.parquet
+        - projects/flexibility_cls/outputs/json/flex_requirements.json
+
+    - id: market_allocation
+      needs: [congestion_forecast]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/02_solve_capacity_allocation.py
+      inputs:
+        - projects/flexibility_cls/outputs/data/congestion_temporal_bounds.parquet
+      outputs:
+        - projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
+        - projects/flexibility_cls/outputs/json/ev_summary_results.json
+
+    - id: pandapower_validation
+      needs: [market_allocation]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/pandapower_validation.py
+      inputs:
+        - projects/flexibility_cls/outputs/json/ev_summary_results.json
+        - projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
+      outputs:
+        - projects/flexibility_cls/outputs/json/pandapower_validation.json
+
+    - id: plot_stage_1_stacked_ev
+      needs: [pandapower_validation]
+      command: uv run python projects/flexibility_cls/scripts/plotting/generate_stacked_ev_plot.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/02_stage1_stochastic_load/stacked_ev_scenarios.pdf
+
+    - id: plot_stage_1_load_distributions
+      needs: [plot_stage_1_stacked_ev]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_04_load_distributions.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/02_stage1_stochastic_load/load_distributions.pdf
+
+    - id: plot_stage_1_ev_summary
+      needs: [plot_stage_1_load_distributions]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_ev_summary.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/02_stage1_stochastic_load/load_management.pdf
+
+    - id: plot_stage_1_targeted_transformer_load
+      needs: [plot_stage_1_ev_summary]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_targeted_transformer_load.py
+
+    - id: plot_stage_2_grid_exceedance
+      needs: [plot_stage_1_targeted_transformer_load]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_01_grid_exceedance.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/03_stage2_thermal_screening/exceedance_probability.pdf
+
+    - id: plot_stage_2_chance_pdf
+      needs: [plot_stage_2_grid_exceedance]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_05_probability_density.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/03_stage2_thermal_screening/chance_constrained_pdf.pdf
+
+    - id: plot_stage_2_temporal_heatmap
+      needs: [plot_stage_2_chance_pdf]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_06_temporal_pdf_heatmap.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/03_stage2_thermal_screening/temporal_probability_heatmap.pdf
+
+    - id: plot_stage_2_temperature_heatmap
+      needs: [plot_stage_2_temporal_heatmap]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_07_temperature_heatmap.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/03_stage2_thermal_screening/temperature_probability_heatmap.pdf
+
+    - id: plot_stage_3_day_ahead
+      needs: [plot_stage_2_temperature_heatmap]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_14_stage_1_day_ahead.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/04_stage3_market_clearing/plot_14_stage_1_day_ahead.pdf
+
+    - id: plot_stage_3_profiled
+      needs: [plot_stage_3_day_ahead]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_14b_stage_1_profiled.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/04_stage3_market_clearing/plot_14b_stage_1_profiled.pdf
+
+    - id: plot_stage_3_power_heatmap
+      needs: [plot_stage_3_profiled]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_08_power_heatmap.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/04_stage3_market_clearing/power_probability_heatmap.pdf
+        - projects/flexibility_cls/outputs/figures/04_stage3_market_clearing/power_probability_heatmap.png
+
+    - id: plot_stage_4_realization
+      needs: [plot_stage_3_power_heatmap]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_15_stage_2_realization.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_15_stage_2_realization.pdf
+        - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_15_stage_2_realization.png
+        - projects/flexibility_cls/outputs/reports/stage_4_realtime_realization_selection.json
+
+    - id: plot_stage_4_aggregator_trajectory
+      needs: [plot_stage_4_realization]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_17_aggregator_trajectory.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_17_aggregator_trajectory.pdf
+
+    - id: plot_stage_4_multiscenario
+      needs: [plot_stage_4_aggregator_trajectory]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_16_stage_2_multiscenario.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_16_stage_2_multiscenario.pdf
+
+    - id: plot_stage_4_aggregator_deficits
+      needs: [plot_stage_4_multiscenario]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_18_aggregator_deficits.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_18_aggregator_deficits.pdf
+
+    - id: plot_stage_5_settlement
+      needs: [plot_stage_4_aggregator_deficits]
+      command: uv run python projects/flexibility_cls/scripts/plotting/plot_03_settlement_curves.py
+      outputs:
+        - projects/flexibility_cls/outputs/figures/06_stage5_settlement/cls_conditional_distributions.pdf
+
+    - id: validate_study_outputs
+      needs: [plot_stage_5_settlement]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/verify_output_consistency.py
+      inputs:
+        - projects/flexibility_cls/outputs/json/ev_summary_results.json
+        - projects/flexibility_cls/outputs/json/flex_requirements.json
+        - projects/flexibility_cls/outputs/json/pandapower_validation.json
+        - projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
+
+    - id: materialize_operational_artifacts
+      needs: [validate_study_outputs]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/materialize_operational_artifacts.py
+      inputs:
+        - digital_twin/flexibility/provider_registry.parquet
+        - digital_twin/flexibility/locational_clearing_events.parquet
+        - digital_twin/flexibility/locational_clearing_selections.parquet
+        - digital_twin/flexibility/network_impact_predictions.parquet
+      outputs:
+        - projects/flexibility_cls/outputs/operations/network_constraints.parquet
+        - projects/flexibility_cls/outputs/operations/flexibility_offers.parquet
+        - projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet
+        - projects/flexibility_cls/outputs/operations/settlement_records.parquet
+        - projects/flexibility_cls/outputs/operations/operation_run.json
+        - projects/flexibility_cls/outputs/operations/operations_catalog.json
+        - projects/flexibility_cls/outputs/reports/operational_kpi_report.json
+
+    - id: build_study_reports
+      needs: [materialize_operational_artifacts]
+      command: uv run python projects/flexibility_cls/scripts/reports/build_study_reports.py
+      outputs:
+        - projects/flexibility_cls/outputs/reports/study_run_manifest.json
+        - projects/flexibility_cls/outputs/reports/output_consistency_report.json
+        - projects/flexibility_cls/outputs/reports/stage_1_stochastic_load_report.json
+        - projects/flexibility_cls/outputs/reports/stage_2_thermal_forecast_report.json
+        - projects/flexibility_cls/outputs/reports/stage_3_market_clearing_report.json
+        - projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json
+        - projects/flexibility_cls/outputs/reports/stage_5_settlement_report.json

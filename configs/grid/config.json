@@ -1,0 +1,67 @@
+{
+    "loads": {
+        "max_load_per_building": 50.0,
+        "diversity_factor_lv": 5.0,
+        "diversity_factor_mv": 1.4,
+        "diversity_factor_hv": 1.1,
+        "n_buildings_cache": 3235
+    },
+    "buses": {
+        "lv": {
+            "voltage_kv": 0.4,
+            "type": "b"
+        },
+        "mv": {
+            "voltage_kv": 25.0,
+            "type": "b"
+        },
+        "hv": {
+            "voltage_kv": 120.0,
+            "type": "b"
+        }
+    },
+    "lines": {
+        "lv": {
+            "std_type": "94-AL1/15-ST1A 0.4",
+            "min_length_km": 0.001
+        },
+        "mv": {
+            "std_type": "149-AL1/24-ST1A 10.0",
+            "min_length_km": 0.001
+        },
+        "hv": {
+            "std_type": "149-AL1/24-ST1A 10.0",
+            "min_length_km": 0.001
+        }
+    },
+    "transformers": {
+        "lv_mv": {
+            "std_type": "0.21 MVA 25/0.4 kV synthetic",
+            "capacity_kva": 210,
+            "sizing_capacity_kva": 250,
+            "utilization_margin": 0.80,
+            "custom_type": true,
+            "vk_percent": 6.0,
+            "vkr_percent": 1.44,
+            "pfe_kw": 0.8,
+            "i0_percent": 0.32,
+            "shift_degree": 150,
+            "vector_group": "Yzn5"
+        },
+        "mv_hv": {
+            "std_type": "15 MVA 120/25 kV HQ",
+            "capacity_kva": 15000,
+            "count": 1,
+            "power_factor": 0.95,
+            "theta_max_c": 110,
+            "custom_type": true,
+            "note": "IEEE C57.91 dynamic rating. K(-22.5°C)=1.41 -> P_dyn=20.1 MW"
+        }
+    },
+    "simulation": {
+        "n_realizations": 30,
+        "resolution_minutes": 5,
+        "seed": 42,
+        "generator": "thermodynamic"
+    }
+}

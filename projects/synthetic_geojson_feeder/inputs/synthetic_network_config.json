@@ -1,0 +1,47 @@
+{
+  "loads": {
+    "max_load_per_building": 18.0,
+    "diversity_factor_lv": 4.0,
+    "diversity_factor_mv": 1.3,
+    "diversity_factor_hv": 1.1
+  },
+  "buses": {
+    "lv": {
+      "voltage_kv": 0.4,
+      "type": "b"
+    },
+    "mv": {
+      "voltage_kv": 20.0,
+      "type": "b"
+    },
+    "hv": {
+      "voltage_kv": 110.0,
+      "type": "b"
+    }
+  },
+  "lines": {
+    "lv": {
+      "std_type": "94-AL1/15-ST1A 0.4",
+      "min_length_km": 0.001
+    },
+    "mv": {
+      "std_type": "149-AL1/24-ST1A 10.0",
+      "min_length_km": 0.001
+    },
+    "hv": {
+      "std_type": "149-AL1/24-ST1A 10.0",
+      "min_length_km": 0.001
+    }
+  },
+  "transformers": {
+    "lv_mv": {
+      "std_type": "0.63 MVA 20/0.4 kV",
+      "capacity_kva": 630,
+      "utilization_margin": 0.8
+    },
+    "mv_hv": {
+      "std_type": "25 MVA 110/20 kV",
+      "capacity_kva": 25000
+    }
+  }
+}

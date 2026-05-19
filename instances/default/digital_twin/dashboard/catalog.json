@@ -1,0 +1,180 @@
+{
+  "created_at": "2026-05-19T11:33:18.303819+00:00",
+  "network_model": {
+    "counts": {
+      "buildings": 3235,
+      "buses": 3562,
+      "connectivity": 3235,
+      "lines": 3398,
+      "loads": 3235,
+      "transformers": 163
+    },
+    "model_version": {},
+    "model_version_id": null,
+    "validation": {
+      "errors": [],
+      "valid": true,
+      "warnings": []
+    }
+  },
+  "report_id": "digital_twin_dashboard_catalog",
+  "scenarios": [
+    {
+      "description": "",
+      "extensions": {
+        "network_impact": "/instances/default/digital_twin/flexibility/network_impact_catalog.json"
+      },
+      "label": "S0",
+      "metrics": {
+        "grid_peak_mw": 19.444462682845455,
+        "line_max_loading_percent": 98.6906968494166,
+        "load_peak_mw": 18.822647094726562,
+        "n_line_overloads": null,
+        "n_trafo_overloads": null,
+        "trafo_max_loading_percent": 133.97383987588367,
+        "v_mean_pu": 0.9572012225029966,
+        "v_min_pu": 0.9141792913107338
+      },
+      "paths": {
+        "lines": "/instances/default/digital_twin/timeseries/S0_powerflow_lines.parquet",
+        "nodes": "/instances/default/digital_twin/timeseries/S0_powerflow_nodes.parquet",
+        "power": "/instances/default/digital_twin/timeseries/S0_powerflow_power.parquet",
+        "transformers": "/instances/default/digital_twin/timeseries/S0_powerflow_transformers.parquet"
+      },
+      "scenario_id": "S0",
+      "topology_counts": {
+        "n_buses": 3562,
+        "n_lines": 3398,
+        "n_loads": 3235,
+        "n_timestamps": 288,
+        "n_transformers": 163
+      }
+    },
+    {
+      "description": "",
+      "extensions": {
+        "network_impact": "/instances/default/digital_twin/flexibility/network_impact_catalog.json"
+      },
+      "label": "S1",
+      "metrics": {
+        "grid_peak_mw": 20.11921828300988,
+        "line_max_loading_percent": 102.18761400844262,
+        "load_peak_mw": 19.46240234375,
+        "n_line_overloads": null,
+        "n_trafo_overloads": null,
+        "trafo_max_loading_percent": 138.71833485458427,
+        "v_mean_pu": 0.9566832641622842,
+        "v_min_pu": 0.9140079486997466
+      },
+      "paths": {
+        "lines": "/instances/default/digital_twin/timeseries/S1_powerflow_lines.parquet",
+        "nodes": "/instances/default/digital_twin/timeseries/S1_powerflow_nodes.parquet",
+        "power": "/instances/default/digital_twin/timeseries/S1_powerflow_power.parquet",
+        "transformers": "/instances/default/digital_twin/timeseries/S1_powerflow_transformers.parquet"
+      },
+      "scenario_id": "S1",
+      "topology_counts": {
+        "n_buses": 3562,
+        "n_lines": 3398,
+        "n_loads": 3235,
+        "n_timestamps": 288,
+        "n_transformers": 163
+      }
+    },
+    {
+      "description": "",
+      "extensions": {
+        "network_impact": "/instances/default/digital_twin/flexibility/network_impact_catalog.json"
+      },
+      "label": "S2",
+      "metrics": {
+        "grid_peak_mw": 20.74079102530337,
+        "line_max_loading_percent": 105.42313913504502,
+        "load_peak_mw": 20.049072265625,
+        "n_line_overloads": null,
+        "n_trafo_overloads": null,
+        "trafo_max_loading_percent": 143.10818999780537,
+        "v_mean_pu": 0.9561490912409158,
+        "v_min_pu": 0.9137752891332368
+      },
+      "paths": {
+        "lines": "/instances/default/digital_twin/timeseries/S2_powerflow_lines.parquet",
+        "nodes": "/instances/default/digital_twin/timeseries/S2_powerflow_nodes.parquet",
+        "power": "/instances/default/digital_twin/timeseries/S2_powerflow_power.parquet",
+        "transformers": "/instances/default/digital_twin/timeseries/S2_powerflow_transformers.parquet"
+      },
+      "scenario_id": "S2",
+      "topology_counts": {
+        "n_buses": 3562,
+        "n_lines": 3398,
+        "n_loads": 3235,
+        "n_timestamps": 288,
+        "n_transformers": 163
+      }
+    },
+    {
+      "description": "",
+      "extensions": {
+        "network_impact": "/instances/default/digital_twin/flexibility/network_impact_catalog.json"
+      },
+      "label": "S3",
+      "metrics": {
+        "grid_peak_mw": 21.413805776018208,
+        "line_max_loading_percent": 108.93403271610921,
+        "load_peak_mw": 20.684722900390625,
+        "n_line_overloads": null,
+        "n_trafo_overloads": null,
+        "trafo_max_loading_percent": 147.87165643385995,
+        "v_mean_pu": 0.9556118058802608,
+        "v_min_pu": 0.9059520366808763
+      },
+      "paths": {
+        "lines": "/instances/default/digital_twin/timeseries/S3_powerflow_lines.parquet",
+        "nodes": "/instances/default/digital_twin/timeseries/S3_powerflow_nodes.parquet",
+        "power": "/instances/default/digital_twin/timeseries/S3_powerflow_power.parquet",
+        "transformers": "/instances/default/digital_twin/timeseries/S3_powerflow_transformers.parquet"
+      },
+      "scenario_id": "S3",
+      "topology_counts": {
+        "n_buses": 3562,
+        "n_lines": 3398,
+        "n_loads": 3235,
+        "n_timestamps": 288,
+        "n_transformers": 163
+      }
+    },
+    {
+      "description": "",
+      "extensions": {
+        "network_impact": "/instances/default/digital_twin/flexibility/network_impact_catalog.json"
+      },
+      "label": "S4",
+      "metrics": {
+        "grid_peak_mw": 22.110378316410703,
+        "line_max_loading_percent": 112.5815877988434,
+        "load_peak_mw": 21.341035842895508,
+        "n_line_overloads": null,
+        "n_trafo_overloads": null,
+        "trafo_max_loading_percent": 152.82054516046105,
+        "v_mean_pu": 0.9550489610360119,
+        "v_min_pu": 0.9040694933960463
+      },
+      "paths": {
+        "lines": "/instances/default/digital_twin/timeseries/S4_powerflow_lines.parquet",
+        "nodes": "/instances/default/digital_twin/timeseries/S4_powerflow_nodes.parquet",
+        "power": "/instances/default/digital_twin/timeseries/S4_powerflow_power.parquet",
+        "transformers": "/instances/default/digital_twin/timeseries/S4_powerflow_transformers.parquet"
+      },
+      "scenario_id": "S4",
+      "topology_counts": {
+        "n_buses": 3562,
+        "n_lines": 3398,
+        "n_loads": 3235,
+        "n_timestamps": 288,
+        "n_transformers": 163
+      }
+    }
+  ],
+  "schema_version": "1.0",
+  "title": "Gridalyn Digital Twin"
+}

@@ -1,0 +1,387 @@
+# Platform Layer Model
+
+Gridalyn should be understandable in two modes at the same time:
+
+- as a reproducible study platform, where a project declares inputs, stages,
+  outputs, validation, and reports;
+- as a utility-oriented digital-twin platform, where the core model, operations,
+  simulations, and applications are reusable beyond one study.
+
+The layer model below is the contract that keeps those two modes aligned. It is
+inspired by public utility and energy-simulation platforms, but it is not a copy
+of any single one. Gridalyn keeps a strong digital-twin and operations layer
+because flexibility management, market clearing, and network verification are
+central to the platform.
+
+## Design Consensus
+
+The architecture takes lessons from several platform families:
+
+| Reference family | Useful lesson for Gridalyn | What Gridalyn should not copy blindly |
+| --- | --- | --- |
+| Zepben / Evolve | Durable utility network model, SDK-first access, CIM-aligned thinking, partial model queries. | Product scope, service layout, or exact object model. |
+| GridAPPS-D | Distribution applications run against a shared grid model and message/data services. | Its full distributed runtime is more than Gridalyn needs for a first public release. |
+| NREL Sienna | Separate system data, operations/planning studies, simulation, and analysis packages. | Its transmission/planning emphasis does not replace Gridalyn's distribution and flexibility focus. |
+| HELICS | Coupled simulations should communicate through explicit interfaces and time coordination. | Co-simulation should remain optional until Gridalyn has stable local model contracts. |
+| pandapower / OpenDSS | Solvers are engines under the platform, not the platform identity. | Solver-specific data structures should not leak into project, dashboard, or market contracts. |
+| Enflow-style modular modeling | Problems, models, environments, and spaces are useful abstractions for reusable experiments. | A pure modeling framework would understate digital twin governance, operations, and market clearing. |
+
+The consensus is: **Gridalyn should be model-centered, operation-aware, and
+application-friendly.**
+
+## Layer Stack
+
+```mermaid
+flowchart TB
+  subgraph G[Foundation And Governance]
+    g1[Identity, units, lineage]
+    g2[Model versions and run manifests]
+    g3[Validation and artifact policy]
+  end
+
+  subgraph F[Digital Twin Core]
+    f1[Network model]
+    f2[Asset, scenario, and state model]
+    f3[Semantic graph]
+  end
+
+  subgraph E[Asset And Flexibility Modeling]
+    e1[Buildings, DER, EVSE, loads]
+    e2[Forecasts, envelopes, spaces]
+  end
+
+  subgraph D[Simulation And Validation]
+    d1[Powerflow and thermal validation]
+    d2[Surrogates and scenario replay]
+  end
+
+  subgraph C[Operations And Markets]
+    c1[Providers, aggregators, offers]
+    c2[Clearing, dispatch, settlement, KPIs]
+  end
+
+  subgraph B[Projects, Problems, And Experiments]
+    b1[Project workflows]
+    b2[Problems, objectives, regressions]
+  end
+
+  subgraph A[Applications And Interfaces]
+    a1[Python SDK]
+    a2[CLI]
+    a3[Dashboard and future APIs]
+  end
+
+  G --> F
+  F --> E
+  E --> D
+  D --> C
+  B -. orchestrates .-> F
+  B -. orchestrates .-> E
+  B -. orchestrates .-> D
+  B -. verifies .-> C
+  A -. accesses .-> F
+  A -. executes .-> B
+  A -. consumes reports from .-> C
+```
+
+This is not a rigid import graph. It is a responsibility map. A dashboard may
+read digital-twin metadata directly, and operations may query topology without
+going through a project workflow. Code dependencies should still stay simple:
+shared contracts live lower in the stack; orchestration and applications live
+higher in the stack.
+
+## 1. Foundation And Governance
+
+This layer makes every artifact traceable and publishable.
+
+**Owns:**
+
+- platform identifiers and naming conventions;
+- units and time conventions;
+- model versions and run IDs;
+- source lineage and artifact hashes;
+- validation reports;
+- project/workflow manifests;
+- release and artifact policy.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.foundation`
+- `gridalyn.projects`
+- `gridalyn.interfaces.reporting`
+- `projects/*/project.yaml`
+- `projects/*/workflow.yaml`
+- `projects/*/outputs/manifests`
+- `digital_twin/reports`
+
+**Design rule:** generated outputs are acceptable only when their source inputs,
+model version, run context, and validation state can be traced.
+
+## 2. Digital Twin Core
+
+This layer is the utility model backbone. It should not be treated as a folder
+of simulation leftovers.
+
+**Owns:**
+
+- canonical network model;
+- topology and connectivity;
+- substations, feeders, transformers, buses, lines, loads, DER, EVSE, and
+  buildings;
+- source adapters for synthetic, GIS, CIM, and future utility systems;
+- scenarios and operational model states;
+- time-series dataset references;
+- semantic graph metadata;
+- partial access by feeder, transformer, bus, downstream zone, and asset type.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.twin`
+- `gridalyn.twin.network`
+- `gridalyn.twin.adapters`
+- `gridalyn.twin.semantic`
+- `digital_twin/base`
+- `digital_twin/scenarios`
+- `digital_twin/timeseries`
+- `digital_twin/semantic`
+
+**Design rule:** solvers, dashboards, reports, and markets consume the twin
+through stable IDs and repositories, not through ad hoc file assumptions.
+
+## 3. Asset And Flexibility Modeling
+
+This layer describes asset behavior and controllability.
+
+**Owns:**
+
+- building model generation;
+- EV, EVSE, DER, and load models;
+- thermal and operational states;
+- baselines and forecasts;
+- dynamic thermal limits;
+- flexibility envelopes;
+- rebound behavior;
+- future input, state, action, and output spaces.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.assets`
+- `gridalyn.assets.modeling`
+- `gridalyn.assets.datagen`
+- `digital_twin/models`
+- `digital_twin/scenarios/asset_registry.parquet`
+- project output profiles under `projects/*/outputs/data`
+
+**Design rule:** an asset model should explain what can happen, what can be
+controlled, what constraints apply, and which measurements validate it.
+
+## 4. Simulation And Validation
+
+This layer answers the physical question: what happens to the grid?
+
+**Owns:**
+
+- pandapower execution;
+- future OpenDSS or other solver adapters;
+- powerflow validation;
+- voltage and thermal metrics;
+- transformer overload and dynamic thermal validation;
+- network-impact surrogate calibration;
+- scenario replay;
+- consistency checks between fast screening and physics validation.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.simulation`
+- `gridalyn.simulation.simulators`
+- `gridalyn.simulation.analytics.network_impact`
+- `projects/*/outputs/json/pandapower_validation.json`
+- `digital_twin/flexibility/network_impact_*`
+
+**Design rule:** market logic may use fast estimates, but final operational
+claims must be explainable against physical validation or a calibrated surrogate
+with known error.
+
+## 5. Operations And Markets
+
+This layer is where Gridalyn differs from a generic modeling toolkit. It turns
+the twin and asset models into decisions.
+
+**Owns:**
+
+- flexibility providers;
+- aggregators and portfolios;
+- offers, bids, availability, and effort;
+- Soft/Hard CLS contracts;
+- locational constraints;
+- clearing;
+- dispatch;
+- settlement;
+- rebound and reliability metrics;
+- post-clearing network verification;
+- operational KPIs for mechanism intelligence.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.operations`
+- `gridalyn.operations.market`
+- `digital_twin/flexibility`
+- `projects/*/outputs/json/ev_summary_results.json`
+- `projects/*/outputs/reports/stage_4_realtime_dispatch_report.json`
+
+**Design rule:** an aggregator is not just a price curve. It is a portfolio of
+providers with spatial location, network sensitivities, delivery risk, and
+contract obligations.
+
+## 6. Projects, Problems, And Experiments
+
+This layer packages reusable platform capability into reproducible work.
+
+**Owns:**
+
+- project workspace structure;
+- workflow stages;
+- input and output contracts;
+- declared dependencies;
+- problem definitions and objectives;
+- datasets and environments;
+- experiment parameters;
+- sweeps, benchmarks, and regressions.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.projects`
+- `gridalyn.projects.workflows`
+- `projects/flexibility_cls`
+- `projects/ieee_33_bus_demo`
+- `projects/*/baselines`
+
+**Design rule:** projects orchestrate platform capabilities; they should not
+contain reusable platform logic unless it is intentionally project-specific.
+
+## 7. Applications And Interfaces
+
+This layer is what users and external systems touch.
+
+**Owns:**
+
+- CLI;
+- dashboard;
+- report readers;
+- catalog generation;
+- future service APIs;
+- future model-server endpoints;
+- utility integration surfaces.
+
+**Current Gridalyn surface:**
+
+- `gridalyn.interfaces`
+- `gridalyn.interfaces.cli`
+- `dashboard`
+- `digital_twin/dashboard`
+- `docs`
+
+**Design rule:** applications consume declared artifacts and APIs. They should
+not infer scenario semantics from a single demo project.
+
+## Naming And Package Direction
+
+The current package has already moved to `gridalyn` as the public namespace.
+Future module changes should follow capability names, not historical script
+names.
+
+## Target Top-Level Modules
+
+The agreed SDK shape is seven large modules. Gridalyn now uses these names as
+the physical top-level package structure. Historical domain imports remain
+available as compatibility aliases while projects and tutorials migrate.
+
+```text
+gridalyn/
+  foundation/
+  twin/
+  assets/
+  simulation/
+  operations/
+  projects/
+  interfaces/
+```
+
+| Public module | Responsibility | Important subpackages |
+| --- | --- | --- |
+| `gridalyn.foundation` | IDs, units, lineage, validation, manifests, model versions, schemas, artifact policy. | `platform`, `data` |
+| `gridalyn.twin` | Network model, topology, repositories, states, scenarios, time-series references, semantic graph. | `network`, `adapters`, `core`, `io`, `semantic`, `db` |
+| `gridalyn.assets` | Buildings, loads, EV/EVSE, DER, forecasts, flexibility envelopes, synthetic asset generation. | `modeling`, `datagen` |
+| `gridalyn.simulation` | Powerflow, thermal checks, solver engines, network-impact surrogate, validation workflows. | `simulators`, `analytics` |
+| `gridalyn.operations` | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, operational KPIs. | `market`, `flexibility` |
+| `gridalyn.projects` | Project manifests, workflow execution, regressions, reproducible studies and demos. | `workflows`, project loader/runner |
+| `gridalyn.interfaces` | CLI, dashboard contracts, reports, graph exports, future API/service adapters. | `cli`, `reporting`, `viz` |
+
+The module names are intentionally product-oriented. A utility user should be
+able to infer what each area owns without knowing the history of the repository.
+
+## Deeper Migration Order
+
+The migration should be gradual and evidence-driven:
+
+1. **Foundation first:** move shared governance contracts behind a stable
+   compatibility layer. This reduces risk for every later move.
+2. **Twin second:** consolidate network, topology, semantic, and adapter access
+   around a clearer digital-twin repository contract.
+3. **Operations third:** give flexibility providers, aggregators, clearing,
+   dispatch, settlement, and KPIs one clear operational home.
+4. **Simulation fourth:** separate physical validation engines and surrogate
+   analytics from market logic.
+5. **Assets fifth:** cleanly group building, EV, DER, load, and forecast models.
+6. **Interfaces sixth:** make CLI, reports, dashboard catalogs, graph exports,
+   and future APIs consume stable lower-layer services.
+7. **Projects last:** keep project orchestration thin after reusable logic has
+   already moved into the platform.
+
+Every deeper package move should include import adapters, tests, and
+documentation updates. The public CLI, project workflows, and seven top-level
+modules should not break during the migration.
+
+| Capability | Preferred package direction |
+| --- | --- |
+| Foundation and governance | `gridalyn.foundation` |
+| Digital twin core | `gridalyn.twin` |
+| Asset modeling | `gridalyn.assets`, future explicit spaces under `gridalyn.assets` or `gridalyn.simulation` only when public |
+| Simulation and validation | `gridalyn.simulation` |
+| Operations and markets | `gridalyn.operations` |
+| Projects and experiments | `gridalyn.projects`, future problem/experiment subpackages only when reused |
+| Applications | `gridalyn.interfaces` |
+
+Do not introduce deeper subpackages just because a concept exists in another
+framework. Promote a boundary when Gridalyn has at least two consumers that
+benefit from it.
+
+## Practical Flow
+
+Most users should experience the layers through a simple path:
+
+```text
+create or import network data
+  -> build a digital twin snapshot
+  -> define scenarios and controllable assets
+  -> run simulations or fast impact screening
+  -> clear/dispatch flexibility with network constraints
+  -> validate outcomes
+  -> publish reports, dashboard catalogs, and run manifests
+```
+
+Developers should experience the same platform through APIs:
+
+New applications should use the seven-module vocabulary when they want the
+platform boundary to be explicit:
+
+```python
+from gridalyn import foundation, twin, assets, simulation, operations
+
+repository = twin.NetworkModelRepository("digital_twin/base")
+policy_report = foundation.check_artifact_policy(".")
+```
+
+The architectural target is not more ceremony. It is a platform where each
+piece has a clear home, and complex utility workflows can be assembled from
+small, predictable contracts.

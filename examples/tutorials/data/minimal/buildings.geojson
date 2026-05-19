@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "building_id": "building:demo_001",
+        "connected_node_id": "bus:lv_1",
+        "floor_area_m2": 120.0,
+        "base_peak_kw": 6.5,
+        "ev_count": 1,
+        "soft_cls_kw": 1.2,
+        "hard_cls_kw": 3.6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5486, 46.3505]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_id": "building:demo_002",
+        "connected_node_id": "bus:lv_1",
+        "floor_area_m2": 180.0,
+        "base_peak_kw": 8.0,
+        "ev_count": 0,
+        "soft_cls_kw": 1.8,
+        "hard_cls_kw": 0.0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5484, 46.3502]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_id": "building:demo_003",
+        "connected_node_id": "bus:lv_2",
+        "floor_area_m2": 95.0,
+        "base_peak_kw": 5.5,
+        "ev_count": 1,
+        "soft_cls_kw": 0.9,
+        "hard_cls_kw": 3.6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5474, 46.351]
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "created_at": "2026-05-12T17:19:18.864787+00:00",
+  "report_id": "digital_twin_report_manifest",
+  "reports": {
+    "network_capacity": "digital_twin/reports/canonical/network_capacity_report.json",
+    "scenario_registry": "digital_twin/reports/canonical/scenario_registry_report.json",
+    "semantic_graph": "digital_twin/reports/canonical/semantic_graph_report.json"
+  },
+  "schema_version": "1.0",
+  "source_domain": "digital_twin"
+}

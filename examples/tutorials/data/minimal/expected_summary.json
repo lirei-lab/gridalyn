@@ -1,0 +1,11 @@
+{
+  "dataset_id": "gridalyn_minimal_radial_demo",
+  "node_count": 3,
+  "edge_count": 2,
+  "building_count": 3,
+  "scenario_count": 2,
+  "total_base_peak_kw": 20.0,
+  "total_ev_assets": 2,
+  "total_soft_cls_kw": 3.9,
+  "total_hard_cls_kw": 7.2
+}

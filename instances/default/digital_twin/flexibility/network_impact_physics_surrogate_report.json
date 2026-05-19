@@ -1,0 +1,26 @@
+{
+  "created_at": "2026-05-10T18:55:57.373562+00:00",
+  "inputs": {
+    "physics_labels": "digital_twin/flexibility/network_impact_physics_labels.parquet",
+    "training": "digital_twin/flexibility/network_impact_training.parquet"
+  },
+  "model": {
+    "fallback_policy": "provider_type_constraint_mean_then_topology_zero",
+    "future_backend": "sklearn_or_heterogeneous_gnn",
+    "label_source": "pandapower_finite_difference",
+    "model_family": "tabular_physics_lookup_v1"
+  },
+  "report_id": "network_impact_physics_surrogate",
+  "scenario_id": "S4",
+  "schema_version": "1.0",
+  "summary": {
+    "mean_predicted_relief_pct_per_kw": 0.5290236728042327,
+    "n_label_rows": 3888,
+    "n_positive_label_rows": 3429,
+    "n_positive_predictions": 114,
+    "n_prediction_rows": 366768,
+    "n_supervised_pairs": 69,
+    "n_supervised_predictions": 13584,
+    "positive_predicted_relief_kw": 300.75434321990605
+  }
+}

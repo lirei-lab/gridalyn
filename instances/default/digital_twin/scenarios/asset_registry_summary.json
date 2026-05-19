@@ -1,0 +1,66 @@
+{
+  "asset_registry_table": "digital_twin/scenarios/asset_registry.parquet",
+  "asset_registry_version": 1,
+  "created_at": "2026-05-10T12:54:27.728899+00:00",
+  "n_scenarios": 5,
+  "scenarios": [
+    {
+      "max_hard_kw": 0.0,
+      "max_soft_kw": 6305.0,
+      "n_buildings": 3235,
+      "n_ev": 0,
+      "n_hard_cls_enabled": 0,
+      "n_hard_preferred": 0,
+      "n_soft_and_ev": 0,
+      "n_soft_participants": 970,
+      "scenario_id": "S0"
+    },
+    {
+      "max_hard_kw": 1244.1599999999999,
+      "max_soft_kw": 6305.0,
+      "n_buildings": 3235,
+      "n_ev": 324,
+      "n_hard_cls_enabled": 324,
+      "n_hard_preferred": 226,
+      "n_soft_and_ev": 98,
+      "n_soft_participants": 970,
+      "scenario_id": "S1"
+    },
+    {
+      "max_hard_kw": 2484.48,
+      "max_soft_kw": 6305.0,
+      "n_buildings": 3235,
+      "n_ev": 647,
+      "n_hard_cls_enabled": 647,
+      "n_hard_preferred": 453,
+      "n_soft_and_ev": 194,
+      "n_soft_participants": 970,
+      "scenario_id": "S2"
+    },
+    {
+      "max_hard_kw": 3724.8,
+      "max_soft_kw": 6305.0,
+      "n_buildings": 3235,
+      "n_ev": 970,
+      "n_hard_cls_enabled": 970,
+      "n_hard_preferred": 664,
+      "n_soft_and_ev": 306,
+      "n_soft_participants": 970,
+      "scenario_id": "S3"
+    },
+    {
+      "max_hard_kw": 4968.96,
+      "max_soft_kw": 6305.0,
+      "n_buildings": 3235,
+      "n_ev": 1294,
+      "n_hard_cls_enabled": 1294,
+      "n_hard_preferred": 905,
+      "n_soft_and_ev": 389,
+      "n_soft_participants": 970,
+      "scenario_id": "S4"
+    }
+  ],
+  "soft_assignment_seed": 3042,
+  "soft_assignment_source": "seeded_registry_assignment",
+  "soft_participation_rate": 0.3
+}

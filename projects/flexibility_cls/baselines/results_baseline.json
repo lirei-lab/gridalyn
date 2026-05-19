@@ -1,0 +1,132 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 0,
+      "id": "S0_0pct.n_ev",
+      "json_path": [
+        "S0_0pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 324,
+      "id": "S1_10pct.n_ev",
+      "json_path": [
+        "S1_10pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 647,
+      "id": "S2_20pct.n_ev",
+      "json_path": [
+        "S2_20pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 970,
+      "id": "S3_30pct.n_ev",
+      "json_path": [
+        "S3_30pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1294,
+      "id": "S4_40pct.n_ev",
+      "json_path": [
+        "S4_40pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 23.832937707162838,
+      "id": "S4_40pct.unmanaged_peak_mw",
+      "json_path": [
+        "S4_40pct",
+        "unmanaged_peak_mw"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 21.717049710165213,
+      "id": "S4_40pct.managed_peak_mw",
+      "json_path": [
+        "S4_40pct",
+        "managed_peak_mw"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 1.7191149834799866,
+      "id": "S4_40pct.total_soft_cls_mwh",
+      "json_path": [
+        "S4_40pct",
+        "total_soft_cls_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 2.707610827361843,
+      "id": "S4_40pct.total_hard_cls_mwh",
+      "json_path": [
+        "S4_40pct",
+        "total_hard_cls_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 1.884049434355084,
+      "id": "S4_40pct.total_rebound_mwh",
+      "json_path": [
+        "S4_40pct",
+        "total_rebound_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 22076.517925840915,
+      "id": "S4_40pct.total_market_settlement_usd",
+      "json_path": [
+        "S4_40pct",
+        "total_market_settlement_usd"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": true,
+      "id": "S3_30pct.congested_dynamic",
+      "json_path": [
+        "scenarios",
+        3,
+        "congested_dynamic"
+      ],
+      "source": "outputs/json/pandapower_validation.json"
+    },
+    {
+      "expected": true,
+      "id": "output_consistency.valid",
+      "json_path": [
+        "validation",
+        "valid"
+      ],
+      "source": "outputs/reports/output_consistency_report.json"
+    }
+  ],
+  "project": "flexibility_cls",
+  "schema_version": "1.0"
+}

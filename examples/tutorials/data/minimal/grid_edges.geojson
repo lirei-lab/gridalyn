@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "edge_id": "line:source_lv_1",
+        "from_node_id": "bus:source",
+        "to_node_id": "bus:lv_1",
+        "length_m": 110.0,
+        "rating_kva": 500.0,
+        "asset_type": "transformer_feeder"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-72.55, 46.35],
+          [-72.5488, 46.3504]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "edge_id": "line:lv_1_lv_2",
+        "from_node_id": "bus:lv_1",
+        "to_node_id": "bus:lv_2",
+        "length_m": 125.0,
+        "rating_kva": 300.0,
+        "asset_type": "low_voltage_line"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-72.5488, 46.3504],
+          [-72.5476, 46.3509]
+        ]
+      }
+    }
+  ]
+}

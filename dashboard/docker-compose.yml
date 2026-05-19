@@ -1,0 +1,13 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gridalyn-dashboard
+    ports:
+      - "8081:80"
+    volumes:
+      - ../instances/default/digital_twin:/usr/share/nginx/html/digital_twin:ro
+      - ../projects/flexibility_cls/outputs:/usr/share/nginx/html/projects/flexibility_cls/outputs:ro
+      - ../projects/ieee_33_bus_demo/outputs:/usr/share/nginx/html/projects/ieee_33_bus_demo/outputs:ro
+    restart: unless-stopped

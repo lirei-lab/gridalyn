@@ -1,0 +1,16 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "S0",
+      "name": "Baseline",
+      "ev_adoption_percent": 0,
+      "description": "Building demand without additional EV charging."
+    },
+    {
+      "scenario_id": "S1",
+      "name": "Demo EV flexibility",
+      "ev_adoption_percent": 50,
+      "description": "Two demo EV charging assets with Soft/Hard CLS capability."
+    }
+  ]
+}

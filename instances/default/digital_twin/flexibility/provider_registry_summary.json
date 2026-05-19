@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "network_sensitivity": "digital_twin/flexibility/network_sensitivity.parquet",
+    "provider_registry": "digital_twin/flexibility/provider_registry.parquet"
+  },
+  "created_at": "2026-05-13T12:02:13.941066+00:00",
+  "inputs": {
+    "asset_registry": "digital_twin/scenarios/asset_registry.parquet",
+    "building_grid_connectivity": "digital_twin/base/building_grid_connectivity.parquet",
+    "scenario_model_devices": [
+      "digital_twin/models/scenarios/S0_device_registry.parquet",
+      "digital_twin/models/scenarios/S1_device_registry.parquet",
+      "digital_twin/models/scenarios/S2_device_registry.parquet",
+      "digital_twin/models/scenarios/S3_device_registry.parquet",
+      "digital_twin/models/scenarios/S4_device_registry.parquet"
+    ]
+  },
+  "n_providers": 8085,
+  "n_sensitivity_rows": 1309770,
+  "provider_registry_version": 1,
+  "scenarios": [
+    {
+      "available_capacity_kw": 6305.0,
+      "n_constraint_zones": 162,
+      "n_hard_ev_providers": 0,
+      "n_providers": 970,
+      "n_soft_building_providers": 970,
+      "scenario_id": "S0"
+    },
+    {
+      "available_capacity_kw": 7549.16,
+      "n_constraint_zones": 162,
+      "n_hard_ev_providers": 324,
+      "n_providers": 1294,
+      "n_soft_building_providers": 970,
+      "scenario_id": "S1"
+    },
+    {
+      "available_capacity_kw": 8789.48,
+      "n_constraint_zones": 162,
+      "n_hard_ev_providers": 647,
+      "n_providers": 1617,
+      "n_soft_building_providers": 970,
+      "scenario_id": "S2"
+    },
+    {
+      "available_capacity_kw": 10029.800000000001,
+      "n_constraint_zones": 162,
+      "n_hard_ev_providers": 970,
+      "n_providers": 1940,
+      "n_soft_building_providers": 970,
+      "scenario_id": "S3"
+    },
+    {
+      "available_capacity_kw": 11273.96,
+      "n_constraint_zones": 162,
+      "n_hard_ev_providers": 1294,
+      "n_providers": 2264,
+      "n_soft_building_providers": 970,
+      "scenario_id": "S4"
+    }
+  ],
+  "selection_method": "downstream_transformer_topology_effective_cost"
+}

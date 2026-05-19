@@ -1,0 +1,38 @@
+{
+  "dataset_id": "gridalyn_minimal_radial_demo",
+  "description": "Tiny radial grid and building dataset for Gridalyn quickstarts and smoke tests.",
+  "schema_version": "1.0",
+  "version": "0.1.0",
+  "coordinate_reference_system": "EPSG:4326",
+  "files": [
+    {
+      "path": "grid_nodes.geojson",
+      "role": "grid_connectivity_nodes",
+      "records": 3
+    },
+    {
+      "path": "grid_edges.geojson",
+      "role": "grid_segments",
+      "records": 2
+    },
+    {
+      "path": "buildings.geojson",
+      "role": "building_assets",
+      "records": 3
+    },
+    {
+      "path": "scenarios.json",
+      "role": "scenario_catalog",
+      "records": 2
+    },
+    {
+      "path": "expected_summary.json",
+      "role": "smoke_test_expectations",
+      "records": 1
+    }
+  ],
+  "size_policy": {
+    "max_directory_bytes": 10485760,
+    "tracked_in_git": true
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "node_id": "bus:source",
+        "name": "Demo source bus",
+        "voltage_kv": 13.8,
+        "node_type": "source"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.55, 46.35]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "node_id": "bus:lv_1",
+        "name": "Demo LV bus 1",
+        "voltage_kv": 0.24,
+        "node_type": "load_bus"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5488, 46.3504]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "node_id": "bus:lv_2",
+        "name": "Demo LV bus 2",
+        "voltage_kv": 0.24,
+        "node_type": "load_bus"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5476, 46.3509]
+      }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "edges": "digital_twin/semantic/edges.parquet",
+    "nodes": "digital_twin/semantic/nodes.parquet",
+    "profile": "digital_twin/semantic/profile_north_america.json",
+    "validation_report": "digital_twin/semantic/validation_report.json"
+  },
+  "count_checks": {
+    "buildings": {
+      "actual": 3235,
+      "expected": 3235,
+      "ok": true
+    },
+    "buses": {
+      "actual": 3562,
+      "expected": 3562,
+      "ok": true
+    },
+    "lines": {
+      "actual": 3398,
+      "expected": 3398,
+      "ok": true
+    },
+    "scenarios": {
+      "actual": 5,
+      "expected": 5,
+      "ok": true
+    },
+    "transformers": {
+      "actual": 163,
+      "expected": 163,
+      "ok": true
+    }
+  },
+  "created_at": "2026-05-13T11:29:08.196184+00:00",
+  "edge_count": 147065,
+  "namespaces": {
+    "brick": "https://brickschema.org/schema/Brick#",
+    "cim": "https://cim.ucaiug.io/ns#",
+    "cls": "https://gridalyn.local/ontology/cls#",
+    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    "gb": "https://www.greenbuttondata.org/ns#",
+    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
+    "openadr": "https://openadr.org/ns#",
+    "s223": "http://data.ashrae.org/standard223#"
+  },
+  "node_count": 74286,
+  "semantic_profile": "north_america",
+  "source_counts": {
+    "asset_registry_rows": 16175,
+    "buildings": 3235,
+    "buses": 3562,
+    "lines": 3398,
+    "provider_registry_rows": 8085,
+    "scenarios": 5,
+    "transformers": 163
+  },
+  "validation": {
+    "error_count": 0,
+    "report": "digital_twin/semantic/validation_report.json",
+    "valid": true,
+    "warning_count": 0
+  }
+}

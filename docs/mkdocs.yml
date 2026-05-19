@@ -1,0 +1,150 @@
+site_name: Gridalyn
+site_dir: ../site
+docs_dir: .
+not_in_nav: |
+  superpowers/plans/*.md
+  superpowers/specs/*.md
+  development/cleanup-inventory.md
+  development/module-migration-plan.md
+  development/release-cleanup-audit.md
+  development/agent-task-templates/*.md
+nav:
+  - Home: index.md
+  - Start:
+      - What Is Gridalyn?: getting-started/what-is-gridalyn.md
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - First Hour With Gridalyn: getting-started/first-hour.md
+      - Run Demo Projects: getting-started/run-ev-project.md
+      - Open The Dashboard: tutorials/open-dashboard.md
+      - Reproducibility Checklist: getting-started/reproducibility.md
+      - Documentation Map: getting-started/documentation-map.md
+      - Tutorials:
+          - Tutorial Overview: tutorials/overview.md
+          - Synthetic Networks From GeoJSON: tutorials/synthetic-network-from-geojson.md
+          - Build A Minimal Digital Twin: tutorials/build-minimal-digital-twin.md
+          - Generate Reports And Figures: tutorials/generate-reports-and-figures.md
+  - Platform:
+      - Platform Overview: platform/overview.md
+      - Platform, SDK, And Projects: platform/platform-sdk-projects.md
+      - Artifact Lifecycle: platform/artifact-lifecycle.md
+      - Architecture:
+          - Architecture Map: platform/capability-architecture.md
+          - Platform Layer Model: platform/platform-layer-model.md
+          - System Architecture: platform/architecture.md
+      - Core Concepts:
+          - Concept Overview: concepts/overview.md
+          - Digital Twin Core: platform/digital-twin.md
+          - Network Model: concepts/network-model.md
+          - Artifacts: concepts/data-and-artifact-model.md
+          - Scenarios: concepts/scenarios.md
+          - Model States: concepts/model-states.md
+          - Semantic Graph: semantic-layer/semantic-graph.md
+      - Applications:
+          - Applications And Interfaces: platform/applications-and-interfaces.md
+          - Dashboard: platform/dashboard.md
+          - Reports: applications/reports.md
+      - Roadmap: platform/utility-platform-roadmap.md
+  - SDK:
+      - Python SDK Overview: sdk/overview.md
+      - SDK Public Contract: sdk/public-contract.md
+      - Public Python API: development/public-api.md
+      - Network Repository: sdk/network-repository.md
+      - Adapters: sdk/adapters.md
+      - Modeling: sdk/modeling.md
+      - Building Models: platform/building-models.md
+      - Simulation: sdk/simulation.md
+      - Reporting: sdk/reporting.md
+      - Semantic Graph: sdk/semantic-graph.md
+      - Market And Operations: sdk/market-operations.md
+  - Operations:
+      - Utility Operations: platform/operations.md
+      - Operational Functions: flexibility/overview.md
+      - Providers And Aggregators: flexibility/providers-and-aggregators.md
+      - Markets And Transactions: flexibility/clearing.md
+      - Control And Optimization: flexibility/control.md
+      - Network Impact Verification: flexibility/network-impact-surrogate.md
+      - Operational KPIs: flexibility/economic-validation.md
+      - Building Flexibility: flexibility/building-flexibility.md
+  - Demos:
+      - Demo Overview: projects/overview.md
+      - Project Model: projects/project-model.md
+      - Project Template Guide: projects/template-guide.md
+      - Demo Catalog:
+          - Minimal Grid Project: projects/minimal-grid-project.md
+          - IEEE 33-Bus Demo: projects/ieee-33-demo.md
+          - Synthetic GeoJSON Feeder: projects/synthetic-geojson-feeder.md
+          - Prosumer Battery Market Demo: projects/prosumer-battery-market.md
+          - DER Voltage Optimization Demo: projects/der-voltage-optimization.md
+          - RL Voltage Control With LightSim2Grid: projects/rl-voltage-control-lightsim.md
+          - Flexibility CLS: workflows/flexibility-cls.md
+      - Project Workflows:
+          - Project Workflow Model: platform/projects-and-workflows.md
+          - Workflow YAML: workflows/workflow-yaml-reference.md
+          - Create A New Project: workflows/creating-new-workflow.md
+          - Project Regression: development/testing-and-validation.md
+  - Reference:
+      - Reference Overview: reference/overview.md
+      - CLI Reference: reference/cli.md
+      - YAML Reference: workflows/workflow-yaml-reference.md
+      - Report Schemas: platform/reports.md
+      - Semantic Model And Graph: semantic-layer/semantic-graph.md
+      - FalkorDB Path: semantic-layer/falkordb.md
+      - Artifact Policy: development/artifact-policy.md
+      - Testing And Validation: development/testing-and-validation.md
+  - Development:
+      - Development Overview: development/overview.md
+      - AI Agent Guide: development/ai-agent-guide.md
+      - Repository Layout: development/core-package-architecture.md
+      - Code Structure Audit: development/code-structure-audit.md
+      - Contribution Workflow: development/developer-workflow.md
+      - Project Hygiene: development/project-hygiene.md
+      - Release Readiness: platform/release-readiness.md
+theme:
+  name: material
+  logo: _static/logo.png
+  favicon: _static/logo.png
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+extra_css:
+  - stylesheets/extra.css
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - stylesheets/extra.js
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lirei-uqtr/gridalyn
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+  - search

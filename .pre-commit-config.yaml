@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.12
+        args: [--line-length=88]
+        additional_dependencies: [poetry]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: [--profile=black, --line-length=88]
+        additional_dependencies: [poetry]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [poetry, flake8-bugbear, flake8-docstrings]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [poetry, types-requests]
+        args: [--ignore-missing-imports, --disallow-untyped-defs]
+
+ci:
+  autofix_commit_msg: "style: Auto-format code and docs [skip ci]"
+  autoupdate_commit_msg: "chore: Update pre-commit hooks [skip ci]"
+  autofix_prs: true
+  skip: []  # Skip mypy in CI as it can be slow

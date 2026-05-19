@@ -1,0 +1,73 @@
+# DER Voltage Optimization Demo
+
+`projects/der_voltage_optimization` is a compact planning and operations demo
+that combines convex optimization with physical power-flow verification.
+
+## Why This Demo Exists
+
+Gridalyn should support more than scenario replay. This project shows how a
+workflow can:
+
+- build a synthetic feeder;
+- define DER assets;
+- derive a linearized voltage-sensitivity model from pandapower perturbations;
+- solve a voltage-constrained DER dispatch problem with `cvxpy`;
+- verify the optimized setpoints with an AC pandapower power flow;
+- publish reports, figures, and operation tables.
+
+It is a useful pattern for hosting-capacity studies, DERMS prototypes, planner
+assistants, and future optimization-backed applications.
+
+## Run It
+
+```bash
+uv run gridalyn project run projects/der_voltage_optimization
+uv run gridalyn project status projects/der_voltage_optimization --check-artifacts
+```
+
+Expected generated artifacts:
+
+```text
+projects/der_voltage_optimization/outputs/data/buses.csv
+projects/der_voltage_optimization/outputs/data/lines.csv
+projects/der_voltage_optimization/outputs/data/loads.csv
+projects/der_voltage_optimization/outputs/data/der_assets.csv
+projects/der_voltage_optimization/outputs/data/voltage_sensitivity_matrix.csv
+projects/der_voltage_optimization/outputs/data/pandapower_verification.csv
+projects/der_voltage_optimization/outputs/operations/der_dispatch.csv
+projects/der_voltage_optimization/outputs/reports/der_feeder_report.json
+projects/der_voltage_optimization/outputs/reports/der_voltage_optimization_report.json
+projects/der_voltage_optimization/outputs/figures/der_feeder_voltage_profile.png
+projects/der_voltage_optimization/outputs/figures/der_voltage_optimization.png
+projects/der_voltage_optimization/outputs/manifests/project_run_manifest.json
+```
+
+## Workflow
+
+| Stage | Purpose |
+| --- | --- |
+| `prepare_workspace` | Creates output folders. |
+| `build_der_feeder` | Builds a 16-bus radial feeder, places high downstream PV, writes feeder/DER tables, report, and voltage figure. |
+| `solve_voltage_optimization` | Builds finite-difference voltage sensitivities, solves the `cvxpy` dispatch, verifies with pandapower, and writes dispatch/report/figure artifacts. |
+
+## Optimization Model
+
+The optimization is a linearized voltage-constrained DER dispatch:
+
+```text
+minimize   PV curtailment + small battery charging penalty + voltage deviation penalty
+subject to 0 <= PV dispatch <= PV available
+           0 <= battery charge <= battery power
+           0.95 <= V_base + S * (PV dispatch - battery charge) <= 1.05
+```
+
+`S` is computed from pandapower finite-difference perturbations. The optimized
+setpoints are then applied back to a pandapower AC model for verification. This
+keeps the demo simple while preserving the essential platform pattern:
+
+```text
+asset model -> sensitivity model -> convex optimizer -> AC verification -> report
+```
+
+This is not a full AC OPF. It is a transparent and reproducible bridge between
+fast convex planning logic and physical validation.

@@ -1,0 +1,37 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: der_voltage_optimization_workflow
+spec:
+  stages:
+    - id: prepare_workspace
+      command: python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('outputs/data', 'outputs/figures', 'outputs/manifests', 'outputs/operations', 'outputs/reports', 'outputs/cache')]"
+      outputs:
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+    - id: build_der_feeder
+      needs:
+        - prepare_workspace
+      command: python scripts/build_der_feeder.py
+      outputs:
+        - outputs/data/buses.csv
+        - outputs/data/lines.csv
+        - outputs/data/loads.csv
+        - outputs/data/der_assets.csv
+        - outputs/reports/der_feeder_report.json
+        - outputs/figures/der_feeder_voltage_profile.png
+    - id: solve_voltage_optimization
+      needs:
+        - build_der_feeder
+      command: python scripts/solve_voltage_optimization.py
+      inputs:
+        - outputs/data/der_assets.csv
+      outputs:
+        - outputs/data/voltage_sensitivity_matrix.csv
+        - outputs/operations/der_dispatch.csv
+        - outputs/data/pandapower_verification.csv
+        - outputs/reports/der_voltage_optimization_report.json
+        - outputs/figures/der_voltage_optimization.png

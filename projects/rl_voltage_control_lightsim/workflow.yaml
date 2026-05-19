@@ -1,0 +1,38 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: rl_voltage_control_lightsim_workflow
+spec:
+  stages:
+    - id: prepare_workspace
+      command: python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('outputs/data', 'outputs/figures', 'outputs/manifests', 'outputs/operations', 'outputs/reports', 'outputs/cache')]"
+      outputs:
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+    - id: build_rl_feeder
+      needs:
+        - prepare_workspace
+      command: python scripts/build_rl_feeder.py
+      outputs:
+        - outputs/data/buses.csv
+        - outputs/data/lines.csv
+        - outputs/data/loads.csv
+        - outputs/data/rl_assets.csv
+        - outputs/reports/rl_feeder_report.json
+        - outputs/figures/rl_feeder_voltage_profile.png
+    - id: train_rl_voltage_agent
+      needs:
+        - build_rl_feeder
+      command: python scripts/train_rl_agent.py
+      inputs:
+        - outputs/data/rl_assets.csv
+      outputs:
+        - outputs/data/training_episodes.csv
+        - outputs/data/policy_evaluation_trajectory.csv
+        - outputs/operations/q_table.csv
+        - outputs/operations/learned_policy.csv
+        - outputs/reports/rl_voltage_control_report.json
+        - outputs/figures/rl_voltage_control.png

@@ -1,0 +1,34 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: rl_voltage_control_lightsim
+  version: 0.1.0
+  description: Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.
+spec:
+  pathBase: project
+  inputs:
+    sourceNetwork:
+      name: Synthetic 10-bus feeder for RL control
+      provider: gridalyn project script
+      note: Deterministic radial feeder with PV and controllable battery load/injection.
+    learning:
+      algorithm: tabular q-learning
+      simulator: lightsim2grid
+      episodeCount: 90
+      evaluationSteps: 24
+  artifacts:
+    project:
+      data: outputs/data
+      figures: outputs/figures
+      manifests: outputs/manifests
+      operations: outputs/operations
+      reports: outputs/reports
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/rl_feeder_report.json
+      - outputs/reports/rl_voltage_control_report.json
+    requiredFigures:
+      - outputs/figures/rl_feeder_voltage_profile.png
+      - outputs/figures/rl_voltage_control.png

@@ -1,0 +1,101 @@
+{
+  "allowed_semantic_types": [
+    "brick:Building",
+    "cim:ACLineSegment",
+    "cim:ConnectivityNode",
+    "cim:EnergyConsumer",
+    "cim:PowerTransformer",
+    "cls:ConstraintZone",
+    "cls:FlexibilityAggregator",
+    "cls:FlexibilityOffer",
+    "cls:FlexibilityPortfolio",
+    "cls:FlexibilityProvider",
+    "cls:HardCLSContract",
+    "cls:SoftCLSContract",
+    "dt:Scenario",
+    "dt:ScenarioDevice",
+    "dt:SimulationRun",
+    "dt:TimeSeriesDataset",
+    "efont:EnergyFlexibility",
+    "efont:EnergyFlexibilityKPI",
+    "efont:FlexibleLoadCharacteristic",
+    "efont:FlexibleOperation",
+    "efont:ThermallyActivatedBuildingSystem",
+    "ieee2030_5:EVSE"
+  ],
+  "created_at": "2026-05-13T11:29:08.632174+00:00",
+  "crosswalk_only_namespaces": [
+    "saref"
+  ],
+  "namespaces": {
+    "brick": "https://brickschema.org/schema/Brick#",
+    "cim": "https://cim.ucaiug.io/ns#",
+    "cls": "https://gridalyn.local/ontology/cls#",
+    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    "gb": "https://www.greenbuttondata.org/ns#",
+    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
+    "openadr": "https://openadr.org/ns#",
+    "s223": "http://data.ashrae.org/standard223#"
+  },
+  "primary_standards": {
+    "building_flexibility": [
+      "EFOnt"
+    ],
+    "buildings": [
+      "ASHRAE 223",
+      "Brick Schema"
+    ],
+    "cls_market": [
+      "gridalyn cls extension"
+    ],
+    "demand_response": [
+      "OpenADR"
+    ],
+    "ev_der_control": [
+      "IEEE 2030.5"
+    ],
+    "grid_topology": [
+      "IEC CIM",
+      "IEC 61970",
+      "IEC 61968",
+      "CIM100"
+    ],
+    "metering": [
+      "Green Button",
+      "NAESB ESPI"
+    ]
+  },
+  "relationship_types": [
+    "AGGREGATES",
+    "ALLOWS",
+    "CHARACTERIZES",
+    "CONNECTS",
+    "CONNECTED_TO",
+    "CONSTRAINT_ZONE_FOR",
+    "DESCRIBES_FLEXIBILITY",
+    "ENABLES",
+    "FEEDS",
+    "HAS_EVSE",
+    "HAS_FLEXIBILITY_RESOURCE",
+    "HAS_LOAD",
+    "IMPLEMENTS_CONTRACT",
+    "INCLUDES_ASSET",
+    "INCLUDES_PROVIDER",
+    "LOCATED_IN_CONSTRAINT_ZONE",
+    "MANAGES_PORTFOLIO",
+    "OBSERVES",
+    "OFFERS",
+    "PARTICIPATES_IN",
+    "PRODUCED",
+    "QUANTIFIES",
+    "TARGETS_CONSTRAINT"
+  ],
+  "semantic_profile": "north_america",
+  "unit_conventions": {
+    "active_power": "kW or MW, explicit in property name",
+    "current": "kA, explicit in property name",
+    "reactive_power": "kvar or Mvar, explicit in property name",
+    "voltage": "kV or pu, explicit in property name"
+  }
+}

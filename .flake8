@@ -1,0 +1,61 @@
+[flake8]
+# Set maximum line length
+max-line-length = 88
+
+# Ignore specific errors and warnings
+ignore = 
+    E203, 
+    E266,  
+    W503,  
+    E501,  
+    E731,  
+
+# Exclude directories and files
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    docs,
+    tests,
+    venv,
+    .venv,
+    .mypy_cache,
+    .pytest_cache
+
+# Set complexity threshold
+max-complexity = 10
+
+# Require docstrings
+docstring-convention = google
+
+# Enable flake8-bugbear
+select = 
+    B,
+    C,
+    E,
+    F,
+    W,
+    B9
+
+# Enable flake8-docstrings
+docstring-style = google
+
+# Enable flake8-import-order
+import-order-style = google
+
+# Enable flake8-builtins
+builtins-ignorelist = 
+    id,
+    input,
+    type,
+    file,
+    filter,
+    map,
+    next,
+    object,
+    open,
+    range,
+    str,
+    super,
+    zip

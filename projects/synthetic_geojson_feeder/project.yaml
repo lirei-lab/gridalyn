@@ -1,0 +1,29 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: synthetic_geojson_feeder
+  version: 0.1.0
+  description: Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.
+spec:
+  pathBase: project
+  inputs:
+    sourceData:
+      name: Generated building-footprint GeoJSON
+      provider: gridalyn.twin.adapters.geojson.FakeGeoJSONGenerator
+      note: Small deterministic footprint set used to teach the GeoJSON-to-network pipeline.
+    gridConfig:
+      path: inputs/synthetic_network_config.json
+  artifacts:
+    project:
+      data: outputs/data
+      figures: outputs/figures
+      manifests: outputs/manifests
+      operations: outputs/operations
+      reports: outputs/reports
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/synthetic_geojson_feeder_report.json
+    requiredFigures:
+      - outputs/figures/synthetic_feeder_topology.png

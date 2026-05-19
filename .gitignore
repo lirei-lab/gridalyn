@@ -1,0 +1,226 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# dotenv
+.env
+.env.*
+
+# virtualenv
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+_build/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Custom
+# data/
+# !geopower/geopower/data/
+
+# Local AI-agent/editor state. These files can contain machine-specific MCP
+# endpoints, credentials, prompts, or transient traces and must not be
+# published to GitHub.
+.roo/
+.agents/
+.codex/
+.claude/
+.cursor/
+.windsurf/
+.vscode/
+docs/superpowers/
+.gitlab-ci.yml
+
+scratch/
+data/twins/
+.cache/
+docs/build/
+docs/source/_static/
+docs/source/_templates/
+geopower.egg-info/
+powerg.egg-info/
+geopower/datagen/data/cache/
+geopower/datagen/outputs/
+datasets
+# paper
+paper/data/
+examples/outputs
+examples/cache/
+examples/generated/outputs/
+examples/generated/cache/
+dashboard/public
+cache/
+projects/*/outputs/
+# examples/outputs
+
+# Gridalyn generated digital twin artifacts
+digital_twin/**/*.parquet
+digital_twin/**/*.pkl
+digital_twin/**/*.npy
+digital_twin/**/*.npz
+digital_twin/timeseries/
+digital_twin/flexibility/*.parquet
+digital_twin/semantic/*.parquet
+digital_twin/models/**/*.parquet
+
+# Instance-local generated digital twin artifacts. The root `digital_twin`
+# symlink is kept for compatibility, but the physical workspace lives here.
+instances/*/digital_twin/**/*.parquet
+instances/*/digital_twin/**/*.pkl
+instances/*/digital_twin/**/*.npy
+instances/*/digital_twin/**/*.npz
+instances/*/digital_twin/timeseries/
+instances/*/digital_twin/flexibility/*.parquet
+instances/*/digital_twin/semantic/*.parquet
+instances/*/digital_twin/models/**/*.parquet
+
+# Gridalyn project and legacy outputs
+projects/*/outputs/
+
+# Dashboard generated data bundles
+dashboard/public/
+
+# Project-local manuscript/presentation figure scripts are publication support,
+# not reusable platform workflow stages.
+projects/*/scripts/manuscript_figures/
+
+# Private manuscript and presentation workspace.
+#
+# Manuscripts are not part of the public Gridalyn platform repository. Keep
+# papers, presentations, reviews, and generated publication figures local or in
+# a separate publication repository.
+manuscripts/
+
+# Manuscript and presentation generated artifacts
+manuscripts/**/figures/generated/
+manuscripts/**/*.aux
+manuscripts/**/*.bbl
+manuscripts/**/*.bcf
+manuscripts/**/*.blg
+manuscripts/**/*.fdb_latexmk
+manuscripts/**/*.fls
+manuscripts/**/*.lof
+manuscripts/**/*.log
+manuscripts/**/*.lot
+manuscripts/**/*.out
+manuscripts/**/*.run.xml
+manuscripts/**/*.synctex.gz
+manuscripts/**/*.toc
+
+clusters
+
+# Compiled manuscript PDFs are release artifacts, not source files
+manuscripts/**/*.pdf
+
+# Large local data and simulation caches
+*.h5
+*.hdf5
+*.pkl
+*.npy
+*.npz

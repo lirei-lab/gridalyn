@@ -1,0 +1,52 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: flexibility_cls
+  version: 0.1.0
+  description: EV capacity limitation project using a synthetic distribution grid and digital twin artifacts.
+spec:
+  pathBase: repo
+  inputs:
+    geography:
+      source: configs/geography/tr01.json
+    buildingFootprints:
+      source: examples/tutorials/data/buildings_inside_polygon.geojson
+      format: GeoJSON FeatureCollection
+      role: Clipped Trois-Rivieres building footprints used to synthesize the project topology cache.
+      replacement:
+        osm:
+          command: uv run gridalyn twin download-osm-buildings --polygon-file configs/geography/tr01.json --output-file projects/flexibility_cls/inputs/buildings.geojson
+        microsoft:
+          command: uv run gridalyn twin prepare-microsoft-buildings --input-file /path/to/microsoft-partition.csv.gz --polygon-file configs/geography/tr01.json --output-file projects/flexibility_cls/inputs/buildings.geojson
+        topologyStage:
+          command: uv run python projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py --input-file projects/flexibility_cls/inputs/buildings.geojson --force-rebuild
+    grid:
+      powergridConfig: configs/grid/powergrid_config.json
+      legacyConfig: configs/grid/config.json
+  artifacts:
+    digitalTwin:
+      base: digital_twin/base
+      scenarios: digital_twin/scenarios
+      timeseries: digital_twin/timeseries
+      semantic: digital_twin/semantic
+    project:
+      data: projects/flexibility_cls/outputs/data
+      json: projects/flexibility_cls/outputs/json
+      reports: projects/flexibility_cls/outputs/reports
+      operations: projects/flexibility_cls/outputs/operations
+      cache: projects/flexibility_cls/outputs/cache
+      figures: projects/flexibility_cls/outputs/figures
+  workflow:
+    file: projects/flexibility_cls/workflow.yaml
+  validation:
+    requiredReports:
+      - projects/flexibility_cls/outputs/reports/study_run_manifest.json
+      - projects/flexibility_cls/outputs/reports/output_consistency_report.json
+      - projects/flexibility_cls/outputs/reports/stage_1_stochastic_load_report.json
+      - projects/flexibility_cls/outputs/reports/stage_2_thermal_forecast_report.json
+      - projects/flexibility_cls/outputs/reports/stage_3_market_clearing_report.json
+      - projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json
+      - projects/flexibility_cls/outputs/reports/stage_5_settlement_report.json
+    requiredFigures:
+      - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_15_stage_2_realization.pdf
+      - projects/flexibility_cls/outputs/figures/05_stage4_realtime_dispatch/plot_17_aggregator_trajectory.pdf

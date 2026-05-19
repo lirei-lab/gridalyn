@@ -1,0 +1,357 @@
+{
+  "artifacts": {
+    "building_model_manifest": "digital_twin/models/building_model_manifest.json",
+    "canonical_report_manifest": "digital_twin/reports/canonical/digital_twin_report_manifest.json",
+    "dashboard_catalog": "digital_twin/dashboard/catalog.json",
+    "scenario_model_manifest": "digital_twin/models/scenarios/scenario_model_manifest.json",
+    "semantic_manifest": "digital_twin/semantic/graph_manifest.json"
+  },
+  "created_at": "2026-05-19T11:33:19.715247+00:00",
+  "dry_run": true,
+  "report_id": "digital_twin_build_manifest",
+  "results": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "base"
+      ],
+      "name": "export_base",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "building-models"
+      ],
+      "name": "generate_building_models",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "scenarios"
+      ],
+      "name": "generate_scenarios",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "timeseries"
+      ],
+      "name": "generate_ev_timeseries",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "overload-report"
+      ],
+      "name": "report_transformer_overloads",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "asset-registry"
+      ],
+      "name": "generate_asset_registry",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "scenario-models"
+      ],
+      "name": "generate_scenario_models",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "providers"
+      ],
+      "name": "generate_flexibility_providers",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.semantic",
+        "build"
+      ],
+      "name": "generate_semantic_graph",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.semantic",
+        "validate"
+      ],
+      "name": "validate_semantics",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.reporting.digital_twin"
+      ],
+      "name": "generate_canonical_reports",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "surrogate"
+      ],
+      "name": "generate_network_impact_surrogate",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "locational-clearing"
+      ],
+      "name": "generate_locational_flexibility_clearing",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "train-physics-surrogate"
+      ],
+      "name": "train_network_impact_physics_surrogate",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "network-impact-catalog"
+      ],
+      "name": "generate_network_impact_dashboard_catalog",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "scorecard"
+      ],
+      "name": "generate_flexibility_clearing_scorecard",
+      "status": "planned"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "gridalyn.interfaces.cli.dashboard",
+        "catalog"
+      ],
+      "name": "generate_dashboard_catalog",
+      "status": "planned"
+    }
+  ],
+  "root": ".",
+  "schema_version": "1.0",
+  "step_count": 17,
+  "steps": [
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "base"
+      ],
+      "heavy": false,
+      "name": "export_base",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "building-models"
+      ],
+      "heavy": false,
+      "name": "generate_building_models",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "scenarios"
+      ],
+      "heavy": false,
+      "name": "generate_scenarios",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "timeseries"
+      ],
+      "heavy": false,
+      "name": "generate_ev_timeseries",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "overload-report"
+      ],
+      "heavy": false,
+      "name": "report_transformer_overloads",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "asset-registry"
+      ],
+      "heavy": false,
+      "name": "generate_asset_registry",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.digital_twin",
+        "scenario-models"
+      ],
+      "heavy": false,
+      "name": "generate_scenario_models",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "providers"
+      ],
+      "heavy": false,
+      "name": "generate_flexibility_providers",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.semantic",
+        "build"
+      ],
+      "heavy": false,
+      "name": "generate_semantic_graph",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.semantic",
+        "validate"
+      ],
+      "heavy": false,
+      "name": "validate_semantics",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.reporting.digital_twin"
+      ],
+      "heavy": false,
+      "name": "generate_canonical_reports",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "surrogate"
+      ],
+      "heavy": false,
+      "name": "generate_network_impact_surrogate",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "locational-clearing"
+      ],
+      "heavy": false,
+      "name": "generate_locational_flexibility_clearing",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "train-physics-surrogate"
+      ],
+      "heavy": false,
+      "name": "train_network_impact_physics_surrogate",
+      "optional": true
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "network-impact-catalog"
+      ],
+      "heavy": false,
+      "name": "generate_network_impact_dashboard_catalog",
+      "optional": false
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.flexibility",
+        "scorecard"
+      ],
+      "heavy": false,
+      "name": "generate_flexibility_clearing_scorecard",
+      "optional": true
+    },
+    {
+      "command": [
+        "-m",
+        "gridalyn.interfaces.cli.dashboard",
+        "catalog"
+      ],
+      "heavy": false,
+      "name": "generate_dashboard_catalog",
+      "optional": false
+    }
+  ]
+}
