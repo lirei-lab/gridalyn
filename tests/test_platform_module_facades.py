@@ -57,6 +57,8 @@ class PlatformModuleFacadeTest(unittest.TestCase):
 
         self.assertTrue(hasattr(operations, "OperationRun"))
         self.assertTrue(hasattr(operations, "build_operation_run"))
+        self.assertTrue(hasattr(operations, "run_flexibility_clearing_operation"))
+        self.assertTrue(hasattr(operations, "build_operational_kpi_report"))
         self.assertTrue(hasattr(operations, "build_locational_clearing"))
         self.assertTrue(hasattr(operations, "build_provider_registry"))
         self.assertTrue(hasattr(operations, "write_locational_clearing_outputs"))
@@ -66,8 +68,10 @@ class PlatformModuleFacadeTest(unittest.TestCase):
 
         self.assertTrue(hasattr(projects, "StudyProject"))
         self.assertTrue(hasattr(projects, "WorkflowSpec"))
+        self.assertTrue(hasattr(projects, "init_project"))
         self.assertTrue(hasattr(projects, "load_project"))
         self.assertTrue(hasattr(projects, "load_workflow"))
+        self.assertTrue(hasattr(projects, "project_verify_all"))
         self.assertTrue(hasattr(projects, "validate_project_file"))
 
     def test_interfaces_facade_exposes_cli_report_dashboard_and_graph_contracts(self):

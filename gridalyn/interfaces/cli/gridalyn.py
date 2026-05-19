@@ -4,14 +4,27 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.metadata
+import importlib.util
 import json
 from pathlib import Path
+import sys
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
 from gridalyn.foundation.platform.validation import validate_workspace
+from gridalyn.foundation.platform.projects import list_projects
+
+
+OPTIONAL_CAPABILITY_MODULES = {
+    "geo": ["geopandas", "osmnx", "shapely"],
+    "sim": ["pandapower", "lightsim2grid"],
+    "ops": ["cvxpy", "lightgbm"],
+    "semantic": ["rdflib", "falkordb"],
+    "dashboard": ["folium", "leafmap"],
+}
 
 
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
@@ -39,6 +52,46 @@ def _validate(args: argparse.Namespace) -> int:
         check_project_artifacts=args.check_project_artifacts,
         run_regression=args.regression,
     )
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload["valid"] else 1
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    root = Path(args.root)
+    workspace = validate_workspace(root)
+    projects = list_projects(root)
+    try:
+        version = importlib.metadata.version("gridalyn")
+    except importlib.metadata.PackageNotFoundError:
+        version = "unknown"
+    optional = {
+        capability: {
+            module_name: importlib.util.find_spec(module_name) is not None
+            for module_name in module_names
+        }
+        for capability, module_names in OPTIONAL_CAPABILITY_MODULES.items()
+    }
+    payload = {
+        "valid": bool(workspace.get("valid")),
+        "python": {
+            "version": sys.version.split()[0],
+            "executable": sys.executable,
+        },
+        "gridalyn": {
+            "version": version,
+        },
+        "workspace": {
+            "root": str(root.resolve()),
+            "valid": workspace.get("valid"),
+            "errors": workspace.get("errors", []),
+            "warnings": workspace.get("warnings", []),
+        },
+        "projects": {
+            "count": len(projects),
+            "items": projects,
+        },
+        "optional_capabilities": optional,
+    }
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if payload["valid"] else 1
 
@@ -76,6 +129,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also run configured project regression checks.",
     )
     validate_parser.set_defaults(handler=_validate)
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Inspect the local Gridalyn installation, workspace, projects, and optional capabilities.",
+    )
+    doctor_parser.add_argument("--root", default=".")
+    doctor_parser.set_defaults(handler=_doctor)
 
     for name, (module_name, help_text, aliases) in DOMAIN_MODULES.items():
         command = subparsers.add_parser(name, aliases=aliases, help=help_text)

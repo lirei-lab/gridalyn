@@ -94,24 +94,39 @@ uv sync --extra dev
 uv run gridalyn --help
 ```
 
-For a lighter library-only install, use `uv sync`. The `dev` extra adds
-documentation and test tools used by the repository checks.
+For a lighter library-only install, use `uv sync`. Optional capability groups
+keep heavier integrations out of the smallest install:
+
+```bash
+uv sync --extra geo        # GeoJSON, OSM, geospatial preprocessing
+uv sync --extra sim        # pandapower and LightSim2Grid simulation helpers
+uv sync --extra ops        # optimization and operational analytics
+uv sync --extra semantic   # RDF/graph database tooling
+uv sync --extra dashboard  # dashboard and visualization helpers
+uv sync --extra all        # full platform runtime
+```
+
+The `dev` extra installs the full runtime plus documentation and test tools
+used by repository checks.
 
 ## Quickstart
 
 Run the workspace validation:
 
 ```bash
+uv run gridalyn doctor
 uv run gridalyn validate
 ```
 
 Inspect and run the smallest demo project:
 
 ```bash
+uv run gridalyn project list
 uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
+uv run gridalyn project verify-all
 ```
 
 Run a larger flexibility operations demo when you need the full stack:

@@ -82,6 +82,27 @@ the generated values make sense for the objective of the project, such as
 improved voltage after control, positive settlement, or one synthetic load per
 generated building.
 
+Projects can declare lightweight sense checks directly in `project.yaml`.
+Declarative checks make new demos extensible without adding project-specific
+Python code:
+
+```yaml
+spec:
+  validation:
+    senseChecks:
+      - id: voltage_floor
+        report: outputs/reports/project_summary.json
+        field: summary.min_voltage_pu
+        min: 0.95
+      - id: powerflow_converged
+        report: outputs/reports/project_summary.json
+        field: summary.converged
+        equals: true
+```
+
+Each rule reads a JSON report, resolves the dotted field path, and supports
+`equals`, `min`, `max`, `gt`, `gte`, `lt`, and `lte`.
+
 ## Public Example Projects
 
 Gridalyn includes several public executable projects. They demonstrate the same

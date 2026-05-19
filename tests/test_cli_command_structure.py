@@ -231,6 +231,30 @@ class CliCommandStructureTest(unittest.TestCase):
             self.assertEqual(args.command, command)
             self.assertTrue(callable(args.handler))
 
+        for command in ["list", "verify-all"]:
+            args = parser.parse_args([command])
+            self.assertEqual(args.command, command)
+            self.assertTrue(callable(args.handler))
+
+    def test_gridalyn_parser_exposes_doctor(self):
+        args, extra_args = gridalyn_cli.parse_args(["doctor", "--root", "."])
+
+        self.assertEqual(args.domain, "doctor")
+        self.assertEqual(extra_args, [])
+        self.assertTrue(callable(args.handler))
+
+    def test_pyproject_splits_heavy_runtime_capabilities_into_extras(self):
+        pyproject = tomllib.loads(Path("pyproject.toml").read_text())
+
+        core_dependencies = "\n".join(pyproject["project"]["dependencies"])
+        self.assertNotIn("osmnx", core_dependencies)
+        self.assertNotIn("lightsim2grid", core_dependencies)
+        self.assertNotIn("cvxpy", core_dependencies)
+
+        optional = pyproject["project"]["optional-dependencies"]
+        for extra in ["geo", "sim", "ops", "dashboard", "semantic", "all"]:
+            self.assertIn(extra, optional)
+
     def test_pyproject_exposes_only_gridalyn_entrypoints(self):
         pyproject = tomllib.loads(Path("pyproject.toml").read_text())
 

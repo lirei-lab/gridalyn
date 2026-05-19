@@ -12,9 +12,9 @@ offers, locational clearing, dispatch, settlement, and operational scorecards.
 | `gridalyn.simulation.analytics` | Network-impact features, predictions, and validation helpers. |
 | `gridalyn.foundation.platform` | Stable governance and report contracts that applications and projects can call. |
 
-Compatibility aliases such as `gridalyn.market`, `gridalyn.analytics`, and
-`gridalyn.platform` remain available for older scripts, but new SDK examples
-should use the seven-module structure above.
+New SDK examples should use this structure directly: operations own market
+decisions, simulation owns impact and validation analytics, and foundation owns
+governed reports and lineage.
 
 ## Design Rule
 

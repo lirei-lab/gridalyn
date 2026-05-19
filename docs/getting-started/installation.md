@@ -28,9 +28,20 @@ From the repository root:
 uv sync --extra dev
 ```
 
-Use plain `uv sync` when you only need the installable SDK and CLI. The
-`dev` extra adds test and documentation tooling for the full repository
-workflow.
+Use plain `uv sync` when you only need the installable SDK and CLI. Optional
+extras install heavier capability groups:
+
+```bash
+uv sync --extra geo        # geospatial preprocessing and OSM tooling
+uv sync --extra sim        # pandapower and LightSim2Grid helpers
+uv sync --extra ops        # optimization and operational analytics
+uv sync --extra semantic   # semantic graph and database tooling
+uv sync --extra dashboard  # dashboard and visualization helpers
+uv sync --extra all        # full runtime capability set
+```
+
+The `dev` extra installs the full runtime plus test and documentation tooling
+for the repository workflow.
 
 Run the test suite:
 

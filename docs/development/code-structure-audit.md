@@ -50,27 +50,16 @@ workflows, CLI arguments, or project manifests.
 | P1 | Project-specific routes must be explicit. | Hidden defaults make demos look like platform requirements. | Pass paths through `project.yaml`, `workflow.yaml`, or CLI arguments. |
 | P1 | Some project workflows still call scripts in `examples/`. | Examples should teach; the SDK should execute reusable operations. | Move reusable GeoJSON and data-acquisition functions into `gridalyn.twin` or `gridalyn.interfaces.cli`. |
 | P1 | Manuscript-specific figure scripts still exist near project logic. | Public projects should not depend on private manuscript outputs. | Keep publication-only material outside the public project workflow. |
-| P2 | Legacy compatibility import aliases remain. | They are useful now, but can confuse new users. | Keep them documented as temporary import shims, not as public commands. |
+| P2 | Historical import aliases still exist in a small shim. | They can confuse new users if examples rely on them. | Keep public docs and new tests on the native seven-module surface while retiring archived callers. |
 | P2 | `gridalyn.api.Interface` reflects an older interactive synthetic-grid interface. | It does not match the current platform boundary. | Replace it with smaller SDK entry points or mark it as legacy. |
 
-## Compatibility Inventory
+## Native Import Retirement Inventory
 
-These import shims are intentionally development-facing. They keep archived
-scripts and notebooks importable, but new source should use the canonical
-seven-module SDK surface.
-
-| Canonical area | Historical aliases | Status |
-| --- | --- | --- |
-| `gridalyn.foundation` | `gridalyn.platform`, `gridalyn.reporting` | Temporary import shims. |
-| `gridalyn.twin` | `gridalyn.network`, `gridalyn.adapters`, `gridalyn.io`, `gridalyn.semantic` | Temporary import shims. |
-| `gridalyn.assets` | `gridalyn.modeling`, `gridalyn.datagen` | Temporary import shims. |
-| `gridalyn.simulation` | `gridalyn.simulators`, `gridalyn.analytics` | Temporary import shims. |
-| `gridalyn.operations` | `gridalyn.market` | Temporary import shim. |
-| `gridalyn.projects` | `gridalyn.workflows` | Temporary import shim for workflow modules. |
-
-Current public docs should lead with canonical modules, CLI commands, project
-contracts, and `ArtifactLayout` paths. Compatibility details belong here until
-the archived scripts are retired.
+The canonical SDK surface is `foundation`, `twin`, `assets`, `simulation`,
+`operations`, `projects`, and `interfaces`. Public docs, examples, and new tests
+should use those names directly. If archived callers still need old imports,
+keep that concern isolated in the shim layer and do not let it define new API
+contracts.
 
 ## Rules For New Code
 
@@ -81,7 +70,8 @@ the archived scripts are retired.
 4. Keep generated artifacts out of package directories.
 5. Prefer explicit paths from project manifests over hard-coded repository paths.
 6. Use normal imports. Avoid runtime `sys.path` edits inside package modules.
-7. If a module exists only for backward compatibility, document that fact.
+7. If a module exists only for historical imports, keep it isolated from public
+   examples and replacement code.
 
 ## Cleanup Sequence
 
@@ -91,6 +81,6 @@ The next cleanup should be incremental:
    functions.
 2. Move publication-only figure generation behind a private or optional
    manuscript workflow.
-3. Add deprecation notes for legacy import aliases.
+3. Retire archived callers that still require historical import aliases.
 4. Add import-boundary tests that fail when package modules depend on examples
    or project-specific paths.

@@ -12,12 +12,14 @@ configure_cli_environment()
 
 from gridalyn.foundation.platform.projects import (
     init_project,
+    list_projects,
     load_project,
     plan_project,
     project_regression,
     project_sense_check,
     project_status,
     project_verify,
+    project_verify_all,
     run_workflow,
     validate_project,
 )
@@ -105,6 +107,17 @@ def _verify(args: argparse.Namespace) -> int:
     return 0 if report.get("valid") else 1
 
 
+def _list(args: argparse.Namespace) -> int:
+    _print_json({"projects": list_projects(Path(args.root))})
+    return 0
+
+
+def _verify_all(args: argparse.Namespace) -> int:
+    report = project_verify_all(Path(args.root), write=args.write)
+    _print_json(report)
+    return 0 if report.get("valid") else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -162,6 +175,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run verification without writing outputs/reports/project_sense_check_report.json.",
     )
     verify_parser.set_defaults(handler=_verify)
+
+    list_parser = subparsers.add_parser("list")
+    list_parser.add_argument("--root", default=".")
+    list_parser.set_defaults(handler=_list)
+
+    verify_all_parser = subparsers.add_parser("verify-all")
+    verify_all_parser.add_argument("--root", default=".")
+    verify_all_parser.add_argument("--write", action="store_true", help="Write project sense-check reports.")
+    verify_all_parser.set_defaults(handler=_verify_all)
     return parser
 
 

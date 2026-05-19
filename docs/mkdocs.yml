@@ -52,6 +52,7 @@ nav:
       - Network Repository: sdk/network-repository.md
       - Adapters: sdk/adapters.md
       - Modeling: sdk/modeling.md
+      - Solver And Model Adapters: sdk/solver-and-model-adapters.md
       - Building Models: platform/building-models.md
       - Simulation: sdk/simulation.md
       - Reporting: sdk/reporting.md

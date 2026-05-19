@@ -158,6 +158,60 @@ def project_verify(path: Path | str, write: bool = True) -> dict:
     }
 
 
+def list_projects(root: Path | str = ".") -> list[dict[str, object]]:
+    """List governed project workspaces under a repository or projects folder."""
+    root_path = Path(root)
+    projects_root = root_path if root_path.name == "projects" else root_path / "projects"
+    records: list[dict[str, object]] = []
+    if not projects_root.exists():
+        return records
+    for project_file in sorted(projects_root.glob("*/project.yaml")):
+        try:
+            project = load_project(project_file)
+        except Exception:
+            records.append(
+                {
+                    "name": project_file.parent.name,
+                    "path": str(project_file.parent),
+                    "valid": False,
+                }
+            )
+            continue
+        records.append(
+            {
+                "name": project.name,
+                "version": project.version,
+                "path": str(project.root),
+                "valid": True,
+            }
+        )
+    return records
+
+
+def project_verify_all(root: Path | str = ".", write: bool = False) -> dict:
+    """Run project verification for every governed project in a workspace."""
+    records = []
+    for project in list_projects(root):
+        path = project["path"]
+        try:
+            report = project_verify(path, write=write)
+        except Exception as exc:
+            report = {
+                "project": project["name"],
+                "valid": False,
+                "errors": [str(exc)],
+            }
+        records.append(report)
+    valid = all(record.get("valid") for record in records)
+    return {
+        "valid": valid,
+        "project_count": len(records),
+        "passed_count": sum(1 for record in records if record.get("valid")),
+        "failed_count": sum(1 for record in records if not record.get("valid")),
+        "projects": records,
+    }
+
+
 def project_status(path: Path | str, check_artifacts: bool = False) -> dict:
     """Return a compact status summary for a project workspace."""
     project = load_project(path)
@@ -268,6 +322,15 @@ def _project_yaml(name: str, template: str = "minimal") -> str:
         if template == "minimal"
         else "\n      - outputs/reports/project_summary.json"
     )
+    sense_checks = (
+        "[]"
+        if template == "minimal"
+        else """
+      - id: project_summary_ready
+        report: outputs/reports/project_summary.json
+        field: summary.ready
+        equals: true"""
+    )
     return f"""apiVersion: gridalyn.io/v1alpha1
 kind: StudyProject
 metadata:
@@ -289,6 +352,7 @@ spec:
   validation:
     requiredReports: {required_reports}
     requiredFigures: []
+    senseChecks: {sense_checks}
 """
 
 

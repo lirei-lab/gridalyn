@@ -29,8 +29,9 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
     project = load_project(_project_file(path))
     checks: CheckList = []
     _common_artifact_checks(project, checks)
+    declared_checks = _declarative_sense_checks(project, checks)
     checker = _PROJECT_CHECKERS.get(project.name)
-    if checker is None:
+    if checker is None and declared_checks == 0:
         _record(
             checks,
             "project_has_registered_sense_checks",
@@ -39,7 +40,7 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
             project.name,
             f"one of {sorted(_PROJECT_CHECKERS)}",
         )
-    elif missing := _missing_objective_artifacts(project):
+    elif checker is not None and (missing := _missing_objective_artifacts(project)):
         _record(
             checks,
             "missing_objective_artifact",
@@ -49,7 +50,7 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
             "all objective artifacts exist",
             "Run the project workflow before objective-level sense checks.",
         )
-    else:
+    elif checker is not None:
         checker(project, checks)
 
     error_failures = [item for item in checks if item["severity"] == "error" and not item["passed"]]
@@ -183,6 +184,114 @@ def _common_artifact_checks(project: StudyProject, checks: CheckList) -> None:
             relative,
             "existing non-empty figure",
         )
+
+
+def _declarative_sense_checks(project: StudyProject, checks: CheckList) -> int:
+    declared = (
+        project.raw.get("spec", {})
+        .get("validation", {})
+        .get("senseChecks", [])
+    )
+    if not isinstance(declared, list):
+        _record(
+            checks,
+            "declared_sense_checks_shape",
+            False,
+            "error",
+            type(declared).__name__,
+            "list",
+        )
+        return 1
+
+    for index, rule in enumerate(declared, start=1):
+        _run_declarative_sense_check(project, checks, rule, index)
+    return len(declared)
+
+
+def _run_declarative_sense_check(
+    project: StudyProject,
+    checks: CheckList,
+    rule: dict[str, Any],
+    index: int,
+) -> None:
+    check_id = str(rule.get("id") or f"declared_sense_check_{index}")
+    severity = str(rule.get("severity", "error"))
+    report_path = rule.get("report")
+    field = rule.get("field")
+    if not report_path or not field:
+        _record(
+            checks,
+            check_id,
+            False,
+            severity,
+            {"report": report_path, "field": field},
+            "rule with report and field",
+            rule.get("message"),
+        )
+        return
+
+    try:
+        payload = json.loads((project.base_dir / str(report_path)).read_text(encoding="utf-8"))
+        observed = _resolve_field(payload, str(field))
+    except Exception as exc:
+        _record(
+            checks,
+            check_id,
+            False,
+            severity,
+            str(exc),
+            f"{report_path}:{field}",
+            rule.get("message"),
+        )
+        return
+
+    passed, expected = _evaluate_declarative_rule(observed, rule)
+    _record(
+        checks,
+        check_id,
+        passed,
+        severity,
+        observed,
+        expected,
+        rule.get("message"),
+    )
+
+
+def _resolve_field(payload: dict[str, Any], field: str) -> Any:
+    value: Any = payload
+    for part in field.split("."):
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        else:
+            raise KeyError(field)
+    return value
+
+
+def _evaluate_declarative_rule(observed: Any, rule: dict[str, Any]) -> tuple[bool, Any]:
+    expectations = []
+    if "equals" in rule:
+        expected = rule["equals"]
+        expectations.append((observed == expected, f"== {expected!r}"))
+    numeric_ops = [
+        ("min", lambda value, limit: value >= limit, ">="),
+        ("max", lambda value, limit: value <= limit, "<="),
+        ("gt", lambda value, limit: value > limit, ">"),
+        ("gte", lambda value, limit: value >= limit, ">="),
+        ("lt", lambda value, limit: value < limit, "<"),
+        ("lte", lambda value, limit: value <= limit, "<="),
+    ]
+    for key, predicate, label in numeric_ops:
+        if key in rule:
+            limit = float(rule[key])
+            try:
+                observed_number = float(observed)
+            except (TypeError, ValueError):
+                expectations.append((False, f"{label} {limit}"))
+            else:
+                expectations.append((predicate(observed_number, limit), f"{label} {limit}"))
+    if not expectations:
+        return False, "one of equals, min, max, gt, gte, lt, lte"
+    return all(item[0] for item in expectations), " and ".join(item[1] for item in expectations)
 
 
 def _missing_objective_artifacts(project: StudyProject) -> list[str]:

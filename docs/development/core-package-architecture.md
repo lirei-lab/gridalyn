@@ -26,25 +26,12 @@ Tutorial datasets belong under `examples/tutorials/data`.
 Generated artifacts belong under declared output folders such as
 `projects/*/outputs`, `instances/default/digital_twin/*`, or `examples/generated`.
 
-## Compatibility Imports
+## Public Module Vocabulary
 
-The old domain imports remain available through compatibility aliases so
-existing project scripts and tutorials continue to run:
-
-```text
-gridalyn.network      -> gridalyn.twin.network
-gridalyn.adapters     -> gridalyn.twin.adapters
-gridalyn.modeling     -> gridalyn.assets.modeling
-gridalyn.simulators   -> gridalyn.simulation.simulators
-gridalyn.analytics    -> gridalyn.simulation.analytics
-gridalyn.market       -> gridalyn.operations.market
-gridalyn.platform     -> gridalyn.foundation.platform
-gridalyn.interfaces.cli          -> gridalyn.interfaces.cli
-```
-
-New code should prefer the seven-module vocabulary when it is clearer.
-Compatibility imports are for continuity, not for adding new architectural
-surface.
+The seven modules above are the public vocabulary for new applications,
+projects, examples, and documentation. Do not introduce new public entrypoints
+under older domain names; put reusable behavior in the owning native module and
+keep project scripts as thin orchestration wrappers.
 
 | Platform module | Internal subpackages |
 | --- | --- |
@@ -57,8 +44,8 @@ surface.
 | `interfaces` | `cli`, `reporting`, `viz` |
 
 Further moves should happen only when they reduce ambiguity for users or give
-multiple applications a cleaner API. Each move needs compatibility imports,
-hygiene tests, documentation, and a project regression run.
+multiple applications a cleaner API. Each move needs native imports, hygiene
+tests, documentation, and a project regression run.
 
 ## Data and Artifact Rules
 
@@ -66,7 +53,7 @@ hygiene tests, documentation, and a project regression run.
   contain real GeoJSON, Parquet, HDF5, or case-study files.
 - Runtime caches must not be tracked inside SDK packages. The datagen weather
   cache defaults to `examples/generated/cache` and can be redirected with
-  `GRIDALYN_DATAGEN_CACHE_DIR` or the legacy `GEOPOWER_DATAGEN_CACHE_DIR`.
+  `GRIDALYN_DATAGEN_CACHE_DIR`.
 - `__pycache__`, generated outputs, and cache folders are never source files.
 - Model weights are currently retained under `gridalyn/assets/datagen/models/weights`
   because `ParametricArxGenerator` loads them at runtime. Moving them should be
@@ -120,7 +107,7 @@ Synthetic grid generation from building footprints should use the GeoJSON
 adapter namespace:
 
 ```python
-from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator, GridProcessor
+from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator, GeoProcessor
 from gridalyn.twin.core.graph import PowerGridGraph
 
 generator = FakeGeoJSONGenerator(grid_size=8, rectangular=True)
@@ -133,8 +120,7 @@ conversion are documented in
 [Synthetic Networks From GeoJSON](../tutorials/synthetic-network-from-geojson.md).
 The package boundary stays stable: `gridalyn.twin.adapters.geojson` validates
 and prepares footprints, while projects decide which source data they trust and
-how they record lineage. The older `gridalyn.adapters.geojson` import remains
-available for compatibility.
+how they record lineage.
 
 Market and flexibility studies should import reusable selection logic directly
 from `gridalyn.operations`:

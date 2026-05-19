@@ -12,6 +12,7 @@ uv run gridalyn --help
 
 | Command | Purpose |
 | --- | --- |
+| `gridalyn doctor` | Inspect the local install, workspace, projects, and optional capabilities. |
 | `gridalyn validate` | Run the unified workspace validation ladder. |
 | `gridalyn project` | Initialize, validate, plan, run, inspect, and regression-test governed projects. |
 | `gridalyn twin` | Build and inspect digital twin artifacts. |
@@ -23,7 +24,9 @@ uv run gridalyn --help
 ## Common Commands
 
 ```bash
+uv run gridalyn doctor
 uv run gridalyn validate
+uv run gridalyn project list
 uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
@@ -31,6 +34,7 @@ uv run gridalyn project status projects/minimal_grid_project --check-artifacts
 uv run gridalyn project regression projects/flexibility_cls
 uv run gridalyn project sense-check projects/minimal_grid_project
 uv run gridalyn project verify projects/minimal_grid_project
+uv run gridalyn project verify-all
 ```
 
 ```bash
@@ -76,6 +80,8 @@ uv run gridalyn project verify projects/rl_voltage_control_lightsim --no-write
 pass. Warning-level failures are reported in JSON but do not block the command.
 `verify` is the recommended agent/CI command because it combines project
 contract validation, artifact status, and sense checks in one JSON payload.
+`verify-all` applies the same ladder to every governed project under
+`projects/` and does not write sense-check reports unless `--write` is passed.
 
 ## Domain-Specific Entrypoints
 

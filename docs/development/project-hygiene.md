@@ -60,19 +60,19 @@ archived demos that still consume `dashboard/public`.
 
 The old monolithic `gridalyn/datagen/run_simulation.py` CLS script was removed.
 It duplicated project workflow behavior and referenced obsolete subpackages;
-the maintained path is project workspaces plus the stable `gridalyn.platform`,
-`gridalyn.workflows`, and `gridalyn.interfaces.cli` entry points.
+the maintained path is project workspaces plus the native `gridalyn.projects`,
+`gridalyn.foundation`, `gridalyn.twin`, `gridalyn.simulation`,
+`gridalyn.operations`, and `gridalyn.interfaces` entry points.
 
 GeoJSON preprocessing for synthetic network generation now has a canonical API:
-`gridalyn.adapters.geojson`. The historical `gridalyn.geoprocess` package is
-kept as a compatibility namespace, but active tests, tutorials, and
-data-acquisition examples should reference the adapter path.
+`gridalyn.twin.adapters.geojson`. Active tests, tutorials, and data-acquisition
+examples should reference that adapter path.
 
-`gridalyn.viz` is intentionally narrow. It exposes Folium inspection maps via
-`GridPlotter` for synthetic-grid development and tutorials. Offline MP4/GIF
-animation code that targeted legacy Kepler Parquet snapshots was removed from
-the package because the dashboard and project reports now consume canonical
-digital-twin artifacts directly.
+Visualization now lives under `gridalyn.interfaces.viz`. It exposes Folium
+inspection maps via `GridPlotter` for synthetic-grid development and tutorials.
+Offline MP4/GIF animation code that targeted legacy Kepler Parquet snapshots was
+removed from the package because the dashboard and project reports now consume
+canonical digital-twin artifacts directly.
 
 The legacy tutorial `examples/tutorials/create_grid_with_datagen_parallel.py`
 now requires:

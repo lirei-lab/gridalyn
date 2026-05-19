@@ -23,22 +23,22 @@ uv run gridalyn platform check-artifacts --summary-only
 Embed the platform from Python:
 
 ```python
-from gridalyn.platform import check_artifact_policy, load_project, plan_project, validate_project
+from gridalyn import foundation, projects
 
-project = load_project("projects/flexibility_cls")
-report = validate_project(project.path)
-stages = plan_project(project)
-artifact_report = check_artifact_policy(".")
+project = projects.load_project("projects/flexibility_cls")
+report = projects.validate_project(project.path)
+stages = projects.plan_project(project)
+artifact_report = foundation.check_artifact_policy(".")
 ```
 
 Write a standard report:
 
 ```python
-from gridalyn.platform import ReportMetadata, write_report
+from gridalyn import foundation
 
-write_report(
+foundation.write_report(
     "projects/my_case/outputs/reports/sample_report.json",
-    metadata=ReportMetadata(report_id="sample_report", source_domain="my_case"),
+    metadata=foundation.ReportMetadata(report_id="sample_report", source_domain="my_case"),
     summary={"valid": True},
 )
 ```
@@ -92,7 +92,7 @@ uv run python projects/flexibility_cls/scripts/reports/build_study_reports.py
 Build digital twin reports:
 
 ```bash
-uv run python -m gridalyn.reporting.digital_twin
+uv run python -m gridalyn.interfaces.reporting.digital_twin
 ```
 
 Build documentation:
