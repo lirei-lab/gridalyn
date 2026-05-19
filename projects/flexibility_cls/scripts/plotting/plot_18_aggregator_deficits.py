@@ -104,13 +104,6 @@ def main():
 
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"Saved to {out_path}")
-    import shutil
-    artifact_path = Path("/home/lirei-lenovo/.gemini/antigravity/brain/8874c524-71c3-4585-8c77-439531a043dc/plot_18_aggregator_deficits.png")
-    if artifact_path.parent.exists():
-        try:
-            shutil.copy(out_path, artifact_path)
-        except OSError:
-            pass
 
 if __name__ == "__main__":
     main()

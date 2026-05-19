@@ -131,7 +131,7 @@ def main():
     peak_idx_ts = int(np.argmax(np.median(s2_mc, axis=0)))
     peak_s4 = s4_mc[:, peak_idx_ts]
     
-    fig = plt.figure(figsize=(14.0, 6.0))
+    fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     gs  = fig.add_gridspec(1, 2, width_ratios=[3, 1], hspace=0, wspace=0.04)
     ax_ts  = fig.add_subplot(gs[0])
     ax_kde = fig.add_subplot(gs[1], sharey=ax_ts)
@@ -239,7 +239,6 @@ def main():
     ax_kde.spines["right"].set_visible(False)
     ax_kde.grid(axis="y", color="#EAEAEA", linewidth=0.8)
     
-    fig.tight_layout()
     fig.savefig(FIG_DIR / "flexibility_requirement.pdf", dpi=200, bbox_inches="tight")
     fig.savefig(FIG_DIR / "flexibility_requirement.png", dpi=200, bbox_inches="tight")
     plt.close(fig)

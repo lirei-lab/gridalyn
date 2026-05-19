@@ -55,7 +55,8 @@ def main():
     
     # Create two-subplot layout: Unmanaged (top), Managed (bottom)
     fig, (ax_un, ax_mg) = plt.subplots(2, 1, figsize=(14, 9), sharex=True,
-                                        gridspec_kw={"height_ratios": [1, 1], "hspace": 0.12})
+                                        constrained_layout=True,
+                                        gridspec_kw={"height_ratios": [1, 1], "hspace": 0.08})
     
     n_realizations = len(df_base.columns)
     
@@ -143,8 +144,6 @@ def main():
     ax_mg.xaxis.set_major_formatter(ticker.FuncFormatter(format_time))
     ax_mg.set_xlabel("Time of Day [HH:MM]", fontsize=14)
     
-    plt.tight_layout()
-    
     out_path = out_dir / "plot_16_stage_2_multiscenario.png"
     out_pdf_path = out_path.with_suffix(".pdf")
     fig.savefig(out_pdf_path, bbox_inches="tight")
@@ -152,14 +151,5 @@ def main():
 
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"Saved to {out_path}")
-    
-    import shutil
-    artifact_path = Path("/home/lirei-lenovo/.gemini/antigravity/brain/8874c524-71c3-4585-8c77-439531a043dc/plot_16_stage_2_multiscenario.png")
-    if artifact_path.parent.exists():
-        try:
-            shutil.copy(out_path, artifact_path)
-        except OSError:
-            pass
-
 if __name__ == "__main__":
     main()

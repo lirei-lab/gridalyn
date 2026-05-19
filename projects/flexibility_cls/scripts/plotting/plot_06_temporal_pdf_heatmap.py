@@ -52,7 +52,7 @@ def main():
             Z_unmanaged[:, i] = 0
             Z_managed[:, i] = 0
             
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True, constrained_layout=True)
     
     # We will use a colormap that goes from white to dark blue
     cmap = "Blues"
@@ -97,7 +97,6 @@ def main():
     cbar = fig.colorbar(c1, ax=axes, orientation='vertical', fraction=0.02, pad=0.02)
     cbar.set_label("Probability Density", fontsize=12)
     
-    fig.tight_layout()
     output_path = fig_dir / "temporal_probability_heatmap.png"
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     fig.savefig(fig_dir / "temporal_probability_heatmap.pdf", dpi=200, bbox_inches="tight")
