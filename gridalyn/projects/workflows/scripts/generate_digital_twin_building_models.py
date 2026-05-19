@@ -9,12 +9,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.assets.modeling import load_base_inputs, write_building_model_artifacts
 from gridalyn.assets.modeling.archetypes import NORTH_AMERICA_RESIDENTIAL_PROFILE
 
 
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "models"
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.models
 
 
 def generate_building_models(

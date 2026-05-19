@@ -11,6 +11,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.simulation.analytics.network_impact.physics_model import (
     build_physics_surrogate_report,
     fit_physics_surrogate,
@@ -19,9 +23,9 @@ from gridalyn.simulation.analytics.network_impact.physics_model import (
 )
 
 
-DEFAULT_TRAINING = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_training.parquet"
-DEFAULT_LABELS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_labels.parquet"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
+DEFAULT_TRAINING = DEFAULT_LAYOUT.flexibility / "network_impact_training.parquet"
+DEFAULT_LABELS = DEFAULT_LAYOUT.flexibility / "network_impact_physics_labels.parquet"
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.flexibility
 
 
 def _relpath(path: Path) -> str:

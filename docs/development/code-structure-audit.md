@@ -53,6 +53,25 @@ workflows, CLI arguments, or project manifests.
 | P2 | Legacy compatibility import aliases remain. | They are useful now, but can confuse new users. | Keep them documented as temporary import shims, not as public commands. |
 | P2 | `gridalyn.api.Interface` reflects an older interactive synthetic-grid interface. | It does not match the current platform boundary. | Replace it with smaller SDK entry points or mark it as legacy. |
 
+## Compatibility Inventory
+
+These import shims are intentionally development-facing. They keep archived
+scripts and notebooks importable, but new source should use the canonical
+seven-module SDK surface.
+
+| Canonical area | Historical aliases | Status |
+| --- | --- | --- |
+| `gridalyn.foundation` | `gridalyn.platform`, `gridalyn.reporting` | Temporary import shims. |
+| `gridalyn.twin` | `gridalyn.network`, `gridalyn.adapters`, `gridalyn.io`, `gridalyn.semantic` | Temporary import shims. |
+| `gridalyn.assets` | `gridalyn.modeling`, `gridalyn.datagen` | Temporary import shims. |
+| `gridalyn.simulation` | `gridalyn.simulators`, `gridalyn.analytics` | Temporary import shims. |
+| `gridalyn.operations` | `gridalyn.market` | Temporary import shim. |
+| `gridalyn.projects` | `gridalyn.workflows` | Temporary import shim for workflow modules. |
+
+Current public docs should lead with canonical modules, CLI commands, project
+contracts, and `ArtifactLayout` paths. Compatibility details belong here until
+the archived scripts are retired.
+
 ## Rules For New Code
 
 1. Put reusable behavior in `gridalyn/`, not in `projects/` or `examples/`.

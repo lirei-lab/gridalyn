@@ -10,6 +10,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.operations.market.providers import (
     build_network_sensitivity,
@@ -18,10 +22,10 @@ from gridalyn.operations.market.providers import (
 )
 
 
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
-DEFAULT_MODELS_DIR = ROOT / "instances" / "default" / "digital_twin" / "models"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
+DEFAULT_MODELS_DIR = DEFAULT_LAYOUT.models
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.flexibility
 
 
 def _relpath(path: Path) -> str:

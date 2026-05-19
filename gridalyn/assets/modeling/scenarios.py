@@ -10,9 +10,11 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.foundation import ArtifactLayout
 
 SCENARIO_SOURCE_STANDARD = "pycity-inspired-scenario-overlay"
-ASSET_REGISTRY_SOURCE_TABLE = "instances/default/digital_twin/scenarios/asset_registry.parquet"
+DEFAULT_LAYOUT = ArtifactLayout(Path("."))
+ASSET_REGISTRY_SOURCE_TABLE = (DEFAULT_LAYOUT.scenarios / "asset_registry.parquet").as_posix()
 
 
 def _bool_value(value: object) -> bool:
@@ -264,7 +266,7 @@ def write_scenario_model_artifacts(
     base_device_registry: pd.DataFrame,
     asset_registry: pd.DataFrame,
     *,
-    out_dir: Path = Path("instances/default/digital_twin/models/scenarios"),
+    out_dir: Path = DEFAULT_LAYOUT.models / "scenarios",
     root: Path = Path("."),
     scenario_id: str | None = None,
 ) -> dict[str, Any]:

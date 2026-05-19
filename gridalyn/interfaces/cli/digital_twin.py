@@ -19,6 +19,10 @@ from gridalyn.workflows.digital_twin import ev_scenarios, ev_timeseries
 
 ROOT = Path(__file__).resolve().parents[3]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 
 def _display_path(path: Path) -> str:
     try:
@@ -39,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--manifest",
         type=Path,
-        default=ROOT / "instances" / "default" / "digital_twin" / "reports" / "digital_twin_build_manifest.json",
+        default=DEFAULT_LAYOUT.reports / "digital_twin_build_manifest.json",
     )
     build.set_defaults(handler=handle_build)
 

@@ -13,8 +13,12 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
+
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+BASE_DIR = DEFAULT_LAYOUT.base
+TIMESERIES_DIR = DEFAULT_LAYOUT.timeseries
 
 
 def _load_json(path: Path) -> dict:

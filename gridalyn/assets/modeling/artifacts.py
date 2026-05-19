@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.foundation import ArtifactLayout
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.assets.modeling.archetypes import (
     NORTH_AMERICA_RESIDENTIAL_ARCHETYPES,
@@ -24,6 +25,7 @@ TABLE_FILENAMES = {
     "device_registry": "device_registry.parquet",
     "end_use_loads": "end_use_loads.parquet",
 }
+DEFAULT_LAYOUT = ArtifactLayout(Path("."))
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -33,7 +35,7 @@ def _relative(path: Path, root: Path) -> str:
         return str(path)
 
 
-def load_base_inputs(base_dir: Path = Path("instances/default/digital_twin/base")) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+def load_base_inputs(base_dir: Path = DEFAULT_LAYOUT.base) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     """Load canonical digital-twin building inputs."""
 
     model = NetworkModelRepository.from_parquet(base_dir).load_model()
@@ -45,7 +47,7 @@ def write_building_model_artifacts(
     buildings: pd.DataFrame,
     connectivity: pd.DataFrame | None = None,
     *,
-    out_dir: Path = Path("instances/default/digital_twin/models"),
+    out_dir: Path = DEFAULT_LAYOUT.models,
     root: Path = Path("."),
     profile: str = NORTH_AMERICA_RESIDENTIAL_PROFILE,
     tables: dict[str, pd.DataFrame] | None = None,

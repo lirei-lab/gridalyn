@@ -11,6 +11,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.operations.market.locational_clearing import (
     build_constraint_requirements,
     build_locational_clearing,
@@ -18,13 +22,13 @@ from gridalyn.operations.market.locational_clearing import (
 )
 
 
-DEFAULT_PROVIDERS = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_IMPACT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_predictions.parquet"
-DEFAULT_TRANSFORMERS = ROOT / "instances" / "default" / "digital_twin" / "base" / "grid_transformers.parquet"
-DEFAULT_OVERLOAD_REPORT = ROOT / "instances" / "default" / "digital_twin" / "reports" / "mv_lv_transformer_overload_report.json"
-DEFAULT_TRANSFORMER_TIMESERIES = ROOT / "instances" / "default" / "digital_twin" / "timeseries" / "S4_powerflow_transformers.parquet"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
-DEFAULT_REPORT_PATH = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "locational_flexibility_clearing_report.json"
+DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
+DEFAULT_IMPACT = DEFAULT_LAYOUT.flexibility / "network_impact_predictions.parquet"
+DEFAULT_TRANSFORMERS = DEFAULT_LAYOUT.base / "grid_transformers.parquet"
+DEFAULT_OVERLOAD_REPORT = DEFAULT_LAYOUT.reports / "mv_lv_transformer_overload_report.json"
+DEFAULT_TRANSFORMER_TIMESERIES = DEFAULT_LAYOUT.timeseries / "S4_powerflow_transformers.parquet"
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.flexibility
+DEFAULT_REPORT_PATH = DEFAULT_LAYOUT.flexibility / "locational_flexibility_clearing_report.json"
 
 
 def _relpath(path: Path) -> str:

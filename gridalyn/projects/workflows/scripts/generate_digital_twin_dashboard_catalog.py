@@ -9,6 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.interfaces.reporting.dashboard_catalog import (
     build_dashboard_catalog,
     write_dashboard_catalog,
@@ -16,14 +20,14 @@ from gridalyn.interfaces.reporting.dashboard_catalog import (
 from gridalyn.twin.network import NetworkModelRepository
 
 
-DEFAULT_SCENARIO_INDEX = ROOT / "instances" / "default" / "digital_twin" / "scenarios" / "index.json"
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_POWERFLOW_SUMMARY = ROOT / "instances" / "default" / "digital_twin" / "timeseries" / "powerflow_smoke_summary.json"
-DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "dashboard" / "catalog.json"
+DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_POWERFLOW_SUMMARY = DEFAULT_LAYOUT.timeseries / "powerflow_smoke_summary.json"
+DEFAULT_OUT = DEFAULT_LAYOUT.dashboard / "catalog.json"
 DEFAULT_EXTENSIONS = {
-    "network_impact": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json",
-    "clearing_scorecard": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "flexibility_clearing_scorecard.json",
-    "operations": ROOT / "instances" / "default" / "digital_twin" / "operations" / "operations_catalog.json",
+    "network_impact": DEFAULT_LAYOUT.flexibility / "network_impact_catalog.json",
+    "clearing_scorecard": DEFAULT_LAYOUT.flexibility / "flexibility_clearing_scorecard.json",
+    "operations": DEFAULT_LAYOUT.operations / "operations_catalog.json",
 }
 
 

@@ -17,8 +17,12 @@ from gridalyn.simulation.simulators.agents.ev import L2_MID_KW
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
+
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.scenarios
 DEFAULT_CONFIG_PATH = ROOT / "configs" / "grid" / "config.json"
 
 SCENARIOS = [

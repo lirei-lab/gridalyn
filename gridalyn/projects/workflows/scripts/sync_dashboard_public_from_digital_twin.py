@@ -16,8 +16,12 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
+
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_TIMESERIES_DIR = DEFAULT_LAYOUT.timeseries
 DEFAULT_PUBLIC_DIR = ROOT / "dashboard" / "public"
 
 

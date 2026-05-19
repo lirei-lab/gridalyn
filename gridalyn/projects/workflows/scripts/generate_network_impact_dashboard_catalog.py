@@ -9,19 +9,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.simulation.analytics.network_impact.catalog import (
     build_network_impact_catalog,
     write_network_impact_catalog,
 )
 
 
-DEFAULT_SCENARIO_INDEX = ROOT / "instances" / "default" / "digital_twin" / "scenarios" / "index.json"
-DEFAULT_OUT = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_catalog.json"
+DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
+DEFAULT_OUT = DEFAULT_LAYOUT.flexibility / "network_impact_catalog.json"
 DEFAULT_REPORTS = {
-    "physicsLabels": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_labels_report.json",
-    "physicsSurrogate": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_surrogate_report.json",
-    "topologyVerification": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_verification_report.json",
-    "physicsVerification": ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_impact_physics_verification_report.json",
+    "physicsLabels": DEFAULT_LAYOUT.flexibility / "network_impact_physics_labels_report.json",
+    "physicsSurrogate": DEFAULT_LAYOUT.flexibility / "network_impact_physics_surrogate_report.json",
+    "topologyVerification": DEFAULT_LAYOUT.flexibility / "network_impact_verification_report.json",
+    "physicsVerification": DEFAULT_LAYOUT.flexibility / "network_impact_physics_verification_report.json",
 }
 
 

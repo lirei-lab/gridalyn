@@ -16,9 +16,13 @@ from gridalyn.simulation.simulators.agents.ev import EVCharger
 
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
+
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.timeseries
 DEFAULT_CONFIG_PATH = ROOT / "configs" / "grid" / "config.json"
 DEFAULT_START = "2024-01-01 00:00:00"
 

@@ -11,15 +11,19 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.twin.semantic.mappings import build_semantic_graph, write_profile
 
 
-DEFAULT_BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-DEFAULT_SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
-DEFAULT_FLEXIBILITY_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
-DEFAULT_TIMESERIES_DIR = ROOT / "instances" / "default" / "digital_twin" / "timeseries"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "semantic"
+DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
+DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
+DEFAULT_FLEXIBILITY_DIR = DEFAULT_LAYOUT.flexibility
+DEFAULT_TIMESERIES_DIR = DEFAULT_LAYOUT.timeseries
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.semantic
 
 
 def _load_json_or_empty(path: Path) -> dict[str, Any]:

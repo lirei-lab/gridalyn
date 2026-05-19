@@ -616,6 +616,29 @@ class ProjectHygieneTest(unittest.TestCase):
         self.assertFalse(report.valid)
         self.assertEqual(11, report.summary["forbidden_tracked_files"])
 
+    def test_production_defaults_use_artifact_layout_for_default_twin_paths(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        roots = [
+            repo_root / "gridalyn",
+            repo_root / "projects" / "flexibility_cls" / "scripts",
+        ]
+        forbidden_snippets = [
+            'ROOT / "instances" / "default" / "digital_twin"',
+            'root / "instances" / "default" / "digital_twin"',
+            'Path("instances/default/digital_twin',
+        ]
+        offenders: list[str] = []
+        for root in roots:
+            for path in root.rglob("*.py"):
+                text = path.read_text(encoding="utf-8")
+                for snippet in forbidden_snippets:
+                    if snippet in text:
+                        offenders.append(
+                            f"{path.relative_to(repo_root).as_posix()}: {snippet}"
+                        )
+
+        self.assertEqual([], offenders)
+
 
 if __name__ == "__main__":
     unittest.main()

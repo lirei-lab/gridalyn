@@ -12,8 +12,12 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[4]
-BASE_DIR = ROOT / "instances" / "default" / "digital_twin" / "base"
-SCENARIO_DIR = ROOT / "instances" / "default" / "digital_twin" / "scenarios"
+
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+BASE_DIR = DEFAULT_LAYOUT.base
+SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
 SCENARIOS = {
     "S0": 0,
     "S1": 10,

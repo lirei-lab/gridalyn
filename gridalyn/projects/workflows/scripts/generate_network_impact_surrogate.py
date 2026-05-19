@@ -11,6 +11,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
+from gridalyn.foundation import ArtifactLayout
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+
 from gridalyn.simulation.analytics.network_impact.surrogate import (
     build_edge_features,
     build_graph_snapshot,
@@ -22,9 +26,9 @@ from gridalyn.simulation.analytics.network_impact.surrogate import (
 )
 
 
-DEFAULT_PROVIDER_REGISTRY = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "provider_registry.parquet"
-DEFAULT_SENSITIVITY = ROOT / "instances" / "default" / "digital_twin" / "flexibility" / "network_sensitivity.parquet"
-DEFAULT_OUT_DIR = ROOT / "instances" / "default" / "digital_twin" / "flexibility"
+DEFAULT_PROVIDER_REGISTRY = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
+DEFAULT_SENSITIVITY = DEFAULT_LAYOUT.flexibility / "network_sensitivity.parquet"
+DEFAULT_OUT_DIR = DEFAULT_LAYOUT.flexibility
 
 
 def _relpath(path: Path) -> str:
