@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import yaml
 
+from gridalyn.foundation.platform.workspace import find_workspace_root
 from gridalyn.projects.models import StudyProject, WorkflowSpec, WorkflowStage
 
 
@@ -38,23 +38,7 @@ def load_workflow(path: Path | str) -> WorkflowSpec:
 
 
 def find_repo_root(start: Path) -> Path:
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        cwd=start,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode == 0:
-        return Path(result.stdout.strip()).resolve()
-    for candidate in (start.resolve(), *start.resolve().parents):
-        if (
-            (candidate / "pyproject.toml").exists()
-            and (candidate / "gridalyn").is_dir()
-            and (candidate / "projects").is_dir()
-        ):
-            return candidate
-    return start.resolve()
+    return find_workspace_root(start)
 
 
 def project_base_dir(project_path: Path, raw: dict[str, Any]) -> tuple[Path, str]:

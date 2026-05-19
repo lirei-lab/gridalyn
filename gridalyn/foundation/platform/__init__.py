@@ -28,6 +28,8 @@ _LAZY_EXPORTS = {
     "validate_workspace": ("gridalyn.foundation.platform.validation", "validate_workspace"),
     "ArtifactLayout": ("gridalyn.foundation.platform.workspace", "ArtifactLayout"),
     "GridalynWorkspace": ("gridalyn.foundation.platform.workspace", "GridalynWorkspace"),
+    "find_workspace_root": ("gridalyn.foundation.platform.workspace", "find_workspace_root"),
+    "workspace_from_path": ("gridalyn.foundation.platform.workspace", "workspace_from_path"),
     "workspace_from_root": ("gridalyn.foundation.platform.workspace", "workspace_from_root"),
     "ReportMetadata": ("gridalyn.foundation.platform.reports", "ReportMetadata"),
     "build_report": ("gridalyn.foundation.platform.reports", "build_report"),

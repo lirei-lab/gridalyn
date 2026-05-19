@@ -23,17 +23,27 @@ Applications should use `GridalynWorkspace` and `ArtifactLayout` instead of
 hard-coding directories:
 
 ```python
-from gridalyn.foundation import GridalynWorkspace
+from gridalyn.foundation import workspace_from_path
 
-workspace = GridalynWorkspace(".")
-workspace.layout.base          # digital_twin/base
-workspace.layout.flexibility   # digital_twin/flexibility
-workspace.layout.operations    # digital_twin/operations
-workspace.project_path("demo") # projects/demo
+workspace = workspace_from_path("projects/demo/scripts")
+workspace.root                         # repository or source-archive root
+workspace.layout.configs               # configs
+workspace.layout.default_instance      # instances/default
+workspace.layout.base                  # digital_twin/base
+workspace.layout.flexibility           # digital_twin/flexibility
+workspace.layout.operations            # digital_twin/operations
+workspace.project_path("demo")         # projects/demo
 ```
 
+`workspace_from_path()` discovers the workspace from a nested file or directory.
+It uses Git metadata when available and falls back to Gridalyn source markers
+(`pyproject.toml`, `gridalyn/`, and `projects/`) so downloaded source archives
+and clean public checkouts work the same way.
+
 Project workflows may override paths, but default platform commands should use
-the canonical `digital_twin/*` roots.
+the canonical `configs/`, `instances/`, `projects/`, and `digital_twin/*`
+roots. Use `GridalynWorkspace(root)` only when the caller already knows the
+exact workspace root.
 
 ## Compatibility Boundary
 

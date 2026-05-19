@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
 from gridalyn.foundation.platform.artifacts import check_artifact_policy
-
-
-ROOT = Path(__file__).resolve().parents[3]
+from gridalyn.foundation.platform.workspace import workspace_from_path
 
 
 def _check_artifacts(args: argparse.Namespace) -> int:
-    report = check_artifact_policy(Path(args.root))
+    payload = _artifact_policy_payload(args)
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload["valid"] else 1
+
+
+def _artifact_policy_payload(args: argparse.Namespace) -> dict[str, object]:
+    workspace = workspace_from_path(args.root)
+    report = check_artifact_policy(workspace.root)
     payload = report.to_dict()
     if args.summary_only:
         payload = {
@@ -22,8 +26,7 @@ def _check_artifacts(args: argparse.Namespace) -> int:
             "warning_count": len(payload["warnings"]),
             "summary": payload["summary"],
         }
-    print(json.dumps(payload, indent=2, sort_keys=True))
-    return 0 if report.valid else 1
+    return payload
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         "check-artifacts",
         help="Check Git artifact policy and the minimal demo dataset contract.",
     )
-    check_artifacts.add_argument("--root", default=ROOT)
+    check_artifacts.add_argument("--root", default=".")
     check_artifacts.add_argument("--summary-only", action="store_true")
     check_artifacts.set_defaults(handler=_check_artifacts)
     return parser

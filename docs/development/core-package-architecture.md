@@ -93,9 +93,9 @@ not in `examples/`.
 Reusable path handling belongs in `gridalyn.foundation`:
 
 ```python
-from gridalyn.foundation import GridalynWorkspace
+from gridalyn.foundation import workspace_from_path
 
-workspace = GridalynWorkspace(".")
+workspace = workspace_from_path(".")
 cache_dir = workspace.layout.cache
 base_dir = workspace.layout.base
 ```

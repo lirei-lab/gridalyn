@@ -36,7 +36,8 @@ def validate_workspace(
 ) -> dict[str, Any]:
     """Validate repository-level policy and one or more project contracts."""
 
-    repo_root = Path(root).resolve()
+    workspace = GridalynWorkspace.discover(root)
+    repo_root = workspace.root
     checks: list[dict[str, Any]] = []
 
     artifact_report = check_artifact_policy(repo_root)
@@ -50,7 +51,6 @@ def validate_workspace(
         )
     )
 
-    workspace = GridalynWorkspace(repo_root)
     project_paths = (
         list(projects)
         if projects is not None

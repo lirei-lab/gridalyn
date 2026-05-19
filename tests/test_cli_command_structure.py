@@ -139,8 +139,25 @@ class CliCommandStructureTest(unittest.TestCase):
         args = parser.parse_args(["check-artifacts", "--summary-only"])
 
         self.assertEqual(args.command, "check-artifacts")
+        self.assertEqual(args.root, ".")
         self.assertTrue(args.summary_only)
         self.assertTrue(callable(args.handler))
+
+    def test_platform_artifact_check_discovers_workspace_from_subdirectory(self):
+        parser = platform.build_parser()
+        args = parser.parse_args(
+            [
+                "check-artifacts",
+                "--root",
+                "projects/minimal_grid_project",
+                "--summary-only",
+            ]
+        )
+
+        report = platform._artifact_policy_payload(args)
+
+        self.assertTrue(report["valid"], report)
+        self.assertEqual("examples/tutorials/data/minimal", report["summary"]["minimal_dataset"])
 
     def test_cli_modules_expose_main_functions(self):
         self.assertTrue(callable(gridalyn_cli.main))
