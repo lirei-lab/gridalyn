@@ -127,9 +127,28 @@ def _load_ev_matrix(path: Path, timestamps: pd.Index, load_index: pd.Index) -> n
     return ev_wide.to_numpy(dtype=np.float32)
 
 
+def _normalize_pandapower_timeseries_net(net) -> None:
+    """Normalize cached pandapower networks before time-series replay."""
+
+    pp.convert_format(net)
+    template = pp.create_empty_network()
+    for table in ["vsc_stacked", "vsc_bipolar", "res_vsc_stacked", "res_vsc_bipolar"]:
+        if table not in net:
+            net[table] = template[table].copy()
+    for column in [
+        "const_z_p_percent",
+        "const_i_p_percent",
+        "const_z_q_percent",
+        "const_i_q_percent",
+    ]:
+        if column not in net.load.columns:
+            net.load[column] = 0.0
+
+
 def _run_powerflow(net, p_total_mw: np.ndarray, q_total_mvar: np.ndarray):
     import lightsim2grid  # noqa: F401
 
+    _normalize_pandapower_timeseries_net(net)
     time_steps = range(p_total_mw.shape[0])
     p_mw_df = pd.DataFrame(p_total_mw, index=time_steps, columns=net.load.index)
     q_mvar_df = pd.DataFrame(q_total_mvar, index=time_steps, columns=net.load.index)

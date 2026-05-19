@@ -18,6 +18,13 @@ from gridalyn.geoprocess import FakeGeoJSONGenerator as LegacyFakeGeoJSONGenerat
 from examples.data_acquisition.prepare_microsoft_building_footprints import (
     prepare_footprints,
 )
+from examples.data_acquisition.filter_buildings_by_polygon import (
+    DEFAULT_POLYGON_COORDS,
+)
+from gridalyn.twin.geoprocess.buildings import (
+    clip_buildings_by_polygon,
+    load_polygon_coordinates,
+)
 
 
 def test_geojson_adapter_exports_synthetic_network_building_tools() -> None:
@@ -101,6 +108,34 @@ def test_geo_processor_filters_mixed_geometries_before_polygon_clip(
 
     filtered = gpd.read_file(output_path)
     assert len(filtered) == 1
+    assert set(filtered.geom_type) <= {"Polygon", "MultiPolygon"}
+
+
+def test_packaged_example_buildings_clip_with_default_polygon(tmp_path: Path) -> None:
+    output_path = tmp_path / "buildings_inside_polygon.geojson"
+
+    clip_buildings_by_polygon(
+        buildings_file="examples/tutorials/data/example_buildings.geojson",
+        polygon_coordinates=load_polygon_coordinates("configs/geography/tr01.json"),
+        output_file=output_path,
+    )
+
+    filtered = gpd.read_file(output_path)
+    assert len(filtered) > 0
+    assert set(filtered.geom_type) <= {"Polygon", "MultiPolygon"}
+
+
+def test_packaged_example_buildings_clip_with_tutorial_polygon(tmp_path: Path) -> None:
+    output_path = tmp_path / "buildings_inside_tutorial_polygon.geojson"
+
+    clip_buildings_by_polygon(
+        buildings_file="examples/tutorials/data/example_buildings.geojson",
+        polygon_coordinates=[tuple(coord) for coord in DEFAULT_POLYGON_COORDS],
+        output_file=output_path,
+    )
+
+    filtered = gpd.read_file(output_path)
+    assert len(filtered) > 0
     assert set(filtered.geom_type) <= {"Polygon", "MultiPolygon"}
 
 

@@ -1,1 +1,210 @@
-{"type":"FeatureCollection","features":[]}
+{
+  "type": "FeatureCollection",
+  "name": "example_buildings",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -122.4148,
+              37.7798
+            ],
+            [
+              -122.4142,
+              37.7798
+            ],
+            [
+              -122.4142,
+              37.7803
+            ],
+            [
+              -122.4148,
+              37.7803
+            ],
+            [
+              -122.4148,
+              37.7798
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -122.4096,
+              37.7852
+            ],
+            [
+              -122.4089,
+              37.7852
+            ],
+            [
+              -122.4089,
+              37.7858
+            ],
+            [
+              -122.4096,
+              37.7858
+            ],
+            [
+              -122.4096,
+              37.7852
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -122.4038,
+              37.7904
+            ],
+            [
+              -122.4032,
+              37.7904
+            ],
+            [
+              -122.4032,
+              37.791
+            ],
+            [
+              -122.4038,
+              37.791
+            ],
+            [
+              -122.4038,
+              37.7904
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -72.6147,
+              46.3461
+            ],
+            [
+              -72.6141,
+              46.3461
+            ],
+            [
+              -72.6141,
+              46.3466
+            ],
+            [
+              -72.6147,
+              46.3466
+            ],
+            [
+              -72.6147,
+              46.3461
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -72.6065,
+              46.3422
+            ],
+            [
+              -72.6058,
+              46.3422
+            ],
+            [
+              -72.6058,
+              46.3428
+            ],
+            [
+              -72.6065,
+              46.3428
+            ],
+            [
+              -72.6065,
+              46.3422
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building": "yes",
+        "source": "gridalyn_tutorial_fixture"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -72.5962,
+              46.3366
+            ],
+            [
+              -72.5955,
+              46.3366
+            ],
+            [
+              -72.5955,
+              46.3372
+            ],
+            [
+              -72.5962,
+              46.3372
+            ],
+            [
+              -72.5962,
+              46.3366
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

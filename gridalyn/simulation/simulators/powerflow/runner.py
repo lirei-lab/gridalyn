@@ -200,7 +200,7 @@ class MonteCarloSimulationManager(Interface):
                     self.net = pickle.load(f)
                 self.pp_net = self.net
                 print(f"Loaded Cached Grid: {len(self.pp_net.bus)} buses, {len(self.pp_net.line)} lines.")
-                return
+                return cache_pp
             except ModuleNotFoundError as exc:
                 print(f"====== Stage 1: Ignoring stale cache from old package layout: {exc} ======")
                 force_rebuild = True

@@ -17,10 +17,17 @@ The project also exposes installed script entrypoints:
 
 ```bash
 uv run gridalyn-dt build --dry-run
-uv run gridalyn-flex verify-clearing --scenario-id S4
+uv run gridalyn-flex verify-clearing \
+  --scenario-id S4 \
+  --cache-dir projects/flexibility_cls/outputs/cache \
+  --market-dispatch-path projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
 uv run gridalyn-semantic validate
 uv run gridalyn-dashboard catalog
 ```
+
+The `verify-clearing` smoke command assumes `projects/flexibility_cls` has been
+run. The shorter `gridalyn-flex verify-clearing --scenario-id S4` form targets a
+materialized `digital_twin/` instance.
 
 ## Tutorial Scripts
 
