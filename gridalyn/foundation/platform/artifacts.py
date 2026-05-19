@@ -142,10 +142,12 @@ def _tracked_files(root: Path) -> list[str]:
     result = subprocess.run(
         ["git", "ls-files"],
         cwd=root,
-        check=True,
+        check=False,
         text=True,
         capture_output=True,
     )
+    if result.returncode != 0:
+        return []
     return [
         line
         for line in result.stdout.splitlines()

@@ -10,7 +10,7 @@ from projects.flexibility_cls.scripts.pipeline.prepare_topology_cache import (
 )
 
 from gridalyn.platform import ReportMetadata, init_project, load_project as platform_load_project
-from gridalyn.platform import plan_project, project_regression, project_status, run_workflow, validate_project
+from gridalyn.platform import plan_project, project_regression, project_status, project_verify, run_workflow, validate_project
 from gridalyn.platform import validate_workspace
 from gridalyn.platform import write_report
 from gridalyn.projects.loader import load_project
@@ -95,6 +95,56 @@ spec:
                 ["build", "validate"],
             )
 
+    def test_repo_path_base_resolves_from_source_archive_without_git_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            project_root = workspace / "projects" / "archive_case"
+            project_root.mkdir(parents=True)
+            (workspace / "gridalyn").mkdir()
+            (workspace / "pyproject.toml").write_text(
+                "[project]\nname = \"gridalyn\"\n",
+                encoding="utf-8",
+            )
+            (project_root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: archive_case_workflow
+spec:
+  stages:
+    - id: build
+      command: echo build
+""".strip(),
+                encoding="utf-8",
+            )
+            (project_root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: archive_case
+  version: 0.1.0
+spec:
+  pathBase: repo
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: projects/archive_case/workflow.yaml
+  validation:
+    requiredReports: []
+    requiredFigures: []
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = validate_project_file(project_root / "project.yaml")
+            project = load_project(project_root / "project.yaml")
+
+            self.assertTrue(report.valid, "\n".join(report.errors))
+            self.assertEqual(workspace.resolve(), project.base_dir)
+            self.assertEqual(project_root / "workflow.yaml", project.workflow.path)
+
     def test_reports_unresolved_stage_dependency(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -133,6 +183,49 @@ spec:
 
             self.assertFalse(report.valid)
             self.assertIn("missing_stage", "\n".join(report.errors))
+
+    def test_project_verify_reports_missing_outputs_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: minimal_grid_project_workflow
+spec:
+  stages:
+    - id: run_minimal_powerflow
+      command: python scripts/run_minimal_powerflow.py
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: minimal_grid_project
+  version: 0.1.0
+spec:
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/minimal_grid_report.json
+    requiredFigures:
+      - outputs/figures/minimal_voltage_profile.png
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = project_verify(root, write=False)
+
+            self.assertFalse(report["valid"])
+            self.assertFalse(report["sense_check"]["valid"])
+            self.assertIn("missing_objective_artifact", report["sense_check"]["errors"])
 
 
 class ProjectWorkflowRunnerTest(unittest.TestCase):

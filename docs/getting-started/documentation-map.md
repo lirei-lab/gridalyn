@@ -52,7 +52,7 @@ uv run gridalyn project validate projects/flexibility_cls --check-artifacts
 uv run gridalyn project verify projects/flexibility_cls
 uv run gridalyn project regression projects/flexibility_cls
 uv run --with pytest python -m pytest -q
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 If one command fails, fix that layer before moving to the next command.

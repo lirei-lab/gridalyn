@@ -25,8 +25,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 From the repository root:
 
 ```bash
-uv sync
+uv sync --extra dev
 ```
+
+Use plain `uv sync` when you only need the installable SDK and CLI. The
+`dev` extra adds test and documentation tooling for the full repository
+workflow.
 
 Run the test suite:
 
@@ -72,7 +76,7 @@ http://localhost:8081/
 Build the documentation:
 
 ```bash
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 MkDocs writes generated HTML to the root `site/` directory, which is ignored by

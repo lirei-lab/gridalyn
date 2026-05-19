@@ -28,7 +28,7 @@ uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
-uv run gridalyn project regression projects/minimal_grid_project
+uv run gridalyn project regression projects/flexibility_cls
 uv run gridalyn project sense-check projects/minimal_grid_project
 uv run gridalyn project verify projects/minimal_grid_project
 ```
@@ -43,10 +43,15 @@ uv run gridalyn dashboard catalog
 uv run gridalyn platform check-artifacts --summary-only
 ```
 
-Use the stricter validation path when you want project artifacts and regressions:
+Use the stricter validation path when you want project artifacts and the
+configured flexibility regression:
 
 ```bash
-uv run gridalyn validate --check-project-artifacts --regression
+uv run gridalyn validate --check-project-artifacts
+uv run gridalyn validate \
+  --project projects/flexibility_cls \
+  --check-project-artifacts \
+  --regression
 ```
 
 For a larger operations workflow, replace `projects/minimal_grid_project` with

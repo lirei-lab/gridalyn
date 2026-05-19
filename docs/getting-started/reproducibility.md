@@ -12,10 +12,10 @@ A reproducible run must have:
 | --- | --- | --- |
 | Source environment | dependencies installed through `uv` | `uv run gridalyn --help` |
 | Clean artifact policy | generated data and caches are not accidentally tracked | `uv run gridalyn platform check-artifacts --summary-only` |
-| Valid project contract | `project.yaml` and `workflow.yaml` are readable and complete | `uv run gridalyn project validate projects/minimal_grid_project --check-artifacts` |
+| Valid project contract | `project.yaml` and `workflow.yaml` are readable and complete | `uv run gridalyn project validate projects/minimal_grid_project` |
 | Stable results | key numerical outputs match the baseline for larger workflows | `uv run gridalyn project regression projects/flexibility_cls` |
 | Healthy code | tests pass | `uv run --with pytest python -m pytest -q` |
-| Published docs | MkDocs builds strictly | `uv run mkdocs build --strict -f docs/mkdocs.yml` |
+| Published docs | MkDocs builds strictly | `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml` |
 
 ## 1. Start From The Repository Root
 
@@ -23,7 +23,7 @@ All commands in this guide run from the repository root unless a command says
 otherwise.
 
 ```bash
-uv sync
+uv sync --extra dev
 uv run gridalyn --help
 ```
 
@@ -47,12 +47,12 @@ committing.
 ## 3. Validate A Demo Project
 
 ```bash
-uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
+uv run gridalyn project validate projects/minimal_grid_project
 uv run gridalyn project plan projects/minimal_grid_project
 ```
 
-The validation command checks the project contract and required artifacts. The
-plan command prints the stage order without executing the workflow.
+The validation command checks the project contract. The plan command prints the
+stage order without executing the workflow.
 
 ## 4. Run Or Reuse The Workflow
 
@@ -89,7 +89,7 @@ ladder for the selected project.
 
 ```bash
 uv run --with pytest python -m pytest -q
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 The test suite checks package boundaries, artifact policy, digital-twin

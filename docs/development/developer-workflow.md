@@ -98,7 +98,7 @@ uv run python -m gridalyn.reporting.digital_twin
 Build documentation:
 
 ```bash
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 ## Generated Files

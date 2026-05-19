@@ -12,7 +12,7 @@ uv run --with pytest python -m pytest -q
 ## Documentation Build
 
 ```bash
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 ## Artifact Policy
@@ -24,7 +24,11 @@ uv run gridalyn validate
 For the stricter project-artifact and regression path:
 
 ```bash
-uv run gridalyn validate --check-project-artifacts --regression
+uv run gridalyn validate --check-project-artifacts
+uv run gridalyn validate \
+  --project projects/flexibility_cls \
+  --check-project-artifacts \
+  --regression
 ```
 
 ## Larger Workflow Regression

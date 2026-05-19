@@ -101,7 +101,7 @@ or another source:
 ```bash
 MPLCONFIGDIR=/tmp/matplotlib-cache \
 uv run gridalyn twin clip-buildings \
-  --buildings-file examples/tutorials/data/buildings_tr.json \
+  --buildings-file examples/tutorials/data/example_buildings.geojson \
   --polygon-file configs/geography/tr01.json \
   --output-file examples/generated/outputs/buildings_inside_polygon.geojson
 ```

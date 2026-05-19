@@ -12,7 +12,7 @@ from pathlib import Path
 
 from gridalyn.twin.geoprocess import clip_buildings_by_polygon, load_polygon_coordinates
 
-DEFAULT_BUILDINGS_FILE = "examples/tutorials/data/buildings_tr.json"
+DEFAULT_BUILDINGS_FILE = "examples/tutorials/data/example_buildings.geojson"
 DEFAULT_OUTPUT_FILE = "examples/generated/outputs/buildings_inside_polygon.geojson"
 DEFAULT_POLYGON_COORDS = [
     [-72.62417036110914, 46.34726673598499],

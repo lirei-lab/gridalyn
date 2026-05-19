@@ -55,7 +55,7 @@ first, then the broader checks:
 
 ```bash
 uv run --with pytest python -m pytest -q
-env UV_CACHE_DIR=/tmp/uv-cache uv run mkdocs build --strict -f docs/mkdocs.yml
+env UV_CACHE_DIR=/tmp/uv-cache uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 git diff --check
 ```
 

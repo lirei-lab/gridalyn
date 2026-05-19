@@ -47,6 +47,13 @@ def find_repo_root(start: Path) -> Path:
     )
     if result.returncode == 0:
         return Path(result.stdout.strip()).resolve()
+    for candidate in (start.resolve(), *start.resolve().parents):
+        if (
+            (candidate / "pyproject.toml").exists()
+            and (candidate / "gridalyn").is_dir()
+            and (candidate / "projects").is_dir()
+        ):
+            return candidate
     return start.resolve()
 
 

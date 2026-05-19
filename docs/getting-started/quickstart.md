@@ -9,8 +9,11 @@ working documentation build.
 From the repository root:
 
 ```bash
-uv sync
+uv sync --extra dev
 ```
+
+For library-only use, `uv sync` is enough. The `dev` extra installs the docs
+and test tools used later in this guide.
 
 If the environment is already created, verify that the CLI is available:
 
@@ -154,7 +157,7 @@ projects/flexibility_cls/
 Validate its project contract:
 
 ```bash
-uv run gridalyn project validate projects/flexibility_cls --check-artifacts
+uv run gridalyn project validate projects/flexibility_cls
 ```
 
 Print the execution plan:
@@ -269,13 +272,13 @@ Dashboard details are in [Dashboard](../platform/dashboard.md).
 ## 13. Build the Documentation
 
 ```bash
-uv run mkdocs serve -f docs/mkdocs.yml
+uv run --extra docs mkdocs serve -f docs/mkdocs.yml
 ```
 
 Strict static build:
 
 ```bash
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 The generated HTML goes to `site/` and should not be committed.

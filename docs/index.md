@@ -109,9 +109,9 @@ repository folders.
 ## First Commands
 
 ```bash
-uv sync
+uv sync --extra dev
 uv run gridalyn --help
-uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
+uv run gridalyn project validate projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 ```
 

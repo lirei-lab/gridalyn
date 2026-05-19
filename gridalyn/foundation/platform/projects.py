@@ -151,6 +151,8 @@ def project_verify(path: Path | str, write: bool = True) -> dict:
             "checked_count": sense["checked_count"],
             "error_count": sense["error_count"],
             "failed_count": sense["failed_count"],
+            "errors": sense.get("validation", {}).get("errors", []),
+            "warnings": sense.get("validation", {}).get("warnings", []),
             "report": str(project.root / "outputs/reports/project_sense_check_report.json"),
         },
     }

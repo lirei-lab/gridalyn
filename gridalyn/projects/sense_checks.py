@@ -39,6 +39,16 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
             project.name,
             f"one of {sorted(_PROJECT_CHECKERS)}",
         )
+    elif missing := _missing_objective_artifacts(project):
+        _record(
+            checks,
+            "missing_objective_artifact",
+            False,
+            "error",
+            missing,
+            "all objective artifacts exist",
+            "Run the project workflow before objective-level sense checks.",
+        )
     else:
         checker(project, checks)
 
@@ -173,6 +183,14 @@ def _common_artifact_checks(project: StudyProject, checks: CheckList) -> None:
             relative,
             "existing non-empty figure",
         )
+
+
+def _missing_objective_artifacts(project: StudyProject) -> list[str]:
+    return [
+        relative
+        for relative in _PROJECT_OBJECTIVE_ARTIFACTS.get(project.name, ())
+        if not (project.root / relative).exists()
+    ]
 
 
 def _check_minimal(project: StudyProject, checks: CheckList) -> None:
@@ -314,6 +332,55 @@ _PROJECT_CHECKERS: dict[str, Callable[[StudyProject, CheckList], None]] = {
     "der_voltage_optimization": _check_der,
     "rl_voltage_control_lightsim": _check_rl,
     "flexibility_cls": _check_flexibility,
+}
+
+_PROJECT_OBJECTIVE_ARTIFACTS: dict[str, tuple[str, ...]] = {
+    "minimal_grid_project": (
+        "outputs/reports/minimal_grid_report.json",
+        "outputs/data/buses.csv",
+        "outputs/data/lines.csv",
+        "outputs/data/loads.csv",
+    ),
+    "ieee_33_bus_demo": (
+        "outputs/reports/ieee33_powerflow_report.json",
+        "outputs/reports/ieee33_scenario_comparison_report.json",
+        "outputs/data/scenario_results.csv",
+    ),
+    "synthetic_geojson_feeder": (
+        "outputs/reports/building_footprints_report.json",
+        "outputs/reports/synthetic_geojson_feeder_report.json",
+        "outputs/reports/synthetic_network_validation_report.json",
+        "outputs/data/buses.csv",
+        "outputs/data/lines.csv",
+        "outputs/data/loads.csv",
+    ),
+    "prosumer_battery_market": (
+        "outputs/reports/synthetic_feeder_report.json",
+        "outputs/reports/prosumer_realtime_market_report.json",
+        "outputs/operations/battery_dispatch.csv",
+        "outputs/data/prosumers.csv",
+    ),
+    "der_voltage_optimization": (
+        "outputs/reports/der_feeder_report.json",
+        "outputs/reports/der_voltage_optimization_report.json",
+        "outputs/operations/der_dispatch.csv",
+    ),
+    "rl_voltage_control_lightsim": (
+        "outputs/reports/rl_feeder_report.json",
+        "outputs/reports/rl_voltage_control_report.json",
+        "outputs/operations/q_table.csv",
+        "outputs/operations/learned_policy.csv",
+    ),
+    "flexibility_cls": (
+        "outputs/reports/output_consistency_report.json",
+        "outputs/reports/stage_1_stochastic_load_report.json",
+        "outputs/reports/stage_2_thermal_forecast_report.json",
+        "outputs/reports/stage_3_market_clearing_report.json",
+        "outputs/reports/stage_4_realtime_dispatch_report.json",
+        "outputs/reports/operational_kpi_report.json",
+        "outputs/reports/stage_5_settlement_report.json",
+        "outputs/reports/stage_4_realtime_realization_selection.json",
+    ),
 }
 
 

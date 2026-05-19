@@ -29,7 +29,9 @@ def main() -> None:
     ]
 
     downloader = BuildingDownloader()
-    output_file = "datasets/buildings_tr.json"
+    output_dir = "examples/generated/outputs"
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, "osm_buildings.geojson")
     downloader.download_buildings(
         tuple(tuple(float(c) for c in coord) for coord in polygon_coordinates),  # type: ignore[misc, arg-type]
         output_file,

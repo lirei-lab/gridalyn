@@ -128,22 +128,13 @@ operation-aware, and application-friendly.**
 
 ```text
 gridalyn/
-  platform/         foundation, governance, release checks, public facade
-  projects/         project/workflow manifests and execution
-  network/          canonical network model repository and topology queries
-  adapters/         synthetic, CIM, GIS, pandapower, OpenDSS, graph exporters
-  semantic/         ontology profile, graph mappings, validation
-  modeling/         building, DER, EVSE, load, flexibility envelope synthesis
-  spaces/           future input/state/action/output contracts
-  simulators/       pandapower and simulation engines
-  environments/     future grid environments for scenario replay
-  analytics/        hosting capacity, network impact, voltage/thermal studies
-  operations/       utility-facing operational services and policy execution
-  market/           providers, aggregators, offers, clearing, dispatch, settlement
-  problems/         future reusable problem definitions
-  experiments/      future reproducible runs, sweeps, benchmarks, regressions
-  reporting/        canonical report schemas, manifests, validation reports
-  cli/              stable command-line entrypoints
+  foundation/       governance, release checks, reports, datasets, workspace paths
+  twin/             network model repository, adapters, semantic graph, graph DB
+  assets/           building, DER, EVSE, load, forecast, synthetic model synthesis
+  simulation/       pandapower, LightSim2Grid, network impact, validation analytics
+  operations/       providers, markets, dispatch, settlement, utility KPIs
+  projects/         project/workflow manifests, execution, regressions
+  interfaces/       CLI, reporting, dashboard/catalog, visualization surfaces
 
 projects/
   minimal_grid_project/
@@ -190,7 +181,7 @@ evolves.
 **Exit criteria:**
 
 - `uv run --with pytest python -m pytest -q`
-- `uv run mkdocs build --strict -f docs/mkdocs.yml`
+- `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml`
 - `uv run gridalyn platform check-artifacts --summary-only`
 - `uv run gridalyn project regression projects/flexibility_cls`
 
@@ -492,7 +483,7 @@ The migration must preserve:
 - `uv run gridalyn semantic build`;
 - `uv run gridalyn semantic validate`;
 - `uv run --with pytest python -m pytest -q`;
-- `uv run mkdocs build --strict -f docs/mkdocs.yml`;
+- `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml`;
 - public demo project workflows and their canonical reports.
 
 ## Near-Term Execution Order

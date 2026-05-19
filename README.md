@@ -46,19 +46,18 @@ scripts.
 
 ```text
 gridalyn/      canonical SDK package and import namespace
-  network/      canonical network model and repository API
-  adapters/     synthetic and CIM-like import/export boundaries
-  modeling/     building, DER, EVSE, load, and scenario model synthesis
-  analytics/    network impact, powerflow validation, hosting-capacity-ready tools
-  market/       flexibility providers, locational clearing, dispatch, settlement
-  semantic/     North America ontology profile and graph exports
-  reporting/    canonical JSON reports and manifests
-  projects/     governed project manifests and workflow execution
-  cli/          stable command-line entrypoints
+  foundation/   governance, reports, artifact policy, datasets, workspace paths
+  twin/         network repository, adapters, graph/database, semantic exports
+  assets/       building, DER, EVSE, load, forecast, and synthetic model synthesis
+  simulation/   pandapower, LightSim2Grid, network impact, validation analytics
+  operations/   flexibility providers, markets, dispatch, settlement, KPIs
+  projects/     governed project manifests, workflow execution, sense checks
+  interfaces/   stable CLI, reporting, dashboard/catalog, visualization surfaces
 
 projects/
   minimal_grid_project/
   ieee_33_bus_demo/
+  synthetic_geojson_feeder/
   prosumer_battery_market/
   der_voltage_optimization/
   rl_voltage_control_lightsim/
@@ -94,9 +93,12 @@ Prerequisites:
 From the repository root:
 
 ```bash
-uv sync
+uv sync --extra dev
 uv run gridalyn --help
 ```
+
+For a lighter library-only install, use `uv sync`. The `dev` extra adds
+documentation and test tools used by the repository checks.
 
 ## Quickstart
 
@@ -130,7 +132,7 @@ uv run gridalyn project verify projects/flexibility_cls
 Build documentation:
 
 ```bash
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 ## Core CLIs
@@ -161,7 +163,7 @@ uv run gridalyn-platform --help
 Serve the docs locally:
 
 ```bash
-uv run mkdocs serve -f docs/mkdocs.yml
+uv run --extra docs mkdocs serve -f docs/mkdocs.yml
 ```
 
 Then open:
@@ -188,7 +190,7 @@ Before publishing a release candidate, run:
 
 ```bash
 uv run --with pytest python -m pytest -q
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn validate --check-project-artifacts
 uv run gridalyn project verify projects/minimal_grid_project
 uv run gridalyn project regression projects/flexibility_cls

@@ -88,13 +88,12 @@ examples/
   tutorials/          # readable learning examples
   data_acquisition/   # OSMNX/building download and filtering examples
   compat/             # temporary wrappers for old production script paths
-  legacy/             # archived/debug scripts kept out of the public path
   generated/          # generated example outputs and request caches
 ```
 
-Legacy CIM examples are intentionally outside the core path. If you need to
-experiment with PNNL CIM-Graph/CIMantic Graphs, install the optional integration
-first:
+Archived/debug examples are intentionally kept out of the public source tree.
+If you need to experiment with PNNL CIM-Graph/CIMantic Graphs, install the
+optional integration first:
 
 ```bash
 uv sync --extra cim

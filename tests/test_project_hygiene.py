@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -407,6 +408,31 @@ class ProjectHygieneTest(unittest.TestCase):
 
         self.assertEqual([], forbidden)
 
+    def test_public_examples_do_not_track_legacy_archive_or_large_duplicate_inputs(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            ["git", "ls-files", "examples"],
+            cwd=repo_root,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        tracked = set(result.stdout.splitlines())
+
+        forbidden = [
+            path
+            for path in sorted(tracked)
+            if path.startswith("examples/legacy/")
+            or path
+            in {
+                "examples/tutorials/data/buildings.json",
+                "examples/tutorials/data/buildings_tr.json",
+                "examples/tutorials/data/simulation_results.h5",
+            }
+        ]
+
+        self.assertEqual([], forbidden)
+
     def test_project_runtime_does_not_depend_on_examples_generated_cache(self):
         repo_root = Path(__file__).resolve().parents[1]
         scanned_roots = [
@@ -500,6 +526,62 @@ class ProjectHygieneTest(unittest.TestCase):
         )
 
         self.assertTrue(report.valid, report.errors)
+
+    def test_artifact_policy_tolerates_source_archive_without_real_git_index(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".git").mkdir()
+            (root / "examples" / "tutorials" / "data" / "minimal").mkdir(parents=True)
+            for filename in (
+                "manifest.json",
+                "grid_nodes.geojson",
+                "grid_edges.geojson",
+                "buildings.geojson",
+                "scenarios.json",
+                "expected_summary.json",
+            ):
+                (root / "examples" / "tutorials" / "data" / "minimal" / filename).write_text(
+                    "{}",
+                    encoding="utf-8",
+                )
+            (root / "examples" / "tutorials" / "data" / "minimal" / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "dataset_id": "gridalyn_minimal_radial_demo",
+                        "files": [
+                            {"path": "grid_nodes.geojson"},
+                            {"path": "grid_edges.geojson"},
+                            {"path": "buildings.geojson"},
+                            {"path": "scenarios.json"},
+                            {"path": "expected_summary.json"},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (root / ".gitignore").write_text((repo_root / ".gitignore").read_text(encoding="utf-8"), encoding="utf-8")
+
+            report = check_artifact_policy(root)
+
+            self.assertTrue(report.valid, report.errors)
+
+    def test_base_dependencies_exclude_dev_docs_and_git_sources(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        pyproject = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+        base_dependencies = pyproject.split("[project.optional-dependencies]", maxsplit=1)[0]
+
+        forbidden = [
+            "git+https://",
+            "pytest",
+            "pre-commit",
+            "mkdocs",
+            "mkdocstrings",
+            "jupyterlab",
+        ]
+        offenders = [dependency for dependency in forbidden if dependency in base_dependencies]
+
+        self.assertEqual([], offenders)
 
     def test_artifact_policy_rejects_generated_tracked_artifacts(self):
         repo_root = Path(__file__).resolve().parents[1]

@@ -148,5 +148,15 @@ It trains a tabular Q-learning battery controller on a 10-bus synthetic feeder
 using `lightsim2grid` as the fast simulation backend. See
 [RL Voltage Control With LightSim2Grid](rl-voltage-control-lightsim.md).
 
+For the larger end-to-end flexibility operations workflow, use:
+
+```text
+projects/flexibility_cls/
+```
+
+It regenerates the topology cache, stochastic load scenarios, CLS market
+clearing, real-time dispatch, settlement, operations artifacts, reports, and
+figures. See [Flexibility CLS](../workflows/flexibility-cls.md).
+
 See [Workflow YAML](../workflows/workflow-yaml-reference.md) and
 [Project Template Guide](template-guide.md).

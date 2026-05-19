@@ -51,7 +51,7 @@ Run these commands from the repository root before tagging or publishing:
 
 ```bash
 uv run --with pytest python -m pytest -q
-uv run mkdocs build --strict -f docs/mkdocs.yml
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn platform check-artifacts --summary-only
 uv run gridalyn project verify projects/minimal_grid_project
 uv run gridalyn project regression projects/flexibility_cls
