@@ -78,85 +78,28 @@ uv run gridalyn project sense-check projects/<project>
 ```
 
 `validate` and `status` check the project contract. `sense-check` verifies that
-the generated values make sense for the purpose of the demo, such as improved
-voltage after control, positive settlement, or one synthetic load per generated
-building.
+the generated values make sense for the objective of the project, such as
+improved voltage after control, positive settlement, or one synthetic load per
+generated building.
 
-## Demo Projects
+## Public Example Projects
 
-Gridalyn includes several public demo projects. They are examples of the same
-project contract at different levels of complexity, not study-specific
-reference artifacts.
+Gridalyn includes several public executable projects. They demonstrate the same
+contract at different levels of complexity, but they do not define the platform
+boundary. Reusable behavior belongs in `gridalyn/`; projects should stay thin
+and declarative.
 
-For the smallest project contract example, use:
+Use the examples as a progression:
 
-```text
-projects/minimal_grid_project/
-```
-
-It builds a five-bus radial feeder, runs one pandapower power flow, and writes
-one report and one figure. See [Minimal Grid Project](minimal-grid-project.md).
-
-For the smallest benchmark-feeder smoke test, use:
-
-```text
-projects/ieee_33_bus_demo/
-```
-
-It runs a pandapower 33-bus distribution benchmark and writes CSV tables, a
-contractual JSON report, and a voltage profile figure. See
-[IEEE 33-Bus Demo](ieee-33-demo.md).
-
-For the geospatial network-generation path, use:
-
-```text
-projects/synthetic_geojson_feeder/
-```
-
-It generates a tiny building-footprint GeoJSON dataset, converts it into a
-synthetic LV/MV/HV feeder, runs pandapower, and writes network validation
-artifacts. See [Synthetic GeoJSON Feeder](synthetic-geojson-feeder.md).
-
-For a compact operations and market example, use:
-
-```text
-projects/prosumer_battery_market/
-```
-
-It builds a small synthetic feeder, places five PV+battery prosumers, clears a
-real-time battery-dispatch market, and verifies the post-market feeder state.
-See [Prosumer Battery Market Demo](prosumer-battery-market.md).
-
-For a compact optimization and verification example, use:
-
-```text
-projects/der_voltage_optimization/
-```
-
-It builds a synthetic feeder, derives voltage sensitivities, solves a
-voltage-constrained DER dispatch with `cvxpy`, and verifies the optimized
-setpoints with pandapower. See
-[DER Voltage Optimization Demo](der-voltage-optimization.md).
-
-For a compact learning-control example, use:
-
-```text
-projects/rl_voltage_control_lightsim/
-```
-
-It trains a tabular Q-learning battery controller on a 10-bus synthetic feeder
-using `lightsim2grid` as the fast simulation backend. See
-[RL Voltage Control With LightSim2Grid](rl-voltage-control-lightsim.md).
-
-For the larger end-to-end flexibility operations workflow, use:
-
-```text
-projects/flexibility_cls/
-```
-
-It regenerates the topology cache, stochastic load scenarios, CLS market
-clearing, real-time dispatch, settlement, operations artifacts, reports, and
-figures. See [Flexibility CLS](../workflows/flexibility-cls.md).
+| Project | Platform contract it demonstrates |
+| --- | --- |
+| [Minimal Grid Project](minimal-grid-project.md) | Smallest project contract, report, figure, and sense-check loop. |
+| [IEEE 33-Bus Demo](ieee-33-demo.md) | Benchmark feeder workflow with deterministic scenario outputs. |
+| [Synthetic GeoJSON Feeder](synthetic-geojson-feeder.md) | GeoJSON-to-network generation with validation artifacts. |
+| [Prosumer Battery Market Demo](prosumer-battery-market.md) | Asset modeling, market clearing, dispatch, and feeder verification. |
+| [DER Voltage Optimization Demo](der-voltage-optimization.md) | Optimization setpoints verified against AC power flow. |
+| [RL Voltage Control With LightSim2Grid](rl-voltage-control-lightsim.md) | Learning-control environment over reusable modeling assets. |
+| [Flexibility CLS](../workflows/flexibility-cls.md) | Larger operations workflow for clearing, dispatch, settlement, reports, and figures. |
 
 See [Workflow YAML](../workflows/workflow-yaml-reference.md) and
 [Project Template Guide](template-guide.md).
