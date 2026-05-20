@@ -7,10 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.grid.network import MVNetwork
-from gridalyn.market.dso_dispatch import DSODispatcher
-from gridalyn.datagen.data.weather import download_tmy, select_peak_load_day
-from gridalyn.market.engine import MarketSimulationEngine
+from gridalyn.assets.datagen.grid.network import MVNetwork
+from gridalyn.operations.market.dso_dispatch import DSODispatcher
+from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
+from gridalyn.operations.market.engine import MarketSimulationEngine
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, P_LIMIT_KW, THETA_MAX
 
 PALETTE = {
@@ -39,7 +39,7 @@ def main():
     cold_day = select_peak_load_day(tmy, duration_hours=28)
     t_out_trace = cold_day["temp_air"].resample(f"{RES_MINUTES}min").interpolate().values
 
-    from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
+    from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
     thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
     network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
     dt_h = RES_MINUTES / 60.0

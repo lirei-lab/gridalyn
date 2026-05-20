@@ -39,7 +39,7 @@ def build_digital_twin_steps(
         _step("generate_flexibility_providers", ["-m", "gridalyn.interfaces.cli.flexibility", "providers"]),
         _step("generate_semantic_graph", ["-m", "gridalyn.interfaces.cli.semantic", "build"]),
         _step("validate_semantics", ["-m", "gridalyn.interfaces.cli.semantic", "validate"]),
-        _step("generate_canonical_reports", ["-m", "gridalyn.reporting.digital_twin"]),
+        _step("generate_canonical_reports", ["-m", "gridalyn.interfaces.reporting.digital_twin"]),
     ]
 
     if include_network_impact:

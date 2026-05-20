@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from gridalyn.interfaces.cli import digital_twin
-from gridalyn.workflows.digital_twin import ev_scenarios, ev_timeseries
+from gridalyn.projects.workflows.digital_twin import ev_scenarios, ev_timeseries
 
 
 class DigitalTwinWorkflowExtractionTest(unittest.TestCase):
@@ -63,7 +63,7 @@ class DigitalTwinWorkflowExtractionTest(unittest.TestCase):
                 return FakeReport()
 
         with patch(
-            "gridalyn.workflows.digital_twin.ev_scenarios.NetworkModelRepository",
+            "gridalyn.projects.workflows.digital_twin.ev_scenarios.NetworkModelRepository",
             FakeRepository,
             create=True,
         ), patch.object(ev_scenarios, "_load_json", return_value={}):

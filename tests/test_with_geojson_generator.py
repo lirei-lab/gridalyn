@@ -18,14 +18,14 @@ from pandapower.diagnostic import diagnostic
 from timeout_decorator import timeout
 from tqdm import tqdm
 
-from gridalyn.core.graph import PowerGridGraph
-from gridalyn.simulators.powerflow.builder import PandapowerGridBuilder
+from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 
 
 class TestPowerGridModel(unittest.TestCase):
     def setUp(self) -> None:
         # Initialize fake GeoJSON generator with ~1000 buildings (32x32 grid)
-        from gridalyn.adapters.geojson import FakeGeoJSONGenerator
+        from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
 
         self.generator = FakeGeoJSONGenerator(grid_size=32)  # 32x32 = 1024 buildings
 
@@ -270,7 +270,7 @@ class TestPowerGridModel(unittest.TestCase):
         different grid sizes.
         """
         # Initialize fake GeoJSON generator with variable grid size
-        from gridalyn.adapters.geojson import FakeGeoJSONGenerator
+        from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
 
         generator = FakeGeoJSONGenerator(grid_size=grid_size)
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.network import NetworkModelRepository
+from gridalyn.twin import NetworkModelRepository
 
 
 class NetworkModelRepositoryTest(unittest.TestCase):

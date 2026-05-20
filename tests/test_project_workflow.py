@@ -9,10 +9,17 @@ from projects.flexibility_cls.scripts.pipeline.prepare_topology_cache import (
     prepare_topology_cache,
 )
 
-from gridalyn.platform import ReportMetadata, init_project, load_project as platform_load_project
-from gridalyn.platform import plan_project, project_regression, project_status, project_verify, run_workflow, validate_project
-from gridalyn.platform import validate_workspace
-from gridalyn.platform import write_report
+from gridalyn.foundation import ReportMetadata, validate_workspace, write_report
+from gridalyn.projects import (
+    init_project,
+    load_project as public_load_project,
+    plan_project,
+    project_regression,
+    project_status,
+    project_verify,
+    run_workflow,
+    validate_project,
+)
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.runner import plan_stages, run_project
 from gridalyn.projects.validation import validate_project_file
@@ -336,9 +343,9 @@ spec:
             )
 
 
-class PlatformProjectApiTest(unittest.TestCase):
-    def test_public_platform_api_loads_validates_and_plans_project(self) -> None:
-        project = platform_load_project(Path("projects/flexibility_cls"))
+class ProjectApiTest(unittest.TestCase):
+    def test_public_project_api_loads_validates_and_plans_project(self) -> None:
+        project = public_load_project(Path("projects/flexibility_cls"))
         report = validate_project(project.path)
         stages = plan_project(project)
 

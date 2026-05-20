@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from gridalyn.platform.reports import (
+from gridalyn.foundation.platform.reports import (
     ReportMetadata,
     build_report,
     file_reference,

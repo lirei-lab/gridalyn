@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.platform import project_status, run_workflow, validate_project
+from gridalyn.projects import project_status, run_workflow, validate_project
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.runner import plan_stages
 

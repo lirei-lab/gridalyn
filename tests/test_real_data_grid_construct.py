@@ -4,8 +4,8 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.data import get_dataset_path
-from gridalyn.core.graph import PowerGridGraph
+from gridalyn.foundation.data import get_dataset_path
+from gridalyn.twin.core.graph import PowerGridGraph
 
 
 class TestRealDataProcessing(unittest.TestCase):

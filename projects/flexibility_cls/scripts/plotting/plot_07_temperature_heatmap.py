@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
-from gridalyn.datagen.data.weather import download_tmy, select_cold_day
+from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 
 def main():
     print("="*60)

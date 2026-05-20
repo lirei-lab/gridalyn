@@ -1,12 +1,8 @@
 """GeoJSON adapters for synthetic network generation.
 
-This module is the canonical import path for tools that ingest, filter,
-validate, or generate building-footprint GeoJSON before passing those footprints
-to :class:`gridalyn.twin.core.graph.PowerGridGraph`.
-
-The historical ``gridalyn.twin.geoprocess`` package remains as a compatibility
-namespace, but new project workflows and tutorials should import these symbols
-from ``gridalyn.twin.adapters.geojson``.
+This module is the public import path for tools that ingest, filter, validate,
+or generate building-footprint GeoJSON before passing those footprints to
+:class:`gridalyn.twin.core.graph.PowerGridGraph`.
 """
 
 from __future__ import annotations

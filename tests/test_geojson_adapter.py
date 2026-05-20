@@ -7,14 +7,14 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import LineString, Polygon
 
-from gridalyn.adapters.geojson import (
+from gridalyn.twin.adapters.geojson import (
     FakeGeoJSONGenerator,
     GeoProcessor,
     extract_building_data,
     validate_geojson,
 )
-from gridalyn.core.graph import PowerGridGraph
-from gridalyn.geoprocess import FakeGeoJSONGenerator as LegacyFakeGeoJSONGenerator
+from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.twin.geoprocess import FakeGeoJSONGenerator as GeoprocessFakeGeoJSONGenerator
 from examples.data_acquisition.prepare_microsoft_building_footprints import (
     prepare_footprints,
 )
@@ -39,8 +39,8 @@ def test_geojson_adapter_exports_synthetic_network_building_tools() -> None:
     assert GeoProcessor.__name__ == "GeoProcessor"
 
 
-def test_geoprocess_namespace_remains_compatible() -> None:
-    assert LegacyFakeGeoJSONGenerator is FakeGeoJSONGenerator
+def test_twin_geoprocess_exports_geojson_generator() -> None:
+    assert GeoprocessFakeGeoJSONGenerator is FakeGeoJSONGenerator
 
 
 def test_power_grid_graph_extracts_centroids_as_longitude_latitude(tmp_path: Path) -> None:

@@ -21,7 +21,7 @@ from gridalyn.operations.flexibility import (
     summarize_network_constraints,
     validate_flexibility_operation_inputs,
 )
-from gridalyn.workflows.flexibility.locational_verification import (
+from gridalyn.projects.workflows.flexibility.locational_verification import (
     main as verify_locational_clearing,
 )
 

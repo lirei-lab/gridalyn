@@ -1,9 +1,9 @@
-"""Public Gridalyn platform API.
+"""Public Gridalyn foundation platform API.
 
 This module is the stable Python entry point for applications that want to
-embed the platform without shelling out to compatibility scripts. Exports are
-loaded lazily so lightweight commands such as ``gridalyn validate`` do not pull
-in simulation or plotting dependencies.
+embed foundation contracts. Exports are loaded lazily so lightweight commands
+such as ``gridalyn validate`` do not pull in simulation or plotting
+dependencies.
 """
 
 from __future__ import annotations
@@ -66,11 +66,6 @@ _LAZY_EXPORTS = {
     "build_operation_run": ("gridalyn.operations", "build_operation_run"),
     "validate_operation_run": ("gridalyn.operations", "validate_operation_run"),
     "write_operation_run": ("gridalyn.operations", "write_operation_run"),
-    "COMPAT_MODULE_ALIASES": ("gridalyn.foundation.platform.compatibility", "COMPAT_MODULE_ALIASES"),
-    "COMPAT_SUBMODULE_ALIASES": (
-        "gridalyn.foundation.platform.compatibility",
-        "COMPAT_SUBMODULE_ALIASES",
-    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)

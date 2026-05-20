@@ -1,9 +1,9 @@
 import unittest
 
 from gridalyn import PowerGridGraph
-from gridalyn.viz.interactive import GridPlotter
+from gridalyn.interfaces.viz.interactive import GridPlotter
 from gridalyn import PowerGridGraph as GridalynPowerGridGraph
-from gridalyn.viz.interactive import GridPlotter as GridalynGridPlotter
+from gridalyn.interfaces.viz.interactive import GridPlotter as GridalynGridPlotter
 
 
 class TestImports(unittest.TestCase):

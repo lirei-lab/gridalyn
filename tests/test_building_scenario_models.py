@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from gridalyn.modeling import (
+from gridalyn.assets.modeling import (
     synthesize_scenario_device_tables,
     write_scenario_model_artifacts,
 )

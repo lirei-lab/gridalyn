@@ -16,7 +16,7 @@ import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
 
-from gridalyn.platform import ReportMetadata, file_reference, write_report
+from gridalyn.foundation import ReportMetadata, file_reference, write_report
 
 
 PROJECT_NAME = "ieee_33_bus_demo"

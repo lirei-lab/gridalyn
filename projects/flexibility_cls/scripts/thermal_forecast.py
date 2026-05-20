@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from gridalyn.modeling.thermal import (
+from gridalyn.assets.modeling.thermal import (
     THERMAL_FORECAST_SOURCE,
     THERMAL_LIMIT_MODEL,
     ThermalForecast,

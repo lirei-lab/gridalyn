@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from gridalyn.modeling import (
+from gridalyn.assets.modeling import (
     load_base_inputs,
     synthesize_building_model_tables,
     write_building_model_artifacts,
@@ -134,7 +134,7 @@ class BuildingModelingTest(unittest.TestCase):
                 return FakeModel()
 
         with patch(
-            "gridalyn.modeling.artifacts.NetworkModelRepository",
+            "gridalyn.assets.modeling.artifacts.NetworkModelRepository",
             FakeRepository,
             create=True,
         ), patch.object(pd, "read_parquet", side_effect=AssertionError("raw base parquet read")):

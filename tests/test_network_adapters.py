@@ -6,24 +6,24 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from gridalyn.adapters.cim import CimParquetAdapter
-from gridalyn.adapters.network import (
+from gridalyn.twin.adapters.cim import CimParquetAdapter
+from gridalyn.twin.adapters.network import (
     NetworkExportResult,
     NetworkSnapshot,
     SyntheticPandapowerAdapter,
     describe_network_source_adapter,
 )
-from gridalyn.adapters.registry import (
+from gridalyn.twin.adapters.registry import (
     NetworkAdapterRegistry,
     UnknownNetworkAdapterError,
     default_network_adapter_registry,
 )
-from gridalyn.adapters.validation import (
+from gridalyn.twin.adapters.validation import (
     build_network_adapter_validation_report,
     write_network_adapter_validation_report,
 )
-from gridalyn.network import NetworkModelRepository
-from gridalyn.workflows.scripts.export_digital_twin_base import export_base_twin
+from gridalyn.twin import NetworkModelRepository
+from gridalyn.projects.workflows.scripts.export_digital_twin_base import export_base_twin
 
 
 class NetworkAdaptersTest(unittest.TestCase):
@@ -307,7 +307,7 @@ class NetworkAdaptersTest(unittest.TestCase):
             registry.register(FakeAdapter)
 
             with patch(
-                "gridalyn.workflows.scripts.export_digital_twin_base.default_network_adapter_registry",
+                "gridalyn.projects.workflows.scripts.export_digital_twin_base.default_network_adapter_registry",
                 return_value=registry,
             ):
                 export_base_twin(

@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Dict, Optional
 
-from gridalyn.core.graph import PowerGridGraph
-from gridalyn.viz.interactive import GridPlotter
+from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.interfaces.viz.interactive import GridPlotter
 
 
 class Interface:
@@ -178,7 +178,7 @@ class Interface:
 
         try:
             from pandapower.diagnostic import diagnostic
-            from gridalyn.simulators.powerflow.builder import PandapowerGridBuilder
+            from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 
             builder = PandapowerGridBuilder(self.power_grid, self.config)
             builder.logger = self.logger

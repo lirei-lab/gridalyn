@@ -24,7 +24,7 @@ from projects.flexibility_cls.scripts.config import (
     S_RATED_MVA, S_RATED_KVA, THETA_MAX, PF,
     GRID_CONFIG,
 )
-from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
 from projects.flexibility_cls.scripts.thermal_forecast import (
     build_thermal_forecast,
     thermal_forecast_metadata,

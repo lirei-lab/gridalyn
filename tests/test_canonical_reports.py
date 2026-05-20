@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.platform.reports import (
+from gridalyn.foundation.platform.reports import (
     ReportMetadata,
     build_report,
     file_reference,
@@ -13,8 +13,8 @@ from gridalyn.platform.reports import (
     write_manifest,
     write_report,
 )
-from gridalyn.reporting.digital_twin import build_digital_twin_reports
-from gridalyn.reporting.schemas import report_input
+from gridalyn.interfaces.reporting.digital_twin import build_digital_twin_reports
+from gridalyn.interfaces.reporting.schemas import report_input
 from projects.flexibility_cls.scripts.reports.build_study_reports import (
     build_study_reports,
 )

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from gridalyn.analytics.network_impact.catalog import (
+from gridalyn.simulation.analytics.network_impact.catalog import (
     build_network_impact_catalog,
     write_network_impact_catalog,
 )

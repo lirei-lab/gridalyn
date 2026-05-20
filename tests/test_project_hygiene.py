@@ -2,6 +2,7 @@ import inspect
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -95,7 +96,7 @@ class ProjectHygieneTest(unittest.TestCase):
         )
 
     def test_datagen_weather_cache_defaults_to_generated_workspace(self):
-        from gridalyn.datagen.data import weather
+        from gridalyn.assets.datagen.data import weather
 
         repo_root = Path(__file__).resolve().parents[1]
         cache_path = weather._CACHE_FILE.relative_to(repo_root).as_posix()
@@ -114,7 +115,7 @@ class ProjectHygieneTest(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "from gridalyn.datagen.data import weather; print(weather._CACHE_FILE.as_posix())",
+                "from gridalyn.assets.datagen.data import weather; print(weather._CACHE_FILE.as_posix())",
             ],
             check=True,
             capture_output=True,
@@ -231,6 +232,92 @@ class ProjectHygieneTest(unittest.TestCase):
                     offenders.append(relative.as_posix())
 
         self.assertEqual([], offenders)
+
+    def test_source_tests_and_docs_use_native_gridalyn_modules(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        historical_modules = [
+            "platform",
+            "network",
+            "modeling",
+            "simulators",
+            "core",
+            "viz",
+            "adapters",
+            "io",
+            "semantic",
+            "market",
+            "analytics",
+            "data",
+            "datagen",
+            "db",
+            "geoprocess",
+            "reporting",
+            "workflows",
+        ]
+        checked_roots = [
+            repo_root / "gridalyn",
+            repo_root / "tests",
+            repo_root / "docs",
+            repo_root / "projects",
+            repo_root / "examples",
+            repo_root / "README.md",
+        ]
+        allowed_paths = {
+            Path("docs/development/code-structure-audit.md"),
+            Path("docs/development/project-hygiene.md"),
+        }
+        offenders: list[str] = []
+
+        for root in checked_roots:
+            paths = [root] if root.is_file() else sorted(root.rglob("*"))
+            for path in paths:
+                if not path.is_file():
+                    continue
+                relative = path.relative_to(repo_root)
+                if relative in allowed_paths:
+                    continue
+                if "__pycache__" in relative.parts or "outputs" in relative.parts:
+                    continue
+                if path.suffix not in {".md", ".py", ".toml", ".yml", ".yaml"}:
+                    continue
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                for module in historical_modules:
+                    pattern = rf"\b(from|import|python -m)\s+gridalyn\.{module}\b"
+                    if re.search(pattern, text):
+                        offenders.append(f"{relative.as_posix()}: gridalyn.{module}")
+
+        self.assertEqual([], offenders)
+
+    def test_historical_gridalyn_alias_modules_are_not_registered(self):
+        import gridalyn
+
+        historical_modules = [
+            "platform",
+            "network",
+            "modeling",
+            "simulators",
+            "core",
+            "viz",
+            "adapters",
+            "io",
+            "semantic",
+            "market",
+            "analytics",
+            "data",
+            "datagen",
+            "db",
+            "geoprocess",
+            "reporting",
+            "workflows",
+        ]
+        registered = [
+            f"gridalyn.{module}"
+            for module in historical_modules
+            if f"gridalyn.{module}" in sys.modules
+        ]
+
+        self.assertEqual([], registered)
+        self.assertFalse(hasattr(gridalyn, "COMPAT" "_MODULE_ALIASES"))
 
     def test_public_docs_nav_excludes_manuscript_workspace(self):
         repo_root = Path(__file__).resolve().parents[1]

@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.market.locational_clearing import (
+from gridalyn.operations.market.locational_clearing import (
     build_locational_clearing,
     write_locational_clearing_outputs,
 )
-from gridalyn.workflows.scripts.generate_locational_flexibility_clearing import _infer_dt_h
+from gridalyn.projects.workflows.scripts.generate_locational_flexibility_clearing import _infer_dt_h
 
 
 class LocationalFlexibilityClearingTest(unittest.TestCase):

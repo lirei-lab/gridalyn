@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from gridalyn.market.spatial_cls import (
+from gridalyn.operations.market.spatial_cls import (
     allocate_addition_by_headroom,
     apply_spatial_cls,
     allocate_reduction,

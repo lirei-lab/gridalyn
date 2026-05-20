@@ -15,8 +15,8 @@ import geopandas as gpd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.data.datasets import get_dataset_path
-from gridalyn.simulators.powerflow.runner import MonteCarloSimulationManager
+from gridalyn.foundation.data.datasets import get_dataset_path
+from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager
 
 from projects.flexibility_cls.scripts.config import (
     GRID_CONFIG,

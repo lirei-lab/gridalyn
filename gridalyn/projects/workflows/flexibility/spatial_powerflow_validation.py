@@ -16,7 +16,7 @@ from gridalyn.operations.market.spatial_cls import (
     allocate_addition_by_headroom,
     apply_spatial_cls,
 )
-from gridalyn.workflows.scripts.run_digital_twin_ev_powerflow import (
+from gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow import (
     _generate_base_building_loads,
     _load_ev_matrix,
     _load_json,

@@ -17,8 +17,8 @@ from gridalyn.twin.geoprocess import (
     load_polygon_coordinates,
     prepare_microsoft_building_footprints,
 )
-from gridalyn.workflows.digital_twin.build import run_digital_twin_build
-from gridalyn.workflows.digital_twin import ev_scenarios, ev_timeseries
+from gridalyn.projects.workflows.digital_twin.build import run_digital_twin_build
+from gridalyn.projects.workflows.digital_twin import ev_scenarios, ev_timeseries
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -107,7 +107,7 @@ def _workflow_handler(main_func):
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler

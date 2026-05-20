@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gridalyn.market.locational_verification import (
+from gridalyn.operations.market.locational_verification import (
     apply_locational_selections,
     build_locational_clearing_verification_report,
     write_locational_verification_outputs,

@@ -1,8 +1,6 @@
 """Foundation contracts for governance, validation, and artifacts.
 
-This facade is the stable home for cross-cutting platform contracts. It
-re-exports the current implementation modules without forcing a disruptive
-package move.
+This facade is the stable home for cross-cutting platform contracts.
 """
 
 from __future__ import annotations
@@ -21,8 +19,6 @@ _LAZY_EXPORTS = {
     "build_report": ("gridalyn.foundation.platform", "build_report"),
     "build_study_run": ("gridalyn.foundation.platform", "build_study_run"),
     "check_artifact_policy": ("gridalyn.foundation.platform", "check_artifact_policy"),
-    "COMPAT_MODULE_ALIASES": ("gridalyn.foundation.platform", "COMPAT_MODULE_ALIASES"),
-    "COMPAT_SUBMODULE_ALIASES": ("gridalyn.foundation.platform", "COMPAT_SUBMODULE_ALIASES"),
     "file_reference": ("gridalyn.foundation.platform", "file_reference"),
     "find_workspace_root": ("gridalyn.foundation.platform", "find_workspace_root"),
     "project_sense_check": ("gridalyn.foundation.platform", "project_sense_check"),

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.modeling.assets import build_asset_registry, summarize_asset_registry
+from gridalyn.assets.modeling.assets import build_asset_registry, summarize_asset_registry
 
 
 class AssetRegistryTest(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.analytics.network_impact.physics_model import (
+from gridalyn.simulation.analytics.network_impact.physics_model import (
     build_physics_surrogate_report,
     fit_physics_surrogate,
     predict_physics_impact,

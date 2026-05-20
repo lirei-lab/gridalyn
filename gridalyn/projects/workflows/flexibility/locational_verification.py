@@ -13,7 +13,7 @@ from gridalyn.operations.market.locational_verification import (
     build_locational_clearing_verification_report,
     write_locational_verification_outputs,
 )
-from gridalyn.workflows.flexibility.spatial_powerflow_validation import (
+from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import (
     DEFAULT_CACHE_DIR,
     DEFAULT_MARKET_DISPATCH_PATH,
     _load_s4_inputs,

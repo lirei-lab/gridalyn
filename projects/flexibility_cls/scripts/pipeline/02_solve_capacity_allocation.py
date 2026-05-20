@@ -15,10 +15,10 @@ from pathlib import Path
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.grid.network import MVNetwork
-from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
-from gridalyn.market.dso_dispatch import DSODispatcher
-from gridalyn.market.engine import MarketSimulationEngine
+from gridalyn.assets.datagen.grid.network import MVNetwork
+from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.operations.market.dso_dispatch import DSODispatcher
+from gridalyn.operations.market.engine import MarketSimulationEngine
 from projects.flexibility_cls.scripts.config import (
     EV_PERCENTAGES,
     MARKET_CLEARING_INTERVAL_H,

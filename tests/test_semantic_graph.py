@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.db.federated_graph_adapter import FederatedGraphAdapter
-from gridalyn.semantic.mappings import build_semantic_graph, north_america_profile
-from gridalyn.semantic.validation import validate_semantic_graph
+from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
+from gridalyn.twin.semantic.mappings import build_semantic_graph, north_america_profile
+from gridalyn.twin.semantic.validation import validate_semantic_graph
 
 
 class SemanticGraphTest(unittest.TestCase):

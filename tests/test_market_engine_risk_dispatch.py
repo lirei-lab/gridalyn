@@ -1,9 +1,9 @@
 import numpy as np
 import unittest
 
-from gridalyn.datagen.grid.network import MVNetwork
-from gridalyn.market.dso_dispatch import DSODispatcher
-from gridalyn.market.engine import MarketSimulationEngine
+from gridalyn.assets.datagen.grid.network import MVNetwork
+from gridalyn.operations.market.dso_dispatch import DSODispatcher
+from gridalyn.operations.market.engine import MarketSimulationEngine
 
 
 class FixedLimitThermalModel:

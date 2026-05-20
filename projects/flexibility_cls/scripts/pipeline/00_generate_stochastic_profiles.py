@@ -18,9 +18,9 @@ from scipy.ndimage import gaussian_filter1d
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.data.weather import download_tmy, select_peak_load_day
-from gridalyn.simulators.agents.fleet import make_buildings, simulate_buildings
-from gridalyn.simulators.agents.ev import make_ev_chargers
+from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
+from gridalyn.simulation.simulators.agents.fleet import make_buildings, simulate_buildings
+from gridalyn.simulation.simulators.agents.ev import make_ev_chargers
 from projects.flexibility_cls.scripts.config import (
     EV_CHARGER_KW,
     N_REALIZATIONS,

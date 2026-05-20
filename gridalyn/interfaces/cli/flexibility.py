@@ -10,7 +10,7 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 configure_cli_environment()
 
 from gridalyn.interfaces.cli.script_runner import run_module_as_script
-from gridalyn.workflows.flexibility import locational_verification
+from gridalyn.projects.workflows.flexibility import locational_verification
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler

@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pandapower as pp
 
 from gridalyn.interfaces.cli import flexibility
-from gridalyn.workflows.flexibility import locational_verification
+from gridalyn.projects.workflows.flexibility import locational_verification
 from gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow import (
     _normalize_pandapower_timeseries_net,
 )

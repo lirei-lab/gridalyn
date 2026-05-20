@@ -2,13 +2,7 @@
 
 from __future__ import annotations
 
-import warnings
 from importlib import import_module
-
-from gridalyn.foundation.platform.compatibility import register_compat_module_aliases
-
-
-register_compat_module_aliases(__name__)
 
 __all__ = [
     "assets",
@@ -43,7 +37,6 @@ __all__ = [
     "validate_operation_run",
 ]
 
-_LEGACY_DATASET_EXPORTS = {"PowerGridDataset", "CIMDataset", "GeoJSONDataset"}
 _LAZY_EXPORTS = {
     "assets": ("gridalyn.assets", "assets"),
     "foundation": ("gridalyn.foundation", "foundation"),
@@ -94,15 +87,4 @@ def __getattr__(name: str):
         value = module if attr_name == name and module_name.endswith(f".{name}") else getattr(module, attr_name)
         globals()[name] = value
         return value
-    if name in _LEGACY_DATASET_EXPORTS:
-        warnings.warn(
-            f"gridalyn.{name} is a legacy dataset stub. Use "
-            "gridalyn.data.get_dataset_path/list_available_datasets for demo data "
-            "or define project datasets through project.yaml.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from gridalyn.data import datasets
-
-        return getattr(datasets, name)
     raise AttributeError(f"module 'gridalyn' has no attribute {name!r}")

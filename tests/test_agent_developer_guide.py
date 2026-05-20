@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from gridalyn.platform import project_verify
+from gridalyn.projects import project_verify
 
 
 def test_project_verify_combines_contract_status_and_sense_checks() -> None:

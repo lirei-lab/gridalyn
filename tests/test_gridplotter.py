@@ -7,8 +7,8 @@ import unittest
 
 import folium
 
-from gridalyn.adapters.geojson import FakeGeoJSONGenerator
-from gridalyn.viz.interactive import GridPlotter, PowerGridGraph
+from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
+from gridalyn.interfaces.viz.interactive import GridPlotter, PowerGridGraph
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)

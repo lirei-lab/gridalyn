@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from gridalyn.platform import project_sense_check
+from gridalyn.projects import project_sense_check
 
 
 PROJECTS = [

@@ -10,9 +10,9 @@ from gridalyn.operations.flexibility import (
     build_settlement_records,
     run_flexibility_clearing_operation,
 )
-from gridalyn.platform import (
-    build_network_constraint_set as platform_build_network_constraint_set,
-    build_operational_kpi_report as platform_build_operational_kpi_report,
+from gridalyn.operations import (
+    build_network_constraint_set as public_build_network_constraint_set,
+    build_operational_kpi_report as public_build_operational_kpi_report,
 )
 
 
@@ -199,9 +199,9 @@ class FlexibilityOperationKpiTest(unittest.TestCase):
             0.002,
         )
 
-    def test_platform_exports_constraint_and_kpi_builders(self):
-        self.assertIs(platform_build_network_constraint_set, build_network_constraint_set)
-        self.assertIs(platform_build_operational_kpi_report, build_operational_kpi_report)
+    def test_operations_api_exports_constraint_and_kpi_builders(self):
+        self.assertIs(public_build_network_constraint_set, build_network_constraint_set)
+        self.assertIs(public_build_operational_kpi_report, build_operational_kpi_report)
 
 
 if __name__ == "__main__":

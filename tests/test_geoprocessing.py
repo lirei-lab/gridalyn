@@ -1,5 +1,5 @@
-from gridalyn.data import datasets
-from gridalyn.adapters.geojson import GeoProcessor
+from gridalyn.foundation.data import datasets
+from gridalyn.twin.adapters.geojson import GeoProcessor
 
 
 def test_geoprocessing() -> None:

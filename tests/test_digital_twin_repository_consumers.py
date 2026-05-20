@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from gridalyn.workflows.scripts.generate_digital_twin_flexibility_providers import (
+from gridalyn.projects.workflows.scripts.generate_digital_twin_flexibility_providers import (
     generate_flexibility_provider_artifacts,
 )
-from gridalyn.workflows.scripts.generate_digital_twin_semantic_graph import (
+from gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph import (
     generate_semantic_graph,
 )
 
@@ -128,7 +128,7 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
             (timeseries_dir / "ev_load_summary.json").write_text(json.dumps({}))
 
             with patch(
-                "gridalyn.workflows.scripts.generate_digital_twin_semantic_graph.NetworkModelRepository",
+                "gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph.NetworkModelRepository",
                 self._repository_class(),
                 create=True,
             ), patch.object(pd, "read_parquet", side_effect=self._read_parquet_side_effect):
@@ -156,7 +156,7 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
             scenario_model_dir.mkdir(parents=True)
 
             with patch(
-                "gridalyn.workflows.scripts.generate_digital_twin_flexibility_providers.NetworkModelRepository",
+                "gridalyn.projects.workflows.scripts.generate_digital_twin_flexibility_providers.NetworkModelRepository",
                 self._repository_class(),
                 create=True,
             ), patch.object(pd, "read_parquet", side_effect=self._read_parquet_side_effect):

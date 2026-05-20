@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from gridalyn.io import timeseries as _timeseries
+from gridalyn.twin.io import timeseries as _timeseries
 
 ROOT = Path(__file__).parents[3]
 DATA_DIR = ROOT / "projects" / "flexibility_cls" / "outputs" / "data"

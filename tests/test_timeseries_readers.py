@@ -27,7 +27,7 @@ def _write_mc_inputs(data_dir: Path) -> None:
 
 
 def test_core_timeseries_readers_use_explicit_data_dir(tmp_path):
-    from gridalyn.io.timeseries import (
+    from gridalyn.twin.io.timeseries import (
         get_baseline_building_load,
         get_baseline_building_load_all,
         get_ev_capability_load_all,
@@ -59,7 +59,7 @@ def test_core_timeseries_readers_use_explicit_data_dir(tmp_path):
 
 
 def test_project_data_api_delegates_to_core_reader():
-    from gridalyn.io.timeseries import get_baseline_building_load_all as core_reader
+    from gridalyn.twin.io.timeseries import get_baseline_building_load_all as core_reader
     from projects.flexibility_cls.scripts import data_api as project_data_api
 
     assert project_data_api.get_baseline_building_load_all.__wrapped__ is core_reader

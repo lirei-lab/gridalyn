@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from gridalyn.foundation import ReportMetadata, file_reference, write_report
-from gridalyn.modeling.synthetic_network import build_synthetic_network_from_geojson
+from gridalyn.assets.modeling.synthetic_network import build_synthetic_network_from_geojson
 
 
 PROJECT_NAME = "synthetic_geojson_feeder"

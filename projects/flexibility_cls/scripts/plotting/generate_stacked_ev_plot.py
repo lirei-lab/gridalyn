@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.data.weather import download_tmy, select_peak_load_day
-from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
+from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
 from projects.flexibility_cls.scripts.data_api import (
     get_baseline_building_load_all,
     get_ev_capability_load_all,

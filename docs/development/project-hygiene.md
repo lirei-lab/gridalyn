@@ -31,11 +31,11 @@ runtime instance at `instances/default/digital_twin/`:
 
 ## Legacy Export Boundary
 
-`gridalyn.db.DigitalTwinManager` and `DashboardExporter` are retained for
+`gridalyn.twin.db.DigitalTwinManager` and `DashboardExporter` are retained for
 archived Falkor/DuckDB experiments, but they are not the current dashboard or
 digital-twin publication path.
 
-`gridalyn.db.__all__` now exposes only `FederatedGraphAdapter`. The old
+`gridalyn.twin.db.__all__` now exposes only `FederatedGraphAdapter`. The old
 `DigitalTwinManager`, `FalkorAdapter`, `DuckAdapter`, and `DashboardExporter`
 remain importable through lazy deprecation shims so archived tutorials can still
 run while new application code follows the federated semantic graph contract.
@@ -54,7 +54,7 @@ New work should publish dashboard state through
 `instances/default/digital_twin/dashboard/catalog.json` and the scenario Parquet files under
 `instances/default/digital_twin/timeseries`.
 
-Kepler/dashboard-public exporters in `gridalyn.io.geo` are also legacy
+Kepler/dashboard-public exporters in `gridalyn.twin.io.geo` are also legacy
 publication helpers. They emit a deprecation warning and should only be used for
 archived demos that still consume `dashboard/public`.
 
@@ -144,9 +144,9 @@ uv run gridalyn dashboard catalog
 ```
 
 Compatibility scripts no longer live under `examples/`. The first extracted workflows are
-`gridalyn.workflows.digital_twin.ev_scenarios`,
-`gridalyn.workflows.digital_twin.ev_timeseries`, and
-`gridalyn.workflows.flexibility.locational_verification`. Generated Python caches can
+`gridalyn.projects.workflows.digital_twin.ev_scenarios`,
+`gridalyn.projects.workflows.digital_twin.ev_timeseries`, and
+`gridalyn.projects.workflows.flexibility.locational_verification`. Generated Python caches can
 be deleted at any time. Data caches under `examples/generated/cache`,
 `examples/generated/outputs`, or root `cache` are tutorial or local caches and
 must not be project runtime dependencies.

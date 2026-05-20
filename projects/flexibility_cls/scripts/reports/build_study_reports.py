@@ -12,7 +12,7 @@ import pandas as pd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.reporting.schemas import (
+from gridalyn.interfaces.reporting.schemas import (
     canonical_report,
     load_json,
     relpath,

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.market.providers import (
+from gridalyn.operations.market.providers import (
     build_network_sensitivity,
     build_provider_registry,
     select_providers_for_constraint,

@@ -7,9 +7,9 @@ from gridalyn.operations.flexibility import (
     run_flexibility_clearing_operation,
     validate_flexibility_operation_inputs,
 )
-from gridalyn.platform import (
-    build_operation_context as platform_build_operation_context,
-    run_flexibility_clearing_operation as platform_run_flexibility_clearing_operation,
+from gridalyn.operations import (
+    build_operation_context as public_build_operation_context,
+    run_flexibility_clearing_operation as public_run_flexibility_clearing_operation,
 )
 
 
@@ -154,10 +154,10 @@ class FlexibilityOperationContractsTest(unittest.TestCase):
         self.assertEqual(report["input_summary"]["provider_count"], 2)
         self.assertEqual(report["input_summary"]["aggregator_count"], 2)
 
-    def test_platform_api_exports_flexibility_operation_facade(self):
-        self.assertIs(platform_build_operation_context, build_operation_context)
+    def test_operations_api_exports_flexibility_operation_facade(self):
+        self.assertIs(public_build_operation_context, build_operation_context)
         self.assertIs(
-            platform_run_flexibility_clearing_operation,
+            public_run_flexibility_clearing_operation,
             run_flexibility_clearing_operation,
         )
 

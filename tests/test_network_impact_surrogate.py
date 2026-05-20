@@ -3,7 +3,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.analytics.network_impact.surrogate import (
+from gridalyn.simulation.analytics.network_impact.surrogate import (
     build_edge_features,
     build_graph_snapshot,
     build_node_features,

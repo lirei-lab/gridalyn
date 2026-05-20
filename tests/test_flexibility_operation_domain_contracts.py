@@ -10,11 +10,11 @@ from gridalyn.operations.flexibility import (
     build_settlement_records,
     run_flexibility_clearing_operation,
 )
-from gridalyn.platform import (
-    build_aggregator_portfolios as platform_build_aggregator_portfolios,
-    build_dispatch_instructions as platform_build_dispatch_instructions,
-    build_provider_offers as platform_build_provider_offers,
-    build_settlement_records as platform_build_settlement_records,
+from gridalyn.operations import (
+    build_aggregator_portfolios as public_build_aggregator_portfolios,
+    build_dispatch_instructions as public_build_dispatch_instructions,
+    build_provider_offers as public_build_provider_offers,
+    build_settlement_records as public_build_settlement_records,
 )
 
 
@@ -172,11 +172,11 @@ class FlexibilityOperationDomainContractsTest(unittest.TestCase):
         self.assertEqual(report["operation_domain"]["settlement_record_count"], 2)
         self.assertAlmostEqual(report["operation_domain"]["settlement_usd"], 5.75)
 
-    def test_platform_api_exports_operation_domain_contracts(self):
-        self.assertIs(platform_build_aggregator_portfolios, build_aggregator_portfolios)
-        self.assertIs(platform_build_provider_offers, build_provider_offers)
-        self.assertIs(platform_build_dispatch_instructions, build_dispatch_instructions)
-        self.assertIs(platform_build_settlement_records, build_settlement_records)
+    def test_operations_api_exports_operation_domain_contracts(self):
+        self.assertIs(public_build_aggregator_portfolios, build_aggregator_portfolios)
+        self.assertIs(public_build_provider_offers, build_provider_offers)
+        self.assertIs(public_build_dispatch_instructions, build_dispatch_instructions)
+        self.assertIs(public_build_settlement_records, build_settlement_records)
 
 
 if __name__ == "__main__":

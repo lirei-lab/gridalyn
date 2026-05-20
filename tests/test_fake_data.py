@@ -8,8 +8,8 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.adapters.geojson import FakeGeoJSONGenerator
-from gridalyn.core.graph import PowerGridGraph
+from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
+from gridalyn.twin.core.graph import PowerGridGraph
 
 
 class TestFakeDataProcessing(unittest.TestCase):

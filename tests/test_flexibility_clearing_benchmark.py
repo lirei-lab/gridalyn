@@ -1,6 +1,6 @@
 import unittest
 
-from gridalyn.market.scorecard import (
+from gridalyn.operations.market.scorecard import (
     build_flexibility_clearing_scorecard,
 )
 

@@ -9,9 +9,9 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.datagen.grid.network import MVNetwork
-from gridalyn.market.dso_dispatch import DSODispatcher
-from gridalyn.market.engine import MarketSimulationEngine
+from gridalyn.assets.datagen.grid.network import MVNetwork
+from gridalyn.operations.market.dso_dispatch import DSODispatcher
+from gridalyn.operations.market.engine import MarketSimulationEngine
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, P_LIMIT_KW, THETA_MAX
 from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
@@ -47,7 +47,7 @@ def main():
     t_out_trace = thermal_forecast.ambient_c
     
     # Initialize components
-    from gridalyn.datagen.grid.transformer_thermal import TransformerThermalModel
+    from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
     thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
     network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
     dt_h = RES_MINUTES / 60.0

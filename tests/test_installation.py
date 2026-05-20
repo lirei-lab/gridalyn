@@ -1,4 +1,4 @@
-from gridalyn.data import datasets
+from gridalyn.foundation.data import datasets
 
 
 def test_installation() -> None:

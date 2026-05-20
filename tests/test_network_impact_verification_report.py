@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from gridalyn.analytics.network_impact.verification_report import (
+from gridalyn.simulation.analytics.network_impact.verification_report import (
     build_constraint_aware_dispatch,
     build_constraint_requirements,
     build_locational_dispatch,

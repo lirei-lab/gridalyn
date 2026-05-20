@@ -9,9 +9,9 @@ import pandas as pd
 from pandapower.diagnostic import diagnostic
 from timeout_decorator import timeout
 
-from gridalyn.data import datasets
-from gridalyn.core.graph import PowerGridGraph
-from gridalyn.simulators.powerflow.builder import PandapowerGridBuilder
+from gridalyn.foundation.data import datasets
+from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 
 
 class TestPowerGridModel(unittest.TestCase):

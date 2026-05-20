@@ -1,4 +1,4 @@
-"""Backward-compatible import path for the fake GeoJSON generator."""
+"""GeoJSON generator export for geoprocessing helpers."""
 
 from gridalyn.twin.geoprocess.generator import FakeGeoJSONGenerator
 

@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from gridalyn.workflows.digital_twin.build import build_digital_twin_steps, run_digital_twin_build
+from gridalyn.projects.workflows.digital_twin.build import build_digital_twin_steps, run_digital_twin_build
 
 
 class DigitalTwinBuildOrchestratorTest(unittest.TestCase):

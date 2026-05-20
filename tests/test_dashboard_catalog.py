@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.network import NetworkModelRepository
-from gridalyn.reporting.dashboard_catalog import build_dashboard_catalog, write_dashboard_catalog
-from gridalyn.workflows.scripts.generate_digital_twin_dashboard_catalog import DEFAULT_EXTENSIONS
+from gridalyn.twin import NetworkModelRepository
+from gridalyn.interfaces.reporting.dashboard_catalog import build_dashboard_catalog, write_dashboard_catalog
+from gridalyn.projects.workflows.scripts.generate_digital_twin_dashboard_catalog import DEFAULT_EXTENSIONS
 
 
 class DashboardCatalogTest(unittest.TestCase):

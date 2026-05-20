@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from gridalyn.geoprocess import FakeGeoJSONGenerator
-from gridalyn.modeling.synthetic_network import build_synthetic_network_from_geojson
+from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
+from gridalyn.assets.modeling.synthetic_network import build_synthetic_network_from_geojson
 
 
 def test_synthetic_network_generator_builds_report_and_cache(tmp_path: Path) -> None:

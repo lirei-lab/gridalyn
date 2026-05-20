@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from gridalyn.analytics.network_impact.perturbation_sampler import (
+from gridalyn.simulation.analytics.network_impact.perturbation_sampler import (
     build_physics_labels,
     build_perturbation_matrices,
     select_perturbation_samples,

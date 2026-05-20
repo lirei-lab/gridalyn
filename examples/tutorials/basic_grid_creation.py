@@ -11,7 +11,7 @@ import json
 import os
 import tempfile
 
-from gridalyn.adapters.geojson import FakeGeoJSONGenerator
+from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
 from gridalyn.twin.core.graph import PowerGridGraph
 from gridalyn.interfaces.viz.interactive import GridPlotter
 
