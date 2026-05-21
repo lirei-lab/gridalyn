@@ -13,6 +13,10 @@ import argparse
 from pathlib import Path
 from typing import Iterable
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.twin.geoprocess import prepare_microsoft_building_footprints
 
 

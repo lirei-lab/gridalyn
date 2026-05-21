@@ -1,15 +1,22 @@
 import sys
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
 
 # Add project root to sys.path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day

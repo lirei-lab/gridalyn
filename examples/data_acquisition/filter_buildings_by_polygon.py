@@ -10,6 +10,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.twin.geoprocess import clip_buildings_by_polygon, load_polygon_coordinates
 
 DEFAULT_BUILDINGS_FILE = "examples/tutorials/data/example_buildings.geojson"

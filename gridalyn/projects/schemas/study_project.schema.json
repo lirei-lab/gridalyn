@@ -30,7 +30,7 @@
         "problem": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["type", "dataset", "environment", "objective", "model", "spaces", "scenarios"],
+          "required": ["type", "dataset", "environment", "objective", "model", "scenarios"],
           "properties": {
             "type": { "type": "string", "minLength": 1 },
             "dataset": { "type": "string", "minLength": 1 },
@@ -41,14 +41,21 @@
               "additionalProperties": true,
               "required": ["type", "name"],
               "properties": {
-                "type": { "type": "string", "minLength": 1 },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "asset_model",
+                    "forecast_model",
+                    "simulation_model",
+                    "optimization_model",
+                    "control_model",
+                    "market_model",
+                    "operations_model",
+                    "workflow_model"
+                  ]
+                },
                 "name": { "type": "string", "minLength": 1 }
               }
-            },
-            "spaces": {
-              "type": "object",
-              "additionalProperties": { "type": "string", "minLength": 1 },
-              "minProperties": 1
             },
             "scenarios": {
               "type": "array",
@@ -83,6 +90,11 @@
                 "items": { "type": "string", "minLength": 1 }
               },
               "metrics": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "model": { "type": "string", "minLength": 1 },
+              "artifacts": {
                 "type": "array",
                 "items": { "type": "string", "minLength": 1 }
               },

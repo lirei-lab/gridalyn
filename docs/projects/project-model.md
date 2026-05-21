@@ -115,9 +115,13 @@ The contract has three levels:
 
 | Level | Responsibility |
 | --- | --- |
-| `problem` | The reusable study statement: dataset, environment, objective, model, and named spaces. |
+| `problem` | The reusable study statement: dataset, environment, objective, and model. |
 | `problem.scenarios` | Stable operating cases such as baseline, EV penetration level, DER condition, market stress case, or train/evaluate split. |
-| `experiments` | Runs or sweeps that reference one or more declared scenarios and list expected metrics. |
+| `experiments` | Runs or sweeps that reference one or more declared scenarios, expected metrics, model, and proof artifacts. |
+
+The contract follows model-centered experiment discipline without introducing
+explicit spaces yet. Keep state/action/input/output assumptions in model docs or
+reports until multiple workflows need the same formal abstraction.
 
 For the detailed schema and examples, see
 [Project Problem Contract](problem-contract.md).

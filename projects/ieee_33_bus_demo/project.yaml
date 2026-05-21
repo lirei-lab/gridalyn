@@ -12,12 +12,8 @@ spec:
     environment: gridalyn_powerflow
     objective: Compare deterministic operating scenarios on a known radial benchmark feeder.
     model:
-      type: simulator
+      type: simulation_model
       name: gridalyn_ieee_33_bus_benchmark
-    spaces:
-      state: feeder_load_generation_condition
-      action: scenario_overlay
-      output: voltage_and_loading_metrics
     scenarios:
       - id: baseline
         role: benchmark_base_case
@@ -47,6 +43,10 @@ spec:
         - min_voltage_pu
         - voltage_violation_count
         - max_line_loading_percent
+      model: gridalyn_ieee_33_bus_benchmark
+      artifacts:
+        - outputs/reports/ieee33_powerflow_report.json
+        - outputs/reports/ieee33_scenario_comparison_report.json
   inputs:
     sourceNetwork:
       name: IEEE 33-bus distribution feeder demo

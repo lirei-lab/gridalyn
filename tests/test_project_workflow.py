@@ -46,10 +46,8 @@ spec:
     environment: test_environment
     objective: Test project contract.
     model:
-      type: workflow
+      type: workflow_model
       name: test_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -135,10 +133,8 @@ spec:
     environment: test_environment
     objective: Test unknown scenario references.
     model:
-      type: workflow
+      type: workflow_model
       name: sample_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -161,6 +157,118 @@ spec:
                 "experiment broken_run references unknown scenario missing",
                 "\n".join(report.errors),
             )
+
+    def test_accepts_problem_contract_without_explicit_spaces(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sample_workflow
+spec:
+  stages:
+    - id: build
+      command: echo build
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: no_spaces_project
+  version: 0.1.0
+spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test project contract without explicit spaces.
+    model:
+      type: simulation_model
+      name: sample_simulation
+    scenarios:
+      - id: baseline
+        role: test_baseline
+  experiments:
+    - id: baseline_run
+      scenario: baseline
+      model: sample_simulation
+      artifacts:
+        - outputs/reports/project_summary.json
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: workflow.yaml
+  validation: {}
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = validate_project_file(root / "project.yaml")
+            project = load_project(root / "project.yaml")
+
+            self.assertTrue(report.valid, report.errors)
+            self.assertEqual(project.experiments[0].model, "sample_simulation")
+            self.assertEqual(
+                project.experiments[0].artifacts,
+                ("outputs/reports/project_summary.json",),
+            )
+
+    def test_rejects_unknown_problem_model_type(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sample_workflow
+spec:
+  stages:
+    - id: build
+      command: echo build
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: unknown_model_kind
+  version: 0.1.0
+spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test model type vocabulary.
+    model:
+      type: kitchen_sink
+      name: sample_model
+    scenarios:
+      - id: baseline
+        role: test_baseline
+  experiments:
+    - id: baseline_run
+      scenario: baseline
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: workflow.yaml
+  validation: {}
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = validate_project_file(root / "project.yaml")
+
+            self.assertFalse(report.valid)
+            self.assertIn("kitchen_sink", "\n".join(report.errors))
 
 
 class ProjectWorkflowLoaderTest(unittest.TestCase):
@@ -199,10 +307,8 @@ spec:
     environment: test_environment
     objective: Test project contract.
     model:
-      type: workflow
+      type: workflow_model
       name: sample_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -302,10 +408,8 @@ spec:
     environment: test_environment
     objective: Test repository-relative project contract.
     model:
-      type: workflow
+      type: workflow_model
       name: archive_case_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -358,10 +462,8 @@ spec:
     environment: test_environment
     objective: Test unresolved dependency validation.
     model:
-      type: workflow
+      type: workflow_model
       name: broken_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -409,10 +511,8 @@ spec:
     environment: test_environment
     objective: Test missing output reporting.
     model:
-      type: workflow
+      type: workflow_model
       name: minimal_grid_project_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -470,10 +570,8 @@ spec:
     environment: test_environment
     objective: Test stage planning.
     model:
-      type: workflow
+      type: workflow_model
       name: sample_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -524,10 +622,8 @@ spec:
     environment: test_environment
     objective: Test dry-run manifest writing.
     model:
-      type: workflow
+      type: workflow_model
       name: sample_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline
@@ -783,10 +879,8 @@ spec:
     environment: test_environment
     objective: Test missing required report validation.
     model:
-      type: workflow
+      type: workflow_model
       name: sample_workflow
-    spaces:
-      state: test_state
     scenarios:
       - id: baseline
         role: test_baseline

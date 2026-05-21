@@ -5,6 +5,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn.twin.geoprocess import download_osm_building_footprints, load_polygon_coordinates
 
 DEFAULT_POLYGON_COORDS = [

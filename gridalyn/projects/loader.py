@@ -74,7 +74,6 @@ def load_problem_spec(raw: dict[str, Any]) -> ProblemSpec:
         environment=problem["environment"],
         objective=problem["objective"],
         model=dict(problem["model"]),
-        spaces=dict(problem.get("spaces", {})),
         scenarios=scenarios,
     )
 
@@ -89,6 +88,8 @@ def load_experiment_specs(raw: dict[str, Any]) -> tuple[ExperimentSpec, ...]:
                 scenario=item.get("scenario"),
                 scenarios=tuple(item.get("scenarios", [])),
                 metrics=tuple(item.get("metrics", [])),
+                model=item.get("model"),
+                artifacts=tuple(item.get("artifacts", [])),
                 parameters=dict(item.get("parameters", {})),
             )
         )

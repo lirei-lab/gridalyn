@@ -4,6 +4,12 @@ Every Gridalyn project must declare the problem it solves before it declares
 workflow mechanics. This keeps demos, examples, and operations studies aligned
 around the same vocabulary.
 
+Gridalyn borrows the useful discipline of model-centered experiment frameworks:
+declare the dataset, environment, objective, model, scenarios, experiments, and
+metrics before writing workflow scripts. It does not expose explicit state,
+action, input, or output spaces in the public project contract yet; those should
+remain model documentation until they are needed by multiple workflows.
+
 ## Why It Exists
 
 `project.yaml` is not only a list of paths. It is the public contract for a
@@ -25,12 +31,8 @@ spec:
     environment: gridalyn_powerflow
     objective: Compare deterministic operating scenarios on a known feeder.
     model:
-      type: simulator
+      type: simulation_model
       name: gridalyn_ieee_33_bus_benchmark
-    spaces:
-      state: feeder_load_generation_condition
-      action: scenario_overlay
-      output: voltage_and_loading_metrics
     scenarios:
       - id: baseline
         role: benchmark_base_case
@@ -41,6 +43,9 @@ spec:
       objective: Validate voltage and loading metrics.
       metrics:
         - min_voltage_pu
+      model: gridalyn_ieee_33_bus_benchmark
+      artifacts:
+        - outputs/reports/ieee33_powerflow_report.json
 ```
 
 | Field | Meaning |
@@ -49,10 +54,28 @@ spec:
 | `dataset` | Named source data or generated dataset used by the project. |
 | `environment` | Execution environment or simulator context. |
 | `objective` | One-sentence reason the project exists. |
-| `model` | Primary model, simulator, optimizer, agent, or operations pipeline. |
-| `spaces` | Named state, action, observation, or output contracts. |
+| `model` | Primary asset, forecast, simulation, optimization, control, market, operations, or workflow model. |
 | `scenarios` | Stable operating cases available to workflow stages and reports. |
-| `experiments` | Runs, sweeps, or comparisons that reference declared scenarios. |
+| `experiments` | Runs, sweeps, or comparisons that reference declared scenarios, metrics, model, and proof artifacts. |
+
+## Model Type Vocabulary
+
+Use a small model vocabulary so readers know what role a model plays:
+
+| Type | Use when |
+| --- | --- |
+| `asset_model` | The project creates or validates reusable asset, feeder, building, DER, EVSE, or load models. |
+| `forecast_model` | The project produces forecast or baseline trajectories. |
+| `simulation_model` | The project runs physical or replay simulation. |
+| `optimization_model` | The project solves a constrained optimization problem. |
+| `control_model` | The project evaluates a controller or learning policy. |
+| `market_model` | The project clears or evaluates a market mechanism. |
+| `operations_model` | The project combines providers, constraints, dispatch, settlement, and verification. |
+| `workflow_model` | The project is primarily a template or workflow contract demonstration. |
+
+Do not add explicit `spaces` to public project contracts for now. If a model has
+state, action, input, or output assumptions, document them in the model docs or
+report metadata and promote them only after the abstraction has multiple users.
 
 ## Scenario Rules
 
@@ -70,6 +93,7 @@ The project validator enforces that:
 
 - every project declares `spec.problem`;
 - every problem has at least one scenario;
+- every problem uses a known `model.type`;
 - scenario IDs are unique;
 - experiment IDs are unique;
 - every experiment references a known scenario.

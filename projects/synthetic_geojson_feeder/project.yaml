@@ -12,12 +12,8 @@ spec:
     environment: gridalyn_geojson_to_pandapower
     objective: Generate a reproducible feeder model from building footprints and validate the resulting topology.
     model:
-      type: asset_modeler
+      type: asset_model
       name: gridalyn.twin.adapters.geojson
-    spaces:
-      state: building_footprint_collection
-      action: network_generation_parameters
-      output: synthetic_feeder_topology
     scenarios:
       - id: baseline
         role: deterministic_generation_case
@@ -30,6 +26,10 @@ spec:
         - building_count
         - pandapower_bus_count
         - powerflow_converged
+      model: gridalyn.twin.adapters.geojson
+      artifacts:
+        - outputs/reports/synthetic_geojson_feeder_report.json
+        - outputs/figures/synthetic_feeder_topology.png
   inputs:
     sourceData:
       name: Generated building-footprint GeoJSON

@@ -12,12 +12,8 @@ spec:
     environment: realtime_market_powerflow_loop
     objective: Dispatch distributed batteries through a local market to reduce feeder import above an operating limit.
     model:
-      type: market_optimizer
+      type: market_model
       name: prosumer_realtime_market
-    spaces:
-      state: feeder_market_interval_state
-      action: battery_dispatch_mw
-      output: dispatch_settlement_and_powerflow_metrics
     scenarios:
       - id: realtime_peak_window
         role: rolling_dispatch_case
@@ -30,6 +26,10 @@ spec:
         - peak_import_mw
         - dispatched_energy_mwh
         - min_voltage_pu
+      model: prosumer_realtime_market
+      artifacts:
+        - outputs/reports/synthetic_feeder_report.json
+        - outputs/reports/prosumer_realtime_market_report.json
   inputs:
     sourceNetwork:
       name: Synthetic 14-bus radial distribution feeder

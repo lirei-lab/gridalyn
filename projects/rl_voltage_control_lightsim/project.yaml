@@ -12,12 +12,8 @@ spec:
     environment: lightsim2grid_voltage_control
     objective: Train and evaluate a compact control policy that reduces voltage deviations with PV and battery actions.
     model:
-      type: learning_agent
+      type: control_model
       name: tabular_q_learning
-    spaces:
-      state: discretized_voltage_and_pv_state
-      action: battery_charge_discharge_choice
-      output: reward_and_voltage_metrics
     scenarios:
       - id: training
         role: policy_training_case
@@ -35,6 +31,10 @@ spec:
         - mean_reward
         - voltage_violation_count
         - episode_count
+      model: tabular_q_learning
+      artifacts:
+        - outputs/reports/rl_feeder_report.json
+        - outputs/reports/rl_voltage_control_report.json
   inputs:
     sourceNetwork:
       name: Synthetic 10-bus feeder for RL control

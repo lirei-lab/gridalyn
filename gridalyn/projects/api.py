@@ -336,6 +336,12 @@ def _project_yaml(name: str, template: str = "minimal") -> str:
         field: summary.ready
         equals: true"""
     )
+    experiment_artifacts = (
+        "[]"
+        if template == "minimal"
+        else """
+        - outputs/reports/project_summary.json"""
+    )
     return f"""apiVersion: gridalyn.io/v1alpha1
 kind: StudyProject
 metadata:
@@ -349,12 +355,8 @@ spec:
     environment: project_workflow
     objective: Define a reproducible Gridalyn project contract.
     model:
-      type: workflow
+      type: workflow_model
       name: {name}_workflow
-    spaces:
-      state: project_inputs
-      action: workflow_stages
-      output: project_reports
     scenarios:
       - id: baseline
         role: template_baseline
@@ -364,6 +366,8 @@ spec:
       scenario: baseline
       objective: Validate the project contract and declared reports.
       metrics: []
+      model: {name}_workflow
+      artifacts: {experiment_artifacts}
   inputs:
     raw: inputs
   artifacts:

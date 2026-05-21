@@ -5,6 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from gridalyn.interfaces.cli.environment import configure_cli_environment
+
+configure_cli_environment()
+
 from gridalyn import interfaces, simulation
 from gridalyn.twin.adapters import FakeGeoJSONGenerator
 

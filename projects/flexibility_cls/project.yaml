@@ -12,12 +12,8 @@ spec:
     environment: multi_stage_cls_market_and_powerflow_validation
     objective: Allocate Soft and Hard CLS flexibility for EV peak management and validate network impact.
     model:
-      type: operations_pipeline
+      type: operations_model
       name: locational_cls_flexibility_clearing
-    spaces:
-      state: stochastic_ev_load_and_thermal_constraint_state
-      action: soft_hard_cls_capacity_and_dispatch
-      output: clearing_dispatch_settlement_and_powerflow_reports
     scenarios:
       - id: S0_0pct
         role: baseline_adoption_case
@@ -57,6 +53,10 @@ spec:
         - unmanaged_peak_mw
         - managed_peak_mw
         - n_ev
+      model: locational_cls_flexibility_clearing
+      artifacts:
+        - projects/flexibility_cls/outputs/reports/stage_1_stochastic_load_report.json
+        - projects/flexibility_cls/outputs/reports/stage_2_thermal_forecast_report.json
     - id: s4_cls_market_operation
       scenario: S4_40pct
       objective: Run the full CLS market, realtime dispatch, settlement, and power-flow verification path.
@@ -65,6 +65,11 @@ spec:
         - delivered_capacity_kw
         - transformer_loading_percent
         - total_market_settlement_usd
+      model: locational_cls_flexibility_clearing
+      artifacts:
+        - projects/flexibility_cls/outputs/reports/stage_3_market_clearing_report.json
+        - projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json
+        - projects/flexibility_cls/outputs/reports/stage_5_settlement_report.json
   inputs:
     geography:
       source: configs/geography/tr01.json

@@ -24,7 +24,7 @@ The architecture takes lessons from several platform families:
 | NREL Sienna | Separate system data, operations/planning studies, simulation, and analysis packages. | Its transmission/planning emphasis does not replace Gridalyn's distribution and flexibility focus. |
 | HELICS | Coupled simulations should communicate through explicit interfaces and time coordination. | Co-simulation should remain optional until Gridalyn has stable local model contracts. |
 | pandapower / OpenDSS | Solvers are engines under the platform, not the platform identity. | Solver-specific data structures should not leak into project, dashboard, or market contracts. |
-| Enflow-style modular modeling | Problems, models, environments, and spaces are useful abstractions for reusable experiments. | A pure modeling framework would understate digital twin governance, operations, and market clearing. |
+| Enflow-style modular modeling | Problems, models, environments, scenarios, and experiments are useful abstractions for reusable studies. | A pure modeling framework would understate digital twin governance, operations, and market clearing. |
 
 The consensus is: **Gridalyn should be model-centered, operation-aware, and
 application-friendly.**
@@ -47,7 +47,7 @@ flowchart TB
 
   subgraph E[Asset And Flexibility Modeling]
     e1[Buildings, DER, EVSE, loads]
-    e2[Forecasts, envelopes, spaces]
+    e2[Forecasts and flexibility envelopes]
   end
 
   subgraph D[Simulation And Validation]
@@ -161,7 +161,7 @@ This layer describes asset behavior and controllability.
 - dynamic thermal limits;
 - flexibility envelopes;
 - rebound behavior;
-- future input, state, action, and output spaces.
+- documented model assumptions and validation signals.
 
 **Current Gridalyn surface:**
 
@@ -284,17 +284,11 @@ This layer is what users and external systems touch.
 **Design rule:** applications consume declared artifacts and APIs. They should
 not infer scenario semantics from a single demo project.
 
-## Naming And Package Direction
+## Package Direction
 
-The current package has already moved to `gridalyn` as the public namespace.
-Future module changes should follow capability names, not historical script
-names.
-
-## Target Top-Level Modules
-
-The agreed SDK shape is seven large modules. Gridalyn now uses these names as
-the physical top-level package structure and public documentation should point
-users to these modules directly.
+Gridalyn uses seven product-oriented top-level modules. Public docs and project
+code should point users to these modules instead of historical script names or
+deep implementation paths.
 
 ```text
 gridalyn/
@@ -307,20 +301,18 @@ gridalyn/
   interfaces/
 ```
 
-| Public module | Responsibility | Important subpackages |
-| --- | --- | --- |
-| `gridalyn.foundation` | IDs, units, lineage, validation, manifests, model versions, schemas, artifact policy. | `platform`, `data` |
-| `gridalyn.twin` | Network model, topology, repositories, states, scenarios, time-series references, semantic graph. | `network`, `adapters`, `core`, `io`, `semantic`, `db` |
-| `gridalyn.assets` | Buildings, loads, EV/EVSE, DER, forecasts, flexibility envelopes, asset contracts, and synthetic input generation. | `modeling`, `datagen` |
-| `gridalyn.simulation` | Synthetic-network construction, powerflow, thermal checks, solver engines, network-impact surrogate, validation workflows. | `simulators`, `analytics` |
-| `gridalyn.operations` | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, operational KPIs. | `market`, `flexibility` |
-| `gridalyn.projects` | Project manifests, workflow execution, regressions, reproducible studies and demos. | `workflows`, project loader/runner |
-| `gridalyn.interfaces` | CLI, dashboard contracts, reports, graph exports, future API/service adapters. | `cli`, `reporting`, `viz` |
+| Public module | Responsibility |
+| --- | --- |
+| `gridalyn.foundation` | IDs, units, lineage, validation, manifests, model versions, schemas, artifact policy. |
+| `gridalyn.twin` | Network model, topology, repositories, states, scenarios, time-series references, semantic graph. |
+| `gridalyn.assets` | Buildings, loads, EV/EVSE, DER, forecasts, flexibility envelopes, asset contracts, synthetic input generation. |
+| `gridalyn.simulation` | Synthetic-network construction, powerflow, thermal checks, solver engines, network-impact validation. |
+| `gridalyn.operations` | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, operational KPIs. |
+| `gridalyn.projects` | Project manifests, workflow execution, regressions, reproducible studies and demos. |
+| `gridalyn.interfaces` | CLI, dashboard contracts, reports, graph exports, future API/service adapters. |
 
 The module names are intentionally product-oriented. A utility user should be
 able to infer what each area owns without knowing the history of the repository.
-
-## Package Stability Rule
 
 New reusable code should enter the module that owns its capability. Project
 scripts should call those modules, not recreate shared logic locally. When a
@@ -338,16 +330,6 @@ capability is unclear, choose the layer by the artifact it owns:
 
 Every deeper package move should include tests and documentation updates.
 Public docs and new project code should use the native owning module.
-
-| Capability | Preferred package direction |
-| --- | --- |
-| Foundation and governance | `gridalyn.foundation` |
-| Digital twin core | `gridalyn.twin` |
-| Asset modeling | `gridalyn.assets`, future explicit spaces under `gridalyn.assets` or `gridalyn.simulation` only when public |
-| Simulation and validation | `gridalyn.simulation` |
-| Operations and markets | `gridalyn.operations` |
-| Projects and experiments | `gridalyn.projects`, future problem/experiment subpackages only when reused |
-| Applications | `gridalyn.interfaces` |
 
 Do not introduce deeper subpackages just because a concept exists in another
 framework. Promote a boundary when Gridalyn has at least two consumers that

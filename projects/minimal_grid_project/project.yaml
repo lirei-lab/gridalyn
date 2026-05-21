@@ -12,12 +12,8 @@ spec:
     environment: pandapower_powerflow
     objective: Validate the smallest reproducible Gridalyn project contract with one AC power-flow run.
     model:
-      type: simulator
+      type: simulation_model
       name: pandapower
-    spaces:
-      state: feeder_topology_and_loads
-      action: no_control
-      output: bus_voltage_and_line_loading
     scenarios:
       - id: baseline
         role: deterministic_baseline
@@ -30,6 +26,10 @@ spec:
         - powerflow_converged
         - min_voltage_pu
         - bus_count
+      model: pandapower
+      artifacts:
+        - outputs/reports/minimal_grid_report.json
+        - outputs/figures/minimal_voltage_profile.png
   inputs:
     sourceNetwork:
       name: Five-bus radial teaching feeder

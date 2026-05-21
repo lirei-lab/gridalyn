@@ -100,6 +100,6 @@ platform into a notebook collection or a set of standalone scripts:
 network model -> fast simulator -> agent training -> policy artifact -> report
 ```
 
-The same structure can later support Grid2Op-style environments, larger action
-spaces, safety filters, and physical validation against pandapower or utility
+The same structure can later support Grid2Op-style environments, richer control
+domains, safety filters, and physical validation against pandapower or utility
 models.

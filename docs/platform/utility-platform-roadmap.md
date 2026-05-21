@@ -90,7 +90,7 @@ Simulation And Validation
   pandapower, thermal checks, network-impact physics, surrogate validation
 
 Asset And Flexibility Modeling
-  buildings, EVSE, DER, loads, forecasts, flexibility envelopes, action/state spaces
+  buildings, EVSE, DER, loads, forecasts, flexibility envelopes
 
 Digital Twin Core
   network model, topology, scenarios, timeseries, semantic graph, adapters
@@ -118,7 +118,7 @@ than from copying one framework:
   coordination.
 - **pandapower / OpenDSS:** solver engines beneath the platform contract.
 - **Modular energy modeling frameworks:** reusable problems, environments,
-  spaces, and experiments, without losing Gridalyn's digital-twin and
+  scenarios, models, and experiments, without losing Gridalyn's digital-twin and
   operations focus.
 
 The resulting principle is simple: **Gridalyn is model-centered,
@@ -292,8 +292,7 @@ network-impact analytics, and market mechanics behind stable contracts.
 
 **Implement:**
 
-- `gridalyn.spaces` with `InputSpace`, `StateSpace`, `ActionSpace`,
-  `OutputSpace`;
+- documented model assumptions and validation signals for controllable assets;
 - `BuildingFlexibilityModel`;
 - `EVChargingModel`;
 - `ThermalLimitModel`;
@@ -384,8 +383,9 @@ one-off pipelines.
 
 **Implement:**
 
-- `Problem` contract: dataset, environment, objective, constraints, spaces;
-- `Experiment` contract: problem, model, parameters, run manifest;
+- `Problem` contract: dataset, environment, objective, model, and scenarios;
+- `Experiment` contract: scenario references, model, metrics, proof artifacts,
+  parameters, and run manifest;
 - `Objective` classes for overload reduction, cost minimization, voltage margin,
   hosting capacity, and reliability;
 - sweep definitions for scenarios, models, datasets, and objectives;
@@ -398,10 +398,15 @@ EVCapacityLimitationProblem
   dataset: digital twin + project outputs
   environment: GridEnvironment
   objective: reduce overload and shortage at minimum cost
-  action_space: Soft CLS and Hard CLS dispatch
-  state_space: load, voltage, transformer loading, congestion state
-  output_space: reports, KPIs, figures, dashboard metrics
+  model: locational CLS flexibility clearing
+  scenarios: S0_0pct, S1_10pct, S2_20pct, S3_30pct, S4_40pct
+  metrics: overload reduction, shortage, settlement cost, delivery risk
+  artifacts: reports, KPIs, figures, dashboard metrics
 ```
+
+Explicit state/action/input/output spaces remain a later abstraction. The
+public v0.1 contract should stay lighter: problem, model, scenarios,
+experiments, metrics, and artifacts.
 
 **Tests:**
 
@@ -455,7 +460,7 @@ reading study scripts.
 | --- | --- | --- |
 | Foundation And Governance | Project manifests, artifact checks, report schemas, regression baseline. | First-class model/run contracts across every report. |
 | Digital Twin Core | Repository, base Parquet, semantic graph, adapter registry, synthetic and CIM-like adapters. | Explicit operational states and richer partial model access. |
-| Asset And Flexibility Modeling | Building models, EV scenario overlays, thermal forecast, asset registry. | Explicit spaces and flexibility envelopes. |
+| Asset And Flexibility Modeling | Building models, EV scenario overlays, thermal forecast, asset registry. | Clear model assumptions and flexibility envelopes. |
 | Simulation And Validation | Pandapower validation, network impact surrogate, consistency reports. | Common environment interface. |
 | Flexibility Market And Operations | Provider registry, locational clearing, operations facade, aggregator portfolios, offers, dispatch, settlement, network constraints, and operational KPIs. | Measured delivery records and dashboard-ready operations catalog. |
 | Problems And Experiments | Governed project workflows and regression. | Reusable `Problem` and `Experiment` abstractions. |

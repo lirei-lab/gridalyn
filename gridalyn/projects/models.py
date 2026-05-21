@@ -20,7 +20,6 @@ class ProblemSpec:
     environment: str
     objective: str
     model: dict[str, Any]
-    spaces: dict[str, Any]
     scenarios: tuple[ScenarioSpec, ...]
 
 
@@ -31,6 +30,8 @@ class ExperimentSpec:
     scenario: str | None = None
     scenarios: tuple[str, ...] = ()
     metrics: tuple[str, ...] = ()
+    model: str | None = None
+    artifacts: tuple[str, ...] = ()
     parameters: dict[str, Any] = field(default_factory=dict)
 
 

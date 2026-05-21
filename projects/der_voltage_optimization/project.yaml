@@ -12,12 +12,8 @@ spec:
     environment: gridalyn_der_dispatch_with_powerflow_verification
     objective: Compute DER and battery setpoints that improve feeder voltage while respecting operating limits.
     model:
-      type: optimizer
+      type: optimization_model
       name: gridalyn_der_voltage_dispatch
-    spaces:
-      state: feeder_voltage_and_der_availability
-      action: der_active_reactive_and_battery_setpoints
-      output: optimized_voltage_profile
     scenarios:
       - id: pv_voltage_stress
         role: voltage_control_case
@@ -30,6 +26,10 @@ spec:
         - objective_value
         - min_voltage_pu
         - max_voltage_pu
+      model: gridalyn_der_voltage_dispatch
+      artifacts:
+        - outputs/reports/der_feeder_report.json
+        - outputs/reports/der_voltage_optimization_report.json
   inputs:
     sourceNetwork:
       name: Synthetic 16-bus DER hosting feeder

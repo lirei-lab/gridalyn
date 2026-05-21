@@ -45,7 +45,7 @@ Workspace preparation is handled by the platform command
 The generated `project.yaml` also includes a minimal
 [`problem`](problem-contract.md) declaration with one `baseline` scenario and
 one experiment. Replace those fields with the actual dataset, environment,
-model, spaces, scenarios, and metrics as soon as the project becomes
+model, scenarios, experiments, metrics, and proof artifacts as soon as the project becomes
 domain-specific.
 
 ## Minimal Template
