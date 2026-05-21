@@ -4,13 +4,12 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import scipy.stats as stats
 from pathlib import Path
 
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.modeling.transformers import TransformerThermalModel
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 
 def main():
@@ -33,8 +32,7 @@ def main():
     # Managed
     p_soft = df_ts["p_soft_cls_mw"].values
     p_hard = df_ts["p_hard_cls_mw"].values
-    mu_managed = mu_unmanaged - p_soft - p_hard
-    
+
     # Get weather
     try:
         tmy = download_tmy()
@@ -142,7 +140,7 @@ def main():
     
     # Panel 2: Managed
     ax2 = axes[1]
-    c2 = ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
+    ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
     ax2.plot(X, limit, color="red", lw=2, ls="--", label=f"Thermal Limit ({THETA_MAX} °C)")
     ax2.plot(X, np.mean(theta_managed_traces, axis=0), color="black", lw=1.5, label="Expected Mean Temp")
     

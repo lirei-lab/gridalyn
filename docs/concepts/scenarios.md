@@ -22,6 +22,12 @@ market conditions, or operational stress cases. The scenario layer must remain
 general: the dashboard and SDK should read scenario metadata programmatically
 rather than assuming one study type.
 
+Governed projects declare their public scenario set in
+`spec.problem.scenarios` inside `project.yaml`. Workflow stages may materialize
+asset registries, time-series, reports, or dashboard catalogs from those
+scenarios, but the scenario IDs themselves should remain part of the project
+contract.
+
 ## Good Scenario Design
 
 - Use stable IDs.

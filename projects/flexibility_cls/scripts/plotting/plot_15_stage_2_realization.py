@@ -47,7 +47,7 @@ def main():
     t_out_trace = thermal_forecast.ambient_c
     
     # Initialize components
-    from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+    from gridalyn.assets.modeling.transformers import TransformerThermalModel
     thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
     network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
     dt_h = RES_MINUTES / 60.0

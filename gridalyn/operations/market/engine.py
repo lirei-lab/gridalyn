@@ -8,12 +8,11 @@ and sequential market clearing over a full simulation horizon.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Any
 from scipy.stats import norm
 
-from gridalyn.assets.datagen.grid.network import MVNetwork
 from gridalyn.operations.market.dso_dispatch import DSODispatcher
 from gridalyn.operations.market.aggregator import generate_residential_portfolios
+from gridalyn.operations.market.network_constraints import NetworkConstraintModel
 from gridalyn.operations.market.settlement import calculate_period_settlement
 
 
@@ -25,7 +24,7 @@ class MarketSimulationEngine:
     checks at each timestep, dynamically generating the participating aggregators,
     and dispatching both Soft-CLS (voluntary) and Hard-CLS (mandatory).
     """
-    def __init__(self, network: MVNetwork, dispatcher: DSODispatcher):
+    def __init__(self, network: NetworkConstraintModel, dispatcher: DSODispatcher):
         self.network = network
         self.dispatcher = dispatcher
 
@@ -325,7 +324,6 @@ class MarketSimulationEngine:
                         allocations_kw=a.get("bids_kw", {}),
                         c_mcp_lambda=offer["c_soft_price"],
                         actual_p_meter_kw=actual_meter,
-                        p_req_unmanaged_kw=expected_unmanaged,
                         dt_h=dt_man_h,
                         lambda_pen_penalty=10.0,
                         p_cap_limit_kw=a.get("p_cap_limit_kw")

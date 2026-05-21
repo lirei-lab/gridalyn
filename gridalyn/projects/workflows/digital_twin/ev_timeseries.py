@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from gridalyn.simulation.simulators.agents.ev import EVCharger
+from gridalyn.assets.datagen.agents import EVCharger
 
 
 ROOT = Path(__file__).resolve().parents[4]

@@ -74,10 +74,11 @@ artifacts.
 
 ## Synthetic Network Creation
 
-The first workflow stage, `prepare_topology_cache`, creates the project-owned
-synthetic network cache used by the stochastic profiles and pandapower checks.
-The default input is the clipped Trois-Rivieres building-footprint GeoJSON
-declared in `project.yaml`:
+The workflow starts with `prepare_workspace`, a platform-owned stage that creates
+the standard project output directories. The next stage, `prepare_topology_cache`,
+creates the project-owned synthetic network cache used by the stochastic profiles
+and pandapower checks. The default input is the clipped Trois-Rivieres
+building-footprint GeoJSON declared in `project.yaml`:
 
 ```text
 examples/tutorials/data/buildings_inside_polygon.geojson

@@ -30,7 +30,7 @@ def main():
     cold_day = select_cold_day(tmy, duration_hours=28)
     t_out_trace = cold_day["temp_air"].resample(f"{RES_MINUTES}min").interpolate().values
     
-    from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+    from gridalyn.assets.modeling.transformers import TransformerThermalModel
     thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
     network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
     dt_h = RES_MINUTES / 60.0
@@ -59,8 +59,6 @@ def main():
     
     fig, ax = plt.subplots(figsize=(14, 7))
     
-    # Use a colormap to differentiate the aggregators
-    import matplotlib.cm as cm
     cmap = plt.get_cmap('viridis')
         
     colors = cmap(np.linspace(0, 1, len(deficit_cols)))

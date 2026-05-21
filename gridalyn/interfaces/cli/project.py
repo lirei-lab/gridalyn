@@ -10,11 +10,12 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.foundation.platform.projects import (
+from gridalyn.projects.api import (
     init_project,
     list_projects,
     load_project,
     plan_project,
+    prepare_project_workspace,
     project_regression,
     project_sense_check,
     project_status,
@@ -76,6 +77,12 @@ def _run(args: argparse.Namespace) -> int:
         manifest_path=Path(args.manifest_path) if args.manifest_path else None,
     )
     _print_json({"executed": executed})
+    return 0
+
+
+def _prepare_workspace(args: argparse.Namespace) -> int:
+    report = prepare_project_workspace(Path(args.project))
+    _print_json(report.to_dict())
     return 0
 
 
@@ -148,6 +155,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--manifest-path")
     run_parser.set_defaults(handler=_run)
+
+    prepare_parser = subparsers.add_parser("prepare-workspace")
+    prepare_parser.add_argument("project")
+    prepare_parser.set_defaults(handler=_prepare_workspace)
 
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("project")

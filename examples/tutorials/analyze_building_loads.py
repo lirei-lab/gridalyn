@@ -1,5 +1,4 @@
 import sys
-import os
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -12,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.simulation.simulators.agents.fleet import make_buildings, simulate_buildings
+from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 
 OUTPUT_DIR = ROOT / "examples" / "generated" / "outputs"

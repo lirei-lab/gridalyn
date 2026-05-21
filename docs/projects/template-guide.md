@@ -24,6 +24,7 @@ projects/my_case/
   outputs/
     data/
     figures/
+    cache/
     manifests/
     operations/
     reports/
@@ -38,6 +39,14 @@ uv run gridalyn project status projects/my_case --check-artifacts
 
 The initial workflow writes `outputs/reports/project_summary.json` using the
 platform report schema. That gives every project a valid first artifact.
+Workspace preparation is handled by the platform command
+`gridalyn project prepare-workspace`, not by project-local setup scripts.
+
+The generated `project.yaml` also includes a minimal
+[`problem`](problem-contract.md) declaration with one `baseline` scenario and
+one experiment. Replace those fields with the actual dataset, environment,
+model, spaces, scenarios, and metrics as soon as the project becomes
+domain-specific.
 
 ## Minimal Template
 

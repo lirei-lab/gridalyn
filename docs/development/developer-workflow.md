@@ -110,9 +110,9 @@ Large simulation runs update many generated outputs:
 - `projects/flexibility_cls/outputs/`;
 - root `site/` when MkDocs builds.
 
-Generated project figures should remain under governed output folders. Private
-publication drafts, review material, and compiled document artifacts are outside
-the public platform architecture and should not drive workflow design.
+Generated project figures should remain under governed output folders.
+Publication drafts, review material, and compiled document artifacts are
+outside the platform architecture and should not drive workflow design.
 
 Before committing, inspect `git status --short` and stage only the files that are
 part of the intended change. Generated outputs should be committed only when the

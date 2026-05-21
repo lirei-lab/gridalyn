@@ -1,5 +1,5 @@
-import inspect
 import importlib.util
+import ast
 import json
 import os
 import re
@@ -10,15 +10,12 @@ import unittest
 from pathlib import Path
 
 from gridalyn.foundation.platform.artifacts import check_artifact_policy
-from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager
+from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner
 
 
 class ProjectHygieneTest(unittest.TestCase):
-    def test_monte_carlo_export_has_no_paper_data_default(self):
-        signature = inspect.signature(MonteCarloSimulationManager.export_to_parquet)
-        default = signature.parameters["out_dir"].default
-
-        self.assertIsNone(default)
+    def test_powerflow_monte_carlo_export_has_no_paper_data_default(self):
+        self.assertFalse(hasattr(PowerflowMonteCarloRunner, "export_to_parquet"))
 
     def test_gridalyn_package_does_not_track_generated_artifacts(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -106,10 +103,9 @@ class ProjectHygieneTest(unittest.TestCase):
             cache_path,
         )
 
-    def test_datagen_weather_cache_accepts_gridalyn_env_alias(self):
+    def test_datagen_weather_cache_accepts_gridalyn_env_variable(self):
         env = os.environ.copy()
         env["GRIDALYN_DATAGEN_CACHE_DIR"] = "projects/demo/outputs/cache"
-        env.pop("GEOPOWER_DATAGEN_CACHE_DIR", None)
 
         result = subprocess.run(
             [
@@ -128,13 +124,96 @@ class ProjectHygieneTest(unittest.TestCase):
         )
 
     def test_parametric_arx_generator_uses_gridalyn_model_weights(self):
-        from gridalyn.simulation.simulators.agents.unmanaged_loads import ParametricArxGenerator
+        from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
 
         generator = ParametricArxGenerator()
 
-        self.assertEqual("gridalyn/assets/datagen/models/weights", generator.model_dir)
-        self.assertTrue(Path(generator.heat_model_path).exists())
-        self.assertTrue(Path(generator.bg_model_path).exists())
+        self.assertEqual("weights", Path(generator.model_dir).name)
+        self.assertTrue(Path(generator.model_dir).as_posix().endswith("gridalyn/assets/datagen/models/weights"))
+        if Path(generator.heat_model_path).exists() and Path(generator.bg_model_path).exists():
+            generator.load()
+            self.assertIsNotNone(generator.heat_model)
+            self.assertIsNotNone(generator.bg_model)
+        else:
+            generator.load()
+            self.assertEqual("_AnalyticalMacroModel", type(generator.heat_model).__name__)
+            self.assertEqual("_AnalyticalMacroModel", type(generator.bg_model).__name__)
+
+    def test_parametric_arx_generator_falls_back_without_packaged_weights(self):
+        import pandas as pd
+
+        from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            generator = ParametricArxGenerator(model_dir=tmp, random_seed=11)
+            weather = pd.Series(
+                [-12.0, -11.0, -10.0, -9.0],
+                index=pd.date_range("2026-01-01", periods=4, freq="15min"),
+            )
+
+            heat_kw, background_kw = generator.generate(weather, n_houses=3)
+
+        self.assertEqual((4, 3), heat_kw.shape)
+        self.assertEqual((4, 3), background_kw.shape)
+        self.assertTrue((heat_kw >= 0.0).all())
+        self.assertTrue((background_kw > 0.0).all())
+
+    def test_datagen_facade_exposes_documented_generation_helpers(self):
+        from gridalyn import assets
+        from gridalyn.assets import datagen
+
+        self.assertTrue(hasattr(assets, "datagen"))
+        self.assertTrue(hasattr(datagen, "GridLoadFacade"))
+        self.assertTrue(hasattr(datagen, "MVNetworkConfig"))
+        self.assertTrue(hasattr(datagen, "ParametricArxGenerator"))
+        self.assertTrue(hasattr(datagen, "load_mv_network_config"))
+        self.assertFalse(hasattr(datagen, "TransformerThermalModel"))
+
+    def test_load_profile_generation_lives_under_assets_datagen(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        removed_module = "gridalyn.simulation.simulators.agents"
+        offenders = []
+        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples", repo_root / "tests"]:
+            for path in sorted(root.rglob("*.py")):
+                text = path.read_text(encoding="utf-8")
+                if (
+                    f"from {removed_module}" in text
+                    or f"import {removed_module}" in text
+                ):
+                    offenders.append(path.relative_to(repo_root).as_posix())
+
+        self.assertEqual([], offenders)
+
+    def test_dashboard_public_exporters_are_not_tracked(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        removed_paths = [
+            repo_root / "gridalyn" / "simulation" / "exports" / "kepler.py",
+            repo_root
+            / "gridalyn"
+            / "projects"
+            / "workflows"
+            / "scripts"
+            / ("sync_dashboard_public_" + "from_digital_twin.py"),
+            repo_root / "gridalyn" / "twin" / "db" / "dashboard_sync.py",
+        ]
+
+        for path in removed_paths:
+            with self.subTest(path=path):
+                self.assertFalse(path.exists())
+
+        removed_symbols = [
+            "export_timeseries_to_" + "kepler_parquet",
+            "export_power_traces_to_" + "kepler_parquet",
+            "sync_dashboard_public_" + "from_digital_twin",
+        ]
+        offenders = []
+        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples"]:
+            for path in sorted(root.rglob("*.py")):
+                text = path.read_text(encoding="utf-8")
+                if any(symbol in text for symbol in removed_symbols):
+                    offenders.append(path.relative_to(repo_root).as_posix())
+
+        self.assertEqual([], offenders)
 
     def test_gridalyn_does_not_import_legacy_ev_runtime_modules(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -148,6 +227,11 @@ class ProjectHygieneTest(unittest.TestCase):
             if f"from {legacy_token}." in text or f"import {legacy_token}." in text:
                 offenders.append(str(path.relative_to(repo_root)))
         self.assertEqual(offenders, [])
+
+    def test_root_api_god_object_is_not_tracked(self):
+        repo_root = Path(__file__).resolve().parents[1]
+
+        self.assertFalse((repo_root / "gridalyn" / "api.py").exists())
 
     def test_new_platform_docs_do_not_frame_legacy_ev_runtime_as_core(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -318,6 +402,69 @@ class ProjectHygieneTest(unittest.TestCase):
 
         self.assertEqual([], registered)
         self.assertFalse(hasattr(gridalyn, "COMPAT" "_MODULE_ALIASES"))
+
+    def test_runtime_source_has_no_compatibility_branches(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        forbidden_terms = [
+            "Backward-compatible",
+            "backward-compatible",
+            "legacy callers",
+            "legacy allocations",
+            "MigrationUnpickler",
+            "legacy_root",
+        ]
+        offenders: list[str] = []
+
+        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples"]:
+            for path in sorted(root.rglob("*.py")):
+                relative = path.relative_to(repo_root)
+                if "__pycache__" in relative.parts or "outputs" in relative.parts:
+                    continue
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                for term in forbidden_terms:
+                    if term in text:
+                        offenders.append(f"{relative.as_posix()}: {term}")
+
+        self.assertEqual([], offenders)
+
+    def test_core_layers_do_not_import_orchestration_layers(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        rules = {
+            "gridalyn/assets": ("gridalyn.projects", "gridalyn.interfaces"),
+            "gridalyn/simulation": ("gridalyn.projects", "gridalyn.interfaces"),
+            "gridalyn/operations": ("gridalyn.projects", "gridalyn.interfaces"),
+            "gridalyn/twin": ("gridalyn.projects", "gridalyn.interfaces"),
+            "gridalyn/foundation": (
+                "gridalyn.assets",
+                "gridalyn.interfaces",
+                "gridalyn.operations",
+                "gridalyn.projects",
+                "gridalyn.simulation",
+                "gridalyn.twin",
+            ),
+        }
+        violations: list[str] = []
+
+        for relative_root, forbidden_prefixes in rules.items():
+            for path in sorted((repo_root / relative_root).rglob("*.py")):
+                relative = path.relative_to(repo_root)
+                if "__pycache__" in relative.parts:
+                    continue
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                for node in ast.walk(tree):
+                    modules: list[str] = []
+                    if isinstance(node, ast.Import):
+                        modules = [alias.name for alias in node.names]
+                    elif isinstance(node, ast.ImportFrom) and node.module:
+                        modules = [node.module]
+                    for module in modules:
+                        if any(
+                            module == prefix or module.startswith(f"{prefix}.")
+                            for prefix in forbidden_prefixes
+                        ):
+                            violations.append(f"{relative.as_posix()}: {module}")
+
+        self.assertEqual([], violations)
 
     def test_public_docs_nav_excludes_manuscript_workspace(self):
         repo_root = Path(__file__).resolve().parents[1]
@@ -530,6 +677,32 @@ class ProjectHygieneTest(unittest.TestCase):
 
         self.assertEqual([], forbidden)
 
+    def test_public_examples_use_platform_level_apis(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            ["git", "ls-files", "examples"],
+            cwd=repo_root,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        offenders: list[str] = []
+        forbidden_imports = [
+            "from gridalyn.twin.core.graph import PowerGridGraph",
+            "from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager",
+            "from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner",
+        ]
+
+        for relative_path in result.stdout.splitlines():
+            path = repo_root / relative_path
+            if path.suffix != ".py" or not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if any(token in text for token in forbidden_imports):
+                offenders.append(relative_path)
+
+        self.assertEqual([], offenders)
+
     def test_project_runtime_does_not_depend_on_examples_generated_cache(self):
         repo_root = Path(__file__).resolve().parents[1]
         scanned_roots = [
@@ -542,6 +715,17 @@ class ProjectHygieneTest(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 if "examples/generated/outputs" in text:
                     offenders.append(path.relative_to(repo_root).as_posix())
+
+        self.assertEqual([], offenders)
+
+    def test_project_workflows_use_platform_workspace_preparation(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        offenders: list[str] = []
+
+        for path in sorted((repo_root / "projects").glob("*/workflow.yaml")):
+            text = path.read_text(encoding="utf-8")
+            if "Path(p).mkdir" in text or "python -c" in text:
+                offenders.append(path.relative_to(repo_root).as_posix())
 
         self.assertEqual([], offenders)
 

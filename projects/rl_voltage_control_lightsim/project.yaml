@@ -6,13 +6,42 @@ metadata:
   description: Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.
 spec:
   pathBase: project
+  problem:
+    type: learning_voltage_control
+    dataset: synthetic_rl_voltage_feeder
+    environment: lightsim2grid_voltage_control
+    objective: Train and evaluate a compact control policy that reduces voltage deviations with PV and battery actions.
+    model:
+      type: learning_agent
+      name: tabular_q_learning
+    spaces:
+      state: discretized_voltage_and_pv_state
+      action: battery_charge_discharge_choice
+      output: reward_and_voltage_metrics
+    scenarios:
+      - id: training
+        role: policy_training_case
+        description: Repeated episodes over the deterministic feeder environment.
+      - id: evaluation
+        role: policy_evaluation_case
+        description: Fixed evaluation run used for public reports and figures.
+  experiments:
+    - id: train_and_evaluate_policy
+      scenarios:
+        - training
+        - evaluation
+      objective: Verify that the learned policy improves the voltage-control reward in evaluation.
+      metrics:
+        - mean_reward
+        - voltage_violation_count
+        - episode_count
   inputs:
     sourceNetwork:
       name: Synthetic 10-bus feeder for RL control
       provider: gridalyn project script
       note: Deterministic radial feeder with PV and controllable battery load/injection.
     learning:
-      algorithm: tabular q-learning
+      algorithm: gridalyn tabular voltage-control trainer
       simulator: lightsim2grid
       episodeCount: 90
       evaluationSteps: 24

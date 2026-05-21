@@ -1,5 +1,5 @@
 """
-transformer_thermal.py – IEEE C57.91-2011 Transformer Thermal Model.
+IEEE C57.91-2011 transformer thermal model.
 
 Implements the Clause 7 hottest-spot temperature model for mineral-oil-immersed
 transformers. The model tracks two thermal states:
@@ -18,8 +18,9 @@ Reference: IEEE Std C57.91-2011, "Guide for Loading Mineral-Oil-Immersed
 
 from __future__ import annotations
 
-import numpy as np
 from dataclasses import dataclass, field
+
+import numpy as np
 
 
 @dataclass
@@ -35,21 +36,22 @@ class TransformerThermalModel:
     delta_theta_hs_r : Rated hottest-spot rise over top-oil (°C)
     tau_to_min    : Oil thermal time constant (minutes)
     tau_hs_min    : Winding thermal time constant (minutes)
-    R             : Ratio of load losses to no-load losses at rated
+    r_loss_ratio  : Ratio of load losses to no-load losses at rated
     n             : Top-oil rise exponent (ONAN: 0.8, ONAF: 0.9, OFAF: 1.0)
     m             : Winding hottest-spot exponent (ONAN: 0.8, ONAF: 0.8)
     theta_max     : Maximum allowable hottest-spot temperature (°C)
     """
-    s_rated_kva: float = 25_000.0       # 25 MVA
-    pf: float = 0.95                     # nominal power factor
-    delta_theta_to_r: float = 55.0       # °C, rated top-oil rise
-    delta_theta_hs_r: float = 25.0       # °C, rated hottest-spot rise over top-oil
-    tau_to_min: float = 180.0            # minutes, oil time constant
-    tau_hs_min: float = 8.0              # minutes, winding time constant
-    R: float = 5.0                       # load-loss to no-load-loss ratio
-    n: float = 0.8                       # top-oil exponent (ONAN)
-    m: float = 0.8                       # winding exponent (ONAN)
-    theta_max: float = 120.0             # °C, maximum hot-spot temperature
+
+    s_rated_kva: float = 25_000.0
+    pf: float = 0.95
+    delta_theta_to_r: float = 55.0
+    delta_theta_hs_r: float = 25.0
+    tau_to_min: float = 180.0
+    tau_hs_min: float = 8.0
+    r_loss_ratio: float = 5.0
+    n: float = 0.8
+    m: float = 0.8
+    theta_max: float = 120.0
 
     # Internal thermal state
     _delta_theta_to: float = field(default=0.0, init=False, repr=False)
@@ -60,27 +62,27 @@ class TransformerThermalModel:
         """Rated active power (kW)."""
         return self.s_rated_kva * self.pf
 
-    def reset(self, ambient_c: float = 20.0, load_kw: float = 0.0):
+    def reset(self, ambient_c: float = 20.0, load_kw: float = 0.0) -> None:
         """Initialize thermal state to steady-state at given load and ambient."""
-        K = load_kw / self.p_rated_kw if self.p_rated_kw > 0 else 0.0
-        self._delta_theta_to = self._ultimate_top_oil_rise(K)
-        self._delta_theta_hs = self._ultimate_hs_rise(K)
+        load_ratio = load_kw / self.p_rated_kw if self.p_rated_kw > 0 else 0.0
+        self._delta_theta_to = self._ultimate_top_oil_rise(load_ratio)
+        self._delta_theta_hs = self._ultimate_hs_rise(load_ratio)
 
-    def _ultimate_top_oil_rise(self, K: float) -> float:
+    def _ultimate_top_oil_rise(self, load_ratio: float) -> float:
         """
         Steady-state top-oil rise for load ratio K:
             ΔΘ_TO,U = ΔΘ_TO,R × [(K²·R + 1) / (R + 1)]^n
         """
-        numerator = K ** 2 * self.R + 1.0
-        denominator = self.R + 1.0
+        numerator = load_ratio**2 * self.r_loss_ratio + 1.0
+        denominator = self.r_loss_ratio + 1.0
         return self.delta_theta_to_r * (numerator / denominator) ** self.n
 
-    def _ultimate_hs_rise(self, K: float) -> float:
+    def _ultimate_hs_rise(self, load_ratio: float) -> float:
         """
         Steady-state hottest-spot rise over top-oil for load ratio K:
             ΔΘ_HS,U = ΔΘ_HS,R × K^(2m)
         """
-        return self.delta_theta_hs_r * K ** (2 * self.m)
+        return self.delta_theta_hs_r * load_ratio ** (2 * self.m)
 
     def step(self, load_kw: float, ambient_c: float, dt_min: float = 1.0) -> float:
         """
@@ -99,11 +101,11 @@ class TransformerThermalModel:
         -------
         theta_h : hottest-spot temperature (°C)
         """
-        K = max(0.0, load_kw / self.p_rated_kw) if self.p_rated_kw > 0 else 0.0
+        load_ratio = max(0.0, load_kw / self.p_rated_kw) if self.p_rated_kw > 0 else 0.0
 
         # Ultimate (steady-state) values for current load
-        delta_to_u = self._ultimate_top_oil_rise(K)
-        delta_hs_u = self._ultimate_hs_rise(K)
+        delta_to_u = self._ultimate_top_oil_rise(load_ratio)
+        delta_hs_u = self._ultimate_hs_rise(load_ratio)
 
         # Exponential approach to ultimate
         exp_to = np.exp(-dt_min / self.tau_to_min)
@@ -120,8 +122,12 @@ class TransformerThermalModel:
         Equilibrium hottest-spot temperature at given load and ambient.
             θ_H = θ_ambient + ΔΘ_TO,U(K) + ΔΘ_HS,U(K)
         """
-        K = max(0.0, load_kw / self.p_rated_kw) if self.p_rated_kw > 0 else 0.0
-        return ambient_c + self._ultimate_top_oil_rise(K) + self._ultimate_hs_rise(K)
+        load_ratio = max(0.0, load_kw / self.p_rated_kw) if self.p_rated_kw > 0 else 0.0
+        return (
+            ambient_c
+            + self._ultimate_top_oil_rise(load_ratio)
+            + self._ultimate_hs_rise(load_ratio)
+        )
 
     def max_load_for_temp(self, ambient_c: float, theta_max: float | None = None) -> float:
         """
@@ -183,7 +189,7 @@ class TransformerThermalModel:
         return theta_h
 
 
-# Default instance matching the 25 MVA substation in the case study
+# Default instance for examples and compact studies.
 TRANSFORMER_THERMAL = TransformerThermalModel()
 
 

@@ -18,7 +18,7 @@ That means the project contract must start before
 configuration to final reports.
 
 Use projects to avoid hidden dependencies on notebooks, tutorial scripts, or
-private publication folders.
+untracked local workspaces.
 
 ## Path Ownership
 
@@ -141,7 +141,7 @@ uv run gridalyn project status projects/my_case --check-artifacts
 ## Python API
 
 ```python
-from gridalyn.foundation.platform import init_project, load_project, plan_project
+from gridalyn.projects import init_project, load_project, plan_project
 
 created = init_project("projects/my_case", name="my_case")
 project = load_project(created.root)

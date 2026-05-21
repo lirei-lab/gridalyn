@@ -138,3 +138,23 @@ test('loadNetworkImpactReports loads scenario-specific reports from catalog', as
     '/custom/S4_verification.json',
   ]);
 });
+
+test('loadNetworkImpactReports returns an empty catalog when the catalog is missing', async () => {
+  const requested = [];
+  const fetchImpl = async path => {
+    requested.push(path);
+    return {
+      ok: false,
+      json: async () => null,
+    };
+  };
+
+  const loaded = await loadNetworkImpactReports(fetchImpl);
+
+  assert.equal(loaded.source, 'catalog');
+  assert.equal(loaded.catalogPath, '/instances/default/digital_twin/flexibility/network_impact_catalog.json');
+  assert.deepEqual(loaded.scenarios, {});
+  assert.deepEqual(requested, [
+    '/instances/default/digital_twin/flexibility/network_impact_catalog.json',
+  ]);
+});

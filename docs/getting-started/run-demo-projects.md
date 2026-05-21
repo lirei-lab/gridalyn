@@ -53,6 +53,12 @@ Run the publication-style verification ladder:
 uv run gridalyn project verify projects/minimal_grid_project
 ```
 
+Verify all governed demos:
+
+```bash
+uv run gridalyn project verify-all
+```
+
 ## Project Outputs
 
 Most projects follow this output layout:

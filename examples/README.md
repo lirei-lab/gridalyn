@@ -32,12 +32,17 @@ materialized `instances/default/digital_twin/` instance.
 ## Tutorial Scripts
 
 Keep new educational examples under `examples/tutorials/` when they demonstrate
-how to use the package:
+how to use the package. Tutorial scripts should call public Gridalyn facades
+such as `gridalyn.simulation`, `gridalyn.assets`, `gridalyn.twin`, and
+`gridalyn.operations`; low-level graph builders and runner internals belong in
+the SDK and tests, not in public tutorials:
 
 - `tutorials/basic_grid_creation.py`
 - `tutorials/create_grid_from_real_data.py`
 - `tutorials/demo_with_power_flow.py`
 - `tutorials/generate_and_visualize_grid.py`
+- `tutorials/create_grid_with_datagen_serial.py`
+- `tutorials/evaluate_transformer_diversity.py`
 
 Data acquisition examples live under `examples/data_acquisition/`:
 

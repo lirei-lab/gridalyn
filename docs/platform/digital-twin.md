@@ -245,8 +245,8 @@ Generate it with:
 uv run gridalyn dashboard catalog
 ```
 
-The dashboard should load this catalog first and fall back to older manifests
-only when it is absent.
+The dashboard should load this catalog first. Other manifests are supporting
+diagnostics rather than the primary UI contract.
 
 ## Scenarios and Asset Registry
 
@@ -411,7 +411,8 @@ uv run gridalyn market network-impact-catalog
 
 ## Operational Reports
 
-The older direct report `instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json` is still useful, but new consumers should prefer canonical reports under `instances/default/digital_twin/reports/canonical`.
+Transformer overload summaries should be published through canonical reports
+under `instances/default/digital_twin/reports/canonical`.
 
 Canonical reports include:
 

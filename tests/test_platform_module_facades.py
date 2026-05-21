@@ -31,26 +31,35 @@ class PlatformModuleFacadeTest(unittest.TestCase):
         self.assertTrue(hasattr(twin, "NetworkModelRepository"))
         self.assertTrue(hasattr(twin, "NetworkModel"))
         self.assertTrue(hasattr(twin, "NetworkSnapshot"))
+        self.assertTrue(hasattr(twin, "SemanticGraphRepository"))
         self.assertTrue(hasattr(twin, "build_semantic_graph"))
         self.assertTrue(hasattr(twin, "validate_semantic_graph"))
+        self.assertFalse(hasattr(twin, "FederatedGraphAdapter"))
 
     def test_assets_facade_exposes_model_generation_contracts(self):
         from gridalyn import assets
 
-        self.assertTrue(hasattr(assets, "build_synthetic_network_from_geojson"))
-        self.assertTrue(hasattr(assets, "SyntheticNetworkBuildResult"))
         self.assertTrue(hasattr(assets, "build_asset_registry"))
         self.assertTrue(hasattr(assets, "synthesize_building_model_tables"))
         self.assertTrue(hasattr(assets, "build_thermal_forecast"))
+        self.assertTrue(hasattr(assets, "TransformerThermalModel"))
 
     def test_simulation_facade_exposes_powerflow_and_network_impact_contracts(self):
         from gridalyn import simulation
 
         self.assertTrue(hasattr(simulation, "PandapowerGridBuilder"))
-        self.assertTrue(hasattr(simulation, "MonteCarloSimulationManager"))
+        self.assertTrue(hasattr(simulation, "build_synthetic_network_from_geojson"))
+        self.assertTrue(hasattr(simulation, "build_synthetic_network_from_config"))
+        self.assertTrue(hasattr(simulation, "build_radial_pandapower_feeder"))
+        self.assertTrue(hasattr(simulation, "build_voltage_control_feeder"))
+        self.assertTrue(hasattr(simulation, "apply_pv_generation_to_pandapower"))
+        self.assertTrue(hasattr(simulation, "SyntheticNetworkBuildResult"))
         self.assertTrue(hasattr(simulation, "build_network_impact_catalog"))
         self.assertTrue(hasattr(simulation, "build_provider_impact_predictions"))
         self.assertTrue(hasattr(simulation, "predict_physics_impact"))
+        self.assertFalse(hasattr(simulation, "MonteCarloSimulationManager"))
+        self.assertFalse(hasattr(simulation, "PowerflowMonteCarloRunner"))
+        self.assertFalse(hasattr(simulation, "export_timeseries_to_kepler_parquet"))
 
     def test_operations_facade_exposes_market_and_operation_contracts(self):
         from gridalyn import operations
@@ -80,8 +89,16 @@ class PlatformModuleFacadeTest(unittest.TestCase):
         self.assertTrue(hasattr(interfaces, "gridalyn_main"))
         self.assertTrue(hasattr(interfaces, "build_dashboard_catalog"))
         self.assertTrue(hasattr(interfaces, "write_dashboard_catalog"))
-        self.assertTrue(hasattr(interfaces, "FederatedGraphAdapter"))
         self.assertTrue(hasattr(interfaces, "GridPlotter"))
+        self.assertFalse(hasattr(interfaces, "FederatedGraphAdapter"))
+
+    def test_root_facade_keeps_low_level_builders_internal(self):
+        import gridalyn
+
+        self.assertTrue(hasattr(gridalyn, "assets"))
+        self.assertTrue(hasattr(gridalyn, "simulation"))
+        self.assertTrue(hasattr(gridalyn, "twin"))
+        self.assertFalse(hasattr(gridalyn, "PowerGridGraph"))
 
 
 if __name__ == "__main__":

@@ -361,7 +361,7 @@ class PowerGridGraph:
                         dist_matrix[k, n] = np.linalg.norm(
                             cluster_points[k] - cluster_points[n]
                         )
-            except Exception as e:
+            except Exception:
                 # Fallback if points are strictly collinear
                 dist_matrix = cdist(cluster_points, cluster_points)
 

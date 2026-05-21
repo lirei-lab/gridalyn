@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
 from gridalyn.foundation.platform.artifacts import check_artifact_policy
-from gridalyn.foundation.platform.projects import project_regression, validate_project
 from gridalyn.foundation.platform.workspace import GridalynWorkspace
 
 
@@ -57,7 +57,9 @@ def validate_workspace(
         else [path.relative_to(repo_root).as_posix() for path in workspace.project_paths()]
     )
     for project_path in project_paths:
-        report = validate_project(
+        project_api = import_module("gridalyn.projects.api")
+
+        report = project_api.validate_project(
             repo_root / project_path,
             check_artifacts=check_project_artifacts,
         )
@@ -71,7 +73,7 @@ def validate_workspace(
             )
         )
         if run_regression:
-            regression = project_regression(repo_root / project_path)
+            regression = project_api.project_regression(repo_root / project_path)
             checks.append(
                 _check_record(
                     check_id=f"regression:{project_path}",

@@ -29,6 +29,10 @@ Reusable behavior belongs in `gridalyn/`. Project scripts orchestrate reusable
 behavior and write declared artifacts. Dashboards and reports consume artifacts,
 not hidden assumptions or notebooks.
 
+The public SDK vocabulary is intentionally narrow: `foundation`, `twin`,
+`assets`, `simulation`, `operations`, `projects`, and `interfaces`. Removed
+historical paths are not part of the open-source contract.
+
 ## Architectural Stance
 
 Gridalyn is not trying to copy one existing platform. It combines the durable

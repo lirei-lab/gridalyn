@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import {
   buildDashboardScenarioCatalog,
   buildScenarioCatalog,
-  DEFAULT_SCENARIO_IDS,
   scenarioIdsFromManifest,
 } from './scenarios.js';
 
@@ -114,6 +113,6 @@ test('buildScenarioCatalog includes summary-only scenarios with conventional met
   assert.equal(catalog[0].paths.lines, '/instances/default/digital_twin/timeseries/Outage_N1_powerflow_lines.parquet');
 });
 
-test('scenarioIdsFromManifest keeps the legacy fallback when no manifest exists', () => {
-  assert.deepEqual(scenarioIdsFromManifest(null), DEFAULT_SCENARIO_IDS);
+test('scenarioIdsFromManifest returns no scenarios when no manifest exists', () => {
+  assert.deepEqual(scenarioIdsFromManifest(null), []);
 });

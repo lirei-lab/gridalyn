@@ -1,9 +1,9 @@
 # RL Voltage Control With LightSim2Grid
 
 This project demonstrates a small reinforcement-learning loop for distribution
-voltage control. A tabular Q-learning agent controls a battery at the end of a
-synthetic radial feeder. `lightsim2grid` runs the power-flow simulation inside
-training and evaluation.
+voltage control. Gridalyn's tabular voltage-control trainer controls a battery
+at the end of a synthetic radial feeder. `lightsim2grid` runs the power-flow
+simulation inside training and evaluation.
 
 ## Run
 

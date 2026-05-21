@@ -16,7 +16,7 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.modeling.transformers import TransformerThermalModel
 from gridalyn.operations.market.dso_dispatch import DSODispatcher
 from gridalyn.operations.market.engine import MarketSimulationEngine
 from projects.flexibility_cls.scripts.config import (
@@ -81,10 +81,6 @@ def main():
         
     summary_results = {}
     
-    s2_p_ev_kw_mean = None
-    s2_d_soft_cls_kw = None
-    s2_d_contracted_soft_kw = None
-    s2_d_hard_cls_kw = None
     s2_clearing_price = None
     
     market_engine = MarketSimulationEngine(network=network, dispatcher=dispatcher)

@@ -15,8 +15,8 @@ engine that matches the study.
 | Capability | Current Gridalyn path | Role |
 | --- | --- | --- |
 | Network repository | `gridalyn.twin.NetworkModelRepository` | Reads canonical Parquet network artifacts. |
-| Synthetic network builder | `gridalyn.assets.build_synthetic_network_from_geojson` | Builds a graph, pandapower model, validation report, and cache bundle. |
-| Pandapower builder | `gridalyn.simulation.PandapowerGridBuilder` | Converts `PowerGridGraph` topology into pandapower networks. |
+| Synthetic network builder | `gridalyn.simulation.build_synthetic_network_from_geojson` | Builds a graph, pandapower model, validation report, and cache bundle. |
+| Pandapower builder | `gridalyn.simulation.PandapowerGridBuilder` | Converts Gridalyn topology bundles into pandapower networks. |
 | LightSim adapter | `gridalyn.simulation.LightSimPowerflowAdapter` | Runs faster power-flow checks when LightSim2Grid is installed. |
 | Voltage-control environment | `gridalyn.simulation.VoltageControlEnvironment` | Provides a small learning-control surface over reusable feeder assets. |
 | Operations facade | `gridalyn.operations` | Converts providers, constraints, dispatch, settlement, and KPIs into governed outputs. |

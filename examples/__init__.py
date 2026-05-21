@@ -1,1 +1,1 @@
-"""Example scripts, tutorials, and compatibility entrypoints."""
+"""Example scripts and tutorials for public Gridalyn workflows."""

@@ -1,14 +1,13 @@
 import unittest
 
-from gridalyn import PowerGridGraph
+from gridalyn import interfaces, simulation, twin
 from gridalyn.interfaces.viz.interactive import GridPlotter
-from gridalyn import PowerGridGraph as GridalynPowerGridGraph
-from gridalyn.interfaces.viz.interactive import GridPlotter as GridalynGridPlotter
+from gridalyn.twin.core.graph import PowerGridGraph
 
 
 class TestImports(unittest.TestCase):
-    def test_power_grid_creation(self) -> None:
-        """Test creation of PowerGridGraph instance"""
+    def test_internal_power_grid_creation(self) -> None:
+        """Low-level graph builder remains available from its owning module."""
         grid = PowerGridGraph()
         self.assertIsInstance(grid, PowerGridGraph)
 
@@ -18,13 +17,11 @@ class TestImports(unittest.TestCase):
         plotter = GridPlotter(grid)
         self.assertIsInstance(plotter, GridPlotter)
 
-    def test_gridalyn_namespace_imports_current_sdk(self) -> None:
+    def test_gridalyn_namespace_imports_current_sdk_modules(self) -> None:
         """Gridalyn is the canonical public namespace."""
-        grid = GridalynPowerGridGraph()
-        plotter = GridalynGridPlotter(grid)
-
-        self.assertIsInstance(grid, GridalynPowerGridGraph)
-        self.assertIsInstance(plotter, GridalynGridPlotter)
+        self.assertTrue(hasattr(twin, "NetworkModelRepository"))
+        self.assertTrue(hasattr(simulation, "build_synthetic_network_from_geojson"))
+        self.assertTrue(hasattr(interfaces, "GridPlotter"))
 
 
 if __name__ == "__main__":

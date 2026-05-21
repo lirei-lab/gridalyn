@@ -81,8 +81,7 @@ def _generate_base_building_loads(
     seed: int,
     generator_type: str,
 ) -> tuple[np.ndarray, np.ndarray]:
-    from gridalyn.assets.datagen.core import GridLoadFacade
-    from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
+    from gridalyn.assets.datagen import GridLoadFacade, download_tmy, select_cold_day
 
     macro_rng = np.random.default_rng(seed)
     cold_day = select_cold_day(download_tmy())

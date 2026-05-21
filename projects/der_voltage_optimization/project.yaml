@@ -3,16 +3,40 @@ kind: StudyProject
 metadata:
   name: der_voltage_optimization
   version: 0.1.0
-  description: Small synthetic feeder with cvxpy DER dispatch and pandapower voltage verification.
+  description: Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification.
 spec:
   pathBase: project
+  problem:
+    type: der_voltage_optimization
+    dataset: synthetic_der_hosting_feeder
+    environment: gridalyn_der_dispatch_with_powerflow_verification
+    objective: Compute DER and battery setpoints that improve feeder voltage while respecting operating limits.
+    model:
+      type: optimizer
+      name: gridalyn_der_voltage_dispatch
+    spaces:
+      state: feeder_voltage_and_der_availability
+      action: der_active_reactive_and_battery_setpoints
+      output: optimized_voltage_profile
+    scenarios:
+      - id: pv_voltage_stress
+        role: voltage_control_case
+        description: Downstream PV and battery condition used to test voltage-aware dispatch.
+  experiments:
+    - id: optimized_dispatch_verification
+      scenario: pv_voltage_stress
+      objective: Compare optimized setpoints against AC power-flow validation.
+      metrics:
+        - objective_value
+        - min_voltage_pu
+        - max_voltage_pu
   inputs:
     sourceNetwork:
       name: Synthetic 16-bus DER hosting feeder
       provider: gridalyn project script
       note: Deterministic high-R/X radial feeder with downstream PV and batteries.
     optimization:
-      solver: cvxpy
+      solver: gridalyn_der_voltage_dispatch
       product: voltage-constrained DER hosting and battery charging dispatch
   artifacts:
     project:

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.twin.network import NetworkModelRepository
-from gridalyn.simulation.simulators.agents.ev import L2_MID_KW
+from gridalyn.assets.datagen.agents import L2_MID_KW
 
 
 ROOT = Path(__file__).resolve().parents[4]

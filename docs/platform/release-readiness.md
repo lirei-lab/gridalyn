@@ -53,8 +53,10 @@ Run these commands from the repository root before tagging or publishing:
 uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn platform check-artifacts --summary-only
-uv run gridalyn project verify projects/minimal_grid_project
+uv run gridalyn project verify-all
 uv run gridalyn project regression projects/flexibility_cls
+node --test dashboard/src/*.test.js
+(cd dashboard && npm run build)
 ```
 
 Expected outcome:
@@ -63,7 +65,9 @@ Expected outcome:
 - documentation builds with strict MkDocs checks;
 - no generated data, dashboard build outputs, large binaries, or compiled
   document artifacts are accidentally tracked;
-- demo project verification and larger workflow regression baselines remain healthy.
+- all governed demo projects verify successfully;
+- larger workflow regression baselines remain healthy;
+- dashboard tests and production build succeed.
 
 ## Public Documentation Rules
 
@@ -79,10 +83,9 @@ The public documentation should prioritize the platform in this order:
 6. developer guide, public API, hygiene, and artifact governance;
 7. release readiness and roadmap.
 
-Do not make paper, presentation, archive, or private runtime folders part of
-the main navigation. They may exist outside the public path for internal
-continuity, but the product story should be the platform core and its
-executable workflows.
+Do not make publication drafts, presentation workspaces, archives, or local
+runtime folders part of the main navigation. The product story should stay
+centered on the platform core and its executable workflows.
 
 ## Publication Checklist
 

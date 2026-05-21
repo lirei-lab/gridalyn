@@ -14,6 +14,7 @@ from gridalyn.projects import (
     init_project,
     load_project as public_load_project,
     plan_project,
+    prepare_project_workspace,
     project_regression,
     project_status,
     project_verify,
@@ -21,6 +22,7 @@ from gridalyn.projects import (
     validate_project,
 )
 from gridalyn.projects.loader import load_project
+from gridalyn.projects.outputs import DEFAULT_OUTPUT_DIRECTORIES
 from gridalyn.projects.runner import plan_stages, run_project
 from gridalyn.projects.validation import validate_project_file
 
@@ -38,6 +40,19 @@ metadata:
   name: bad_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test project contract.
+    model:
+      type: workflow
+      name: test_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   workflow:
     file: workflow.yaml
   inputs: {}
@@ -51,6 +66,101 @@ spec:
 
             self.assertFalse(report.valid)
             self.assertTrue(any("kind" in error for error in report.errors))
+
+    def test_rejects_project_without_problem_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sample_workflow
+spec:
+  stages:
+    - id: build
+      command: echo build
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: missing_problem
+  version: 0.1.0
+spec:
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: workflow.yaml
+  validation: {}
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = validate_project_file(root / "project.yaml")
+
+            self.assertFalse(report.valid)
+            self.assertIn("'problem' is a required property", "\n".join(report.errors))
+
+    def test_rejects_experiment_with_unknown_scenario(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "workflow.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: sample_workflow
+spec:
+  stages:
+    - id: build
+      command: echo build
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "project.yaml").write_text(
+                """
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: unknown_scenario
+  version: 0.1.0
+spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test unknown scenario references.
+    model:
+      type: workflow
+      name: sample_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
+  experiments:
+    - id: broken_run
+      scenario: missing
+  inputs: {}
+  artifacts: {}
+  workflow:
+    file: workflow.yaml
+  validation: {}
+""".strip(),
+                encoding="utf-8",
+            )
+
+            report = validate_project_file(root / "project.yaml")
+
+            self.assertFalse(report.valid)
+            self.assertIn(
+                "experiment broken_run references unknown scenario missing",
+                "\n".join(report.errors),
+            )
 
 
 class ProjectWorkflowLoaderTest(unittest.TestCase):
@@ -83,6 +193,22 @@ metadata:
   name: sample_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test project contract.
+    model:
+      type: workflow
+      name: sample_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
+  experiments:
+    - id: baseline_run
+      scenario: baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -97,10 +223,46 @@ spec:
             project = load_project(root / "project.yaml")
 
             self.assertEqual(project.name, "sample_project")
+            self.assertEqual(project.problem.type, "test_problem")
+            self.assertEqual(project.problem.scenarios[0].id, "baseline")
+            self.assertEqual(project.experiments[0].scenario, "baseline")
             self.assertEqual(
                 [stage.id for stage in project.workflow.stages],
                 ["build", "validate"],
             )
+
+    def test_prepare_project_workspace_creates_standard_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            report = prepare_project_workspace(root)
+
+            self.assertEqual(root, report.root)
+            self.assertEqual(DEFAULT_OUTPUT_DIRECTORIES, report.created_directories)
+            for relative in DEFAULT_OUTPUT_DIRECTORIES:
+                self.assertTrue((root / relative).is_dir(), relative)
+
+    def test_prepare_workspace_cli_runs_from_project_api(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "gridalyn.interfaces.cli.project",
+                    "prepare-workspace",
+                    str(root),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            payload = json.loads(result.stdout)
+            self.assertEqual(str(root), payload["root"])
+            self.assertIn("outputs/cache", payload["created_directories"])
+            self.assertTrue((root / "outputs" / "reports").is_dir())
 
     def test_repo_path_base_resolves_from_source_archive_without_git_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -134,6 +296,19 @@ metadata:
   version: 0.1.0
 spec:
   pathBase: repo
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test repository-relative project contract.
+    model:
+      type: workflow
+      name: archive_case_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -177,6 +352,19 @@ metadata:
   name: broken_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test unresolved dependency validation.
+    model:
+      type: workflow
+      name: broken_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -215,6 +403,19 @@ metadata:
   name: minimal_grid_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test missing output reporting.
+    model:
+      type: workflow
+      name: minimal_grid_project_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -263,6 +464,19 @@ metadata:
   name: sample_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test stage planning.
+    model:
+      type: workflow
+      name: sample_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -304,6 +518,19 @@ metadata:
   name: sample_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test dry-run manifest writing.
+    model:
+      type: workflow
+      name: sample_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:
@@ -352,6 +579,23 @@ class ProjectApiTest(unittest.TestCase):
         self.assertEqual(project.name, "flexibility_cls")
         self.assertTrue(report.valid, "\n".join(report.errors))
         self.assertGreater(len(stages), 10)
+
+    def test_public_projects_declare_problem_and_experiment_contracts(self) -> None:
+        for project_path in sorted(Path("projects").glob("*/project.yaml")):
+            with self.subTest(project=project_path):
+                project = load_project(project_path)
+                scenario_ids = {scenario.id for scenario in project.problem.scenarios}
+                experiment_refs = {
+                    ref
+                    for experiment in project.experiments
+                    for ref in ([experiment.scenario] if experiment.scenario else [])
+                    + list(experiment.scenarios)
+                }
+
+                self.assertTrue(project.problem.objective)
+                self.assertGreaterEqual(len(project.problem.scenarios), 1)
+                self.assertGreaterEqual(len(project.experiments), 1)
+                self.assertTrue(experiment_refs.issubset(scenario_ids))
 
     def test_init_project_creates_valid_study_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -533,6 +777,19 @@ metadata:
   name: sample_project
   version: 0.1.0
 spec:
+  problem:
+    type: test_problem
+    dataset: test_dataset
+    environment: test_environment
+    objective: Test missing required report validation.
+    model:
+      type: workflow
+      name: sample_workflow
+    spaces:
+      state: test_state
+    scenarios:
+      - id: baseline
+        role: test_baseline
   inputs: {}
   artifacts: {}
   workflow:

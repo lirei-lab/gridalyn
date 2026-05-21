@@ -2,45 +2,24 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-os.environ.setdefault("MPLCONFIGDIR", str(Path("outputs/cache/matplotlib").resolve()))
-
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from gridalyn.foundation import ReportMetadata, file_reference, write_report
-from gridalyn.assets.modeling.synthetic_network import build_synthetic_network_from_geojson
+from gridalyn.simulation import (
+    build_pandapower_summary,
+    configure_headless_matplotlib,
+    write_pandapower_element_tables,
+)
+from gridalyn.simulation.simulators.powerflow.synthetic_network import build_synthetic_network_from_geojson
 
 
 PROJECT_NAME = "synthetic_geojson_feeder"
 
 
-def _ensure_outputs() -> None:
-    for relative in ("outputs/data", "outputs/figures", "outputs/reports", "outputs/cache"):
-        Path(relative).mkdir(parents=True, exist_ok=True)
-
-
 def _write_tables(result) -> dict[str, Path]:
-    net = result.net
-    buses_path = Path("outputs/data/buses.csv")
-    lines_path = Path("outputs/data/lines.csv")
-    loads_path = Path("outputs/data/loads.csv")
-    net.bus.join(net.res_bus, how="left", rsuffix="_result").to_csv(
-        buses_path, index_label="bus_id"
-    )
-    net.line.join(net.res_line, how="left", rsuffix="_result").to_csv(
-        lines_path, index_label="line_id"
-    )
-    net.load.join(net.res_load, how="left", rsuffix="_result").to_csv(
-        loads_path, index_label="load_id"
-    )
-    return {"buses": buses_path, "lines": lines_path, "loads": loads_path}
+    return write_pandapower_element_tables(result.net, "outputs/data")
 
 
 def _bus_positions(net) -> pd.DataFrame:
@@ -58,8 +37,12 @@ def _bus_positions(net) -> pd.DataFrame:
 
 
 def _write_figure(result) -> Path:
+    configure_headless_matplotlib()
+    import matplotlib.pyplot as plt
+
     net = result.net
     figure_path = Path("outputs/figures/synthetic_feeder_topology.png")
+    figure_path.parent.mkdir(parents=True, exist_ok=True)
     positions = _bus_positions(net).set_index("bus_id")
     fig, ax = plt.subplots(figsize=(7.4, 5.2))
     for line in net.line.itertuples():
@@ -82,20 +65,23 @@ def _write_figure(result) -> Path:
 def _write_report(result, tables: dict[str, Path], figure_path: Path) -> None:
     net = result.net
     validation = result.validation_report
-    summary = {
-        "project_intent": "geojson_to_synthetic_feeder",
-        "simulation_engine": "pandapower",
-        "building_count": int(validation["counts"]["buildings"]),
-        "pandapower_bus_count": int(len(net.bus)),
-        "pandapower_line_count": int(len(net.line)),
-        "pandapower_load_count": int(len(net.load)),
-        "pandapower_transformer_count": int(len(net.trafo)),
-        "powerflow_converged": bool(validation["powerflow"]["converged"]),
-        "min_voltage_pu": float(net.res_bus.vm_pu.min()) if not net.res_bus.empty else None,
-        "max_line_loading_pct": (
-            float(net.res_line.loading_percent.max()) if not net.res_line.empty else None
-        ),
-    }
+    summary = build_pandapower_summary(
+        net,
+        extra={
+            "project_intent": "geojson_to_synthetic_feeder",
+            "building_count": int(validation["counts"]["buildings"]),
+            "pandapower_bus_count": int(len(net.bus)),
+            "pandapower_line_count": int(len(net.line)),
+            "pandapower_load_count": int(len(net.load)),
+            "pandapower_transformer_count": int(len(net.trafo)),
+            "powerflow_converged": bool(validation["powerflow"]["converged"]),
+            "max_line_loading_pct": (
+                float(net.res_line.loading_percent.max())
+                if not net.res_line.empty
+                else None
+            ),
+        },
+    )
     artifacts = [
         file_reference("outputs/data/building_footprints.geojson"),
         file_reference("outputs/reports/synthetic_network_validation_report.json"),
@@ -124,7 +110,6 @@ def _write_report(result, tables: dict[str, Path], figure_path: Path) -> None:
 
 
 def main() -> int:
-    _ensure_outputs()
     result = build_synthetic_network_from_geojson(
         footprints_path="outputs/data/building_footprints.geojson",
         config_path="inputs/synthetic_network_config.json",

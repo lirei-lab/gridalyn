@@ -6,6 +6,65 @@ metadata:
   description: EV capacity limitation project using a synthetic distribution grid and digital twin artifacts.
 spec:
   pathBase: repo
+  problem:
+    type: flexibility_market_operation
+    dataset: synthetic_trois_rivieres_distribution_twin
+    environment: multi_stage_cls_market_and_powerflow_validation
+    objective: Allocate Soft and Hard CLS flexibility for EV peak management and validate network impact.
+    model:
+      type: operations_pipeline
+      name: locational_cls_flexibility_clearing
+    spaces:
+      state: stochastic_ev_load_and_thermal_constraint_state
+      action: soft_hard_cls_capacity_and_dispatch
+      output: clearing_dispatch_settlement_and_powerflow_reports
+    scenarios:
+      - id: S0_0pct
+        role: baseline_adoption_case
+        description: Building load without EV adoption.
+        parameters:
+          ev_penetration_percent: 0
+      - id: S1_10pct
+        role: low_ev_adoption_case
+        description: Low EV adoption case used in stochastic profile comparison.
+        parameters:
+          ev_penetration_percent: 10
+      - id: S2_20pct
+        role: medium_ev_adoption_case
+        description: Medium EV adoption case used in stochastic profile comparison.
+        parameters:
+          ev_penetration_percent: 20
+      - id: S3_30pct
+        role: high_ev_adoption_case
+        description: High EV adoption case used in stochastic profile comparison.
+        parameters:
+          ev_penetration_percent: 30
+      - id: S4_40pct
+        role: stress_and_validation_case
+        description: Target EV adoption case for thermal screening, market clearing, dispatch, and network verification.
+        parameters:
+          ev_penetration_percent: 40
+  experiments:
+    - id: ev_adoption_sweep
+      scenarios:
+        - S0_0pct
+        - S1_10pct
+        - S2_20pct
+        - S3_30pct
+        - S4_40pct
+      objective: Quantify unmanaged and managed peak behavior across EV penetration levels.
+      metrics:
+        - unmanaged_peak_mw
+        - managed_peak_mw
+        - n_ev
+    - id: s4_cls_market_operation
+      scenario: S4_40pct
+      objective: Run the full CLS market, realtime dispatch, settlement, and power-flow verification path.
+      metrics:
+        - selected_capacity_kw
+        - delivered_capacity_kw
+        - transformer_loading_percent
+        - total_market_settlement_usd
   inputs:
     geography:
       source: configs/geography/tr01.json

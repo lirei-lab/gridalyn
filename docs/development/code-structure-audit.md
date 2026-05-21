@@ -29,10 +29,14 @@ be avoided unless they represent a durable platform capability.
 - Projects such as `projects/flexibility_cls`,
   `projects/ieee_33_bus_demo`, and other demos now use project manifests and
   workflow contracts.
-- Compatibility aliases keep older import paths working while the repository
-  transitions to the canonical package layout.
-- Examples are moving toward tutorial and interoperability roles rather than
-  being the runtime backbone of projects.
+- The historical `gridalyn/api.py` facade, dashboard-public exporters,
+  database-manager shims, and project-owned compatibility routes have been
+  removed instead of preserved as parallel APIs.
+- `foundation` no longer acts as a catch-all facade for project or operations
+  behavior. Project APIs live under `gridalyn.projects`; market and flexibility
+  APIs live under `gridalyn.operations`.
+- Examples are tutorial and interoperability material rather than the runtime
+  backbone of projects.
 
 ## Structural Risks
 
@@ -48,18 +52,16 @@ workflows, CLI arguments, or project manifests.
 | P0 | Keep the seven-package boundary stable. | Frequent package reshuffling makes the SDK hard to learn. | Add capabilities inside the canonical areas before creating new areas. |
 | P1 | Keep `gridalyn/` independent from `projects/`. | The SDK must be usable without bundled demo projects. | Enforced by `test_gridalyn_package_does_not_depend_on_projects`. |
 | P1 | Project-specific routes must be explicit. | Hidden defaults make demos look like platform requirements. | Pass paths through `project.yaml`, `workflow.yaml`, or CLI arguments. |
-| P1 | Some project workflows still call scripts in `examples/`. | Examples should teach; the SDK should execute reusable operations. | Move reusable GeoJSON and data-acquisition functions into `gridalyn.twin` or `gridalyn.interfaces.cli`. |
 | P1 | Manuscript-specific figure scripts still exist near project logic. | Public projects should not depend on private manuscript outputs. | Keep publication-only material outside the public project workflow. |
-| P2 | Historical import aliases still exist in a small shim. | They can confuse new users if examples rely on them. | Keep public docs and new tests on the native seven-module surface while retiring archived callers. |
-| P2 | `gridalyn.api.Interface` reflects an older interactive synthetic-grid interface. | It does not match the current platform boundary. | Replace it with smaller SDK entry points or mark it as legacy. |
+| P2 | Some low-level helpers still expose study-era names in comments or print messages. | They do not break functionality, but they make the source harder to read before open source publication. | Rename messages and comments when touching the owning module; avoid compatibility shims. |
 
 ## Native Import Retirement Inventory
 
 The canonical SDK surface is `foundation`, `twin`, `assets`, `simulation`,
 `operations`, `projects`, and `interfaces`. Public docs, examples, and new tests
-should use those names directly. If archived callers still need old imports,
-keep that concern isolated in the shim layer and do not let it define new API
-contracts.
+should use those names directly. Archived callers should be recovered from Git
+history or migrated to the native surface. Do not add compatibility modules for
+removed paths.
 
 ## Rules For New Code
 
@@ -70,17 +72,16 @@ contracts.
 4. Keep generated artifacts out of package directories.
 5. Prefer explicit paths from project manifests over hard-coded repository paths.
 6. Use normal imports. Avoid runtime `sys.path` edits inside package modules.
-7. If a module exists only for historical imports, keep it isolated from public
-   examples and replacement code.
+7. If a path exists only for historical imports, remove it or migrate callers
+   to the native module.
 
 ## Cleanup Sequence
 
 The next cleanup should be incremental:
 
-1. Promote GeoJSON network-generation utilities from examples into SDK/CLI
-   functions.
-2. Move publication-only figure generation behind a private or optional
+1. Move publication-only figure generation behind a private or optional
    manuscript workflow.
-3. Retire archived callers that still require historical import aliases.
-4. Add import-boundary tests that fail when package modules depend on examples
-   or project-specific paths.
+2. Keep import-boundary checks current as new platform modules appear.
+3. Rename study-era comments and messages when touching the owning module.
+4. Keep examples small, documented, and independent from governed project
+   execution.

@@ -1,5 +1,7 @@
 import unittest
 import tomllib
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest import mock
 from pathlib import Path
 
@@ -190,6 +192,19 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertEqual(extra_args, ["status"])
         self.assertTrue(callable(args.handler))
 
+    def test_gridalyn_domain_help_delegates_to_domain_parser(self):
+        buffer = StringIO()
+
+        with self.assertRaises(SystemExit) as raised:
+            with redirect_stdout(buffer):
+                gridalyn_cli.main(["project", "--help"])
+
+        self.assertEqual(0, raised.exception.code)
+        help_text = buffer.getvalue()
+        self.assertIn("init", help_text)
+        self.assertIn("run", help_text)
+        self.assertIn("verify-all", help_text)
+
     def test_gridalyn_routes_domain_arguments_to_existing_cli(self):
         called: list[list[str] | None] = []
 
@@ -226,7 +241,7 @@ class CliCommandStructureTest(unittest.TestCase):
         init_args = parser.parse_args(["init", "projects/example", "--template", "grid-study"])
         self.assertEqual(init_args.template, "grid-study")
 
-        for command in ["init", "validate", "plan", "run", "status", "regression"]:
+        for command in ["init", "validate", "plan", "run", "status", "regression", "prepare-workspace"]:
             args = parser.parse_args([command, "projects/example"])
             self.assertEqual(args.command, command)
             self.assertTrue(callable(args.handler))

@@ -108,13 +108,14 @@ scenario_tables = synthesize_scenario_device_tables(
 ## Thermal Limit Model
 
 Transformer dynamic operating limits are platform modeling primitives, not
-study-local helpers. Use `gridalyn.assets.modeling.thermal` when a workflow
-needs to turn ambient-temperature forecasts into IEEE C57.91-style active-power
-limits:
+study-local helpers. Use `gridalyn.assets.datagen.build_thermal_forecast` when
+a workflow needs a synthetic TMY/weather-driven forecast, and use
+`gridalyn.assets.modeling.thermal` when the workflow already owns an explicit
+ambient-temperature trace:
 
 ```python
+from gridalyn.assets.datagen import build_thermal_forecast
 from gridalyn.assets.modeling.thermal import (
-    build_thermal_forecast,
     thermal_forecast_metadata,
 )
 

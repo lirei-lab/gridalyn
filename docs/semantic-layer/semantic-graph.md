@@ -197,12 +197,17 @@ The validator checks:
 The first graph backend is Parquet:
 
 ```text
-gridalyn/db/federated_graph_adapter.py
+gridalyn/twin/semantic/repository.py
+gridalyn/twin/db/federated_graph_adapter.py
 ```
 
-This adapter lets the rest of the application query the graph using the node and
-edge schema before any database migration. A future FalkorDB writer should import
-labels from `semantic_type` and `labels`, not from ad hoc CIM class strings.
+`SemanticGraphRepository` is the application-facing query API for the Parquet
+graph. It answers operational relationship questions such as providers for a
+constraint, assets in a scenario, building-to-constraint traces, and
+scenario-relevant time-series datasets. The lower-level federated graph adapter
+remains a backend migration helper that prepares Cypher batches for FalkorDB or
+compatible graph stores. A future FalkorDB writer should import labels from
+`semantic_type` and `labels`, not from ad hoc CIM class strings.
 
 Migration rule of thumb:
 

@@ -311,8 +311,8 @@ gridalyn/
 | --- | --- | --- |
 | `gridalyn.foundation` | IDs, units, lineage, validation, manifests, model versions, schemas, artifact policy. | `platform`, `data` |
 | `gridalyn.twin` | Network model, topology, repositories, states, scenarios, time-series references, semantic graph. | `network`, `adapters`, `core`, `io`, `semantic`, `db` |
-| `gridalyn.assets` | Buildings, loads, EV/EVSE, DER, forecasts, flexibility envelopes, synthetic asset generation. | `modeling`, `datagen` |
-| `gridalyn.simulation` | Powerflow, thermal checks, solver engines, network-impact surrogate, validation workflows. | `simulators`, `analytics` |
+| `gridalyn.assets` | Buildings, loads, EV/EVSE, DER, forecasts, flexibility envelopes, asset contracts, and synthetic input generation. | `modeling`, `datagen` |
+| `gridalyn.simulation` | Synthetic-network construction, powerflow, thermal checks, solver engines, network-impact surrogate, validation workflows. | `simulators`, `analytics` |
 | `gridalyn.operations` | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, operational KPIs. | `market`, `flexibility` |
 | `gridalyn.projects` | Project manifests, workflow execution, regressions, reproducible studies and demos. | `workflows`, project loader/runner |
 | `gridalyn.interfaces` | CLI, dashboard contracts, reports, graph exports, future API/service adapters. | `cli`, `reporting`, `viz` |
@@ -331,14 +331,13 @@ capability is unclear, choose the layer by the artifact it owns:
 | Workspace paths, reports, validation, manifests | `gridalyn.foundation` |
 | Network topology, scenario metadata, semantic graph | `gridalyn.twin` |
 | Building, EV, DER, load, and synthetic asset generation | `gridalyn.assets` |
-| Power-flow, thermal, voltage, and surrogate validation | `gridalyn.simulation` |
+| Synthetic-network construction, power-flow, thermal, voltage, and surrogate validation | `gridalyn.simulation` |
 | Providers, clearing, dispatch, settlement, and KPIs | `gridalyn.operations` |
 | Project contracts, runners, regressions, sense checks | `gridalyn.projects` |
 | CLI, dashboard/catalog, report, graph, and visualization surfaces | `gridalyn.interfaces` |
 
-Every deeper package move should include import adapters, tests, and
-documentation updates. The public CLI, project workflows, and seven top-level
-modules should not break during the migration.
+Every deeper package move should include tests and documentation updates.
+Public docs and new project code should use the native owning module.
 
 | Capability | Preferred package direction |
 | --- | --- |

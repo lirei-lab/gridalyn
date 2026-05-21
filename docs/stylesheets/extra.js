@@ -1,6 +1,6 @@
-// Redirect old flat documentation URLs after the Markdown files moved into
+// Redirect earlier flat documentation URLs after Markdown files moved into
 // domain folders. This keeps previously opened browser tabs usable.
-var legacyPathRedirects = {
+var pathRedirects = {
    '/architecture/': '/platform/architecture/',
    '/reports/': '/platform/reports/',
    '/flexibility_market_operation/': '/flexibility/clearing/',
@@ -19,8 +19,8 @@ var legacyPathRedirects = {
 };
 
 var currentPath = window.location.pathname;
-if (legacyPathRedirects[currentPath]) {
-   window.location.replace(legacyPathRedirects[currentPath] + window.location.search + window.location.hash);
+if (pathRedirects[currentPath]) {
+   window.location.replace(pathRedirects[currentPath] + window.location.search + window.location.hash);
 }
 
 // Open links externally.

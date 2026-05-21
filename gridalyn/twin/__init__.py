@@ -8,7 +8,6 @@ _LAZY_EXPORTS = {
     "CimParquetAdapter": ("gridalyn.twin.adapters", "CimParquetAdapter"),
     "ConnectedEquipment": ("gridalyn.twin.network", "ConnectedEquipment"),
     "DownstreamAssets": ("gridalyn.twin.network", "DownstreamAssets"),
-    "FederatedGraphAdapter": ("gridalyn.twin.db", "FederatedGraphAdapter"),
     "NetworkAdapterDescriptor": ("gridalyn.twin.adapters", "NetworkAdapterDescriptor"),
     "NetworkAdapterRegistry": ("gridalyn.twin.adapters", "NetworkAdapterRegistry"),
     "NetworkExportResult": ("gridalyn.twin.adapters", "NetworkExportResult"),
@@ -17,6 +16,7 @@ _LAZY_EXPORTS = {
     "NetworkModelRepository": ("gridalyn.twin.network", "NetworkModelRepository"),
     "NetworkSnapshot": ("gridalyn.twin.adapters", "NetworkSnapshot"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters", "NetworkSourceAdapter"),
+    "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
     "SyntheticPandapowerAdapter": ("gridalyn.twin.adapters", "SyntheticPandapowerAdapter"),
     "UnknownNetworkAdapterError": ("gridalyn.twin.adapters", "UnknownNetworkAdapterError"),
     "build_network_adapter_validation_report": (

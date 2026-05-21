@@ -6,6 +6,35 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class ScenarioSpec:
+    id: str
+    role: str
+    description: str = ""
+    parameters: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ProblemSpec:
+    type: str
+    dataset: str
+    environment: str
+    objective: str
+    model: dict[str, Any]
+    spaces: dict[str, Any]
+    scenarios: tuple[ScenarioSpec, ...]
+
+
+@dataclass(frozen=True)
+class ExperimentSpec:
+    id: str
+    objective: str = ""
+    scenario: str | None = None
+    scenarios: tuple[str, ...] = ()
+    metrics: tuple[str, ...] = ()
+    parameters: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class WorkflowStage:
     id: str
     command: str
@@ -30,6 +59,8 @@ class StudyProject:
     base_dir: Path
     path_base: str
     raw: dict[str, Any]
+    problem: ProblemSpec
+    experiments: tuple[ExperimentSpec, ...]
     workflow: WorkflowSpec
 
 

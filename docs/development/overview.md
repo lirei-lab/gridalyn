@@ -27,11 +27,11 @@ rules for coding agents.
 Where platform modules live and how canonical SDK boundaries are organized.
 </a>
 
-<a class="landing-card" href="code-structure-audit/">
-<h3>Code Structure Audit</h3>
+<a class="landing-card" href="module-boundaries/">
+<h3>Module Boundaries</h3>
 
-Current module boundaries, structural risks, cleanup priorities, and rules for
-new code.
+Stable ownership rules for foundation, twin, assets, simulation, operations,
+projects, and interfaces.
 </a>
 
 <a class="landing-card" href="testing-and-validation/">
@@ -41,13 +41,19 @@ The verification ladder for unit tests, project sense checks, artifacts, docs,
 and release readiness.
 </a>
 
+<a class="landing-card" href="project-hygiene/">
+<h3>Project Hygiene</h3>
+
+Artifact placement, generated-output policy, and repository cleanliness rules.
+</a>
+
 </div>
 
 ## Development Rule
 
 Reusable behavior belongs in `gridalyn/`. Project scripts should orchestrate
 that behavior and write declared outputs. Documentation should explain the
-public contract, not private implementation accidents.
+public contract, not incidental implementation details.
 
 Before sending a change for review, run the smallest relevant verification
 first, then the broader checks:

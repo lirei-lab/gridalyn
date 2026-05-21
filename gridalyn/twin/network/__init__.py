@@ -7,6 +7,7 @@ from gridalyn.twin.network.model import (
     NetworkModel,
 )
 from gridalyn.twin.network.repository import NetworkModelRepository
+from gridalyn.twin.network.metadata import build_base_metadata, write_base_metadata
 
 __all__ = [
     "ConnectedEquipment",
@@ -14,4 +15,6 @@ __all__ = [
     "NetworkIntegrityReport",
     "NetworkModel",
     "NetworkModelRepository",
+    "build_base_metadata",
+    "write_base_metadata",
 ]

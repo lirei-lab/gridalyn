@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
+from gridalyn.twin import SemanticGraphRepository
 from gridalyn.twin.semantic.mappings import build_semantic_graph, north_america_profile
 from gridalyn.twin.semantic.validation import validate_semantic_graph
 
@@ -394,6 +395,47 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertGreaterEqual(len(batches["nodes"]), 1)
         self.assertGreaterEqual(len(batches["edges"]), 1)
         self.assertTrue(all("UNWIND $props AS p" in batch["cypher"] for batch in batches["nodes"]))
+
+    def test_semantic_repository_answers_operational_relationship_queries(self):
+        data = self._fixtures()
+        nodes, edges, _manifest = build_semantic_graph(
+            buses=data["buses"],
+            lines=data["lines"],
+            transformers=data["transformers"],
+            buildings=data["buildings"],
+            connectivity=data["connectivity"],
+            asset_registry=data["assets"],
+            provider_registry=data["providers"],
+            timeseries_manifests=data["timeseries"],
+        )
+
+        repository = SemanticGraphRepository(nodes=nodes, edges=edges)
+
+        context = repository.get_asset_context("building:0")
+        self.assertEqual(context["node"]["semantic_type"], "brick:Building")
+        self.assertIn("load:0", context["outgoing"]["HAS_LOAD"])
+        self.assertIn("ev:S4:0", context["outgoing"]["HAS_EVSE"])
+
+        providers = repository.providers_for_constraint("transformer:0", scenario_id="S4")
+        self.assertEqual(
+            {provider["provider_id"] for provider in providers},
+            {"provider:S4:building:0:soft_cls", "provider:S4:ev:S4:0:hard_cls"},
+        )
+        self.assertEqual({provider["provider_type"] for provider in providers}, {"soft_cls_building", "hard_cls_ev"})
+
+        trace = repository.trace_building_to_constraint("building:0", scenario_id="S4")
+        self.assertEqual(trace["building_id"], "building:0")
+        self.assertEqual(trace["load_ids"], ("load:0",))
+        self.assertEqual(trace["bus_ids"], ("bus:0",))
+        self.assertEqual(trace["constraint_ids"], ("transformer:0",))
+        self.assertEqual(
+            trace["provider_ids"],
+            ("provider:S4:building:0:soft_cls", "provider:S4:ev:S4:0:hard_cls"),
+        )
+
+        timeseries = repository.timeseries_for_asset("ev:S4:0", scenario_id="S4")
+        self.assertEqual(len(timeseries), 1)
+        self.assertEqual(timeseries[0]["semantic_type"], "dt:TimeSeriesDataset")
 
 
 if __name__ == "__main__":

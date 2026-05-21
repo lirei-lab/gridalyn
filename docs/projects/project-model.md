@@ -1,8 +1,8 @@
 # Project Model
 
-A Gridalyn project is a reproducible unit of work. It declares inputs,
-configuration, workflow stages, expected artifacts, reports, figures, manifests,
-and regression checks.
+A Gridalyn project is a reproducible unit of work. It declares the problem,
+scenarios, experiments, inputs, workflow stages, expected artifacts, reports,
+figures, manifests, and regression checks.
 
 ## Project Structure
 
@@ -36,6 +36,7 @@ The template creates:
 - `inputs/`;
 - `outputs/data`;
 - `outputs/figures`;
+- `outputs/cache`;
 - `outputs/manifests`;
 - `outputs/operations`;
 - `outputs/reports`.
@@ -58,12 +59,13 @@ uv run gridalyn project init projects/my_minimal_case --template minimal
 
 | File or folder | Responsibility |
 | --- | --- |
-| `project.yaml` | Project identity, path policy, inputs, outputs, and validation expectations. |
+| `project.yaml` | Project identity, problem contract, scenarios, experiments, path policy, inputs, outputs, and validation expectations. |
 | `workflow.yaml` | Ordered workflow stages and command execution contract. |
 | `scripts/` | Project orchestration only; reusable logic belongs in `gridalyn/`. |
 | `outputs/data/` | Project-local Parquet/CSV/derived data. |
 | `outputs/reports/` | Stable JSON reports. |
 | `outputs/figures/` | Figures generated from project data. |
+| `outputs/cache/` | Project-local caches, including non-source runtime caches such as Matplotlib. |
 | `outputs/operations/` | Dispatch instructions, operation runs, operational catalogs, and settlement-ready artifacts. |
 | `outputs/manifests/` | Run manifests and artifact inventories. |
 
@@ -103,12 +105,35 @@ spec:
 Each rule reads a JSON report, resolves the dotted field path, and supports
 `equals`, `min`, `max`, `gt`, `gte`, `lt`, and `lte`.
 
+## Problem, Scenarios, And Experiments
+
+Every public project must declare `spec.problem`. This keeps the platform from
+mixing responsibilities between assets, simulators, digital twins, and demo
+scripts.
+
+The contract has three levels:
+
+| Level | Responsibility |
+| --- | --- |
+| `problem` | The reusable study statement: dataset, environment, objective, model, and named spaces. |
+| `problem.scenarios` | Stable operating cases such as baseline, EV penetration level, DER condition, market stress case, or train/evaluate split. |
+| `experiments` | Runs or sweeps that reference one or more declared scenarios and list expected metrics. |
+
+For the detailed schema and examples, see
+[Project Problem Contract](problem-contract.md).
+
 ## Public Example Projects
 
 Gridalyn includes several public executable projects. They demonstrate the same
 contract at different levels of complexity, but they do not define the platform
 boundary. Reusable behavior belongs in `gridalyn/`; projects should stay thin
 and declarative.
+
+For power-flow demos, project scripts should call the native simulation helpers
+for pandapower tables, voltage figures, standard scenario execution, and
+canonical reports. For market demos, clearing and dispatch belong in
+`gridalyn.operations`; the project should pin local parameters and persist the
+declared outputs.
 
 Use the examples as a progression:
 

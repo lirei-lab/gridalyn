@@ -1,5 +1,3 @@
-export const DEFAULT_SCENARIO_IDS = ['S0', 'S1', 'S2', 'S3', 'S4'];
-
 const FILE_KINDS = {
   nodes: 'powerflow_nodes',
   lines: 'powerflow_lines',
@@ -112,10 +110,9 @@ export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest
 }
 
 export function scenarioIdsFromManifest(manifest) {
-  const ids = (manifest?.scenarios || [])
+  return (manifest?.scenarios || [])
     .map(item => item?.scenario_id)
     .filter(Boolean);
-  return ids.length > 0 ? ids : DEFAULT_SCENARIO_IDS;
 }
 
 export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetManifest = null, semanticManifest = null) {
@@ -137,12 +134,6 @@ export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetMan
     const existing = byId.get(asset.scenario_id) || { scenario: null, summary: null, asset: null };
     existing.asset = asset;
     byId.set(asset.scenario_id, existing);
-  }
-
-  if (byId.size === 0) {
-    for (const id of DEFAULT_SCENARIO_IDS) {
-      byId.set(id, { scenario: { scenario_id: id }, summary: null, asset: null });
-    }
   }
 
   return Array.from(byId.entries())

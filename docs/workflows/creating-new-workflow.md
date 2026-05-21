@@ -135,6 +135,6 @@ uv run gridalyn project status projects/my_case --check-artifacts
 
 ## 7. Connect to Dashboard Or Downstream Apps
 
-Use `instances/default/digital_twin/dashboard/catalog.json` or project reports for dashboard
-summary cards. Avoid making the dashboard depend on project-specific plotting
-scripts or private publication material.
+Use `instances/default/digital_twin/dashboard/catalog.json` or project reports
+for dashboard summary cards. Avoid making the dashboard depend on
+project-specific plotting scripts or publication material.

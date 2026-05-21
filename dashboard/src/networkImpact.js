@@ -1,12 +1,5 @@
 const DEFAULT_CATALOG_PATH = '/instances/default/digital_twin/flexibility/network_impact_catalog.json';
 
-const LEGACY_REPORT_PATHS = {
-  physicsLabels: '/instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json',
-  physicsSurrogate: '/instances/default/digital_twin/flexibility/network_impact_physics_surrogate_report.json',
-  topologyVerification: '/projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json',
-  physicsVerification: '/projects/flexibility_cls/outputs/reports/stage_4_realtime_dispatch_report.json',
-};
-
 async function loadJsonOrNull(fetchImpl, path) {
   const res = await fetchImpl(path);
   if (!res.ok) return null;
@@ -30,7 +23,7 @@ export function normalizeNetworkImpactReports({
   physicsSurrogate = null,
   topologyVerification = null,
   physicsVerification = null,
-} = {}, paths = LEGACY_REPORT_PATHS) {
+} = {}, paths = {}) {
   const physicsCase = caseDispatch(physicsVerification, 'surrogate_locational');
   const physicsComparison = caseComparison(physicsVerification, 'surrogate_locational');
   const topologyCase = caseDispatch(topologyVerification, 'topology_locational');
@@ -89,18 +82,9 @@ export async function loadNetworkImpactReports(fetchImpl = fetch, catalogPath = 
     return loadCatalogReports(fetchImpl, catalog, catalogPath);
   }
 
-  const normalized = await loadReportSet(fetchImpl, LEGACY_REPORT_PATHS);
-  const scenarioId = normalized.scenarioId || 'unknown';
   return {
-    source: 'legacy',
-    catalogPath: null,
-    scenarios: {
-      [scenarioId]: {
-        ...normalized,
-        scenarioId,
-        status: 'available',
-        reason: null,
-      },
-    },
+    source: 'catalog',
+    catalogPath,
+    scenarios: {},
   };
 }

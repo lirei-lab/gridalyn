@@ -5,6 +5,7 @@ not_in_nav: |
   superpowers/plans/*.md
   superpowers/specs/*.md
   development/cleanup-inventory.md
+  development/code-structure-audit.md
   development/module-migration-plan.md
   development/release-cleanup-audit.md
   development/agent-task-templates/*.md
@@ -52,6 +53,7 @@ nav:
       - Network Repository: sdk/network-repository.md
       - Adapters: sdk/adapters.md
       - Modeling: sdk/modeling.md
+      - Data Generation: sdk/data-generation.md
       - Solver And Model Adapters: sdk/solver-and-model-adapters.md
       - Building Models: platform/building-models.md
       - Simulation: sdk/simulation.md
@@ -70,6 +72,7 @@ nav:
   - Demos:
       - Demo Overview: projects/overview.md
       - Project Model: projects/project-model.md
+      - Project Problem Contract: projects/problem-contract.md
       - Project Template Guide: projects/template-guide.md
       - Demo Catalog:
           - Minimal Grid Project: projects/minimal-grid-project.md
@@ -97,9 +100,10 @@ nav:
       - Development Overview: development/overview.md
       - AI Agent Guide: development/ai-agent-guide.md
       - Repository Layout: development/core-package-architecture.md
-      - Code Structure Audit: development/code-structure-audit.md
+      - Module Boundaries: development/module-boundaries.md
       - Contribution Workflow: development/developer-workflow.md
       - Project Hygiene: development/project-hygiene.md
+      - Testing And Validation: development/testing-and-validation.md
       - Release Readiness: platform/release-readiness.md
 theme:
   name: material

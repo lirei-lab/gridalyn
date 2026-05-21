@@ -1,51 +1,74 @@
+"""Synthetic residential load-profile generators."""
+
 import os
 import pickle
-import numpy as np
-import pandas as pd
-import lightgbm as lgb
+from pathlib import Path
 from typing import Tuple
 
+import numpy as np
+import pandas as pd
+
+
+DEFAULT_MODEL_DIR = (
+    Path(__file__).resolve().parent
+    / "models"
+    / "weights"
+)
+
+
+class _AnalyticalMacroModel:
+    """Small deterministic fallback used when packaged ML weights are absent."""
+
+    def __init__(self, kind: str):
+        self.kind = kind
+
+    def predict(self, features: pd.DataFrame) -> np.ndarray:
+        temp = features["temperature"].to_numpy(dtype=float)
+        hour = features["hour"].to_numpy(dtype=float)
+        evening_peak = np.exp(-0.5 * ((hour - 19.0) / 3.0) ** 2)
+        morning_peak = np.exp(-0.5 * ((hour - 7.0) / 2.5) ** 2)
+        occupancy_shape = 0.55 + 0.30 * morning_peak + 0.45 * evening_peak
+        heating_degree = np.clip(18.0 - temp, 0.0, None)
+        if self.kind == "heat":
+            return np.clip(0.18 * heating_degree * occupancy_shape, 0.0, None)
+        return 0.35 + 0.45 * occupancy_shape
+
+
 class ParametricArxGenerator:
+    """Parametric ARX generator for synthetic residential load traces.
+
+    When packaged LightGBM weights are available, they provide aggregate heating
+    and background-load shapes from temperature and time-of-day features. When
+    weights or the optional LightGBM runtime are absent, the generator falls back
+    to a deterministic analytical macro shape. Per-household diversity is
+    introduced with seeded AR(1) noise, fixed structural multipliers, and phase
+    shifts. The generator is reproducible, but it should be treated as a
+    synthetic baseline rather than a calibrated forecast for a specific feeder.
     """
-    Parametric Generative Auto-Regressive Exogenous (ARX) Model.
-    
-    This model trains two separate LightGBM macroscopic models (Heating and Base Load) 
-    that predict perfectly smooth double-hump grid traces (the 'Exogenous' part).
-    
-    It then generates N individual Synthetic Digital Twins using an 
-    Auto-Regressive AR(1) Colored Noise process. This accurately simulates the 
-    persistent physical memory of thermostats and appliances (avoiding white noise), 
-    while mathematically guaranteeing that the ensemble average perfectly identically 
-    traces the macroscopic LightGBM predictions!
-    
-    This generator DOES NOT require `.h5` databases at runtime! It is open-source deployable.
-    """
+
     def __init__(
         self,
-        model_dir: str = 'gridalyn/assets/datagen/models/weights',
+        model_dir: str | os.PathLike[str] | None = None,
         random_seed: int | None = 4242,
     ):
-        self.model_dir = model_dir
-        self.heat_model_path = os.path.join(model_dir, 'lgbm_heating_macro.pkl')
-        self.bg_model_path = os.path.join(model_dir, 'lgbm_bg_macro.pkl')
+        self.model_dir = Path(model_dir) if model_dir is not None else DEFAULT_MODEL_DIR
+        self.heat_model_path = self.model_dir / "lgbm_heating_macro.pkl"
+        self.bg_model_path = self.model_dir / "lgbm_bg_macro.pkl"
         self.heat_model = None
         self.bg_model = None
         self.random_seed = random_seed
 
     def fit(self, df_meteo: pd.DataFrame, df_heating: pd.DataFrame, df_bg: pd.DataFrame):
-        """
-        Trains the macroscopic LightGBM models on actual database data. ONLY runs once locally.
-        """
-        print(f"Training Parametric ARX Macro Models...")
+        """Train and serialize the packaged macro-shape models."""
+        import lightgbm as lgb
+
+        print("Training Parametric ARX macro models...")
         os.makedirs(self.model_dir, exist_ok=True)
-        
-        # Train dynamically on EVERY valid physical day of the year natively to map 
-        # all temperature regimes: Summer (+25C), Shoulder (+10C), and Winter (-25C).
+
         unique_days = df_meteo.resample('D').mean().index
-        
+
         X_list, y_heat_list, y_bg_list = [], [], []
-        
-        # Calculate true means across the 1000 empirical HQ homes
+
         avg_heat_kw = df_heating.mean(axis=1)
         avg_bg_kw = df_bg.mean(axis=1)
         
@@ -71,14 +94,13 @@ class ParametricArxGenerator:
                 X_list.append(X)
                 y_heat_list.append(h_day.values)
                 y_bg_list.append(b_day.values)
-            except Exception as e:
+            except Exception:
                 pass
                 
         X_train = pd.concat(X_list, ignore_index=True)
         y_heat_train = np.concatenate(y_heat_list)
         y_bg_train = np.concatenate(y_bg_list)
         
-        # Extremely deep regression to overfit exactly to the 5-day smooth shape
         params = {
             'objective': 'regression',
             'metric': 'rmse',
@@ -98,21 +120,26 @@ class ParametricArxGenerator:
             pickle.dump(self.heat_model, f)
         with open(self.bg_model_path, 'wb') as f:
             pickle.dump(self.bg_model, f)
-            
-        print(f"Models successfully trained and serialized to {self.model_dir}")
+
+        print(f"Models serialized to {self.model_dir}")
+
+    def _load_analytical_fallback(self) -> None:
+        self.heat_model = _AnalyticalMacroModel("heat")
+        self.bg_model = _AnalyticalMacroModel("background")
 
     def load(self):
-        """
-        Loads the lightweight ML parameters directly into memory natively.
-        Zero dependency on HQ databases.
-        """
-        if not os.path.exists(self.heat_model_path) or not os.path.exists(self.bg_model_path):
-            raise FileNotFoundError("Parametric Grid Models missing! Run .fit() first.")
-            
-        with open(self.heat_model_path, 'rb') as f:
-            self.heat_model = pickle.load(f)
-        with open(self.bg_model_path, 'rb') as f:
-            self.bg_model = pickle.load(f)
+        """Load packaged model weights, or use the analytical fallback."""
+        if not self.heat_model_path.exists() or not self.bg_model_path.exists():
+            self._load_analytical_fallback()
+            return
+
+        try:
+            with open(self.heat_model_path, 'rb') as f:
+                self.heat_model = pickle.load(f)
+            with open(self.bg_model_path, 'rb') as f:
+                self.bg_model = pickle.load(f)
+        except ModuleNotFoundError:
+            self._load_analytical_fallback()
             
     def _rng(self, stream_offset: int = 0) -> np.random.Generator:
         if self.random_seed is None:
@@ -127,10 +154,7 @@ class ParametricArxGenerator:
         sigma: float,
         rng: np.random.Generator,
     ) -> np.ndarray:
-        """
-        Generates continuous mathematically auto-correlated AR(1) Colored Noise.
-        rho=0.92 gives highly persistent continuous 2-hour cycles (non-jagged).
-        """
+        """Generate auto-correlated AR(1) diversity noise."""
         noise = np.zeros((steps, n_houses), dtype=np.float32)
         # Seed first step
         noise[0, :] = rng.normal(0, sigma, size=n_houses)
@@ -145,13 +169,7 @@ class ParametricArxGenerator:
         return noise
 
     def generate(self, temp_out_series: pd.Series, n_houses: int) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Synthesizes `n_houses` individual colored-noise Digital Twin Heating and Base Load 
-        trajectories. Overlying mathematically identical to the HQ HQ Baseline.
-        
-        Returns:
-            heat_kw_matrix, bg_kw_matrix (shape: steps x n_houses)
-        """
+        """Generate heating and background-load matrices in kilowatts."""
         if self.heat_model is None or self.bg_model is None:
             self.load()
             
@@ -166,7 +184,7 @@ class ParametricArxGenerator:
             'hour': hours
         })
         
-        # 2. Extract the Universal Perfect Macro Shapes 
+        # 2. Extract aggregate macro shapes.
         macro_heat = self.heat_model.predict(X_infer)
         macro_bg = self.bg_model.predict(X_infer)
         
@@ -174,23 +192,21 @@ class ParametricArxGenerator:
         macro_heat = np.maximum(macro_heat, 0.0)
         macro_bg = np.maximum(macro_bg, 0.0)
         
-        # 3. Dynamic Arbitrary-Time Resolution Scaling
-        # To perfectly support generation at 1-min, 15-min, or 1-hour natively:
+        # 3. Resolution-aware AR(1) coefficients.
         try:
             # Detect delta_t in hours exactly 
             dt_hours = (temp_out_series.index[1] - temp_out_series.index[0]).total_seconds() / 3600.0
         except IndexError:
             dt_hours = 0.25 # Default fallback (15 min)
             
-        # The true physical continuous relaxation time constants (in hours)
-        tau_heat = 2.5 # Heaters persistently stay on for 2-3 hours
-        tau_bg = 1.0   # General appliances cycle faster
+        tau_heat = 2.5
+        tau_bg = 1.0
         
-        # Transform physical continuous tau to discrete Markov rho per-timestep: rho = exp(-dt/tau)
+        # Transform continuous time constants to discrete Markov coefficients.
         rho_heat = np.exp(-dt_hours / tau_heat)
         rho_bg = np.exp(-dt_hours / tau_bg)
 
-        # Generate Mathematical Continuous AR(1) Colored Noise
+        # Generate AR(1) diversity noise.
         ar_heat = self._generate_ar1_noise(
             steps, n_houses, rho=rho_heat, sigma=0.6, rng=self._rng(0)
         )
@@ -198,15 +214,13 @@ class ParametricArxGenerator:
             steps, n_houses, rho=rho_bg, sigma=0.4, rng=self._rng(1)
         )
         
-        # 4. Enforce Day-by-Day House Consistency
-        # The Fixed Daily Magnitude Multiplier gives structural uniqueness per home.
-        # It must be cached so `House #42` has the EXACT same scale multiplier on Jan 1 and Jan 2!
+        # 4. Preserve per-household structural consistency across calls.
         if getattr(self, '_n_houses_initialized', None) != n_houses:
-            # Seeded structural multipliers make House #i reproducible across runs.
+            # Seeded structural multipliers make each house reproducible across runs.
             s_rng = self._rng(2)
             self._multiplier_heat = np.maximum(s_rng.normal(1.0, 0.25, size=n_houses), 0.1)
             self._multiplier_bg = np.maximum(s_rng.normal(1.0, 0.35, size=n_houses), 0.1)
-            # Phase shifts for individual peak diversity (mean=0, std=60 min)
+            # Phase shifts add individual peak diversity.
             self._phase_shift_min = s_rng.normal(0, 60, size=n_houses).astype(int)
             self._n_houses_initialized = n_houses
             
@@ -223,23 +237,11 @@ class ParametricArxGenerator:
             shifted_macro_heat[:, i] = np.roll(macro_heat, shift_steps)
             shifted_macro_bg[:, i] = np.roll(macro_bg, shift_steps)
             
-        # 5. Apply the mathematical physical logic
-        # Apply strict baseline + dynamic noise
-        # Using softplus or max to clip negative loads nicely
-        
-        # Replace linear multiplier (1.0 + ar) with exponential `np.exp(ar)`
-        # This prevents catastrophic negative drops while perfectly preserving realistic log-normal appliance capacity spiking.
+        # 5. Apply positive log-normal diversity around the aggregate shape.
         raw_heat = (shifted_macro_heat * self._multiplier_heat[np.newaxis, :]) * np.exp(ar_heat)
         raw_bg   = (shifted_macro_bg   * self._multiplier_bg[np.newaxis, :])   * np.exp(ar_bg)
-        
-        # Enforce strict positive limits gracefully without ever collapsing completely to exactly 0.0
-        # unless macro strictly demands 0. 
-        # Smallest residual standby load floor for standard background is ~0.1 kW
+
+        # Preserve a small background standby floor.
         raw_bg = np.maximum(raw_bg, 0.05)
-        
-        # We NO LONGER force the exact mean expectation backward mechanically.
-        # Allowing individual phase shifts preserves true individual daily peak stochasticity.
-        # The aggregation will naturally form a curve dictated by the Law of Large Numbers,
-        # which will be physically smoother than the unshifted LightGBM macro.
-        
+
         return raw_heat, raw_bg

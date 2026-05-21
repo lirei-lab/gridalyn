@@ -10,8 +10,6 @@ from pathlib import Path
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from projects.flexibility_cls.scripts.config import S_RATED_KVA, THETA_MAX
-
 def main():
     print("="*60)
     print("  Generating Power Probability Density Heatmap...")
@@ -109,7 +107,7 @@ def main():
     
     # Panel 2: Managed
     ax2 = axes[1]
-    c2 = ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
+    ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
     ax2.plot(X, p_threshold_mw, color="red", lw=2, ls="--", label="DSO Activation Threshold")
     ax2.plot(X, np.mean(p_managed_traces, axis=0), color="black", lw=1.5, label="Expected Mean Power")
     

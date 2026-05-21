@@ -6,6 +6,30 @@ metadata:
   description: Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.
 spec:
   pathBase: project
+  problem:
+    type: powerflow_validation
+    dataset: five_bus_teaching_feeder
+    environment: pandapower_powerflow
+    objective: Validate the smallest reproducible Gridalyn project contract with one AC power-flow run.
+    model:
+      type: simulator
+      name: pandapower
+    spaces:
+      state: feeder_topology_and_loads
+      action: no_control
+      output: bus_voltage_and_line_loading
+    scenarios:
+      - id: baseline
+        role: deterministic_baseline
+        description: Five-bus feeder with fixed loads and no controllable devices.
+  experiments:
+    - id: baseline_powerflow
+      scenario: baseline
+      objective: Confirm convergence, voltage range, and report/figure generation.
+      metrics:
+        - powerflow_converged
+        - min_voltage_pu
+        - bus_count
   inputs:
     sourceNetwork:
       name: Five-bus radial teaching feeder

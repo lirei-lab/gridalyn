@@ -8,7 +8,7 @@ telemetry violations of the absolute power envelope ($P_{\text{cap}}$).
 """
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict
 
 
 @dataclass
@@ -25,7 +25,6 @@ def calculate_period_settlement(
     allocations_kw: Dict[str, float],
     c_mcp_lambda: float,
     actual_p_meter_kw: float,
-    p_req_unmanaged_kw: float,
     dt_h: float,
     lambda_pen_penalty: float = 10.0,
     p_cap_limit_kw: float = None
@@ -44,8 +43,6 @@ def calculate_period_settlement(
         Uniform market clearing price (lambda) in $/(kW*h).
     actual_p_meter_kw : float
         The physical native load telemetry captured during the window.
-    p_req_unmanaged_kw : float
-        Legacy fallback reference used only if p_cap_limit_kw is omitted.
     dt_h : float
         Resolution of this specific telemetry check in hours (e.g. 5/60 for 5-minute data).
     lambda_pen_penalty : float
@@ -76,12 +73,9 @@ def calculate_period_settlement(
         )
         
     # 2. Strict Deterministic Boundary Evaluation
-    if p_cap_limit_kw is not None:
-        p_cap_limit = p_cap_limit_kw
-    else:
-        # Backward-compatible path for legacy callers. Current project workflows
-        # pass the explicit cap recorded at clearing.
-        p_cap_limit = p_req_unmanaged_kw - c_soft_cleared
+    if p_cap_limit_kw is None:
+        raise ValueError("p_cap_limit_kw is required when cleared volume is positive")
+    p_cap_limit = p_cap_limit_kw
     
     # Did the meter structurally breach the cap?
     breach_kw = max(0.0, actual_p_meter_kw - p_cap_limit)

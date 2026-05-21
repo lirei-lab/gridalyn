@@ -18,7 +18,7 @@ from gridalyn.twin.adapters.network import (
     describe_network_source_adapter,
 )
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
-from gridalyn.projects.workflows.digital_twin.base_metadata import write_base_metadata
+from gridalyn.twin.network.metadata import write_base_metadata
 
 
 CIM_PARQUET_TABLES = {

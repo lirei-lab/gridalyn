@@ -58,6 +58,11 @@ where = ["."]
 include = ["gridalyn*"]
 exclude = ["tests*"]
 
+[tool.setuptools.package-data]
+gridalyn = [
+    "assets/datagen/models/weights/*.pkl",
+]
+
 [project.optional-dependencies]
 geo = [
     "contextily>=1.7.0",

@@ -1,27 +1,19 @@
 import os
-import time
 import pickle
-import random
 import json
 import hashlib
-import concurrent.futures
-import warnings
 from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-import networkx as nx
 import pandapower as pp
-from pandapower.diagnostic import diagnostic
 from pandapower.timeseries import DFData, run_timeseries, OutputWriter
 from pandapower.control import ConstControl
-from tqdm import tqdm
 
-from gridalyn.twin.core.graph import PowerGridGraph
-from gridalyn.interfaces.viz.interactive import GridPlotter
-from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
-from gridalyn.simulation.simulators.agents.fleet import make_buildings, simulate_buildings
+from gridalyn.simulation.simulators.powerflow.synthetic_network import (
+    build_synthetic_network_from_config,
+)
 
 
 def run_single_realization(sim_idx, seed, net_json_path, cold_temp_air, n_blocks, labels_lv, areas, resolution_minutes=5, generator_type="parametric"):
@@ -33,7 +25,7 @@ def run_single_realization(sim_idx, seed, net_json_path, cold_temp_air, n_blocks
     # worker to reserve static TLS block for OpenMP/OpenBLAS. Otherwise, dlopen fails 
     # silently with 'cannot allocate memory in static TLS block', Pandapower silently 
     # falls back to fragile Python Scipy.spsolve, and Numpy mathematically crashes with NaNs!
-    import lightsim2grid
+    import lightsim2grid  # noqa: F401
     import numpy as np
     
     np.seterr(all='ignore')
@@ -48,7 +40,7 @@ def run_single_realization(sim_idx, seed, net_json_path, cold_temp_air, n_blocks
     # Given the core update, n_blocks now explicitly means n_houses (thousands)
     n_houses = n_blocks
     
-    from gridalyn.assets.datagen.core import GridLoadFacade
+    from gridalyn.assets.datagen import GridLoadFacade
     heat_kw, bg_kw = GridLoadFacade.generate_loads(
         generator_type=generator_type,
         df_weather=perturbed_temp_air,
@@ -142,21 +134,18 @@ def run_single_realization(sim_idx, seed, net_json_path, cold_temp_air, n_blocks
     }
 
 
-from gridalyn.api import Interface
-from gridalyn.twin.io.geo import export_pp_to_geojson, export_timeseries_to_kepler_parquet
-
-
-class MonteCarloSimulationManager(Interface):
-    """
-    High-level Simulation engine for building massive Grid ontologies
-    and orchestrating C++ Parallel Monte Carlo engines.
-    """
+class PowerflowMonteCarloRunner:
+    """Run stochastic power-flow scenarios over a generated feeder cache."""
     
     def __init__(self, input_file: str, cache_dir: str = "examples/generated/outputs", config: Optional[Dict[str, Any]] = None):
-        super().__init__(config=config)
         self.input_file = input_file
         self.cache_dir = cache_dir
+        self.config = config or self._default_config()
         os.makedirs(self.cache_dir, exist_ok=True)
+        self.power_grid = None
+        self.pg_graph = None
+        self.net = None
+        self.pp_net = None
         
         # Multidimensional result structures
         self.mc_ext_p_mw = []
@@ -168,8 +157,37 @@ class MonteCarloSimulationManager(Interface):
         self.mc_spatial_trafo = []
         self.resolution_minutes = 15
 
+    @staticmethod
+    def _default_config() -> dict[str, Any]:
+        return {
+            "loads": {
+                "max_load_per_building": 25.0,
+                "diversity_factor_lv": 5.0,
+                "diversity_factor_mv": 1.3,
+                "diversity_factor_hv": 1.1,
+            },
+            "buses": {
+                "lv": {"voltage_kv": 0.4, "type": "b"},
+                "mv": {"voltage_kv": 20.0, "type": "b"},
+                "hv": {"voltage_kv": 110.0, "type": "b"},
+            },
+            "lines": {
+                "lv": {"std_type": "94-AL1/15-ST1A 0.4", "min_length_km": 0.001},
+                "mv": {"std_type": "149-AL1/24-ST1A 10.0", "min_length_km": 0.001},
+                "hv": {"std_type": "149-AL1/24-ST1A 10.0", "min_length_km": 0.001},
+            },
+            "transformers": {
+                "lv_mv": {
+                    "std_type": "0.63 MVA 20/0.4 kV",
+                    "capacity_kva": 250,
+                    "utilization_margin": 0.80,
+                },
+                "mv_hv": {"std_type": "25 MVA 110/20 kV", "capacity_kva": 25_000},
+            },
+        }
+
     def _prepare_grid(self, force_rebuild: bool = False):
-        """Loads heavily pickled base grids, or regenerates from scratch and caches over Operations Interface."""
+        """Load cached base grids, or regenerate them through the asset-modeling builder."""
         cache_pg = os.path.join(self.cache_dir, "pg_graph_cache.pkl")
         cache_pp = os.path.join(self.cache_dir, "pp_net_cache.pkl")
         cache_meta = os.path.join(self.cache_dir, "grid_cache_meta.json")
@@ -210,29 +228,28 @@ class MonteCarloSimulationManager(Interface):
                 print("====== Stage 1: Cached Grid Stale or Unversioned; Rebuilding ======")
             else:
                 print("====== Stage 1: Spatial Grid Generation ======")
-            # Uses the Native Interface
-            self.load_grid(self.input_file)
-            self.build_pp()
-            self.pg_graph = self.power_grid
-            self.pp_net = self.net
+            result = build_synthetic_network_from_config(
+                footprints_path=self.input_file,
+                config=self.config,
+                out_dir=self.cache_dir,
+                config_source="PowerflowMonteCarloRunner.config",
+                write_cache=True,
+                run_powerflow=False,
+            )
+            self.power_grid = result.power_grid
+            self.net = result.net
+            self.pg_graph = result.power_grid
+            self.pp_net = result.net
 
             if self.pp_net is None:
                 print("[!] Pandapower network build failed — pp_net_cache.pkl will NOT be written.")
                 print("[!] Check transformer std_type in config.json — must be a valid pandapower type.")
-                # Still cache the spatial graph (buildings, topology)
-                with open(cache_pg, "wb") as f:
-                    pickle.dump(self.pg_graph, f)
-                print("Cached spatial grid (topology only) to disk.")
                 raise RuntimeError("Pandapower network build failed; aborting simulation.")
 
             # Export buildings to match original script functionality
             building_data_output_filepath = os.path.join(self.cache_dir, "buildings_data.json")
             self.pg_graph.export_building_data_to_json(building_data_output_filepath)
 
-            with open(cache_pg, "wb") as f:
-                pickle.dump(self.pg_graph, f)
-            with open(cache_pp, "wb") as f:
-                pickle.dump(self.net, f)
             with open(cache_meta, "w") as f:
                 json.dump(
                     {
@@ -358,68 +375,6 @@ class MonteCarloSimulationManager(Interface):
         print(f"\n[BENCHMARK] Parallel {n_realizations}x Simulation Execution Time: {t_end - t_start:.2f} seconds")
 
         self._verify_grid_stats()
-        legacy_export_dir = self.config.get("simulation", {}).get("legacy_mc_export_dir")
-        if legacy_export_dir:
-            self.export_to_parquet(legacy_export_dir)
-
-    def export_to_parquet(self, out_dir: Optional[str] = None) -> None:
-        """
-        Export Monte Carlo building load timeseries to Parquet.
-
-        This is a legacy snapshot helper. Active project and digital-twin
-        workflows should use project output data directories and
-        `instances/default/digital_twin/timeseries`.
-        Callers that still need the old two-file snapshot must pass `out_dir`
-        explicitly, for example through `simulation.legacy_mc_export_dir`.
-
-        Writes two files:
-          substation_baseline_mc.parquet
-            Columns: realization_0 ... realization_N  (aggregate building load in kW)
-
-          substation_powerflow_mc.parquet
-            Columns: realization_0 ... realization_N  (HV ext-grid active power in MW)
-        """
-        if out_dir is None:
-            warnings.warn(
-                "MonteCarloSimulationManager.export_to_parquet() no longer "
-                "defaults to paper/data. Pass an explicit out_dir only for "
-                "legacy Monte Carlo snapshots.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return
-
-        if not self.mc_raw_p_mw:
-            print("[!] export_to_parquet: no MC results to export — run run_monte_carlo() first.")
-            return
-
-        os.makedirs(out_dir, exist_ok=True)
-
-        # ── 1. Building baseline (kW, aggregate across all loads) ──────────
-        n_steps = len(self.mc_raw_p_mw[0])
-        bldg_df = pd.DataFrame(
-            {f"realization_{r}": self.mc_raw_p_mw[r] * 1000.0  # MW → kW
-             for r in range(len(self.mc_raw_p_mw))},
-        )
-        bldg_path = os.path.join(out_dir, "substation_baseline_mc.parquet")
-        bldg_df.to_parquet(bldg_path, index=False)
-
-        # ── 2. Power-flow result at ext-grid bus (MW, from KLU solver) ─────
-        pf_df = pd.DataFrame(
-            {f"realization_{r}": self.mc_ext_p_mw[r]
-             for r in range(len(self.mc_ext_p_mw))},
-        )
-        pf_path = os.path.join(out_dir, "substation_powerflow_mc.parquet")
-        pf_df.to_parquet(pf_path, index=False)
-
-        n_r    = len(self.mc_raw_p_mw)
-        pk_kw  = bldg_df.median(axis=1).max()
-        print(f"\n====== Parquet Export (Single Source of Truth) ======")
-        print(f"  {n_r} realizations × {n_steps} steps")
-        print(f"  Building median peak: {pk_kw/1e3:.1f} MW")
-        print(f"  → {bldg_path}")
-        print(f"  → {pf_path}")
-        print("=====================================================\n")
 
 
     def _verify_grid_stats(self):

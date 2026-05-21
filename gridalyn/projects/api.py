@@ -11,6 +11,7 @@ import sys
 
 from gridalyn.projects.loader import load_project as _load_project
 from gridalyn.projects.models import StudyProject, ValidationReport, WorkflowStage
+from gridalyn.projects.outputs import prepare_project_workspace
 from gridalyn.projects.runner import default_manifest_path, plan_stages, run_project
 from gridalyn.projects.sense_checks import project_sense_check as _project_sense_check
 from gridalyn.projects.validation import validate_project_file
@@ -222,6 +223,14 @@ def project_status(path: Path | str, check_artifacts: bool = False) -> dict:
     return {
         "name": project.name,
         "version": project.version,
+        "problem": {
+            "type": project.problem.type,
+            "dataset": project.problem.dataset,
+            "environment": project.problem.environment,
+            "objective": project.problem.objective,
+            "scenario_count": len(project.problem.scenarios),
+            "experiment_count": len(project.experiments),
+        },
         "root": str(project.root),
         "project_file": str(project.path),
         "workflow_file": str(project.workflow.path),
@@ -288,11 +297,7 @@ def init_project(
         raise FileExistsError(f"target project directory is not empty: {root}")
 
     (root / "inputs").mkdir(parents=True, exist_ok=True)
-    (root / "outputs" / "data").mkdir(parents=True, exist_ok=True)
-    (root / "outputs" / "figures").mkdir(parents=True, exist_ok=True)
-    (root / "outputs" / "manifests").mkdir(parents=True, exist_ok=True)
-    (root / "outputs" / "operations").mkdir(parents=True, exist_ok=True)
-    (root / "outputs" / "reports").mkdir(parents=True, exist_ok=True)
+    prepare_project_workspace(root)
     (root / "scripts").mkdir(parents=True, exist_ok=True)
 
     project_file = root / "project.yaml"
@@ -338,6 +343,27 @@ metadata:
   version: 0.1.0
 spec:
   pathBase: project
+  problem:
+    type: grid_study
+    dataset: project_inputs
+    environment: project_workflow
+    objective: Define a reproducible Gridalyn project contract.
+    model:
+      type: workflow
+      name: {name}_workflow
+    spaces:
+      state: project_inputs
+      action: workflow_stages
+      output: project_reports
+    scenarios:
+      - id: baseline
+        role: template_baseline
+        description: Default template scenario for contract validation.
+  experiments:
+    - id: baseline_run
+      scenario: baseline
+      objective: Validate the project contract and declared reports.
+      metrics: []
   inputs:
     raw: inputs
   artifacts:
@@ -365,7 +391,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('outputs/data', 'outputs/figures', 'outputs/manifests', 'outputs/operations', 'outputs/reports')]"
+      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
       outputs:
         - outputs/data
         - outputs/figures
@@ -386,7 +412,7 @@ metadata:
 spec:
   stages:
     - id: prepare_inputs
-      command: python -c "from pathlib import Path; Path('outputs/reports').mkdir(parents=True, exist_ok=True)"
+      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
       outputs:
         - outputs/reports
     - id: validate_outputs

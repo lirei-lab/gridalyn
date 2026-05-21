@@ -10,8 +10,8 @@ New code should use the native seven-module structure:
 | --- | --- |
 | `gridalyn.foundation` | Workspaces, artifact policy, reports, manifests, validation, and governance. |
 | `gridalyn.twin` | Network repositories, topology, source adapters, IO helpers, and semantic graph. |
-| `gridalyn.assets` | Building, EV, DER, thermal, load, and synthetic-network model generation. |
-| `gridalyn.simulation` | Power-flow builders, solver adapters, network impact, and validation analytics. |
+| `gridalyn.assets` | Building, EV, DER, thermal, load, and asset-model generation. |
+| `gridalyn.simulation` | Synthetic-network builders, power-flow builders, solver adapters, network impact, and validation analytics. |
 | `gridalyn.operations` | Providers, aggregators, offers, clearing, dispatch, settlement, constraints, and KPIs. |
 | `gridalyn.projects` | `project.yaml`, `workflow.yaml`, workflow execution, regression, and sense checks. |
 | `gridalyn.interfaces` | CLI, visualization, reporting entrypoints, and application-facing surfaces. |
@@ -41,6 +41,7 @@ Stable project imports:
 | `load_project` | Load a project from a workspace directory or `project.yaml`. |
 | `validate_project` | Validate the project contract. |
 | `plan_project` | Convert workflow metadata into executable stages. |
+| `prepare_project_workspace` | Create the standard `outputs/` directory contract for a project run. |
 | `run_workflow` | Execute or dry-run project stages. |
 | `project_status` | Summarize contract, stages, manifests, and required reports. |
 | `project_sense_check` | Run declared and registered objective checks. |
@@ -113,7 +114,7 @@ Stable foundation imports include:
 | --- | --- |
 | `GridalynWorkspace` | Resolved workspace layout. |
 | `workspace_from_path` | Resolve canonical instance, project, cache, and output paths. |
-| `check_artifact_policy` | Detect generated, private, or misplaced artifacts. |
+| `check_artifact_policy` | Detect generated, untracked, or misplaced artifacts. |
 | `ReportMetadata` | Common report metadata contract. |
 | `file_reference` | Build a report input/artifact file reference. |
 | `build_report` | Build a canonical report object. |
@@ -163,17 +164,29 @@ operations.write_operation_run("projects/my_case/outputs/operations/operation_ru
 
 Stable operations imports include provider registries, locational clearing,
 dispatch instructions, settlement records, operation-run contracts, operational
-KPI reports, and network-constraint summaries.
+KPI reports, network-constraint summaries, and the prosumer real-time market
+runner:
+
+```python
+from gridalyn.operations.market import (
+    ProsumerRealtimeMarketConfig,
+    run_prosumer_realtime_market,
+)
+```
 
 ## Asset Modeling API
 
 Use `gridalyn.assets` for reusable asset, building, scenario-device,
-thermal-limit, and synthetic-network models. Project scripts may wrap these
+thermal-limit, and synthetic input models. Project scripts may wrap these
 functions to pin local configuration, but implementation should stay in the SDK.
 
 ```python
 from gridalyn import assets
 
+thermal_model = assets.TransformerThermalModel(
+    s_rated_kva=15_000.0,
+    theta_max=110.0,
+)
 forecast = assets.build_thermal_forecast(
     336,
     resolution_minutes=5,
@@ -183,17 +196,42 @@ forecast = assets.build_thermal_forecast(
 metadata = assets.thermal_forecast_metadata(forecast)
 ```
 
-Synthetic network generation from building footprints is also exposed here:
+`assets.build_thermal_forecast` is a convenience facade over the synthetic
+datagen forecast builder. Pure thermal-limit conversion from an explicit
+ambient trace lives in `gridalyn.assets.modeling.thermal`.
+
+Synthetic network generation from building footprints is owned by simulation,
+because it creates solver-ready network objects:
 
 ```python
-from gridalyn import assets
+from gridalyn import simulation
 
-result = assets.build_synthetic_network_from_geojson(
+result = simulation.build_synthetic_network_from_geojson(
     footprints_path="projects/my_project/inputs/buildings.geojson",
     config_path="projects/my_project/inputs/synthetic_network_config.json",
     out_dir="projects/my_project/outputs/cache",
 )
 ```
+
+Lower-level synthetic trajectory generation is available through
+`gridalyn.assets.datagen`:
+
+```python
+from gridalyn.assets.datagen import GridLoadFacade, download_tmy, select_cold_day
+
+tmy = download_tmy()
+weather = select_cold_day(tmy)["temp_air"]
+heat_kw, background_kw = GridLoadFacade.generate_loads(
+    "parametric",
+    weather,
+    n_houses=100,
+    resolution_minutes=15,
+    seed=42,
+)
+```
+
+Treat this surface as a reproducible synthetic baseline. Project reports should
+record generator type, seed, weather window, and any calibration assumptions.
 
 ## Time-Series IO API
 
@@ -218,9 +256,15 @@ the public objects remain stable.
 ```python
 from gridalyn import assets, simulation
 
-feeder = assets.build_voltage_control_feeder(...)
+feeder = simulation.build_voltage_control_feeder(...)
 env = simulation.VoltageControlEnvironment(...)
 ```
+
+Stable simulation helpers also include `build_radial_pandapower_feeder`,
+`write_pandapower_element_tables`, `write_voltage_profile_figure`,
+`write_powerflow_report`, `StandardPowerflowScenario`, and
+`run_standard_powerflow_scenario`. Project scripts should use these helpers
+instead of duplicating pandapower table/report/scenario code.
 
 See [Solver And Model Adapters](../sdk/solver-and-model-adapters.md) for the
 adapter contract and optional solver capability groups.
@@ -233,6 +277,17 @@ node and edge tables.
 ```bash
 uv run gridalyn semantic build --profile north_america
 uv run gridalyn semantic validate --semantic-dir instances/default/digital_twin/semantic
+```
+
+Use `SemanticGraphRepository` for relationship queries over the materialized
+graph:
+
+```python
+from gridalyn import twin
+
+semantic = twin.SemanticGraphRepository.from_parquet("instances/default/digital_twin/semantic")
+providers = semantic.providers_for_constraint("transformer:64", scenario_id="S4")
+trace = semantic.trace_building_to_constraint("building:123", scenario_id="S4")
 ```
 
 ## Boundary Rule

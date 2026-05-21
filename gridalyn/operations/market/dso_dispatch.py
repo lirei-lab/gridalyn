@@ -14,16 +14,17 @@ Implements:
 from __future__ import annotations
 
 import numpy as np
-from scipy.stats import norm
 
-from gridalyn.assets.datagen.grid.network import MVNetwork, NETWORK
+from gridalyn.operations.market.network_constraints import NetworkConstraintModel
+
+
 class DSODispatcher:
     """
     DSO-side CLS advanced dispatch logic.
 
     Parameters
     ----------
-    network           : MVNetwork – defines P_LIMIT constraint (linearized
+    network           : NetworkConstraintModel – defines the physical constraint
                         proxy for IEEE C57.91 transformer thermal limits)
     dt_man_h          : management period duration in hours
     epsilon           : risk tolerance P(exceed) > ε → congestion declared
@@ -32,7 +33,7 @@ class DSODispatcher:
 
     def __init__(
         self,
-        network: MVNetwork = NETWORK,
+        network: NetworkConstraintModel,
         dt_man_h: float = 5.0 / 60.0,
         epsilon: float = 0.05,
         stochastic_failure_rate: float = 0.05,
@@ -177,18 +178,17 @@ class DSODispatcher:
         for port in portfolios:
             port_offers = port.generate_limitation_offers(t_idx, clearing_period_h=clearing_period_h)
             for res_name, offer in port_offers.items():
-                if "p_ref_kw" in offer and "p_cap_kw" in offer:
-                    p_ref = float(offer["p_ref_kw"])
-                    p_cap = float(offer["p_cap_kw"])
-                    # Admissibility screen from the paper: only binding caps can
-                    # receive positive-cost settlement capacity.
-                    if p_cap >= p_ref:
-                        continue
-                    p_flex = float(offer.get("delta_p_kw", max(0.0, p_ref - p_cap)))
-                else:
-                    p_ref = float(offer.get("p_req_kw", 0.0))
-                    p_cap = float(offer.get("p_min_kw", 0.0))
-                    p_flex = max(0.0, p_ref - p_cap)
+                if "p_ref_kw" not in offer or "p_cap_kw" not in offer:
+                    raise ValueError(
+                        "limitation offers must define p_ref_kw and p_cap_kw"
+                    )
+                p_ref = float(offer["p_ref_kw"])
+                p_cap = float(offer["p_cap_kw"])
+                # Admissibility screen from the paper: only binding caps can
+                # receive positive-cost settlement capacity.
+                if p_cap >= p_ref:
+                    continue
+                p_flex = float(offer.get("delta_p_kw", max(0.0, p_ref - p_cap)))
 
                 if p_flex <= 0:
                     continue
@@ -323,18 +323,11 @@ class DSODispatcher:
             )
             
             # Use the explicit contractual cap recorded at clearing for AMI settlement.
-            # The fallback preserves compatibility for callers that pass legacy allocations only.
             p_cap_limit_kw = contract_caps.get(port.block_id)
-            if p_cap_limit_kw is None and firm_peak_t is not None:
-                if hasattr(port, "get_capacity_bounds"):
-                    expected_peak_load = port.get_capacity_bounds(firm_peak_t)[0]
-                elif hasattr(port, "p_req_kw"):
-                    expected_peak_load = port.p_req_kw
-                else:
-                    expected_peak_load = sum(r.available_kw for r in port.resources)
-                p_cap_limit_kw = expected_peak_load - sum(bids.values())
-            elif p_cap_limit_kw is None:
-                p_cap_limit_kw = expected_native_load - sum(bids.values())
+            if p_cap_limit_kw is None and bids:
+                raise RuntimeError(
+                    f"Missing contractual cap for cleared portfolio {port.block_id}."
+                )
 
             allocation.append({
                 "block_id": port.block_id,

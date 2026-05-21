@@ -1,11 +1,12 @@
 # Platform, SDK, And Projects
 
-Gridalyn separates three concerns that are easy to mix up in research code:
+Gridalyn separates three concerns that are easy to mix up in exploratory grid
+software:
 
 | Layer | What It Is | What Belongs There | What Does Not Belong There |
 | --- | --- | --- | --- |
 | Platform | The governed architecture and artifact contract. | Digital twin roots, IDs, reports, manifests, validation rules, and source-of-truth rules. | One-off study assumptions. |
-| SDK | Reusable Python capabilities under `gridalyn/`. | Network models, GeoJSON preprocessing, simulation helpers, operation contracts, semantic graph builders. | Hard-coded project paths or manuscript outputs. |
+| SDK | Reusable Python capabilities under `gridalyn/`. | Network models, GeoJSON preprocessing, simulation helpers, operation contracts, semantic graph builders. | Hard-coded project paths or project-only artifacts. |
 | Projects | Executable case studies under `projects/<name>/`. | `project.yaml`, `workflow.yaml`, local scripts, declared inputs, generated outputs. | Reusable platform logic that another project would need. |
 
 The dependency direction is intentionally one-way:
@@ -48,5 +49,5 @@ exact workspace root.
 ## Public Boundary
 
 New code should use the seven canonical package areas and the `gridalyn` CLI
-vocabulary. Historical cleanup notes belong in Development pages, not in user
-workflows or application contracts.
+vocabulary. Maintenance notes belong in Development pages; user workflows and
+application contracts should reference only the current platform surfaces.

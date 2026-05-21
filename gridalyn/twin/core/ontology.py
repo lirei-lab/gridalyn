@@ -1,5 +1,5 @@
 from typing import Literal, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class GridNodeBase(BaseModel):
     """Base class for all topological grid elements."""

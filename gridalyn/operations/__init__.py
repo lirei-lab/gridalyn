@@ -14,6 +14,8 @@ from gridalyn.operations.runs import (
 
 __all__ = [
     "AggregatorPortfolio",
+    "DERVoltageDispatchConfig",
+    "DERVoltageDispatchResult",
     "DispatchInstruction",
     "FlexibilityOffer",
     "FlexibilityOperationContext",
@@ -30,11 +32,14 @@ __all__ = [
     "build_operational_kpi_report",
     "build_provider_offers",
     "build_settlement_records",
+    "run_der_voltage_dispatch",
     "validate_operation_run",
     "run_flexibility_clearing_operation",
     "summarize_network_constraints",
+    "summarize_der_voltage_dispatch",
     "validate_flexibility_operation_inputs",
     "write_operation_run",
+    "write_der_voltage_dispatch_figure",
     "SpatialClsResult",
     "allocate_addition_by_headroom",
     "allocate_reduction",
@@ -46,8 +51,10 @@ __all__ = [
     "build_locational_clearing_verification_report",
     "build_network_sensitivity",
     "build_provider_registry",
+    "build_shadow_report",
     "select_providers_for_constraint",
     "summarize_provider_registry",
+    "write_shadow_report",
     "write_flexibility_clearing_scorecard",
     "write_locational_clearing_outputs",
     "write_locational_verification_outputs",
@@ -73,6 +80,14 @@ _FLEXIBILITY_EXPORTS = {
     "validate_flexibility_operation_inputs",
 }
 
+_DER_VOLTAGE_EXPORTS = {
+    "DERVoltageDispatchConfig",
+    "DERVoltageDispatchResult",
+    "run_der_voltage_dispatch",
+    "summarize_der_voltage_dispatch",
+    "write_der_voltage_dispatch_figure",
+}
+
 _MARKET_EXPORTS = {
     "SpatialClsResult",
     "allocate_addition_by_headroom",
@@ -85,8 +100,10 @@ _MARKET_EXPORTS = {
     "build_locational_clearing_verification_report",
     "build_network_sensitivity",
     "build_provider_registry",
+    "build_shadow_report",
     "select_providers_for_constraint",
     "summarize_provider_registry",
+    "write_shadow_report",
     "write_flexibility_clearing_scorecard",
     "write_locational_clearing_outputs",
     "write_locational_verification_outputs",
@@ -94,6 +111,10 @@ _MARKET_EXPORTS = {
 
 
 def __getattr__(name: str):
+    if name in _DER_VOLTAGE_EXPORTS:
+        value = getattr(import_module("gridalyn.operations.der_voltage"), name)
+        globals()[name] = value
+        return value
     if name in _FLEXIBILITY_EXPORTS:
         value = getattr(import_module("gridalyn.operations.flexibility"), name)
         globals()[name] = value

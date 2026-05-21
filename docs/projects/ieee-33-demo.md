@@ -1,8 +1,8 @@
 # IEEE 33-Bus Demo
 
 `projects/ieee_33_bus_demo` is a compact demo project for Gridalyn's project
-workflow contract. It uses `pandapower.networks.case33bw`, the common 33-bus
-radial distribution benchmark.
+workflow contract. It uses Gridalyn's IEEE 33-bus benchmark feeder contract,
+which wraps the common 33-bus radial distribution benchmark behind the SDK.
 
 ## Why This Demo Exists
 
@@ -52,7 +52,7 @@ The workflow has two stages:
 | Stage | Purpose |
 | --- | --- |
 | `prepare_workspace` | Creates the project output folders. |
-| `run_ieee33_powerflow` | Loads `case33bw`, runs a pandapower power flow, exports tables, writes a report, and plots the voltage profile. |
+| `run_ieee33_powerflow` | Builds the Gridalyn IEEE 33-bus benchmark feeder, runs a power flow, exports tables, writes a report, and plots the voltage profile. |
 | `generate_operational_scenarios` | Applies deterministic load, PV, and EV scenarios; runs power flow for each; writes comparison tables, report, and figure. |
 
 The generated report records:
@@ -93,13 +93,13 @@ Use this project as the starting point for small experiments:
 
 | Extension | Where to add it |
 | --- | --- |
-| Add load growth or DER scenarios | `scripts/build_ieee33_demo.py` or a new workflow stage |
+| Add load growth or DER scenarios | a Gridalyn scenario contract and a thin project workflow stage |
 | Add operational dispatch records | `outputs/operations/` and a platform operation run report |
 | Add semantic graph export | a new stage that writes graph nodes and edges |
 | Add dashboard catalog metadata | a new stage that materializes dashboard-ready JSON |
 
-Reusable logic should move into `gridalyn/`; project scripts should only bind
-the demo workflow to concrete paths and parameters.
+Reusable logic belongs in `gridalyn/`; project scripts should only bind the
+demo workflow to concrete paths and parameters.
 
 ## Natural Next Extension
 

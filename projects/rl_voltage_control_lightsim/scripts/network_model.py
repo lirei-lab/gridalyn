@@ -8,9 +8,8 @@ from gridalyn.assets import (
     BatteryAsset,
     RadialFeederSpec,
     VoltageControlDERSpec,
-    build_voltage_control_feeder,
 )
-from gridalyn.simulation import VoltageControlEnvironmentSpec
+from gridalyn.simulation import VoltageControlEnvironmentSpec, build_voltage_control_feeder
 
 
 BASE_LOADS_MW = {

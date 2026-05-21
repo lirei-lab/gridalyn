@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandapower as pp
 
-from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager
+from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner
 from gridalyn.twin.core.graph import PowerGridGraph
 
 
@@ -34,12 +34,12 @@ def test_monte_carlo_prepare_grid_returns_cached_net_path(tmp_path: Path) -> Non
         ),
         encoding="utf-8",
     )
-    manager = MonteCarloSimulationManager(
+    runner = PowerflowMonteCarloRunner(
         input_file="examples/tutorials/data/buildings_inside_polygon.geojson",
         cache_dir=str(cache_dir),
         config=config,
     )
 
-    cache_path = manager._prepare_grid()
+    cache_path = runner._prepare_grid()
 
     assert cache_path == str(cache_dir / "pp_net_cache.pkl")

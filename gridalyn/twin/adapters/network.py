@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
-from gridalyn.projects.workflows.digital_twin.base_metadata import write_base_metadata
+from gridalyn.twin.network.metadata import write_base_metadata
 from gridalyn.foundation import ArtifactLayout
 
 
@@ -37,16 +37,6 @@ DEFAULT_NETWORK_ADAPTER_CAPABILITIES = (
     "write_base_metadata",
     "write_validation_report",
 )
-
-
-class _GridalynMigrationUnpickler(pickle.Unpickler):
-    """Load pre-rename cache files without restoring the old package namespace."""
-
-    def find_class(self, module: str, name: str):
-        legacy_root = "geo" + "power"
-        if module == legacy_root or module.startswith(f"{legacy_root}."):
-            module = module.replace(legacy_root, "gridalyn", 1)
-        return super().find_class(module, name)
 
 
 @dataclass(frozen=True)
@@ -266,9 +256,9 @@ def _config_hash(config: dict[str, Any]) -> str:
 
 def _load_cache(cache_dir: Path):
     with (cache_dir / "pp_net_cache.pkl").open("rb") as f:
-        net = _GridalynMigrationUnpickler(f).load()
+        net = pickle.load(f)
     with (cache_dir / "pg_graph_cache.pkl").open("rb") as f:
-        pg = _GridalynMigrationUnpickler(f).load()
+        pg = pickle.load(f)
     return net, pg
 
 

@@ -47,8 +47,8 @@ workflow scripts.
 gridalyn/      canonical SDK package and import namespace
   foundation/   governance, reports, artifact policy, datasets, workspace paths
   twin/         network repository, adapters, graph/database, semantic exports
-  assets/       building, DER, EVSE, load, forecast, and synthetic model synthesis
-  simulation/   pandapower, LightSim2Grid, network impact, validation analytics
+  assets/       building, DER, EVSE, load, forecast, and asset model synthesis
+  simulation/   synthetic-network builders, pandapower, LightSim2Grid, network impact
   operations/   flexibility providers, markets, dispatch, settlement, KPIs
   projects/     governed project manifests, workflow execution, sense checks
   interfaces/   stable CLI, reporting, dashboard/catalog, visualization surfaces
@@ -108,6 +108,10 @@ uv sync --extra all        # full platform runtime
 
 The `dev` extra installs the full runtime plus documentation and test tools
 used by repository checks.
+
+Synthetic load and weather generation helpers are included for reproducible
+public studies. They are documented under `docs/sdk/data-generation.md`; treat
+them as synthetic baselines unless a project explicitly documents calibration.
 
 ## Quickstart
 
@@ -198,12 +202,14 @@ Before publishing a release candidate, run:
 uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn validate --check-project-artifacts
-uv run gridalyn project verify projects/minimal_grid_project
+uv run gridalyn project verify-all
 uv run gridalyn project regression projects/flexibility_cls
+node --test dashboard/src/*.test.js
+(cd dashboard && npm run build)
 ```
 
 These checks cover unit tests, documentation, tracked-artifact hygiene, and the
-project verification/regression baseline.
+project verification/regression baseline plus dashboard health.
 
 ## License
 

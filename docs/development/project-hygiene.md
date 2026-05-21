@@ -1,159 +1,130 @@
 # Project Hygiene
 
-The canonical runtime state for the default digital twin instance lives under
-`instances/default/digital_twin/`. Generated
-local experiments, one-off debug scripts, and embedded database files should
-not be committed as project source.
+Project hygiene keeps Gridalyn readable as a reusable SDK plus governed demo
+projects. Source code, project contracts, tests, and documentation should tell
+the platform story. Generated outputs and local experiments should stay in
+declared artifact locations.
 
-## Removed Legacy Artifacts
+## Source Of Truth
 
-The following paths were removed from version control:
+| Path | Role | Keep Out |
+| --- | --- | --- |
+| `gridalyn/` | Reusable platform SDK code. | Project-specific orchestration, local outputs, generated reports. |
+| `projects/<name>/project.yaml` | Project identity, problem, scenarios, experiments, inputs, outputs, and validation expectations. | Runtime state or implementation logic. |
+| `projects/<name>/workflow.yaml` | Ordered workflow stages and commands. | Reusable modeling, solver, or market algorithms. |
+| `projects/<name>/scripts/` | Thin project orchestration. | Shared platform behavior that should live in `gridalyn/`. |
+| `projects/<name>/outputs/` | Generated project artifacts. | Manually edited source files. |
+| `instances/default/digital_twin/` | Canonical local digital-twin instance consumed by dashboards, reports, semantics, and applications. | Private notebooks, draft material, or ad hoc scratch files. |
+| `examples/` | Optional tutorials and small learning scripts. | Runtime dependencies for governed projects. |
+| `docs/` | User, SDK, operations, project, and developer documentation. | Generated site output or publication drafts. |
 
-- `scratch/`: ad hoc debug and patch scripts for old DSO experiments.
-- `data/twins/`: local FalkorDB database files created by the legacy
-  `DigitalTwinManager`.
+## Artifact Placement
 
-Both paths are now ignored by `.gitignore`.
+Use the project workspace contract for demo outputs:
 
-## Current Source Of Truth
-
-Use these logical folders for active workflows. They live inside the default
-runtime instance at `instances/default/digital_twin/`:
-
-- `instances/default/digital_twin/base`: static grid and building assets.
-- `instances/default/digital_twin/scenarios`: scenario and asset registry metadata.
-- `instances/default/digital_twin/timeseries`: scenario power-flow and load traces.
-- `instances/default/digital_twin/dashboard/catalog.json`: dashboard scenario catalog.
-- `instances/default/digital_twin/semantic`: semantic graph artifacts.
-- `instances/default/digital_twin/reports`: canonical grid reports.
-- `instances/default/digital_twin/flexibility`: provider registry, network sensitivity, and
-  network-impact surrogate artifacts.
-
-## Legacy Export Boundary
-
-`gridalyn.twin.db.DigitalTwinManager` and `DashboardExporter` are retained for
-archived Falkor/DuckDB experiments, but they are not the current dashboard or
-digital-twin publication path.
-
-`gridalyn.twin.db.__all__` now exposes only `FederatedGraphAdapter`. The old
-`DigitalTwinManager`, `FalkorAdapter`, `DuckAdapter`, and `DashboardExporter`
-remain importable through lazy deprecation shims so archived tutorials can still
-run while new application code follows the federated semantic graph contract.
-
-By default, `DigitalTwinManager.export_web_snapshot()` now refuses to write into
-`dashboard/public/data`. Archived demos must opt in explicitly with:
-
-```python
-DigitalTwinManager(
-    twin_id="legacy_demo",
-    allow_legacy_dashboard_public_export=True,
-)
+```text
+projects/<project>/
+  outputs/
+    data/
+    figures/
+    json/
+    manifests/
+    operations/
+    reports/
+    cache/
 ```
 
-New work should publish dashboard state through
-`instances/default/digital_twin/dashboard/catalog.json` and the scenario Parquet files under
-`instances/default/digital_twin/timeseries`.
+Use the digital-twin instance contract for platform-level materialized state:
 
-Kepler/dashboard-public exporters in `gridalyn.twin.io.geo` are also legacy
-publication helpers. They emit a deprecation warning and should only be used for
-archived demos that still consume `dashboard/public`.
-
-The old monolithic `gridalyn/datagen/run_simulation.py` CLS script was removed.
-It duplicated project workflow behavior and referenced obsolete subpackages;
-the maintained path is project workspaces plus the native `gridalyn.projects`,
-`gridalyn.foundation`, `gridalyn.twin`, `gridalyn.simulation`,
-`gridalyn.operations`, and `gridalyn.interfaces` entry points.
-
-GeoJSON preprocessing for synthetic network generation now has a canonical API:
-`gridalyn.twin.adapters.geojson`. Active tests, tutorials, and data-acquisition
-examples should reference that adapter path.
-
-Visualization now lives under `gridalyn.interfaces.viz`. It exposes Folium
-inspection maps via `GridPlotter` for synthetic-grid development and tutorials.
-Offline MP4/GIF animation code that targeted legacy Kepler Parquet snapshots was
-removed from the package because the dashboard and project reports now consume
-canonical digital-twin artifacts directly.
-
-The legacy tutorial `examples/tutorials/create_grid_with_datagen_parallel.py`
-now requires:
-
-```bash
---allow-legacy-dashboard-public
+```text
+instances/default/digital_twin/
+  base/
+  models/
+  scenarios/
+  timeseries/
+  flexibility/
+  operations/
+  semantic/
+  reports/
+  dashboard/
 ```
 
-## Current Build Entry Point
+If an artifact proves one project workflow, put it under that project's
+`outputs/`. If an artifact is part of the default platform instance consumed by
+dashboard, semantic, reporting, or application surfaces, put it under
+`instances/default/digital_twin/`.
 
-Use the digital-twin build orchestrator for active regeneration work:
+## Project Script Boundary
 
-```bash
-uv run gridalyn twin build --dry-run --skip-heavy
-uv run gridalyn twin build --include-network-impact
-```
+Project scripts should be thin. They may:
 
-The orchestrator writes `instances/default/digital_twin/reports/digital_twin_build_manifest.json`
-and keeps generated artifacts inside the canonical `instances/default/digital_twin/` contract.
+- load project-local input files;
+- pin demo parameters;
+- call SDK APIs from `gridalyn/`;
+- write declared outputs;
+- assemble project reports from platform report helpers.
 
-## Removed Paper Snapshot
+Project scripts should not:
 
-`paper/data` was removed from the active tree. It contained two small Monte
-Carlo snapshots:
+- define reusable asset models, solver builders, market engines, or reporting
+  frameworks;
+- hard-code paths from another project;
+- publish dashboard state directly;
+- create hidden runtime dependencies on `examples/`;
+- manually edit generated outputs.
 
-- `substation_baseline_mc.parquet`;
-- `substation_powerflow_mc.parquet`.
+When two projects need the same function, move it into the owning SDK module
+before copying it across demos.
 
-Those files duplicated data that now belongs under
-`projects/flexibility_cls/outputs/data` or `instances/default/digital_twin/timeseries`.
-`MonteCarloSimulationManager.export_to_parquet()` no longer defaults to
-`paper/data`; callers must pass an explicit output directory only for legacy
-reproducibility snapshots.
+## Dashboard And Reporting Boundary
 
-## Similar Cleanup Candidates
+Dashboard-facing state should flow through canonical contracts:
 
-The following tracked paths have the same smell as `paper/data`: they are
-generated snapshots, build outputs, caches, or archived copies outside the
-current digital-twin contract.
+- `instances/default/digital_twin/dashboard/catalog.json`;
+- semantic graph artifacts under `instances/default/digital_twin/semantic/`;
+- canonical reports under `instances/default/digital_twin/reports/`;
+- project reports under `projects/<project>/outputs/reports/`;
+- operations catalogs under `outputs/operations/` or
+  `instances/default/digital_twin/operations/`.
 
-- `_build/`: tracked Sphinx/MkDocs HTML build output. Regenerate locally instead
-  of versioning it.
-- `dashboard/public/`: removed from the active tree. It was a legacy
-  Kepler/static dashboard bundle; the current dashboard reads mounted
-  `instances/default/digital_twin/` and `projects/*/outputs/` artifacts.
-- `examples/generated/outputs/`: tutorial-only generated maps or caches from
-  examples. Project runtime caches belong under `projects/*/outputs/cache`.
-- `examples/generated/cache/` and root `cache/`: request/download cache JSON files.
-- old paper and figure backup copies: preserve in git history or an external
-  archive, not as active source.
+Visualization code belongs under `gridalyn.interfaces.viz` when it is reusable.
+Project-local figures are acceptable when they explain one demo result and are
+declared in the project contract.
 
-Do not remove the default twin instance wholesale because it is the canonical
-platform artifact layer. Its physical home is
-`instances/default/digital_twin/`. Project-generated data
-belongs under `projects/*/outputs`; it is not the active dashboard or package
-source path.
+## Examples Policy
 
-## Examples Cleanup Policy
-
-`examples/` is now organized around public tutorials and data-acquisition
-demos. Production workflows should use
-`gridalyn.interfaces.cli` commands such as:
+`examples/` is tutorial material. Production workflows should use platform CLI
+commands and governed project contracts:
 
 ```bash
 uv run gridalyn twin build --dry-run
-uv run gridalyn market verify-clearing --scenario-id S4
+uv run gridalyn project run projects/<project>
+uv run gridalyn project verify projects/<project>
 uv run gridalyn semantic validate
 uv run gridalyn dashboard catalog
 ```
 
-Compatibility scripts no longer live under `examples/`. The first extracted workflows are
-`gridalyn.projects.workflows.digital_twin.ev_scenarios`,
-`gridalyn.projects.workflows.digital_twin.ev_timeseries`, and
-`gridalyn.projects.workflows.flexibility.locational_verification`. Generated Python caches can
-be deleted at any time. Data caches under `examples/generated/cache`,
-`examples/generated/outputs`, or root `cache` are tutorial or local caches and
-must not be project runtime dependencies.
+Shared grid and geography configuration belongs under `configs/`, not
+`examples/`. Tutorial-generated maps, caches, and temporary outputs should not
+be project runtime dependencies.
 
-Shared grid and geography configurations live under `configs/`, not
-`examples/`. Project manifests, workflows, and reusable package defaults should
-reference `configs/grid/*.json` and `configs/geography/*.json` so examples stay
-tutorial-only.
+## Cleanliness Checks
 
-For the active cleanup queue, see [Cleanup Inventory](cleanup-inventory.md).
+Run the relevant checks before publishing or reviewing a change:
+
+```bash
+uv run gridalyn validate
+uv run gridalyn project verify-all
+uv run --with pytest python -m pytest -q
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
+git diff --check
+```
+
+For a smaller project-only change, start with:
+
+```bash
+uv run gridalyn project verify projects/<project>
+```
+
+The release checklist in [Release Readiness](../platform/release-readiness.md)
+combines these checks with dashboard validation.

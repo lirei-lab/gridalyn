@@ -3,14 +3,55 @@ kind: StudyProject
 metadata:
   name: ieee_33_bus_demo
   version: 0.1.0
-  description: Demo project using the well-known 33-bus distribution feeder available through pandapower.
+  description: Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.
 spec:
   pathBase: project
+  problem:
+    type: benchmark_powerflow_scenarios
+    dataset: ieee_33_bus_benchmark
+    environment: gridalyn_powerflow
+    objective: Compare deterministic operating scenarios on a known radial benchmark feeder.
+    model:
+      type: simulator
+      name: gridalyn_ieee_33_bus_benchmark
+    spaces:
+      state: feeder_load_generation_condition
+      action: scenario_overlay
+      output: voltage_and_loading_metrics
+    scenarios:
+      - id: baseline
+        role: benchmark_base_case
+        description: Original IEEE 33-bus feeder.
+      - id: load_growth_20
+        role: demand_growth_case
+        description: Uniform 20 percent demand growth.
+      - id: pv_midday
+        role: distributed_generation_case
+        description: Midday PV at selected downstream buses.
+      - id: ev_evening_peak
+        role: electrification_stress_case
+        description: Evening EV charging demand at selected downstream buses.
+      - id: pv_plus_ev
+        role: mixed_der_case
+        description: Combined PV and EV condition for a mixed operating case.
+  experiments:
+    - id: deterministic_scenario_comparison
+      scenarios:
+        - baseline
+        - load_growth_20
+        - pv_midday
+        - ev_evening_peak
+        - pv_plus_ev
+      objective: Rank benchmark operating cases by voltage and loading impact.
+      metrics:
+        - min_voltage_pu
+        - voltage_violation_count
+        - max_line_loading_percent
   inputs:
     sourceNetwork:
       name: IEEE 33-bus distribution feeder demo
-      provider: pandapower.networks.case33bw
-      note: The pandapower case is the common Baran-Wu 33-bus radial distribution benchmark.
+      provider: gridalyn.assets.modeling.IEEE_33_BUS_BENCHMARK
+      note: Gridalyn wraps the common Baran-Wu 33-bus radial distribution benchmark as a platform model contract.
   artifacts:
     project:
       data: outputs/data

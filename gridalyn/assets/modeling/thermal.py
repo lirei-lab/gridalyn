@@ -7,13 +7,11 @@ from typing import Iterable
 
 import numpy as np
 
-from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
-from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.modeling.transformers import TransformerThermalModel
 
 
 THERMAL_FORECAST_SOURCE = "TMY peak cold day"
 THERMAL_LIMIT_MODEL = "IEEE C57.91 steady-state inverse"
-DEFAULT_RESOLUTION_MINUTES = 5
 DEFAULT_S_RATED_KVA = 15_000.0
 DEFAULT_THETA_MAX_C = 110.0
 
@@ -50,33 +48,6 @@ def build_thermal_forecast_from_ambient(
     )
 
 
-def build_thermal_forecast(
-    n_steps: int,
-    resolution_minutes: int = DEFAULT_RESOLUTION_MINUTES,
-    *,
-    s_rated_kva: float = DEFAULT_S_RATED_KVA,
-    theta_max: float = DEFAULT_THETA_MAX_C,
-    duration_hours: int = 28,
-) -> ThermalForecast:
-    """Build an ambient forecast and dynamic transformer limit trace from TMY data."""
-    tmy = download_tmy()
-    cold_day = select_peak_load_day(tmy, duration_hours=duration_hours)
-    ambient_c = (
-        cold_day["temp_air"]
-        .resample(f"{resolution_minutes}min")
-        .interpolate()
-        .values[:n_steps]
-        .astype(float)
-    )
-    return build_thermal_forecast_from_ambient(
-        ambient_c,
-        resolution_minutes=resolution_minutes,
-        s_rated_kva=s_rated_kva,
-        theta_max=theta_max,
-        start_time=str(cold_day.index.min()),
-    )
-
-
 def thermal_forecast_metadata(
     forecast: ThermalForecast,
     peak_idx: int | None = None,
@@ -108,3 +79,14 @@ def thermal_forecast_metadata(
         metadata["dynamic_limit_winter_design_mw"] = float(winter_design_limit_mw)
 
     return metadata
+
+
+__all__ = [
+    "DEFAULT_S_RATED_KVA",
+    "DEFAULT_THETA_MAX_C",
+    "THERMAL_FORECAST_SOURCE",
+    "THERMAL_LIMIT_MODEL",
+    "ThermalForecast",
+    "build_thermal_forecast_from_ambient",
+    "thermal_forecast_metadata",
+]

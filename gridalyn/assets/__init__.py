@@ -7,39 +7,26 @@ from importlib import import_module
 _LAZY_EXPORTS = {
     "BuildingDownloader": ("gridalyn.twin.adapters", "BuildingDownloader"),
     "BatteryAsset": ("gridalyn.assets.modeling", "BatteryAsset"),
+    "DERDispatchAsset": ("gridalyn.assets.modeling", "DERDispatchAsset"),
+    "IEEE_33_BUS_BENCHMARK": ("gridalyn.assets.modeling", "IEEE_33_BUS_BENCHMARK"),
+    "IeeeBenchmarkFeederSpec": ("gridalyn.assets.modeling", "IeeeBenchmarkFeederSpec"),
     "FakeGeoJSONGenerator": ("gridalyn.twin.adapters", "FakeGeoJSONGenerator"),
     "GeoProcessor": ("gridalyn.twin.adapters", "GeoProcessor"),
     "PVAsset": ("gridalyn.assets.modeling", "PVAsset"),
     "ProsumerAsset": ("gridalyn.assets.modeling", "ProsumerAsset"),
     "RadialFeederSpec": ("gridalyn.assets.modeling", "RadialFeederSpec"),
-    "SyntheticNetworkBuildResult": ("gridalyn.assets.modeling", "SyntheticNetworkBuildResult"),
     "ThermalForecast": ("gridalyn.assets.modeling", "ThermalForecast"),
+    "TransformerThermalModel": ("gridalyn.assets.modeling", "TransformerThermalModel"),
     "VoltageControlDERSpec": ("gridalyn.assets.modeling", "VoltageControlDERSpec"),
     "build_asset_registry": ("gridalyn.assets.modeling", "build_asset_registry"),
-    "build_radial_pandapower_feeder": (
-        "gridalyn.assets.modeling",
-        "build_radial_pandapower_feeder",
-    ),
-    "build_synthetic_network_from_geojson": (
-        "gridalyn.assets.modeling",
-        "build_synthetic_network_from_geojson",
-    ),
-    "build_thermal_forecast": ("gridalyn.assets.modeling", "build_thermal_forecast"),
+    "build_thermal_forecast": ("gridalyn.assets.datagen", "build_thermal_forecast"),
     "build_thermal_forecast_from_ambient": (
         "gridalyn.assets.modeling",
         "build_thermal_forecast_from_ambient",
     ),
-    "build_voltage_control_feeder": (
+    "der_dispatch_assets_to_frame": (
         "gridalyn.assets.modeling",
-        "build_voltage_control_feeder",
-    ),
-    "apply_battery_dispatch_to_pandapower": (
-        "gridalyn.assets.modeling",
-        "apply_battery_dispatch_to_pandapower",
-    ),
-    "apply_pv_generation_to_pandapower": (
-        "gridalyn.assets.modeling",
-        "apply_pv_generation_to_pandapower",
+        "der_dispatch_assets_to_frame",
     ),
     "calculate_area": ("gridalyn.twin.adapters", "calculate_area"),
     "calculate_centroid": ("gridalyn.twin.adapters", "calculate_centroid"),
@@ -60,6 +47,18 @@ _LAZY_EXPORTS = {
     "voltage_control_assets_to_frame": (
         "gridalyn.assets.modeling",
         "voltage_control_assets_to_frame",
+    ),
+    "validate_radial_feeder_spec": (
+        "gridalyn.assets.modeling",
+        "validate_radial_feeder_spec",
+    ),
+    "validate_der_dispatch_assets": (
+        "gridalyn.assets.modeling",
+        "validate_der_dispatch_assets",
+    ),
+    "validate_voltage_control_der": (
+        "gridalyn.assets.modeling",
+        "validate_voltage_control_der",
     ),
     "write_building_model_artifacts": ("gridalyn.assets.modeling", "write_building_model_artifacts"),
     "write_scenario_model_artifacts": (

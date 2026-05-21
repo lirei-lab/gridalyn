@@ -116,6 +116,15 @@ def test_project_sense_check_runs_declarative_rules(tmp_path) -> None:
                 "metadata": {"name": "declarative_project", "version": "0.1.0"},
                 "spec": {
                     "pathBase": "project",
+                    "problem": {
+                        "type": "test_problem",
+                        "dataset": "test_dataset",
+                        "environment": "test_environment",
+                        "objective": "Validate declarative sense checks.",
+                        "model": {"type": "workflow", "name": "declarative_project"},
+                        "spaces": {"state": "test_state"},
+                        "scenarios": [{"id": "baseline", "role": "test_baseline"}],
+                    },
                     "inputs": {},
                     "artifacts": {},
                     "workflow": {"file": "workflow.yaml"},

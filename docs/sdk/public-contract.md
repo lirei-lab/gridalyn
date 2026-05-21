@@ -26,19 +26,19 @@ Use domain modules when you are building reusable platform capabilities:
 | Module | Use it for |
 | --- | --- |
 | `gridalyn.twin` | Durable network topology, adapters, semantic graph, and repository access. |
-| `gridalyn.assets` | Synthetic network, building, EVSE, DER, thermal, and load model generation. |
-| `gridalyn.simulation` | Power-flow engines, network impact, validation, and surrogate-ready features. |
+| `gridalyn.assets` | Building, EVSE, DER, thermal, load, forecast, and asset-table generation. |
+| `gridalyn.simulation` | Synthetic-network building, power-flow engines, network impact, validation, and surrogate-ready features. |
 | `gridalyn.operations` | Flexibility providers, clearing, dispatch, settlement, and KPIs. |
 | `gridalyn.foundation` | Validation, manifests, artifact policy, report metadata, and governance. |
+| `gridalyn.projects` | Project manifests, workflow execution, project status, regression, and sense checks. |
 | `gridalyn.interfaces` | CLI, dashboard/report/catalog helpers, graph-facing adapters, and visualization. |
 
 ## Seven-Module Direction
 
 The public contract includes seven larger capability areas:
 
-```text
-foundation -> twin -> assets -> simulation -> operations -> projects -> interfaces
-```
+They are a vocabulary, not a single linear import chain. Lower layers own
+durable contracts; upper layers orchestrate or expose them.
 
 The seven modules are the product vocabulary:
 
@@ -46,8 +46,8 @@ The seven modules are the product vocabulary:
 from gridalyn import foundation, twin, assets, simulation, operations, projects, interfaces
 ```
 
-Development notes may track internal cleanup work, but public applications
-should treat these seven modules as the stable import surface.
+Public applications should treat these seven modules as the stable import
+surface.
 
 ## Project Scripts
 
@@ -76,16 +76,17 @@ Use these output folders consistently:
 
 ## Project Boundary Rule
 
-Do not depend on private helper modules from another project workspace. A study
-can depend on `gridalyn`, declared inputs, and generated artifacts, but not on
+Do not depend on helper modules from another project workspace. A study can
+depend on `gridalyn`, declared inputs, and generated artifacts, but not on
 hidden scripts inside a different study.
 
 ## Synthetic Network API
 
-The assets module exposes the GeoJSON-to-network builder:
+The GeoJSON-to-pandapower builder lives in `gridalyn.simulation`, because it
+creates solver-ready network objects and optional validation reports:
 
 ```python
-from gridalyn.assets import build_synthetic_network_from_geojson
+from gridalyn.simulation import build_synthetic_network_from_geojson
 
 result = build_synthetic_network_from_geojson(
     footprints_path="projects/my_project/inputs/buildings.geojson",
@@ -97,6 +98,6 @@ result = build_synthetic_network_from_geojson(
 ```
 
 This is the preferred path for project workflows that need synthetic networks.
-Lower-level `PowerGridGraph` methods remain available for library development
-and experiments, but project stages should prefer the builder because it emits
-a consistent validation report and cache contract.
+Lower-level topology builders remain internal library development tools. Public
+project stages should prefer the builder because it emits a consistent
+validation report and cache contract.

@@ -112,7 +112,7 @@ flowchart LR
     raw[OSMnx or Microsoft footprints] --> clip[Clip to study polygon]
     clip --> footprints[Building footprint GeoJSON]
     footprints --> cache[prepare_topology_cache]
-    cache --> pg[PowerGridGraph cache]
+    cache --> pg[topology cache]
     cache --> pp[pandapower cache]
     pp --> validation[pandapower validation]
 ```
@@ -169,30 +169,31 @@ data generation, case-study analysis figures, validation checks, operational
 artifact materialization, and canonical report generation in one reproducible
 contract:
 
-1. `prepare_topology_cache`
-2. `generate_stochastic_profiles`
-3. `congestion_forecast`
-4. `market_allocation`
-5. `pandapower_validation`
-6. `plot_stage_1_stacked_ev`
-7. `plot_stage_1_load_distributions`
-8. `plot_stage_1_ev_summary`
-9. `plot_stage_1_targeted_transformer_load`
-10. `plot_stage_2_grid_exceedance`
-11. `plot_stage_2_chance_pdf`
-12. `plot_stage_2_temporal_heatmap`
-13. `plot_stage_2_temperature_heatmap`
-14. `plot_stage_3_day_ahead`
-15. `plot_stage_3_profiled`
-16. `plot_stage_3_power_heatmap`
-17. `plot_stage_4_realization`
-18. `plot_stage_4_aggregator_trajectory`
-19. `plot_stage_4_multiscenario`
-20. `plot_stage_4_aggregator_deficits`
-21. `plot_stage_5_settlement`
-22. `validate_study_outputs`
-23. `materialize_operational_artifacts`
-24. `build_study_reports`
+1. `prepare_workspace`
+2. `prepare_topology_cache`
+3. `generate_stochastic_profiles`
+4. `congestion_forecast`
+5. `market_allocation`
+6. `pandapower_validation`
+7. `plot_stage_1_stacked_ev`
+8. `plot_stage_1_load_distributions`
+9. `plot_stage_1_ev_summary`
+10. `plot_stage_1_targeted_transformer_load`
+11. `plot_stage_2_grid_exceedance`
+12. `plot_stage_2_chance_pdf`
+13. `plot_stage_2_temporal_heatmap`
+14. `plot_stage_2_temperature_heatmap`
+15. `plot_stage_3_day_ahead`
+16. `plot_stage_3_profiled`
+17. `plot_stage_3_power_heatmap`
+18. `plot_stage_4_realization`
+19. `plot_stage_4_aggregator_trajectory`
+20. `plot_stage_4_multiscenario`
+21. `plot_stage_4_aggregator_deficits`
+22. `plot_stage_5_settlement`
+23. `validate_study_outputs`
+24. `materialize_operational_artifacts`
+25. `build_study_reports`
 
 The YAML follows the `apiVersion`, `kind`, `metadata`, `spec` convention:
 
@@ -220,9 +221,10 @@ nested `../../` paths from the project folder.
 
 The workflow preserves this stage order:
 
-1. `prepare_topology_cache.py`
+1. `gridalyn project prepare-workspace`
+2. `prepare_topology_cache.py`
    - Reads the project building-footprint GeoJSON.
-   - Builds or refreshes the synthetic PowerGridGraph and pandapower topology cache.
+   - Builds or refreshes the synthetic topology and pandapower cache.
    - Writes `projects/flexibility_cls/outputs/cache/building_footprint_validation_report.json`.
    - Writes `projects/flexibility_cls/outputs/cache/pg_graph_cache.pkl`.
    - Writes `projects/flexibility_cls/outputs/cache/pp_net_cache.pkl`.

@@ -15,7 +15,7 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 configure_cli_environment()
 
 from gridalyn.foundation.platform.validation import validate_workspace
-from gridalyn.foundation.platform.projects import list_projects
+from gridalyn.projects.api import list_projects
 
 
 OPTIONAL_CAPABILITY_MODULES = {
@@ -35,6 +35,24 @@ DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
     "dashboard": ("gridalyn.interfaces.cli.dashboard", "Generate and validate dashboard catalogs.", ["dash"]),
     "platform": ("gridalyn.interfaces.cli.platform", "Run platform governance and artifact checks.", ["governance"]),
 }
+
+
+def _domain_module_name(token: str) -> str | None:
+    for name, (module_name, _help_text, aliases) in DOMAIN_MODULES.items():
+        if token == name or token in aliases:
+            return module_name
+    return None
+
+
+def _delegate_domain_help(argv: list[str] | None) -> int | None:
+    tokens = list(sys.argv[1:] if argv is None else argv)
+    if len(tokens) >= 2 and tokens[1] in {"-h", "--help"}:
+        module_name = _domain_module_name(tokens[0])
+        if module_name is None:
+            return None
+        module = importlib.import_module(module_name)
+        return module.main(["--help"])
+    return None
 
 
 def _delegate_module(module_name: str):
@@ -151,6 +169,9 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
 
 
 def main(argv: list[str] | None = None) -> int:
+    delegated_help = _delegate_domain_help(argv)
+    if delegated_help is not None:
+        return delegated_help
     args, _extra_args = parse_args(argv)
     return args.handler(args)
 

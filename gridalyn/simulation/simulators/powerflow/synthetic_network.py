@@ -1,4 +1,4 @@
-"""Public synthetic distribution-network generation API.
+"""Synthetic distribution-network generation for pandapower simulations.
 
 This module turns building-footprint GeoJSON into a reproducible Gridalyn
 network bundle: a :class:`PowerGridGraph`, a pandapower network, optional cache
@@ -56,10 +56,33 @@ def build_synthetic_network_from_geojson(
             convergence in the report.
     """
 
-    footprints = Path(footprints_path)
     config_file = Path(config_path)
-    output_dir = Path(out_dir) if out_dir is not None else None
     config = _load_json(config_file)
+    return build_synthetic_network_from_config(
+        footprints_path=footprints_path,
+        config=config,
+        out_dir=out_dir,
+        config_source=config_file,
+        clustering_crs=clustering_crs,
+        write_cache=write_cache,
+        run_powerflow=run_powerflow,
+    )
+
+
+def build_synthetic_network_from_config(
+    *,
+    footprints_path: Path | str,
+    config: dict[str, Any],
+    out_dir: Path | str | None = None,
+    config_source: Path | str = "runtime_config",
+    clustering_crs: str | int | None = "auto",
+    write_cache: bool = False,
+    run_powerflow: bool = False,
+) -> SyntheticNetworkBuildResult:
+    """Build a synthetic distribution network from an explicit config mapping."""
+
+    footprints = Path(footprints_path)
+    output_dir = Path(out_dir) if out_dir is not None else None
 
     power_grid = PowerGridGraph()
     buildings = power_grid.extract_building_centers_and_areas(
@@ -74,7 +97,7 @@ def build_synthetic_network_from_geojson(
     topology = _topology_report(power_grid)
     report = _validation_report(
         footprints_path=footprints,
-        config_path=config_file,
+        config_source=config_source,
         config=config,
         power_grid=power_grid,
         buildings_count=len(buildings),
@@ -200,7 +223,7 @@ def _topology_report(power_grid: PowerGridGraph) -> dict[str, Any]:
 def _validation_report(
     *,
     footprints_path: Path,
-    config_path: Path,
+    config_source: Path | str,
     config: dict[str, Any],
     power_grid: PowerGridGraph,
     buildings_count: int,
@@ -218,8 +241,8 @@ def _validation_report(
         "source": {
             "footprints_path": str(footprints_path),
             "footprints_sha256": _sha256(footprints_path),
-            "config_path": str(config_path),
-            "config_sha256": _sha256(config_path),
+            "config_path": str(config_source),
+            "config_sha256": _config_sha256(config, config_source),
         },
         "coordinate_reference_systems": {
             "source_crs": power_grid.source_crs,
@@ -267,6 +290,14 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _config_sha256(config: dict[str, Any], source: Path | str) -> str:
+    source_path = Path(source)
+    if source_path.exists():
+        return _sha256(source_path)
+    payload = json.dumps(config, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _write_cache(out_dir: Path, power_grid: PowerGridGraph, net: pp.pandapowerNet) -> None:
     with (out_dir / "pg_graph_cache.pkl").open("wb") as handle:
         pickle.dump(power_grid, handle)
@@ -276,5 +307,6 @@ def _write_cache(out_dir: Path, power_grid: PowerGridGraph, net: pp.pandapowerNe
 
 __all__ = [
     "SyntheticNetworkBuildResult",
+    "build_synthetic_network_from_config",
     "build_synthetic_network_from_geojson",
 ]

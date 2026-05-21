@@ -45,7 +45,7 @@ def main():
     t_out_trace = cold_day["temp_air"].resample(f"{RES_MINUTES}min").interpolate().values
     
     # Initialize components
-    from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+    from gridalyn.assets.modeling.transformers import TransformerThermalModel
     thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
     network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
     dt_h = RES_MINUTES / 60.0
@@ -76,7 +76,6 @@ def main():
         p_limit[t] = thermal_model.max_load_for_temp(t_out_trace[t]) / 1000.0
         
     contracted_soft_mw = df_res["contracted_soft_kw"].values / 1000.0
-    expected_hard_mw = df_res["hard_cls_kw"].values / 1000.0
     
     from scipy.stats import norm
     z_score = norm.ppf(1 - 0.05)

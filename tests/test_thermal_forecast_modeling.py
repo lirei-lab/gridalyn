@@ -1,6 +1,6 @@
 import numpy as np
 
-from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
+from gridalyn.assets.modeling.transformers import TransformerThermalModel
 from projects.flexibility_cls.scripts import config as ev_project_config
 
 
@@ -35,7 +35,7 @@ def test_core_thermal_forecast_builds_dynamic_limit_from_ambient_trace():
 
 
 def test_ev_capacity_thermal_forecast_uses_project_parameters():
-    from gridalyn.assets.modeling.thermal import build_thermal_forecast as core_build
+    from gridalyn.assets.datagen import build_thermal_forecast as core_build
     from projects.flexibility_cls.scripts.thermal_forecast import (
         build_thermal_forecast as project_build,
     )
@@ -51,4 +51,3 @@ def test_ev_capacity_thermal_forecast_uses_project_parameters():
     assert project_forecast.resolution_minutes == ev_project_config.RES_MINUTES
     np.testing.assert_allclose(project_forecast.ambient_c, core_forecast.ambient_c)
     np.testing.assert_allclose(project_forecast.p_limit_kw, core_forecast.p_limit_kw)
-

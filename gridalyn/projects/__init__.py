@@ -6,6 +6,9 @@ from importlib import import_module
 
 from gridalyn.projects.loader import load_workflow
 from gridalyn.projects.models import (
+    ExperimentSpec,
+    ProblemSpec,
+    ScenarioSpec,
     StudyProject,
     ValidationReport,
     WorkflowSpec,
@@ -14,22 +17,26 @@ from gridalyn.projects.models import (
 from gridalyn.projects.validation import validate_project_file
 
 _LAZY_EXPORTS = {
-    "CreatedProject": ("gridalyn.foundation.platform.projects", "CreatedProject"),
-    "init_project": ("gridalyn.foundation.platform.projects", "init_project"),
-    "list_projects": ("gridalyn.foundation.platform.projects", "list_projects"),
-    "load_project": ("gridalyn.foundation.platform.projects", "load_project"),
-    "plan_project": ("gridalyn.foundation.platform.projects", "plan_project"),
-    "project_regression": ("gridalyn.foundation.platform.projects", "project_regression"),
-    "project_sense_check": ("gridalyn.foundation.platform.projects", "project_sense_check"),
-    "project_status": ("gridalyn.foundation.platform.projects", "project_status"),
-    "project_verify": ("gridalyn.foundation.platform.projects", "project_verify"),
-    "project_verify_all": ("gridalyn.foundation.platform.projects", "project_verify_all"),
-    "run_workflow": ("gridalyn.foundation.platform.projects", "run_workflow"),
-    "validate_project": ("gridalyn.foundation.platform.projects", "validate_project"),
+    "CreatedProject": ("gridalyn.projects.api", "CreatedProject"),
+    "init_project": ("gridalyn.projects.api", "init_project"),
+    "list_projects": ("gridalyn.projects.api", "list_projects"),
+    "load_project": ("gridalyn.projects.api", "load_project"),
+    "plan_project": ("gridalyn.projects.api", "plan_project"),
+    "prepare_project_workspace": ("gridalyn.projects.api", "prepare_project_workspace"),
+    "project_regression": ("gridalyn.projects.api", "project_regression"),
+    "project_sense_check": ("gridalyn.projects.api", "project_sense_check"),
+    "project_status": ("gridalyn.projects.api", "project_status"),
+    "project_verify": ("gridalyn.projects.api", "project_verify"),
+    "project_verify_all": ("gridalyn.projects.api", "project_verify_all"),
+    "run_workflow": ("gridalyn.projects.api", "run_workflow"),
+    "validate_project": ("gridalyn.projects.api", "validate_project"),
 }
 
 __all__ = [
     "CreatedProject",
+    "ExperimentSpec",
+    "ProblemSpec",
+    "ScenarioSpec",
     "StudyProject",
     "ValidationReport",
     "WorkflowSpec",
@@ -39,6 +46,7 @@ __all__ = [
     "load_project",
     "load_workflow",
     "plan_project",
+    "prepare_project_workspace",
     "project_regression",
     "project_sense_check",
     "project_status",

@@ -4,7 +4,10 @@ import json
 from pathlib import Path
 
 from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
-from gridalyn.assets.modeling.synthetic_network import build_synthetic_network_from_geojson
+from gridalyn.simulation.simulators.powerflow.synthetic_network import (
+    build_synthetic_network_from_config,
+    build_synthetic_network_from_geojson,
+)
 
 
 def test_synthetic_network_generator_builds_report_and_cache(tmp_path: Path) -> None:
@@ -63,3 +66,28 @@ def test_synthetic_network_generator_can_run_powerflow_on_small_case(
     assert result.validation_report["powerflow"]["attempted"] is True
     assert result.validation_report["powerflow"]["converged"] is True
     assert result.net.converged is True
+
+
+def test_synthetic_network_generator_accepts_runtime_config_mapping(
+    tmp_path: Path,
+) -> None:
+    footprints_path = tmp_path / "buildings.geojson"
+    generator = FakeGeoJSONGenerator(grid_size=2, seed=17, rectangular=True)
+    footprints_path.write_text(
+        json.dumps(generator.generate_geojson()),
+        encoding="utf-8",
+    )
+    config = json.loads(Path("configs/grid/config.json").read_text(encoding="utf-8"))
+
+    result = build_synthetic_network_from_config(
+        footprints_path=footprints_path,
+        config=config,
+        config_source="test_runtime_config",
+        out_dir=tmp_path / "network",
+        write_cache=True,
+    )
+
+    assert result.validation_report["valid"] is True
+    assert result.validation_report["source"]["config_path"] == "test_runtime_config"
+    assert result.validation_report["source"]["config_sha256"]
+    assert (tmp_path / "network" / "pp_net_cache.pkl").exists()

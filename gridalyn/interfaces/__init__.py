@@ -5,7 +5,6 @@ from __future__ import annotations
 from importlib import import_module
 
 _LAZY_EXPORTS = {
-    "FederatedGraphAdapter": ("gridalyn.twin.db", "FederatedGraphAdapter"),
     "GridPlotter": ("gridalyn.interfaces.viz.interactive", "GridPlotter"),
     "build_dashboard_catalog": ("gridalyn.interfaces.reporting", "build_dashboard_catalog"),
     "build_digital_twin_reports": ("gridalyn.interfaces.reporting", "build_digital_twin_reports"),

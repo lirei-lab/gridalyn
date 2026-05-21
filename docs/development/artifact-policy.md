@@ -2,7 +2,7 @@
 
 Gridalyn tracks source, contracts, tests, documentation, and one minimal demo
 dataset. It does not track generated simulation outputs, compiled documents,
-caches, heavyweight data, or private publication workspaces.
+caches, heavyweight data, or publication workspaces.
 
 ## Tracked
 
@@ -21,7 +21,7 @@ caches, heavyweight data, or private publication workspaces.
 - `examples/generated/cache/` and `examples/generated/outputs/`;
 - generated `instances/*/digital_twin/**/*.parquet` files;
 - dashboard public generated data bundles;
-- paper, presentation, review, and publication working files;
+- publication drafts, presentations, review material, and working files;
 - LaTeX build outputs and compiled PDFs;
 - local caches, scratch files, node modules, and virtual environments.
 
@@ -53,14 +53,12 @@ uv run gridalyn platform check-artifacts --summary-only
 
 Expected result for a healthy working tree: `"valid": true`.
 
-## Transitional Samples
+## Tutorial Samples
 
-The release branch still carries a small number of historical tutorial inputs
-outside `examples/tutorials/data/minimal/`, most notably the clipped
-`buildings_inside_polygon.geojson` sample used by the `flexibility_cls`
-workflow and real-data grid tutorials. Treat these as temporary reference
-inputs. New tutorials should either use the minimal dataset or declare an
-explicit project input under `projects/<name>/inputs/`.
+Tutorial inputs outside `examples/tutorials/data/minimal/` should remain small,
+documented, and tied to a runnable example. New tutorials should either use the
+minimal dataset or declare an explicit project input under
+`projects/<name>/inputs/`.
 
 ## Full Artifacts
 
@@ -71,9 +69,10 @@ DVC, a separate publication repository, or a dedicated
 under `instances/default/digital_twin/`. Additional runtime instances should
 use the same `instances/<name>/digital_twin/` structure.
 
-## Clean Baseline Procedure
+## Baseline Procedure
 
-Use this only after the current migration branch is archived.
+Use this procedure only when maintainers intentionally create a fresh public
+baseline.
 
 1. Create an archive branch or tag for the current state.
 2. Create a clean orphan branch or a separate clean repository.
@@ -85,4 +84,5 @@ Use this only after the current migration branch is archived.
 git commit -m "Initialize Gridalyn platform baseline"
 ```
 
-Do not run destructive cleanup commands on the working migration branch.
+Do not run destructive repository commands without an explicit maintainer
+decision.

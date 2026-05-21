@@ -5,9 +5,11 @@ from gridalyn.assets import (
     BatteryAsset,
     ProsumerAsset,
     PVAsset,
+    prosumer_assets_to_frame,
+)
+from gridalyn.simulation import (
     apply_battery_dispatch_to_pandapower,
     apply_pv_generation_to_pandapower,
-    prosumer_assets_to_frame,
 )
 
 

@@ -66,13 +66,16 @@ contracts in `gridalyn.assets`:
 - `ProsumerAsset`;
 - `PVAsset`;
 - `BatteryAsset`;
-- `prosumer_assets_to_frame`;
-- `apply_pv_generation_to_pandapower`;
-- `apply_battery_dispatch_to_pandapower`.
+- `prosumer_assets_to_frame`.
+
+The project maps those asset contracts into a solver network through
+`gridalyn.simulation.apply_pv_generation_to_pandapower` and
+`gridalyn.simulation.apply_battery_dispatch_to_pandapower`.
 
 That keeps the project focused on scenario setup and market orchestration. The
-asset identity, tabular contract, and pandapower mapping can be reused by other
-projects, dashboards, semantic-graph exporters, or future service APIs.
+asset identity and tabular contract can be reused by other projects, dashboards,
+semantic-graph exporters, or future service APIs while solver mappings remain
+in the simulation layer.
 
 ## Market Logic
 

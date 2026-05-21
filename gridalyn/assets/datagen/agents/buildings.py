@@ -1,5 +1,4 @@
-"""
-building.py – Stochastic building thermal model + background load.
+"""Stochastic residential building thermal model.
 
 Each building is an independent residential unit with:
   - 1st-order RC thermal model (thermostat-controlled electric baseboard)
@@ -15,7 +14,6 @@ Thermostat: ON/OFF hysteresis band around setpoint T_set ± deadband/2
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from dataclasses import dataclass, field
 
 
@@ -137,7 +135,6 @@ class Building:
         # ── 2.  Thermostat control (constant 21°C setpoint)
         # Night setback is not modeled here; setpoint diversity is represented
         # through stochastic initial states and building parameters.
-        T_on  = T_SET - DEADBAND / 2
         T_off = T_SET + DEADBAND / 2
 
         # ── Discretized Proportional Controller (simulating 10 discrete baseboards)

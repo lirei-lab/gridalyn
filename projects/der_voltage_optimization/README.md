@@ -4,8 +4,9 @@ This project demonstrates a small utility-planning workflow that mixes convex
 optimization with physical power-flow verification.
 
 The workflow builds a synthetic 16-bus radial feeder with high downstream PV,
-uses `cvxpy` to solve a linearized voltage-constrained DER dispatch problem, and
-then verifies the optimized setpoints with `pandapower`.
+declares DER capability through Gridalyn asset models, runs Gridalyn's
+voltage-constrained DER dispatch operation, and then verifies the optimized
+setpoints with an AC power-flow snapshot.
 
 ## Run
 
@@ -26,5 +27,5 @@ uv run gridalyn project status projects/der_voltage_optimization --check-artifac
 ## Scope
 
 This is not a replacement for an AC OPF. It is a small reproducible example of
-how Gridalyn can combine optimization models, asset tables, and pandapower
+how Gridalyn can combine optimization models, asset tables, and physical
 verification in one governed project workflow.

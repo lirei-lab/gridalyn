@@ -58,7 +58,7 @@
   },
   "validation": {
     "error_count": 0,
-    "report": "digital_twin/semantic/validation_report.json",
+    "report": "instances/default/digital_twin/semantic/validation_report.json",
     "valid": true,
     "warning_count": 0
   }

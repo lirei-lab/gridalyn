@@ -26,14 +26,14 @@ flowchart LR
     ms[Microsoft footprint partition] --> raw
     raw --> clip[Clip to study polygon]
     clip --> geojson[Building GeoJSON]
-    geojson --> graph[PowerGridGraph]
+    geojson --> graph[Gridalyn topology bundle]
     graph --> pp[pandapower network]
     pp --> twin[Digital twin base artifacts]
 ```
 
 The canonical footprint preparation entry point is `gridalyn.twin.adapters`.
 The canonical network-generation entry point is
-`gridalyn.assets.build_synthetic_network_from_geojson`.
+`gridalyn.simulation.build_synthetic_network_from_geojson`.
 
 ## Project API
 
@@ -43,7 +43,7 @@ steps:
 ```python
 from pathlib import Path
 
-from gridalyn.assets import build_synthetic_network_from_geojson
+from gridalyn.simulation import build_synthetic_network_from_geojson
 
 result = build_synthetic_network_from_geojson(
     footprints_path=Path("projects/my_project/inputs/buildings.geojson"),
@@ -59,7 +59,7 @@ The function returns:
 
 | Field | Meaning |
 | --- | --- |
-| `power_grid` | The generated `PowerGridGraph` with LV/MV/HV graph layers. |
+| `power_grid` | Generated topology bundle used by Gridalyn simulation and visualization helpers. |
 | `net` | The generated pandapower network. |
 | `validation_report` | Counts, CRS lineage, source hashes, topology checks, and optional power-flow convergence. |
 | `report_path` | Path to `synthetic_network_validation_report.json` when `out_dir` is provided. |

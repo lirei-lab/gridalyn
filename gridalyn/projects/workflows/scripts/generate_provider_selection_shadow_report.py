@@ -14,7 +14,7 @@ from gridalyn.foundation import ArtifactLayout
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
-from gridalyn.simulation.analytics.network_impact.provider_shadow import (
+from gridalyn.operations.market.provider_shadow import (
     build_shadow_report,
     write_shadow_report,
 )

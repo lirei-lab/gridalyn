@@ -34,7 +34,7 @@ uv run gridalyn project verify projects/<name>
 
 | File or folder | What to inspect |
 | --- | --- |
-| `project.yaml` | Identity, inputs, outputs, required artifacts, and sense checks. |
+| `project.yaml` | Identity, problem, scenarios, experiments, inputs, outputs, required artifacts, and sense checks. |
 | `workflow.yaml` | Ordered stages and commands. |
 | `scripts/` | Project orchestration. Reusable behavior should come from `gridalyn/`. |
 | `outputs/reports/` | Stable JSON reports for applications and publication. |

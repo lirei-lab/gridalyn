@@ -14,7 +14,7 @@ Gridalyn provides:
 | --- | --- |
 | Digital twin core | Canonical grid, building, scenario, time-series, semantic, and report artifacts. |
 | Project workflows | Reproducible project contracts with `project.yaml`, `workflow.yaml`, scripts, outputs, manifests, and regression checks. |
-| Synthetic model generation | GeoJSON and configuration-driven synthetic network and building model generation. |
+| Synthetic model generation | GeoJSON and configuration-driven building, asset, load, and solver-ready network generation through native SDK modules. |
 | Simulation and validation | Powerflow and network-impact validation using generated or imported model snapshots. |
 | Flexibility operations | Provider registry, aggregators, locational clearing, dispatch, settlement, and operational KPIs. |
 | Semantic graph | North America-first ontology mapping for grid, buildings, EV/DER assets, telemetry, scenarios, and flexibility contracts. |
@@ -31,7 +31,8 @@ platform boundary is broader than any one demo:
 - canonical twin artifacts belong in `instances/default/digital_twin/`;
 - project-specific generated artifacts belong in project `outputs/`;
 - dashboards and reports consume explicit artifacts, not study-specific hidden
-  assumptions.
+  assumptions;
+- public APIs use the native `gridalyn.*` modules and CLI commands.
 
 ## Public Interfaces
 

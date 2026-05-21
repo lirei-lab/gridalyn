@@ -1,57 +1,89 @@
-"""
-network.py – HV/MV Distribution Substation (configured via configs/grid/config.json).
+"""Simplified MV-network model for synthetic flexibility studies.
 
-Topology
---------
-  HV bus (←config) ──[S_rated MVA transformer]──[MV bus (←config)]
-                                                               │
-                          ┌────────────┬──────────────┬────────┴──────────┬──────────────┐
-                       Feeder 1    Feeder 2        Feeder 3           Feeder 4
-
-Each 25 kV feeder serves residential customers via distribution LV transformers
-(typically 50–167 kVA, pole-mounted or pad-mounted).
-
-The EV capacity limitation study aggregates 3,235 stochastic dwellings into 160 market feeder
-blocks for Soft-CLS clearing, with 30% of blocks enrolled in the market.
-
-Physical power parameters per block-level building object:
-  P_heat_max  : ~80 kW (50 units × 1.6 kW baseboards, ON/OFF controlled)
-  P_bg_mean   : ~25 kW  (50 units × 0.5 kW background)
-  EV charger  : 3.84 kW per EV × ~40 EVs at peak = ~150 kW per block
+The module provides a configurable aggregate substation and feeder-block model.
+It is intentionally lightweight: it supports repeatable market and thermal-limit
+experiments without claiming to be a calibrated utility planning model.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
-from dataclasses import dataclass, field
-import numpy as np
-from gridalyn.assets.datagen.grid.transformer_thermal import TransformerThermalModel
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Substation specification (Dynamically synced)
-# ─────────────────────────────────────────────────────────────────────────────
-_root = Path(__file__).parents[4]
-with open(_root / "configs/grid/config.json", "r") as f:
-    _config = json.load(f)
+from gridalyn.assets.modeling.transformers import TransformerThermalModel
 
-TRANSFORMER_MVA = _config["transformers"]["mv_hv"]["capacity_kva"] / 1000.0
-TRANSFORMER_KVA = TRANSFORMER_MVA * 1000 
-VOLTAGE_HV_KV   = 120.0          # primary (HQ transmission standard)
-VOLTAGE_MV_KV   = 25.0           # secondary / distribution feeder voltage
-PF_NOMINAL      = 0.95           # nominal power factor
+REPO_ROOT = Path(__file__).resolve().parents[4]
+DEFAULT_GRID_CONFIG_PATH = REPO_ROOT / "configs" / "grid" / "config.json"
 
-P_RATED_KW      = TRANSFORMER_KVA * PF_NOMINAL       
-P_EMERGENCY_KW  = P_RATED_KW * 1.20                  
-P_LIMIT_KW      = TRANSFORMER_KVA * 1.0       # Legacy Static DOE
-THETA_MAX       = _config["transformers"]["mv_hv"].get("theta_max_c", 110.0)
+DEFAULT_TRANSFORMER_KVA = 15_000.0
+DEFAULT_VOLTAGE_HV_KV = 120.0
+DEFAULT_VOLTAGE_MV_KV = 25.0
+DEFAULT_PF_NOMINAL = 0.95
+DEFAULT_THETA_MAX_C = 110.0
+DEFAULT_EMERGENCY_MULTIPLIER = 1.20
+DEFAULT_N_UNITS_PER_BLOCK = 50
 
-# MV feeder current at 25 kV (3-phase): I = S / (√3 · V)
-I_MAX_A         = (TRANSFORMER_KVA * 1000) / (1.732 * VOLTAGE_MV_KV * 1000)
+TRANSFORMER_KVA = DEFAULT_TRANSFORMER_KVA
+TRANSFORMER_MVA = TRANSFORMER_KVA / 1000.0
+VOLTAGE_HV_KV = DEFAULT_VOLTAGE_HV_KV
+VOLTAGE_MV_KV = DEFAULT_VOLTAGE_MV_KV
+PF_NOMINAL = DEFAULT_PF_NOMINAL
+P_RATED_KW = TRANSFORMER_KVA * PF_NOMINAL
+P_EMERGENCY_KW = P_RATED_KW * DEFAULT_EMERGENCY_MULTIPLIER
+P_LIMIT_KW = TRANSFORMER_KVA
+THETA_MAX = DEFAULT_THETA_MAX_C
+I_MAX_A = (TRANSFORMER_KVA * 1000) / (1.732 * VOLTAGE_MV_KV * 1000)
+N_UNITS_PER_BLOCK = DEFAULT_N_UNITS_PER_BLOCK
+N_BLOCKS_TOTAL = 160
 
-# Simulation scale: each "building" object = N_UNITS_PER_BLOCK households
-N_UNITS_PER_BLOCK = 50
-N_BLOCKS_TOTAL    = 160
+
+@dataclass(frozen=True)
+class MVNetworkConfig:
+    """Configuration for the aggregate MV-network model."""
+
+    transformer_kva: float = DEFAULT_TRANSFORMER_KVA
+    voltage_hv_kv: float = DEFAULT_VOLTAGE_HV_KV
+    voltage_mv_kv: float = DEFAULT_VOLTAGE_MV_KV
+    power_factor: float = DEFAULT_PF_NOMINAL
+    theta_max_c: float = DEFAULT_THETA_MAX_C
+    emergency_multiplier: float = DEFAULT_EMERGENCY_MULTIPLIER
+    n_units_per_block: int = DEFAULT_N_UNITS_PER_BLOCK
+
+    @property
+    def transformer_mva(self) -> float:
+        return self.transformer_kva / 1000.0
+
+    @property
+    def p_rated_kw(self) -> float:
+        return self.transformer_kva * self.power_factor
+
+    @property
+    def p_emergency_kw(self) -> float:
+        return self.p_rated_kw * self.emergency_multiplier
+
+    @property
+    def p_limit_kw(self) -> float:
+        return self.transformer_kva
+
+    @property
+    def i_max_a(self) -> float:
+        return (self.transformer_kva * 1000.0) / (1.732 * self.voltage_mv_kv * 1000.0)
+
+
+def load_mv_network_config(config_path: Path | str = DEFAULT_GRID_CONFIG_PATH) -> MVNetworkConfig:
+    """Load an MV-network configuration from a Gridalyn grid config JSON file."""
+    path = Path(config_path)
+    payload = json.loads(path.read_text())
+    transformer = payload.get("transformers", {}).get("mv_hv", {})
+    buses = payload.get("buses", {})
+    return MVNetworkConfig(
+        transformer_kva=float(transformer.get("capacity_kva", DEFAULT_TRANSFORMER_KVA)),
+        voltage_hv_kv=float(buses.get("hv", {}).get("voltage_kv", DEFAULT_VOLTAGE_HV_KV)),
+        voltage_mv_kv=float(buses.get("mv", {}).get("voltage_kv", DEFAULT_VOLTAGE_MV_KV)),
+        power_factor=float(transformer.get("power_factor", DEFAULT_PF_NOMINAL)),
+        theta_max_c=float(transformer.get("theta_max_c", DEFAULT_THETA_MAX_C)),
+    )
 
 
 @dataclass
@@ -63,9 +95,8 @@ class Feeder:
 
 @dataclass
 class MVNetwork:
-    """
-    Simplified radial MV network. Uses dynamic Unified Thermal Model + aggregate power balance.
-    """
+    """Aggregate radial MV network with dynamic thermal-limit checks."""
+
     feeders: list[Feeder] = field(default_factory=lambda: [
         Feeder("Feeder-1", n_blocks=40),
         Feeder("Feeder-2", n_blocks=40),
@@ -76,10 +107,31 @@ class MVNetwork:
     p_emergency_kw: float = P_EMERGENCY_KW
     p_rated_kw: float = P_RATED_KW  
     transformer_mva: float = TRANSFORMER_MVA
+    n_units_per_block: int = N_UNITS_PER_BLOCK
     thermal_model: TransformerThermalModel = field(default_factory=lambda: TransformerThermalModel(
         theta_max=THETA_MAX,
         s_rated_kva=TRANSFORMER_KVA
     ))
+
+    @classmethod
+    def from_config(cls, config: MVNetworkConfig) -> "MVNetwork":
+        """Create a network from explicit configuration values."""
+        return cls(
+            p_limit_kw=config.p_limit_kw,
+            p_emergency_kw=config.p_emergency_kw,
+            p_rated_kw=config.p_rated_kw,
+            transformer_mva=config.transformer_mva,
+            n_units_per_block=config.n_units_per_block,
+            thermal_model=TransformerThermalModel(
+                theta_max=config.theta_max_c,
+                s_rated_kva=config.transformer_kva,
+            ),
+        )
+
+    @classmethod
+    def from_grid_config(cls, config_path: Path | str = DEFAULT_GRID_CONFIG_PATH) -> "MVNetwork":
+        """Create a network from ``configs/grid/config.json`` or a compatible file."""
+        return cls.from_config(load_mv_network_config(config_path))
 
     @property
     def n_blocks(self) -> int:
@@ -87,14 +139,14 @@ class MVNetwork:
 
     @property
     def n_units(self) -> int:
-        return self.n_blocks * N_UNITS_PER_BLOCK
+        return self.n_blocks * self.n_units_per_block
 
     def check_constraint(self, p_total_kw: float, ambient_c: float | None = None) -> dict:
         """
         Return constraint status dict.
-        - 'ok'    : θ_H ≤ θ_max (or P ≤ 20 MW if no thermal model)
-        - 'amber' : θ_max < θ_H ≤ θ_emergency
-        - 'red'   : θ_H > θ_emergency (or P > emergency rating)
+        - ``ok``: load is below the static or ambient-dependent limit.
+        - ``amber``: load exceeds the normal limit but remains below emergency loading.
+        - ``red``: load exceeds emergency loading.
         """
         # If ambient is provided, use the thermal model steady-state limit
         limit_kw = self.p_limit_kw
@@ -128,10 +180,9 @@ class MVNetwork:
         self, p_mean_kw: float, p_std_kw: float, ambient_c: float | None = None, epsilon: float = 0.05
     ) -> dict:
         """
-        Eq. (1) of the paper refined: P(theta_H > theta_max) > ε → congestion declared.
-        
-        If ambient_c is provided, identifies the power level P_crit such that 
-        steady_state(P_crit, ambient_c) == theta_max, and checks P(P > P_crit) > ε.
+        Declare congestion when the probability of exceeding the thermal limit is
+        greater than ``epsilon``. If ambient temperature is provided, the limit is
+        computed from the thermal model for that ambient condition.
         """
         limit_kw = self.p_limit_kw
         if ambient_c is not None:
@@ -168,7 +219,7 @@ NETWORK = MVNetwork()
 
 if __name__ == "__main__":
     print(f"Network: {NETWORK.transformer_mva} MVA substation")
-    print(f"  {NETWORK.n_blocks} residential blocks × {N_UNITS_PER_BLOCK} households "
+    print(f"  {NETWORK.n_blocks} residential blocks × {NETWORK.n_units_per_block} households "
           f"= {NETWORK.n_units:,} virtual customers")
     print(f"  P_rated={NETWORK.p_rated_kw/1000:.2f} MW  "
           f"P_LIMIT={NETWORK.p_limit_kw/1000:.1f} MW  "

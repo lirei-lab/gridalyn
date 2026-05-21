@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import pandapower as pp
-
-from gridalyn.assets import BatteryAsset, PVAsset, ProsumerAsset
+from gridalyn.assets import BatteryAsset, PVAsset, ProsumerAsset, RadialFeederSpec
+from gridalyn.simulation import build_radial_pandapower_feeder
 
 
 LOADS_MW = {
@@ -91,38 +90,25 @@ PROSUMER_ASSETS = (
     ),
 )
 
+FEEDER_SPEC = RadialFeederSpec(
+    name="synthetic_14_bus_radial_feeder",
+    bus_count=14,
+    sn_mva=5.0,
+    base_voltage_kv=12.47,
+    slack_vm_pu=1.02,
+    loads_mw=LOADS_MW,
+    q_to_p_ratio=0.32,
+    line_length_km=0.35,
+    line_lengths_km={to_bus: 0.35 + 0.03 * (to_bus % 4) for to_bus in range(1, 14)},
+    line_r_ohm_per_km=0.38,
+    line_x_ohm_per_km=0.32,
+    line_c_nf_per_km=8.0,
+    line_max_i_ka=0.22,
+    bus_y_step=0.35,
+    metadata={"source": "gridalyn.assets.modeling.feeders.RadialFeederSpec"},
+)
 
-def build_synthetic_feeder() -> pp.pandapowerNet:
+
+def build_synthetic_feeder():
     """Create a compact 14-bus radial feeder with deterministic loads."""
-    net = pp.create_empty_network(sn_mva=5.0)
-    for bus_id in range(14):
-        pp.create_bus(
-            net,
-            vn_kv=12.47,
-            name=f"bus_{bus_id:02d}",
-            geodata=(float(bus_id), 0.35 * float(bus_id % 3)),
-        )
-    pp.create_ext_grid(net, bus=0, vm_pu=1.02, name="grid_connection")
-
-    for from_bus, to_bus in zip(range(13), range(1, 14), strict=True):
-        pp.create_line_from_parameters(
-            net,
-            from_bus=from_bus,
-            to_bus=to_bus,
-            length_km=0.35 + 0.03 * (to_bus % 4),
-            r_ohm_per_km=0.38,
-            x_ohm_per_km=0.32,
-            c_nf_per_km=8.0,
-            max_i_ka=0.22,
-            name=f"line_{from_bus:02d}_{to_bus:02d}",
-        )
-
-    for bus_id, p_mw in LOADS_MW.items():
-        pp.create_load(
-            net,
-            bus=bus_id,
-            p_mw=p_mw,
-            q_mvar=p_mw * 0.32,
-            name=f"load_bus_{bus_id:02d}",
-        )
-    return net
+    return build_radial_pandapower_feeder(FEEDER_SPEC)

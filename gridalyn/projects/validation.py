@@ -44,6 +44,9 @@ def validate_project_file(
     _validate_schema(project_data, "study_project.schema.json", report, "project")
     if not report.valid:
         return report
+    _validate_problem_contract(project_data, report)
+    if not report.valid:
+        return report
 
     try:
         base_dir, _ = project_base_dir(project_path, project_data)
@@ -91,3 +94,37 @@ def validate_project_file(
                     report.add_error(f"empty required {label}: {artifact}")
 
     return report
+
+
+def _validate_problem_contract(project_data: dict, report: ValidationReport) -> None:
+    spec = project_data["spec"]
+    scenarios = spec["problem"]["scenarios"]
+    scenario_ids = [item["id"] for item in scenarios]
+    duplicate_scenarios = sorted(
+        {scenario_id for scenario_id in scenario_ids if scenario_ids.count(scenario_id) > 1}
+    )
+    for scenario_id in duplicate_scenarios:
+        report.add_error(f"duplicate problem scenario id: {scenario_id}")
+
+    known_scenarios = set(scenario_ids)
+    experiment_ids = [item["id"] for item in spec.get("experiments", [])]
+    duplicate_experiments = sorted(
+        {
+            experiment_id
+            for experiment_id in experiment_ids
+            if experiment_ids.count(experiment_id) > 1
+        }
+    )
+    for experiment_id in duplicate_experiments:
+        report.add_error(f"duplicate experiment id: {experiment_id}")
+
+    for experiment in spec.get("experiments", []):
+        refs: list[str] = []
+        if experiment.get("scenario"):
+            refs.append(experiment["scenario"])
+        refs.extend(experiment.get("scenarios", []))
+        for scenario_id in refs:
+            if scenario_id not in known_scenarios:
+                report.add_error(
+                    f"experiment {experiment['id']} references unknown scenario {scenario_id}"
+                )

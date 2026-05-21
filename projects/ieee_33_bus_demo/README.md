@@ -1,11 +1,11 @@
 # IEEE 33-Bus Demo Project
 
-This project is a compact Gridalyn demo based on the 33-bus radial distribution
-benchmark exposed by `pandapower.networks.case33bw`.
+This project is a compact Gridalyn demo based on the SDK's IEEE 33-bus
+benchmark feeder contract.
 
 It is intentionally smaller than the EV capacity limitation reference project.
 Use it to verify the project workflow contract, report contract, figure
-generation, and pandapower integration without running a full digital-twin case
+generation, and power-flow integration without running a full digital-twin case
 study.
 
 The project also includes deterministic operational scenarios for load growth,

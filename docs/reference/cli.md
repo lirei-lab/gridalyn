@@ -8,6 +8,14 @@ Gridalyn exposes the `gridalyn` command as the canonical entrypoint.
 uv run gridalyn --help
 ```
 
+Domain help is delegated to the domain parser:
+
+```bash
+uv run gridalyn project --help
+uv run gridalyn twin --help
+uv run gridalyn market --help
+```
+
 ## Main Command Groups
 
 | Command | Purpose |
@@ -27,6 +35,7 @@ uv run gridalyn --help
 uv run gridalyn doctor
 uv run gridalyn validate
 uv run gridalyn project list
+uv run gridalyn project prepare-workspace projects/minimal_grid_project
 uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project

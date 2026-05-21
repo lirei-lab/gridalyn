@@ -82,6 +82,12 @@ It combines:
 - project status summary;
 - objective-level sense checks.
 
+To verify every governed demo project:
+
+```bash
+uv run gridalyn project verify-all
+```
+
 ## Project Contract Check
 
 ```bash
@@ -98,6 +104,8 @@ uv run gridalyn project status projects/flexibility_cls --check-artifacts
 | Core Python package | pytest plus any affected project regression |
 | Artifact policy or generated outputs | artifact policy check plus project status |
 | Dashboard catalog or reports | dashboard/report command plus docs link check if documentation changed |
+| Dashboard source | `node --test dashboard/src/*.test.js` and `npm run build` in `dashboard/` |
+| Public module boundary | selected lint/import-boundary checks plus `tests/test_project_hygiene.py` |
 
 The release checklist combines these checks in
 [Release Readiness](../platform/release-readiness.md).

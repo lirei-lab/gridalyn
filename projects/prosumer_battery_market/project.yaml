@@ -6,6 +6,30 @@ metadata:
   description: Small synthetic feeder with distributed prosumers, batteries, and a real-time local market.
 spec:
   pathBase: project
+  problem:
+    type: local_market_dispatch
+    dataset: synthetic_prosumer_battery_feeder
+    environment: realtime_market_powerflow_loop
+    objective: Dispatch distributed batteries through a local market to reduce feeder import above an operating limit.
+    model:
+      type: market_optimizer
+      name: prosumer_realtime_market
+    spaces:
+      state: feeder_market_interval_state
+      action: battery_dispatch_mw
+      output: dispatch_settlement_and_powerflow_metrics
+    scenarios:
+      - id: realtime_peak_window
+        role: rolling_dispatch_case
+        description: Twelve five-minute intervals with five prosumer batteries and a feeder import limit.
+  experiments:
+    - id: realtime_market_dispatch
+      scenario: realtime_peak_window
+      objective: Measure battery dispatch, feeder import reduction, and AC power-flow feasibility.
+      metrics:
+        - peak_import_mw
+        - dispatched_energy_mwh
+        - min_voltage_pu
   inputs:
     sourceNetwork:
       name: Synthetic 14-bus radial distribution feeder

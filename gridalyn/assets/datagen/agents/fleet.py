@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from gridalyn.simulation.simulators.agents.buildings import Building
+from gridalyn.assets.datagen.agents.buildings import Building
 
 def make_buildings(n: int, seed: int = 0) -> list[Building]:
     """Construct n Building objects with reproducible diversity."""
@@ -38,8 +38,8 @@ def simulate_buildings(
         
     n_houses = len(buildings)
     
-    # Pre-generate High-Fidelity Parametric ARX Appliance Backgrounds strictly using exact target frequency
-    from gridalyn.simulation.simulators.agents.unmanaged_loads import ParametricArxGenerator
+    # Pre-generate synthetic appliance backgrounds at the requested frequency.
+    from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
     gen = ParametricArxGenerator(random_seed=random_seed)
     gen.load()
     _, bg_matrix_kw = gen.generate(temp_out_series=t_out_series, n_houses=n_houses)

@@ -8,9 +8,8 @@ Caching
 -------
 The first successful download (or synthetic generation) is stored as a pickle
 under the generated cache directory and reused on every subsequent call. Set
-GRIDALYN_DATAGEN_CACHE_DIR, or the legacy GEOPOWER_DATAGEN_CACHE_DIR, to
-override the default cache location. Pass force_refresh=True to bypass the cache
-and re-fetch from PVGIS.
+GRIDALYN_DATAGEN_CACHE_DIR to override the default cache location. Pass
+force_refresh=True to bypass the cache and re-fetch from PVGIS.
 """
 
 from __future__ import annotations
@@ -32,12 +31,7 @@ PVGIS_MONTHS = list(range(1, 13))  # full year
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_CACHE_DIR = REPO_ROOT / "examples" / "generated" / "cache"
-_CACHE_DIR = Path(
-    os.environ.get(
-        "GRIDALYN_DATAGEN_CACHE_DIR",
-        os.environ.get("GEOPOWER_DATAGEN_CACHE_DIR", _DEFAULT_CACHE_DIR),
-    )
-)
+_CACHE_DIR = Path(os.environ.get("GRIDALYN_DATAGEN_CACHE_DIR", _DEFAULT_CACHE_DIR))
 _CACHE_FILE = _CACHE_DIR / "tmy_trois_rivieres.pkl"
 
 

@@ -1,66 +1,71 @@
-import pandas as pd
+"""Facade for stochastic load-profile generation."""
+
+from __future__ import annotations
+
+from typing import Literal
+
 import numpy as np
+import pandas as pd
+
+
+LoadGeneratorType = Literal["parametric", "thermodynamic"]
+
 
 class GridLoadFacade:
+    """Generate synthetic heating and background-load trajectories.
+
+    The facade supports two reproducible synthetic engines:
+
+    - ``parametric``: a packaged LightGBM macro-shape model plus AR(1) diversity;
+    - ``thermodynamic``: an explicit RC-style residential building simulator.
+
+    Both engines return matrices in kilowatts with shape
+    ``(time_steps, n_houses)``. They are intended for repeatable studies and
+    examples, not as calibrated forecasts for a specific utility territory.
     """
-    Central API for generating stochastic grid load trajectories.
-    Allows seamless toggling between purely mathematical ARX generators
-    and explicit physical Thermodynamic models.
-    """
-    
+
     @classmethod
     def generate_loads(
-        cls, 
-        generator_type: str, 
-        df_weather: pd.Series, 
-        n_houses: int, 
-        resolution_minutes: int, 
-        seed: int
-    ):
-        """
-        Natively routes the load generation to the requested simulation engine.
-        
-        Args:
-            generator_type: "parametric" (ARX math) or "thermodynamic" (RC physics)
-            df_weather: The target outdoor temperature trajectory.
-            n_houses: Number of independent stochastic traces to generate.
-            resolution_minutes: Step size for the returned matrix.
-            seed: RNG seed for reproducible generation.
-            
-        Returns:
-            A tuple (heat_kw_matrix, bg_kw_matrix) of shape (time_steps, n_houses).
-        """
+        cls,
+        generator_type: LoadGeneratorType,
+        df_weather: pd.Series,
+        n_houses: int,
+        resolution_minutes: int,
+        seed: int,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Route load generation to the requested synthetic engine."""
+        if n_houses <= 0:
+            raise ValueError("n_houses must be positive")
+        if resolution_minutes <= 0:
+            raise ValueError("resolution_minutes must be positive")
+
         target_freq = f"{resolution_minutes}min"
         native_res_temp = df_weather.resample(target_freq).mean().interpolate()
-        
+
         if generator_type == "parametric":
-            from gridalyn.simulation.simulators.agents.unmanaged_loads import ParametricArxGenerator
-            gen = ParametricArxGenerator()
+            from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
+
+            gen = ParametricArxGenerator(random_seed=seed)
             gen.load()
-            
-            # Enforce native rng seed mapping to tie identical stochastic households 
-            # consistently to the exact Monte Carlo spatial node instance!
-            np.random.seed(seed)
             return gen.generate(native_res_temp, n_houses=n_houses)
-            
-        elif generator_type == "thermodynamic":
-            from gridalyn.simulation.simulators.agents.fleet import make_buildings, simulate_buildings
-            
-            # Generate the strict array of explicitly tracked homes
+
+        if generator_type == "thermodynamic":
+            from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
+
             buildings = make_buildings(n_houses, seed=seed)
-            
-            # The simulator steps natively and returns a detailed physics state matrix
             bld_results = simulate_buildings(buildings, native_res_temp)
-            
+
             time_steps = len(native_res_temp)
             heat_kw_matrix = np.zeros((time_steps, n_houses))
             bg_kw_matrix = np.zeros((time_steps, n_houses))
-            
+
             for i in range(n_houses):
                 heat_kw_matrix[:, i] = bld_results[i]["p_heat_kw"].values
                 bg_kw_matrix[:, i] = bld_results[i]["p_bg_kw"].values
-                
+
             return heat_kw_matrix, bg_kw_matrix
-            
-        else:
-            raise ValueError(f"Unknown generator_type: {generator_type}. Must be 'parametric' or 'thermodynamic'.")
+
+        raise ValueError(
+            "Unknown generator_type: "
+            f"{generator_type!r}. Must be 'parametric' or 'thermodynamic'."
+        )

@@ -7,11 +7,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from gridalyn.assets.modeling.feeders import RadialFeederSpec
-from gridalyn.assets.modeling.voltage_control import (
-    VoltageControlDERSpec,
+from gridalyn.assets.modeling.voltage_control import VoltageControlDERSpec
+from gridalyn.simulation.simulators.lightsim import LightSimPowerflowAdapter
+from gridalyn.simulation.simulators.powerflow.voltage_control import (
     build_voltage_control_feeder,
 )
-from gridalyn.simulation.simulators.lightsim import LightSimPowerflowAdapter
 
 
 @dataclass(frozen=True)

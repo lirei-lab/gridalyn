@@ -5,13 +5,75 @@ plausible on the network model.
 
 ## Current Scope
 
+- GeoJSON-to-`pandapower` synthetic network construction;
 - pandapower-based powerflow validation;
+- standard pandapower table, voltage-figure, report, and scenario helpers;
 - LightSim2Grid-backed fast AC power-flow environments;
 - reusable voltage-control environments for optimization and learning demos;
 - voltage and thermal loading outputs;
 - transformer overload checks;
 - scenario time-series validation;
 - comparison between fast network-impact estimates and physics validation.
+
+## Synthetic Network Builder
+
+`build_synthetic_network_from_geojson` is the native project-facing builder for
+turning footprint GeoJSON plus a Gridalyn grid config into:
+
+- a Gridalyn topology bundle;
+- a solver-ready `pandapowerNet`;
+- optional cache files for downstream adapters;
+- `synthetic_network_validation_report.json`.
+
+```python
+from gridalyn.simulation import build_synthetic_network_from_geojson
+
+result = build_synthetic_network_from_geojson(
+    footprints_path="projects/my_project/inputs/buildings.geojson",
+    config_path="configs/grid/config.json",
+    out_dir="projects/my_project/outputs/cache",
+    write_cache=True,
+    run_powerflow=True,
+)
+
+assert result.validation_report["valid"]
+```
+
+Use this API from project scripts when the workflow needs a generated
+electrical network. Use `gridalyn.assets` for the durable asset entities and
+synthetic input tables that feed simulation.
+
+## Power-Flow Study Helpers
+
+Project scripts should not reimplement routine pandapower serialization. Use
+the simulation helpers to keep demos thin and to make reports consistent:
+
+```python
+from gridalyn import foundation, simulation
+
+net = simulation.build_radial_pandapower_feeder(feeder_spec)
+tables = simulation.write_pandapower_element_tables(net, "outputs/data")
+figure = simulation.write_voltage_profile_figure(
+    net,
+    "outputs/figures/voltage_profile.png",
+    title="Voltage Profile",
+)
+simulation.write_powerflow_report(
+    "outputs/reports/powerflow_report.json",
+    metadata=foundation.ReportMetadata(
+        report_id="powerflow_report",
+        source_domain="my_project",
+        project={"name": "my_project"},
+    ),
+    net=net,
+    artifacts=[*tables.values(), figure],
+)
+```
+
+For deterministic load/PV/EV operating cases, declare
+`StandardPowerflowScenario` objects and call
+`run_standard_powerflow_scenario`. The project owns the scenario list; the SDK
+owns how the scenario mutates and validates the solver network.
 
 ## Voltage-Control Environment
 
@@ -71,3 +133,10 @@ claims should be backed by validation reports. When a surrogate is used, reports
 should state which physics checks were run and which constraints remain.
 
 See [Network Impact Verification](../flexibility/network-impact-surrogate.md).
+
+## Output Boundary
+
+Simulation code produces physical validation records and solver results. Project
+workflows and digital-twin instance contracts decide where those results are
+persisted, and dashboard-facing publication goes through report or catalog
+interfaces rather than simulation-specific exporters.

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from gridalyn.assets.datagen import build_thermal_forecast as _build_thermal_forecast
 from gridalyn.assets.modeling.thermal import (
     THERMAL_FORECAST_SOURCE,
     THERMAL_LIMIT_MODEL,
     ThermalForecast,
-    build_thermal_forecast as _build_thermal_forecast,
     thermal_forecast_metadata,
 )
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, THETA_MAX

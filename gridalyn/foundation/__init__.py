@@ -21,8 +21,6 @@ _LAZY_EXPORTS = {
     "check_artifact_policy": ("gridalyn.foundation.platform", "check_artifact_policy"),
     "file_reference": ("gridalyn.foundation.platform", "file_reference"),
     "find_workspace_root": ("gridalyn.foundation.platform", "find_workspace_root"),
-    "project_sense_check": ("gridalyn.foundation.platform", "project_sense_check"),
-    "project_verify": ("gridalyn.foundation.platform", "project_verify"),
     "read_json_report": ("gridalyn.foundation.platform", "read_json_report"),
     "validate_report": ("gridalyn.foundation.platform", "validate_report"),
     "validate_workspace": ("gridalyn.foundation.platform", "validate_workspace"),

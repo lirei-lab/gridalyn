@@ -8,7 +8,7 @@ Synthetic generation is one adapter path, not the platform itself.
 | Adapter type | Role |
 | --- | --- |
 | GeoJSON | Read, validate, filter, and prepare geographic source data from OSMnx, Microsoft Building Footprints, or local GIS exports. |
-| Synthetic network | Generate synthetic distribution network snapshots from configs and geography. |
+| Synthetic network | Generate solver-ready distribution networks from configs and geography through `gridalyn.simulation`. |
 | Pandapower | Build or consume simulation-ready network models. |
 | CIM-like Parquet | Move toward utility-grade CIM-aligned model snapshots. |
 | Future utility adapters | GIS, DMS, AMI, SCADA, DERMS, market, and weather integrations. |

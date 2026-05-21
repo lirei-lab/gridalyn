@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.projects.workflows.digital_twin.base_metadata import build_base_metadata, write_base_metadata
+from gridalyn.twin.network.metadata import build_base_metadata, write_base_metadata
 
 
 class DigitalTwinBaseMetadataTest(unittest.TestCase):

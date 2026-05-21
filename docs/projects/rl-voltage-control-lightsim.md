@@ -13,7 +13,7 @@ optimization. This project adds a learning-based control pattern:
 - create PV and battery control assets;
 - model the feeder and DER through Gridalyn asset contracts;
 - run a reusable Gridalyn voltage-control environment backed by `lightsim2grid`;
-- train a small tabular Q-learning agent;
+- train a small tabular controller through Gridalyn's reusable control module;
 - evaluate the learned policy against an uncontrolled baseline;
 - publish episode history, policy, Q-table, trajectory, report, and figure.
 
@@ -46,21 +46,26 @@ projects/rl_voltage_control_lightsim/outputs/manifests/project_run_manifest.json
 | --- | --- |
 | `prepare_workspace` | Creates output folders. |
 | `build_rl_feeder` | Builds a 10-bus radial feeder through `RadialFeederSpec`, initializes the Gridalyn LightSim adapter, and writes feeder assets/report/figure. |
-| `train_rl_voltage_agent` | Trains a tabular Q-learning agent against `VoltageControlEnvironment`, evaluates the greedy policy, and writes learning/control artifacts. |
+| `train_rl_voltage_agent` | Calls Gridalyn's tabular voltage-control trainer against `VoltageControlEnvironment`, evaluates the greedy policy, and writes learning/control artifacts. |
 
 ## Gridalyn SDK Usage
 
-The project keeps only case parameters and the Q-learning loop locally. The
-network, DER contract, and simulation environment come from Gridalyn:
+The project keeps only case parameters and output wiring locally. The network,
+DER contract, simulation environment, and tabular training loop come from
+Gridalyn:
 
 ```python
 from gridalyn.assets import (
     BatteryAsset,
     RadialFeederSpec,
     VoltageControlDERSpec,
+)
+from gridalyn.simulation import (
+    TabularVoltageControlConfig,
+    train_tabular_voltage_controller,
+    VoltageControlEnvironment,
     build_voltage_control_feeder,
 )
-from gridalyn.simulation import VoltageControlEnvironment
 ```
 
 This boundary matters. A new learning-control study should be able to reuse the

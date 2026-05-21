@@ -15,8 +15,8 @@ The physical SDK tree is organized around seven platform modules:
 | --- | --- |
 | `gridalyn.foundation` | IDs, units, lineage, validation, manifests, model versions, artifact policy, and lightweight dataset discovery. |
 | `gridalyn.twin` | Network topology, adapters, import/export helpers, semantic graph, and graph/database adapters. |
-| `gridalyn.assets` | Building, load, EV/EVSE, DER, forecast, thermal, and synthetic asset generation. |
-| `gridalyn.simulation` | Simulation engines, pandapower integration, network impact, and validation analytics. |
+| `gridalyn.assets` | Building, load, EV/EVSE, DER, forecast, thermal, and asset-table generation. |
+| `gridalyn.simulation` | Synthetic-network builders, simulation engines, pandapower integration, network impact, and validation analytics. |
 | `gridalyn.operations` | Providers, aggregators, offers, clearing, dispatch, settlement, constraints, and KPIs. |
 | `gridalyn.projects` | Project/workflow manifests, workflow stages, regression checks, and reproducible study orchestration. |
 | `gridalyn.interfaces` | CLI modules, dashboard/report contracts, visualization, and user/system entrypoints. |
@@ -29,9 +29,11 @@ Generated artifacts belong under declared output folders such as
 ## Public Module Vocabulary
 
 The seven modules above are the public vocabulary for new applications,
-projects, examples, and documentation. Do not introduce new public entrypoints
-under older domain names; put reusable behavior in the owning native module and
-keep project scripts as thin orchestration wrappers.
+projects, examples, and documentation. Put reusable behavior in the owning
+native module and keep project scripts as thin orchestration wrappers.
+
+See [Module Boundaries](module-boundaries.md) for the ownership and dependency
+rules.
 
 | Platform module | Internal subpackages |
 | --- | --- |
@@ -55,9 +57,13 @@ tests, documentation, and a project regression run.
   cache defaults to `examples/generated/cache` and can be redirected with
   `GRIDALYN_DATAGEN_CACHE_DIR`.
 - `__pycache__`, generated outputs, and cache folders are never source files.
-- Model weights are currently retained under `gridalyn/assets/datagen/models/weights`
-  because `ParametricArxGenerator` loads them at runtime. Moving them should be
-  done through a model registry change, not by silently deleting them.
+- Optional model weights may live under `gridalyn/assets/datagen/models/weights`
+  and are declared as package data when present.
+  `gridalyn.assets.datagen.load_profiles.ParametricArxGenerator` also has an
+  analytical fallback so public clones and lightweight installs do not depend on
+  local training data or binary artifacts. Moving the weights should be
+  done through a model registry change, not by silently changing the generator
+  contract.
 
 ## Public API Direction
 
@@ -66,8 +72,8 @@ The intended public surface is:
 ```text
 gridalyn.foundation     governance, validation, manifests, reports metadata
 gridalyn.twin           network model, topology, adapters, semantic graph
-gridalyn.assets         building, EV, DER, load, forecast, synthetic models
-gridalyn.simulation     powerflow, thermal, surrogate, validation analytics
+gridalyn.assets         building, EV, DER, load, forecast, asset models
+gridalyn.simulation     synthetic-network building, powerflow, thermal, surrogate, validation analytics
 gridalyn.operations     providers, aggregators, clearing, dispatch, settlement
 gridalyn.projects       project.yaml/workflow.yaml, workflows, regressions
 gridalyn.interfaces     CLI, report/dashboard contracts, graph/UI interfaces
@@ -104,14 +110,20 @@ repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```
 
 Synthetic grid generation from building footprints should use the GeoJSON
-adapter namespace:
+adapter namespace for footprint creation and validation:
 
 ```python
-from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator, GeoProcessor
-from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn import simulation
+from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
 
 generator = FakeGeoJSONGenerator(grid_size=8, rectangular=True)
 payload = generator.generate_geojson()
+
+result = simulation.build_synthetic_network_from_geojson(
+    footprints_path="projects/my_project/inputs/buildings.geojson",
+    config_path="configs/grid/config.json",
+    out_dir="projects/my_project/outputs/cache",
+)
 ```
 
 Source-specific acquisition belongs in examples or project inputs, not in the
@@ -121,6 +133,25 @@ conversion are documented in
 The package boundary stays stable: `gridalyn.twin.adapters.geojson` validates
 and prepares footprints, while projects decide which source data they trust and
 how they record lineage.
+
+When footprints need to become a solver-ready electrical network, use the
+simulation-owned builder:
+
+```python
+from gridalyn.simulation import build_synthetic_network_from_geojson
+
+result = build_synthetic_network_from_geojson(
+    footprints_path="projects/my_project/inputs/buildings.geojson",
+    config_path="configs/grid/config.json",
+)
+```
+
+Synthetic load, weather, thermal forecast generation, and aggregate MV-network
+stress-test assumptions live under `gridalyn.assets.datagen`. That package is a
+documented experimental surface: examples and advanced workflows may import it
+directly, while stable asset entities and pure physical model contracts should
+continue to be exposed through `gridalyn.assets.modeling` and the
+`gridalyn.assets` facade.
 
 Market and flexibility studies should import reusable selection logic directly
 from `gridalyn.operations`:
@@ -133,9 +164,9 @@ from gridalyn.operations import (
 )
 ```
 
-Historical study scripts have been absorbed into governed project workspaces.
-New code should use the platform package or project-local scripts, and no SDK
-module should import project runtime logic.
+Study scripts belong in governed project workspaces. New code should use the
+platform package or project-local scripts, and no SDK module should import
+project runtime logic.
 
 `gridalyn.projects.workflows.scripts` contains script entrypoints, not domain
 logic. Stable commands in `gridalyn.interfaces.cli` should dispatch to SDK
@@ -155,10 +186,10 @@ uv run --with pytest python -m pytest tests/test_project_hygiene.py -q
 Those tests check that:
 
 - `gridalyn/foundation/data` only tracks discovery code;
-- tracked `gridalyn` and `gridalyn` files do not include generated cache/output directories;
+- tracked package and project files do not include generated cache/output directories;
 - CLI modules dispatch to package modules and workflow entrypoints;
 - the datagen weather cache defaults outside the package tree;
-- Monte Carlo exports do not default to publication or paper data paths.
+- Monte Carlo exports do not default to publication or draft artifact paths.
 
 These tests are intentionally conservative. If a new package-level artifact is
 needed, add a clear architectural reason first, then update the guardrail with

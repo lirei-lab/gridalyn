@@ -9,10 +9,11 @@ simulations, flexibility operations, and reports.
 | --- | --- |
 | Buildings | PyCity-style building, zone, end-use, and device abstractions. |
 | Thermal forecasts | Dynamic thermal capacity and operating envelopes. |
-| Synthetic networks | Building-footprint GeoJSON to `PowerGridGraph`, pandapower network, cache files, and validation report. |
+| Network-adjacent asset inputs | Building footprints, scenario device tables, and asset registries consumed by twin and simulation workflows. |
 | Study feeders | Compact radial feeder specifications for optimization, markets, and learning-control demos. |
 | EV and EVSE | Charging assets, scenario participation, and controllability roles. |
 | DER control assets | PV plus battery contracts for voltage-control and distributed-energy studies. |
+| Transformer thermal models | IEEE C57.91-style thermal limits and forecast contracts. |
 | Flexibility envelopes | Provider capabilities and response limits. |
 | Scenario devices | Scenario-specific overlays on base assets. |
 
@@ -22,18 +23,45 @@ Modeling should expose reusable components, not study-specific scripts. Project
 workflows should be able to combine model generators to create different cases
 without copying internals from another demo project.
 
+Gridalyn follows an EnFlow-like separation of roles without copying EnFlow's
+API directly:
+
+| Role | Gridalyn home | Boundary |
+| --- | --- | --- |
+| Asset contracts | `gridalyn.assets.modeling` | Dataclasses, validation, tabular contracts, and pure physical model helpers. |
+| Synthetic input generators | `gridalyn.assets.datagen` | Weather/load generation, TMY selection, aggregate synthetic stress-test models. |
+| Solver modelers | `gridalyn.simulation` | `pandapower`, LightSim2Grid, network construction, replay, and validation analytics. |
+| Operation modelers | `gridalyn.operations` | Provider selection, clearing, dispatch, settlement, constraints, and KPIs. |
+| Experiment packaging | `gridalyn.projects` | Dataset/environment/objective/scenario binding through `project.yaml` and `workflow.yaml`. |
+
+The strict rule is that asset modelers do not import solver engines,
+operations, project workflows, or datagen. They define reusable contracts that
+other layers consume.
+
 See [Building Models](../platform/building-models.md).
+
+For stochastic load profiles, weather windows, packaged ARX weights, and
+aggregate MV-network stress-test assumptions, see
+[Data Generation](data-generation.md). Those helpers feed modeling workflows,
+but they are documented separately because they describe synthetic inputs rather
+than durable asset entities.
+
+Transformer thermal behavior lives in modeling because it is a physical asset
+model. Synthetic workflows may import it from `gridalyn.assets.modeling` when
+they need aggregate stress-test constraints.
 
 ## Synthetic Network Builder
 
 Use `build_synthetic_network_from_geojson` when a project needs to create a
 network model from building footprints instead of hand-copying the historical
-tutorial sequence.
+tutorial sequence. The builder is documented here because it consumes building
+and asset assumptions, but the API is owned by `gridalyn.simulation` because it
+creates a `pandapower` network and optional power-flow validation report.
 
 ```python
 from pathlib import Path
 
-from gridalyn.assets.modeling import build_synthetic_network_from_geojson
+from gridalyn.simulation import build_synthetic_network_from_geojson
 
 result = build_synthetic_network_from_geojson(
     footprints_path=Path("projects/my_project/inputs/buildings.geojson"),
@@ -53,7 +81,12 @@ provided. With `write_cache=True`, it also writes `pg_graph_cache.pkl` and
 `pp_net_cache.pkl`, which can be exported through the digital-twin adapter.
 
 The root shortcut `from gridalyn import build_synthetic_network_from_geojson`
-is also supported for project scripts.
+is also supported for compact project scripts, but new documentation should
+prefer `from gridalyn.simulation import build_synthetic_network_from_geojson`.
+
+Use `build_synthetic_network_from_config` when the workflow already owns a
+validated configuration mapping and should not round-trip it through a temporary
+file.
 
 ## Prosumer Energy Assets
 
@@ -78,7 +111,7 @@ asset = ProsumerAsset(
 ```
 
 Use `prosumer_assets_to_frame` for stable project artifacts and
-`apply_pv_generation_to_pandapower` / `apply_battery_dispatch_to_pandapower`
+`gridalyn.simulation.apply_pv_generation_to_pandapower` / `gridalyn.simulation.apply_battery_dispatch_to_pandapower`
 when mapping those assets into power-flow studies.
 
 ## Feeder and Voltage-Control Assets
@@ -93,8 +126,8 @@ from gridalyn.assets import (
     BatteryAsset,
     RadialFeederSpec,
     VoltageControlDERSpec,
-    build_voltage_control_feeder,
 )
+from gridalyn.simulation import build_voltage_control_feeder
 
 feeder = RadialFeederSpec(
     name="demo_feeder",

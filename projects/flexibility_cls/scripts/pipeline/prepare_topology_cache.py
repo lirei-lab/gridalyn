@@ -16,7 +16,7 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.foundation.data.datasets import get_dataset_path
-from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager
+from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner
 
 from projects.flexibility_cls.scripts.config import (
     GRID_CONFIG,
@@ -121,9 +121,9 @@ def _validate_building_footprints(source: Path, report_path: Path) -> dict[str, 
     return report
 
 
-def _cache_counts(manager: MonteCarloSimulationManager) -> dict[str, int]:
-    net = manager.pp_net
-    pg = manager.pg_graph
+def _cache_counts(runner: PowerflowMonteCarloRunner) -> dict[str, int]:
+    net = runner.pp_net
+    pg = runner.pg_graph
     return {
         "buses": int(len(net.bus)),
         "lines": int(len(net.line)),
@@ -147,12 +147,12 @@ def prepare_topology_cache(
     validation_report_path = cache_dir / FOOTPRINT_VALIDATION_REPORT
     footprint_report = _validate_building_footprints(source, validation_report_path)
 
-    manager = MonteCarloSimulationManager(
+    runner = PowerflowMonteCarloRunner(
         input_file=str(source),
         cache_dir=str(cache_dir),
         config=GRID_CONFIG,
     )
-    manager._prepare_grid(force_rebuild=force_rebuild)
+    runner._prepare_grid(force_rebuild=force_rebuild)
 
     missing = [name for name in REQUIRED_CACHE_FILES if not (cache_dir / name).exists()]
     if missing:
@@ -166,7 +166,7 @@ def prepare_topology_cache(
         "input_file": Path(source).as_posix(),
         "config_hash": _config_hash(GRID_CONFIG),
         "required_files": list(REQUIRED_CACHE_FILES),
-        "counts": _cache_counts(manager),
+        "counts": _cache_counts(runner),
         "building_footprints": {
             "source_path": Path(source).as_posix(),
             "sha256": footprint_report["source"]["sha256"],

@@ -16,8 +16,8 @@ Applications should read:
 - semantic graph manifests;
 - dashboard catalogs.
 
-They should avoid reading private intermediate files unless the file is
-documented as part of the application contract.
+They should avoid reading intermediate files unless the file is documented as
+part of the application contract.
 
 See [Reports And Manifests](../platform/reports.md) and
 [Dashboard](../platform/dashboard.md).

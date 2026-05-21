@@ -79,7 +79,7 @@ def main():
     
     # Panel 2: Managed
     ax2 = axes[1]
-    c2 = ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
+    ax2.pcolormesh(X, Y, Z_managed, shading='auto', cmap=cmap, vmax=np.max(Z_unmanaged)*0.8)
     ax2.plot(X, limit, color="red", lw=2, ls="--", label="Dynamic Thermal Limit")
     ax2.plot(X, mu_managed, color="black", lw=1.5, label="Expected Mean")
     

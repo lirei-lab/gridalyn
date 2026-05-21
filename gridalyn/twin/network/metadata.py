@@ -10,8 +10,8 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.foundation.platform.governance import build_model_version
+from gridalyn.twin.network.repository import NetworkModelRepository
 
 
 BASE_METADATA_SCHEMA_VERSION = "1.0"

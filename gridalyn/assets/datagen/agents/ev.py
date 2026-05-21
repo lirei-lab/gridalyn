@@ -1,5 +1,4 @@
-"""
-ev.py – Smart EV Charger model with Demand Response (DR) program.
+"""Synthetic EV charger model with demand-response controls.
 
 DR Program (HQ-style ILOUP / Rate Flex inspired):
   - Base tariff:             9.20 ¢/kWh
@@ -28,7 +27,6 @@ CLS events.  In return they receive a year-round off-peak charging rebate:
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from dataclasses import dataclass, field
 
 

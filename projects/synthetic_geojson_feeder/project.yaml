@@ -6,6 +6,30 @@ metadata:
   description: Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.
 spec:
   pathBase: project
+  problem:
+    type: synthetic_network_generation
+    dataset: generated_building_footprints
+    environment: gridalyn_geojson_to_pandapower
+    objective: Generate a reproducible feeder model from building footprints and validate the resulting topology.
+    model:
+      type: asset_modeler
+      name: gridalyn.twin.adapters.geojson
+    spaces:
+      state: building_footprint_collection
+      action: network_generation_parameters
+      output: synthetic_feeder_topology
+    scenarios:
+      - id: baseline
+        role: deterministic_generation_case
+        description: Fixed footprint seed and network configuration for a compact synthetic feeder.
+  experiments:
+    - id: build_baseline_feeder
+      scenario: baseline
+      objective: Validate GeoJSON generation, feeder construction, and topology reports.
+      metrics:
+        - building_count
+        - pandapower_bus_count
+        - powerflow_converged
   inputs:
     sourceData:
       name: Generated building-footprint GeoJSON

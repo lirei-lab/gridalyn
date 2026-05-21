@@ -5,13 +5,14 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('outputs/data', 'outputs/figures', 'outputs/manifests', 'outputs/operations', 'outputs/reports', 'outputs/cache')]"
+      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
       outputs:
         - outputs/data
         - outputs/figures
         - outputs/manifests
         - outputs/operations
         - outputs/reports
+        - outputs/cache
     - id: build_synthetic_feeder
       needs:
         - prepare_workspace

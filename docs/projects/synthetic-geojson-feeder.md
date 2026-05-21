@@ -53,7 +53,7 @@ projects/synthetic_geojson_feeder/outputs/manifests/project_run_manifest.json
 | --- | --- |
 | `gridalyn.twin.adapters.geojson.FakeGeoJSONGenerator` | Creates deterministic demo footprints. |
 | `gridalyn.twin.adapters.geojson.validate_geojson` | Checks the generated GeoJSON input. |
-| `gridalyn.assets.build_synthetic_network_from_geojson` | Converts footprints and config into a graph, pandapower network, and validation report. |
+| `gridalyn.simulation.build_synthetic_network_from_geojson` | Converts footprints and config into a graph, pandapower network, and validation report. |
 | `gridalyn.foundation.write_report` | Writes platform-standard JSON reports. |
 
 ## Input Configuration

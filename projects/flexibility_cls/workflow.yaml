@@ -5,7 +5,18 @@ metadata:
   description: Executes the governed EV capacity limitation data pipeline and case-analysis figures.
 spec:
   stages:
+    - id: prepare_workspace
+      command: python -m gridalyn.interfaces.cli.project prepare-workspace projects/flexibility_cls
+      outputs:
+        - projects/flexibility_cls/outputs/data
+        - projects/flexibility_cls/outputs/figures
+        - projects/flexibility_cls/outputs/manifests
+        - projects/flexibility_cls/outputs/operations
+        - projects/flexibility_cls/outputs/reports
+        - projects/flexibility_cls/outputs/cache
+
     - id: prepare_topology_cache
+      needs: [prepare_workspace]
       command: uv run python projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py
       inputs:
         - projects/flexibility_cls/scripts/pipeline/prepare_topology_cache.py

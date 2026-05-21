@@ -10,7 +10,6 @@ availability, reliability, and risk profiles.
 from __future__ import annotations
 import numpy as np
 from dataclasses import dataclass
-from scipy.stats import norm
 
 @dataclass
 class FlexResource:
@@ -65,8 +64,6 @@ class BlockFlexPortfolio:
             # For EVs, they can technically be curtailed to 0. 
             # Submitting a heterogeneous cost adds merit-order depth.
             offers[res.name] = {
-                "p_req_kw": p_req,
-                "p_min_kw": 0.0,
                 "p_ref_kw": p_req,
                 "p_cap_kw": 0.0,
                 "delta_p_kw": p_req,
@@ -198,9 +195,6 @@ class BuildingAggregator:
                 "p_cap_kw": p_cap,
                 "delta_p_kw": block_size,
                 "cumulative_delta_p_kw": end_depth,
-                # Backward-compatible fields for older portfolio consumers.
-                "p_req_kw": block_size,
-                "p_min_kw": 0.0,
                 "c_limit_per_kw_h": block_cost
             }
             

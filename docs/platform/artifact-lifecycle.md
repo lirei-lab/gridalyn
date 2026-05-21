@@ -45,6 +45,5 @@ dashboard catalogs, validation, and release checks
 ## Rule Of Thumb
 
 If an artifact describes the reusable twin, put it under `instances/default/digital_twin`. If it
-is specific to a demo, manuscript, or experiment, put it under the project
-output directory and declare it in the project workflow.
-
+is specific to a demo, study, or experiment, put it under the project output
+directory and declare it in the project workflow.

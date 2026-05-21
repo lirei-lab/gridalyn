@@ -66,10 +66,10 @@ The current system already has several strong platform ingredients:
 | Project workflows | `projects/*/project.yaml` and `workflow.yaml`. |
 | Dashboard | General digital twin catalog plus scenario and network impact panels. |
 
-The main remaining weakness is boundary clarity: old research notes and local
-publication material can distract from the platform contract. The public
-surface should keep those out of the main architecture and point users to
-`gridalyn`, `projects/`, and `instances/default/digital_twin/`.
+The main remaining weakness is boundary clarity. The public surface should keep
+the architecture centered on `gridalyn`, governed `projects/`, and
+`instances/default/digital_twin/`, while optional editorial material stays
+outside executable platform workflows.
 
 ## Target Capability Architecture
 
@@ -175,7 +175,7 @@ evolves.
 - keep public demo projects reproducible and independent;
 - keep `instances/default/digital_twin/*` artifact contracts stable;
 - keep the canonical SDK imports stable while reusable logic evolves;
-- keep public docs centered on the platform, not private study history;
+- keep public docs centered on the platform contract;
 - run the release checks after every architecture step.
 
 **Exit criteria:**
@@ -216,7 +216,8 @@ and validation report.
 
 **Status:**
 
-- `gridalyn.foundation.platform.governance` defines `ModelVersion` and `StudyRun`.
+- `gridalyn.foundation` exposes `ModelVersion` and `StudyRun` governance
+  contracts.
 - `instances/default/digital_twin/base/metadata.json` includes `model_version_id` and a structured
   `model_version` object.
 - Project dry runs and executions include a structured `study_run` object in
@@ -275,8 +276,9 @@ network-impact analytics, and market mechanics behind stable contracts.
 
 - `gridalyn.operations.flexibility` provides the first validated operation
   facade.
-- `gridalyn.foundation.platform` exports the flexibility operation facade for
-  applications and future service APIs.
+- `gridalyn.operations` exports the flexibility operation facade for
+  applications and future service APIs; `foundation` remains focused on
+  governance, reports, workspace, and artifact contracts.
 - Existing `gridalyn.operations.market.locational_clearing` remains the clearing engine;
   the operation layer wraps it with governance and validation.
 - The same layer now exposes `AggregatorPortfolio`, `FlexibilityOffer`,
@@ -465,8 +467,8 @@ Active implementation lives in:
 
 - `gridalyn` for reusable platform logic;
 - `projects/flexibility_cls` for executable study workflows;
-- a private or separate publication repository for manuscript material and
-  document builds.
+- optional publication or presentation material outside executable platform
+  workflows.
 
 New code must not write study outputs outside the governed project artifact
 roots.
@@ -494,7 +496,7 @@ The migration must preserve:
    `gridalyn.operations.market` and `gridalyn.simulation.analytics`.
 4. Move canonical report schemas into `gridalyn.interfaces.reporting`.
 5. Keep study pipeline scripts under `projects/flexibility_cls`.
-6. Move publication-only notes and illustrative plots outside executable
+6. Keep publication-only notes and illustrative plots outside executable
    workflows.
 7. Keep generated project outputs under `projects/flexibility_cls/outputs`.
 8. Continue hardening the `gridalyn.twin` repository with Parquet backend.

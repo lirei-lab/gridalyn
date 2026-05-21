@@ -49,9 +49,14 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: uv run python projects/minimal_grid_project/scripts/prepare_workspace.py
+      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
       outputs:
-        - projects/minimal_grid_project/outputs/reports
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+        - outputs/cache
 
     - id: run_powerflow
       needs: [prepare_workspace]
