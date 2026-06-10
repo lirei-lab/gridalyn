@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
@@ -55,6 +56,16 @@ def _workflow_handler(main_func):
 
 
 def main(argv: list[str] | None = None) -> int:
+    from gridalyn.foundation.platform.capabilities import (
+        MissingCapabilityError,
+        require_capabilities,
+    )
+
+    try:
+        require_capabilities("ops", context="flexibility commands")
+    except MissingCapabilityError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     args, _extra_args = parse_args(argv)
     return args.handler(args)
 
