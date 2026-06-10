@@ -1,0 +1,47 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": "optimal",
+      "id": "summary.solver_status",
+      "json_path": [
+        "summary",
+        "solver_status"
+      ],
+      "source": "outputs/reports/der_voltage_optimization_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1.0480220230730766,
+      "id": "summary.verified_max_voltage_after_pu",
+      "json_path": [
+        "summary",
+        "verified_max_voltage_after_pu"
+      ],
+      "source": "outputs/reports/der_voltage_optimization_report.json",
+      "tolerance": 0.0001
+    },
+    {
+      "expected": 2.459492019004247,
+      "id": "summary.total_pv_dispatch_mw",
+      "json_path": [
+        "summary",
+        "total_pv_dispatch_mw"
+      ],
+      "source": "outputs/reports/der_voltage_optimization_report.json",
+      "tolerance": 0.0001
+    },
+    {
+      "expected": 0.30050798099575315,
+      "id": "summary.total_pv_curtailment_mw",
+      "json_path": [
+        "summary",
+        "total_pv_curtailment_mw"
+      ],
+      "source": "outputs/reports/der_voltage_optimization_report.json",
+      "tolerance": 0.0001
+    }
+  ]
+}

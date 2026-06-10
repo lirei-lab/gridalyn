@@ -1,0 +1,37 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": true,
+      "id": "summary.powerflow_converged",
+      "json_path": [
+        "summary",
+        "powerflow_converged"
+      ],
+      "source": "outputs/reports/minimal_grid_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1.0098061102947706,
+      "id": "summary.min_voltage_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_pu"
+      ],
+      "source": "outputs/reports/minimal_grid_report.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2.8346723036099917,
+      "id": "summary.max_line_loading_pct",
+      "json_path": [
+        "summary",
+        "max_line_loading_pct"
+      ],
+      "source": "outputs/reports/minimal_grid_report.json",
+      "tolerance": 1e-06
+    }
+  ]
+}

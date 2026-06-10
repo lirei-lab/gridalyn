@@ -1,0 +1,47 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 9,
+      "id": "summary.building_count",
+      "json_path": [
+        "summary",
+        "building_count"
+      ],
+      "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 14,
+      "id": "summary.pandapower_bus_count",
+      "json_path": [
+        "summary",
+        "pandapower_bus_count"
+      ],
+      "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": true,
+      "id": "summary.powerflow_converged",
+      "json_path": [
+        "summary",
+        "powerflow_converged"
+      ],
+      "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.9962554018317967,
+      "id": "summary.min_voltage_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_pu"
+      ],
+      "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+      "tolerance": 1e-06
+    }
+  ]
+}

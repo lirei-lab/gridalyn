@@ -6,18 +6,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.foundation import ReportMetadata, file_reference, write_report
 from gridalyn.operations.market import (
     ProsumerRealtimeMarketConfig,
     build_prosumer_realtime_market_summary,
     run_prosumer_realtime_market,
     write_prosumer_market_dispatch_figure,
 )
+from gridalyn.projects.scripting import ProjectScript, project_script
 
 from network_model import build_synthetic_feeder
 
-
-PROJECT_NAME = "prosumer_battery_market"
 
 MARKET_CONFIG = ProsumerRealtimeMarketConfig(
     interval_minutes=5,
@@ -60,16 +58,14 @@ MARKET_CONFIG = ProsumerRealtimeMarketConfig(
 )
 
 
-def _write_tables(result) -> dict[str, Path]:
+def _write_tables(script: ProjectScript, result) -> dict[str, Path]:
     paths = {
-        "clearing": Path("outputs/operations/realtime_market_clearing.csv"),
-        "dispatch": Path("outputs/operations/battery_dispatch.csv"),
-        "forecast": Path("outputs/data/realtime_market_forecast.csv"),
-        "offers": Path("outputs/operations/realtime_market_offers.csv"),
-        "powerflow": Path("outputs/data/realtime_powerflow_results.csv"),
+        "clearing": script.operations_dir / "realtime_market_clearing.csv",
+        "dispatch": script.operations_dir / "battery_dispatch.csv",
+        "forecast": script.data_dir / "realtime_market_forecast.csv",
+        "offers": script.operations_dir / "realtime_market_offers.csv",
+        "powerflow": script.data_dir / "realtime_powerflow_results.csv",
     }
-    for path in paths.values():
-        path.parent.mkdir(parents=True, exist_ok=True)
     result.clearing.to_csv(paths["clearing"], index=False)
     result.dispatch.to_csv(paths["dispatch"], index=False)
     result.forecast.to_csv(paths["forecast"], index=False)
@@ -79,17 +75,18 @@ def _write_tables(result) -> dict[str, Path]:
 
 
 def main() -> int:
-    prosumer_path = Path("outputs/data/prosumers.csv")
+    script = project_script()
+    prosumer_path = script.data_dir / "prosumers.csv"
     prosumers = pd.read_csv(prosumer_path)
     result = run_prosumer_realtime_market(
         prosumers=prosumers,
         build_feeder=build_synthetic_feeder,
         config=MARKET_CONFIG,
     )
-    paths = _write_tables(result)
+    paths = _write_tables(script, result)
     figure_path = write_prosumer_market_dispatch_figure(
         result.clearing,
-        "outputs/figures/prosumer_market_dispatch.png",
+        script.figures_dir / "prosumer_market_dispatch.png",
         import_limit_mw=MARKET_CONFIG.import_limit_mw,
     )
     valid = bool(
@@ -97,16 +94,11 @@ def main() -> int:
         and result.clearing["cleared_mw"].sum() > 0
     )
 
-    write_report(
-        Path("outputs/reports/prosumer_realtime_market_report.json"),
-        metadata=ReportMetadata(
-            report_id="prosumer_realtime_market_report",
-            source_domain=PROJECT_NAME,
-            project={"name": PROJECT_NAME},
-        ),
+    script.write_report(
+        "prosumer_realtime_market_report",
         inputs=[
-            file_reference(prosumer_path),
-            file_reference(paths["forecast"]),
+            script.file_reference(prosumer_path),
+            script.file_reference(paths["forecast"]),
             {
                 "name": "real_time_import_limit",
                 "type": "market_parameter",
@@ -120,11 +112,11 @@ def main() -> int:
             },
         ],
         artifacts=[
-            file_reference(paths["clearing"]),
-            file_reference(paths["dispatch"]),
-            file_reference(paths["offers"]),
-            file_reference(paths["powerflow"]),
-            file_reference(figure_path),
+            script.file_reference(paths["clearing"]),
+            script.file_reference(paths["dispatch"]),
+            script.file_reference(paths["offers"]),
+            script.file_reference(paths["powerflow"]),
+            script.file_reference(figure_path),
         ],
         summary=build_prosumer_realtime_market_summary(result, config=MARKET_CONFIG),
         validation={

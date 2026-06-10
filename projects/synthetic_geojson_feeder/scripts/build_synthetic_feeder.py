@@ -6,20 +6,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.foundation import ReportMetadata, file_reference, write_report
+from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     build_pandapower_summary,
-    configure_headless_matplotlib,
     write_pandapower_element_tables,
 )
 from gridalyn.simulation.simulators.powerflow.synthetic_network import build_synthetic_network_from_geojson
-
-
-PROJECT_NAME = "synthetic_geojson_feeder"
-
-
-def _write_tables(result) -> dict[str, Path]:
-    return write_pandapower_element_tables(result.net, "outputs/data")
 
 
 def _bus_positions(net) -> pd.DataFrame:
@@ -36,13 +28,11 @@ def _bus_positions(net) -> pd.DataFrame:
     )
 
 
-def _write_figure(result) -> Path:
-    configure_headless_matplotlib()
+def _write_figure(script: ProjectScript, result) -> Path:
     import matplotlib.pyplot as plt
 
     net = result.net
-    figure_path = Path("outputs/figures/synthetic_feeder_topology.png")
-    figure_path.parent.mkdir(parents=True, exist_ok=True)
+    figure_path = script.figures_dir / "synthetic_feeder_topology.png"
     positions = _bus_positions(net).set_index("bus_id")
     fig, ax = plt.subplots(figsize=(7.4, 5.2))
     for line in net.line.itertuples():
@@ -62,7 +52,7 @@ def _write_figure(result) -> Path:
     return figure_path
 
 
-def _write_report(result, tables: dict[str, Path], figure_path: Path) -> None:
+def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure_path: Path) -> None:
     net = result.net
     validation = result.validation_report
     summary = build_pandapower_summary(
@@ -83,21 +73,16 @@ def _write_report(result, tables: dict[str, Path], figure_path: Path) -> None:
         },
     )
     artifacts = [
-        file_reference("outputs/data/building_footprints.geojson"),
-        file_reference("outputs/reports/synthetic_network_validation_report.json"),
-        *(file_reference(path) for path in tables.values()),
-        file_reference(figure_path),
+        script.file_reference(script.data_dir / "building_footprints.geojson"),
+        script.file_reference(script.reports_dir / "synthetic_network_validation_report.json"),
+        *(script.file_reference(path) for path in tables.values()),
+        script.file_reference(figure_path),
     ]
-    write_report(
-        "outputs/reports/synthetic_geojson_feeder_report.json",
-        metadata=ReportMetadata(
-            report_id="synthetic_geojson_feeder_report",
-            source_domain="synthetic_network_generation",
-            project={"name": PROJECT_NAME},
-        ),
+    script.write_report(
+        "synthetic_geojson_feeder_report",
         inputs=[
-            file_reference("outputs/data/building_footprints.geojson"),
-            file_reference("inputs/synthetic_network_config.json"),
+            script.file_reference(script.data_dir / "building_footprints.geojson"),
+            script.file_reference(script.root / "inputs/synthetic_network_config.json"),
         ],
         artifacts=artifacts,
         summary=summary,
@@ -110,17 +95,18 @@ def _write_report(result, tables: dict[str, Path], figure_path: Path) -> None:
 
 
 def main() -> int:
+    script = project_script()
     result = build_synthetic_network_from_geojson(
-        footprints_path="outputs/data/building_footprints.geojson",
-        config_path="inputs/synthetic_network_config.json",
-        out_dir="outputs/reports",
+        footprints_path=script.data_dir / "building_footprints.geojson",
+        config_path=script.root / "inputs/synthetic_network_config.json",
+        out_dir=script.reports_dir,
         clustering_crs="auto",
         write_cache=False,
         run_powerflow=True,
     )
-    tables = _write_tables(result)
-    figure_path = _write_figure(result)
-    _write_report(result, tables, figure_path)
+    tables = write_pandapower_element_tables(result.net, script.data_dir)
+    figure_path = _write_figure(script, result)
+    _write_report(script, result, tables, figure_path)
     return 0
 
 

@@ -21,15 +21,28 @@ spec:
       - id: load_growth_20
         role: demand_growth_case
         description: Uniform 20 percent demand growth.
+        parameters:
+          loadMultiplier: 1.2
       - id: pv_midday
         role: distributed_generation_case
-        description: Midday PV at selected downstream buses.
+        description: Midday distributed PV at selected downstream buses.
+        parameters:
+          pvBuses: [6, 14, 24, 30]
+          pvMwPerBus: 0.25
       - id: ev_evening_peak
         role: electrification_stress_case
         description: Evening EV charging demand at selected downstream buses.
+        parameters:
+          evBuses: [17, 18, 25, 30, 32]
+          evMwPerBus: 0.18
       - id: pv_plus_ev
         role: mixed_der_case
         description: Combined PV and EV condition for a mixed operating case.
+        parameters:
+          pvBuses: [6, 14, 24, 30]
+          pvMwPerBus: 0.18
+          evBuses: [17, 18, 25, 30, 32]
+          evMwPerBus: 0.12
   experiments:
     - id: deterministic_scenario_comparison
       scenarios:

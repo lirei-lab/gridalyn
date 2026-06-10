@@ -33,8 +33,27 @@ spec:
   inputs:
     sourceNetwork:
       name: Five-bus radial teaching feeder
-      provider: project script
-      note: Built directly with pandapower so new users can inspect the complete workflow in one file.
+      provider: project.yaml
+      note: Declarative radial feeder contract loaded through gridalyn.projects model-input helpers.
+      model:
+        type: radial_feeder
+        name: minimal_5_bus_radial_feeder
+        busCount: 5
+        snMva: 2.0
+        baseVoltageKv: 12.47
+        slackVmPu: 1.01
+        loadsMw:
+          1: 0.035
+          2: 0.045
+          3: 0.030
+          4: 0.040
+        qToPRatio: 0.25
+        lineLengthKm: 0.25
+        lineROhmPerKm: 0.28
+        lineXOhmPerKm: 0.18
+        lineCNfPerKm: 5.0
+        lineMaxIKa: 0.25
+        busYStep: 0.15
   artifacts:
     project:
       data: outputs/data

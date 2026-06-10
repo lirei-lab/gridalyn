@@ -1,0 +1,57 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 1.01,
+      "id": "summary.min_voltage_midday_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_midday_pu"
+      ],
+      "source": "outputs/reports/rl_feeder_report.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.0437719010993352,
+      "id": "summary.max_voltage_midday_pu",
+      "json_path": [
+        "summary",
+        "max_voltage_midday_pu"
+      ],
+      "source": "outputs/reports/rl_feeder_report.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 90,
+      "id": "summary.episode_count",
+      "json_path": [
+        "summary",
+        "episode_count"
+      ],
+      "source": "outputs/reports/rl_voltage_control_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 24,
+      "id": "summary.evaluation_step_count",
+      "json_path": [
+        "summary",
+        "evaluation_step_count"
+      ],
+      "source": "outputs/reports/rl_voltage_control_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": "tabular_q_learning_voltage_control",
+      "id": "summary.algorithm",
+      "json_path": [
+        "summary",
+        "algorithm"
+      ],
+      "source": "outputs/reports/rl_voltage_control_report.json",
+      "tolerance": 0
+    }
+  ]
+}

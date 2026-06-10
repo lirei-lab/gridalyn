@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandapower as pp
-
 from gridalyn.assets import voltage_control_assets_to_frame
-from gridalyn.foundation import ReportMetadata
+from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     LightSimPowerflowAdapter,
+    StandardPowerflowScenario,
+    run_standard_powerflow_scenario,
     write_pandapower_element_tables,
     write_powerflow_report,
     write_voltage_profile_figure,
@@ -24,10 +24,7 @@ from network_model import (
 )
 
 
-PROJECT_NAME = "rl_voltage_control_lightsim"
-
-
-def _apply_profile(net: pp.pandapowerNet, step: int) -> None:
+def _apply_profile(net, step: int) -> None:
     load_multiplier = float(load_multiplier_profile()[step])
     pv_mw = float(PV_MAX_MW * pv_profile()[step])
     base_load_count = len(net.load) - 1
@@ -37,24 +34,30 @@ def _apply_profile(net: pp.pandapowerNet, step: int) -> None:
     net.sgen.at[0, "p_mw"] = pv_mw
 
 
-def _write_inputs(net: pp.pandapowerNet) -> dict[str, Path]:
-    tables = write_pandapower_element_tables(net, "outputs/data")
-    assets_path = Path("outputs/data/rl_assets.csv")
-    assets_path.parent.mkdir(parents=True, exist_ok=True)
+def _write_inputs(script: ProjectScript, net) -> dict[str, Path]:
+    tables = write_pandapower_element_tables(net, script.data_dir)
+    assets_path = script.data_dir / "rl_assets.csv"
     voltage_control_assets_to_frame(DER_SPEC).to_csv(assets_path, index=False)
     return {**tables, "assets": assets_path}
 
 
 def main() -> int:
+    script = project_script()
     net = build_rl_feeder()
     _apply_profile(net, 11)
-    pp.runpp(net, algorithm="nr", init="auto")
+    run_standard_powerflow_scenario(
+        net,
+        StandardPowerflowScenario(
+            scenario_id="midday_pv_baseline",
+            description="Midday PV operating point for the RL feeder.",
+        ),
+    )
     lightsim = LightSimPowerflowAdapter(net)
     vm = lightsim.solve_voltage_magnitudes()
-    tables = _write_inputs(net)
+    tables = _write_inputs(script, net)
     figure = write_voltage_profile_figure(
         net,
-        "outputs/figures/rl_feeder_voltage_profile.png",
+        script.figures_dir / "rl_feeder_voltage_profile.png",
         title="RL Feeder - Midday PV Baseline",
         lower_limit_pu=0.98,
         upper_limit_pu=1.04,
@@ -62,15 +65,11 @@ def main() -> int:
         figsize=(8.5, 4.5),
     )
     write_powerflow_report(
-        Path("outputs/reports/rl_feeder_report.json"),
-        metadata=ReportMetadata(
-            report_id="rl_feeder_report",
-            source_domain=PROJECT_NAME,
-            project={"name": PROJECT_NAME},
-        ),
+        script.reports_dir / "rl_feeder_report.json",
+        metadata=script.report_metadata("rl_feeder_report"),
         net=net,
         inputs=[{"name": "synthetic_10_bus_rl_feeder", "type": "deterministic_project_generator"}],
-        artifacts=[*tables.values(), figure],
+        artifacts=[script.file_reference(path) for path in (*tables.values(), figure)],
         summary={
             "network": "synthetic_10_bus_rl_feeder",
             "simulation_engine": "lightsim2grid",

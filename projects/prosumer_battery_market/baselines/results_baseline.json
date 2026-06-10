@@ -1,0 +1,47 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 0.1213750000000003,
+      "id": "summary.total_cleared_mwh",
+      "json_path": [
+        "summary",
+        "total_cleared_mwh"
+      ],
+      "source": "outputs/reports/prosumer_realtime_market_report.json",
+      "tolerance": 0.0001
+    },
+    {
+      "expected": 2.55,
+      "id": "summary.peak_import_after_mw",
+      "json_path": [
+        "summary",
+        "peak_import_after_mw"
+      ],
+      "source": "outputs/reports/prosumer_realtime_market_report.json",
+      "tolerance": 0.0001
+    },
+    {
+      "expected": 0.9971457100831225,
+      "id": "summary.min_voltage_after_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_after_pu"
+      ],
+      "source": "outputs/reports/prosumer_realtime_market_report.json",
+      "tolerance": 0.0001
+    },
+    {
+      "expected": 5,
+      "id": "summary.prosumer_count",
+      "json_path": [
+        "summary",
+        "prosumer_count"
+      ],
+      "source": "outputs/reports/prosumer_realtime_market_report.json",
+      "tolerance": 0
+    }
+  ]
+}

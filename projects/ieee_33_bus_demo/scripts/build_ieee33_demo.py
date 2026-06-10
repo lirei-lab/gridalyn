@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from gridalyn.assets import IEEE_33_BUS_BENCHMARK
-from gridalyn.foundation import ReportMetadata
+from gridalyn.projects.scripting import project_script
 from gridalyn.simulation import (
     build_ieee33_benchmark_feeder,
     write_pandapower_element_tables,
@@ -14,28 +12,20 @@ from gridalyn.simulation import (
 )
 
 
-PROJECT_NAME = "ieee_33_bus_demo"
-
-
 def main() -> int:
+    script = project_script()
     net = build_ieee33_benchmark_feeder(run_powerflow=True)
-    tables = write_pandapower_element_tables(net, "outputs/data")
+    tables = write_pandapower_element_tables(net, script.data_dir)
     figure = write_voltage_profile_figure(
         net,
-        "outputs/figures/ieee33_voltage_profile.png",
+        script.figures_dir / "ieee33_voltage_profile.png",
         title="IEEE 33-Bus Demo - Voltage Profile",
         xlabel="Bus index",
         figsize=(9.0, 4.8),
     )
-    report_path = Path("outputs/reports/ieee33_powerflow_report.json")
-
     write_powerflow_report(
-        report_path,
-        metadata=ReportMetadata(
-            report_id="ieee33_powerflow_report",
-            source_domain=PROJECT_NAME,
-            project={"name": PROJECT_NAME},
-        ),
+        script.reports_dir / "ieee33_powerflow_report.json",
+        metadata=script.report_metadata("ieee33_powerflow_report"),
         net=net,
         inputs=[
             {
@@ -43,7 +33,10 @@ def main() -> int:
                 "type": "gridalyn_benchmark_feeder",
             }
         ],
-        artifacts=[tables["buses"], tables["lines"], tables["loads"], figure],
+        artifacts=[
+            script.file_reference(path)
+            for path in (tables["buses"], tables["lines"], tables["loads"], figure)
+        ],
         summary={"network": IEEE_33_BUS_BENCHMARK.benchmark_id},
     )
     return 0

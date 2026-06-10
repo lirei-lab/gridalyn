@@ -1,0 +1,47 @@
+{
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 5,
+      "id": "summary.scenario_count",
+      "json_path": [
+        "summary",
+        "scenario_count"
+      ],
+      "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": "ev_evening_peak",
+      "id": "summary.worst_voltage_scenario",
+      "json_path": [
+        "summary",
+        "worst_voltage_scenario"
+      ],
+      "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.8845858902633064,
+      "id": "summary.min_voltage_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_pu"
+      ],
+      "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.00025788234982032225,
+      "id": "summary.max_line_loading_percent",
+      "json_path": [
+        "summary",
+        "max_line_loading_percent"
+      ],
+      "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+      "tolerance": 1e-06
+    }
+  ]
+}

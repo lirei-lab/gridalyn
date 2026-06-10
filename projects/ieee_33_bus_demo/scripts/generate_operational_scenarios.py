@@ -1,4 +1,4 @@
-"""Generate deterministic operational scenarios for the IEEE 33-bus demo."""
+"""Run the operational scenarios declared in project.yaml for the IEEE 33-bus demo."""
 
 from __future__ import annotations
 
@@ -7,49 +7,13 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.assets import IEEE_33_BUS_BENCHMARK
-from gridalyn.foundation import ReportMetadata, file_reference, write_report
+from gridalyn.projects.model_inputs import load_standard_powerflow_scenarios
+from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     StandardPowerflowScenario,
     build_ieee33_benchmark_feeder,
-    configure_headless_matplotlib,
     run_standard_powerflow_scenario,
     scenario_to_record,
-)
-
-
-PROJECT_NAME = "ieee_33_bus_demo"
-
-
-SCENARIOS = (
-    StandardPowerflowScenario(
-        scenario_id="baseline",
-        description="Original IEEE 33-bus feeder.",
-    ),
-    StandardPowerflowScenario(
-        scenario_id="load_growth_20",
-        description="Uniform 20 percent demand growth.",
-        load_multiplier=1.2,
-    ),
-    StandardPowerflowScenario(
-        scenario_id="pv_midday",
-        description="Midday distributed PV at selected downstream buses.",
-        pv_buses=(6, 14, 24, 30),
-        pv_mw_per_bus=0.25,
-    ),
-    StandardPowerflowScenario(
-        scenario_id="ev_evening_peak",
-        description="Evening EV charging demand at selected downstream buses.",
-        ev_buses=(17, 18, 25, 30, 32),
-        ev_mw_per_bus=0.18,
-    ),
-    StandardPowerflowScenario(
-        scenario_id="pv_plus_ev",
-        description="Combined PV and EV condition for a mixed operating case.",
-        pv_buses=(6, 14, 24, 30),
-        pv_mw_per_bus=0.18,
-        ev_buses=(17, 18, 25, 30, 32),
-        ev_mw_per_bus=0.12,
-    ),
 )
 
 
@@ -60,22 +24,20 @@ def _run_scenario(scenario: StandardPowerflowScenario) -> tuple[dict, pd.DataFra
     )
 
 
-def _write_scenario_inputs() -> Path:
-    path = Path("outputs/data/scenarios.csv")
-    rows = [
-        scenario_to_record(scenario)
-        for scenario in SCENARIOS
-    ]
+def _write_scenario_inputs(
+    script: ProjectScript,
+    scenarios: tuple[StandardPowerflowScenario, ...],
+) -> Path:
+    path = script.data_dir / "scenarios.csv"
+    rows = [scenario_to_record(scenario) for scenario in scenarios]
     pd.DataFrame(rows).to_csv(path, index=False)
     return path
 
 
-def _write_voltage_comparison(results: pd.DataFrame, voltages: pd.DataFrame) -> Path:
-    configure_headless_matplotlib()
+def _write_voltage_comparison(script: ProjectScript, voltages: pd.DataFrame) -> Path:
     import matplotlib.pyplot as plt
 
-    figure_path = Path("outputs/figures/ieee33_scenario_voltage_comparison.png")
-    figure_path.parent.mkdir(parents=True, exist_ok=True)
+    figure_path = script.figures_dir / "ieee33_scenario_voltage_comparison.png"
     fig, ax = plt.subplots(figsize=(10, 5.4))
     for scenario_id, group in voltages.groupby("scenario_id", sort=False):
         ax.plot(group["bus_id"], group["vm_pu"], linewidth=1.7, marker="o", markersize=3, label=scenario_id)
@@ -107,38 +69,34 @@ def _summary(results: pd.DataFrame) -> dict:
 
 
 def main() -> int:
-    scenario_input_path = _write_scenario_inputs()
+    script = project_script()
+    scenarios = load_standard_powerflow_scenarios(script.project)
+    scenario_input_path = _write_scenario_inputs(script, scenarios)
     rows = []
     voltage_frames = []
-    for scenario in SCENARIOS:
+    for scenario in scenarios:
         result, voltage = _run_scenario(scenario)
         rows.append(result)
         voltage_frames.append(voltage)
 
     results = pd.DataFrame(rows)
     voltages = pd.concat(voltage_frames, ignore_index=True)
-    result_path = Path("outputs/data/scenario_results.csv")
-    voltage_path = Path("outputs/data/scenario_voltage_profiles.csv")
+    result_path = script.data_dir / "scenario_results.csv"
+    voltage_path = script.data_dir / "scenario_voltage_profiles.csv"
     results.to_csv(result_path, index=False)
     voltages.to_csv(voltage_path, index=False)
-    figure_path = _write_voltage_comparison(results, voltages)
-    report_path = Path("outputs/reports/ieee33_scenario_comparison_report.json")
+    figure_path = _write_voltage_comparison(script, voltages)
 
-    write_report(
-        report_path,
-        metadata=ReportMetadata(
-            report_id="ieee33_scenario_comparison_report",
-            source_domain=PROJECT_NAME,
-            project={"name": PROJECT_NAME},
-        ),
+    script.write_report(
+        "ieee33_scenario_comparison_report",
         inputs=[
-            file_reference(scenario_input_path),
+            script.file_reference(scenario_input_path),
             {"name": IEEE_33_BUS_BENCHMARK.source_name, "type": "gridalyn_benchmark_feeder"},
         ],
         artifacts=[
-            file_reference(result_path),
-            file_reference(voltage_path),
-            file_reference(figure_path),
+            script.file_reference(result_path),
+            script.file_reference(voltage_path),
+            script.file_reference(figure_path),
         ],
         summary=_summary(results),
         validation={
