@@ -35,10 +35,16 @@ Inspect its planned stages:
 uv run gridalyn project plan projects/minimal_grid_project
 ```
 
-Run it:
+Run it (per-stage progress streams to the terminal):
 
 ```bash
 uv run gridalyn project run projects/minimal_grid_project
+```
+
+While iterating on one stage, run only that stage and its dependencies:
+
+```bash
+uv run gridalyn project run projects/minimal_grid_project --stage run_minimal_powerflow
 ```
 
 Check outputs and required artifacts:
@@ -58,6 +64,17 @@ Verify all governed demos:
 ```bash
 uv run gridalyn project verify-all
 ```
+
+Check pinned result metrics against the project's regression baseline (every
+demo ships one under `baselines/results_baseline.json`):
+
+```bash
+uv run gridalyn project regression projects/minimal_grid_project
+```
+
+If a command fails with an import error, `uv run gridalyn doctor` shows which
+optional capabilities are installed; domain CLIs also print the exact
+`pip install "gridalyn[<extra>]"` command they need.
 
 ## Project Outputs
 

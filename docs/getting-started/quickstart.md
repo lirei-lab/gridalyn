@@ -36,7 +36,59 @@ Expected result: `"valid": true`. If the command reports tracked generated
 artifacts, read [Artifact Policy](../development/artifact-policy.md) before
 adding files to Git.
 
-## 2. Run A Minimal Governed Project
+If anything looks off, inspect the installation, optional capabilities, and
+workspace in one command:
+
+```bash
+uv run gridalyn doctor
+```
+
+## 2. Your First Simulation In One Command
+
+Create and run a complete IEEE 33-bus power-flow study, including a
+voltage-profile figure and a governed JSON report:
+
+```bash
+uv run gridalyn quickstart my-first-study
+```
+
+This scaffolds a project from the `powerflow-demo` template, runs its
+workflow with live progress, and prints where the artifacts landed:
+
+```text
+outputs/figures/powerflow_demo_voltage_profile.png
+outputs/reports/powerflow_demo_report.json
+```
+
+The same study in Python, using only top-level imports:
+
+```python
+import gridalyn
+
+created = gridalyn.init_project("my-first-study", template="powerflow-demo")
+gridalyn.run_workflow(created.root, echo=True)
+print(gridalyn.project_verify(created.root)["valid"])
+```
+
+Inside a project script, `gridalyn.project_script()` removes the remaining
+boilerplate: it resolves the workspace, prepares `outputs/*`, configures
+headless matplotlib, and writes reports stamped with the project name:
+
+```python
+from gridalyn.projects.scripting import project_script
+from gridalyn.simulation import build_ieee33_benchmark_feeder, write_voltage_profile_figure
+
+script = project_script()
+net = build_ieee33_benchmark_feeder(run_powerflow=True)
+write_voltage_profile_figure(
+    net,
+    script.figures_dir / "voltage_profile.png",
+    title=f"{script.name} - Voltage Profile",
+)
+script.write_report("my_report", summary={"min_voltage_pu": float(net.res_bus.vm_pu.min())})
+```
+
+## 3. Run A Minimal Governed Project
 
 The smallest complete project contract is:
 
@@ -68,7 +120,7 @@ project-level verification.
 
 More detail is in [Minimal Grid Project](../projects/minimal-grid-project.md).
 
-## 3. Inspect The Platform Surfaces
+## 4. Inspect The Platform Surfaces
 
 After the minimal project passes, inspect the reusable surfaces instead of
 jumping straight into a large demo:
@@ -84,7 +136,7 @@ jumping straight into a large demo:
 Use [Documentation Map](documentation-map.md) when you are unsure where to go
 next.
 
-## 4. Choose One Additional Verification Path
+## 5. Choose One Additional Verification Path
 
 Pick one path based on what you need to prove:
 
@@ -101,7 +153,7 @@ The larger Flexibility CLS workflow is useful as an end-to-end stress test for
 operations, clearing, dispatch, settlement, reports, and figures. Run it when
 you need the full operations stack, not as the first proof that Gridalyn works.
 
-## 5. Validate Code And Documentation
+## 6. Validate Code And Documentation
 
 Run the Python test suite:
 
@@ -117,7 +169,7 @@ uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 
 The generated HTML goes to `site/` and should not be committed.
 
-## 6. Optional Application Surfaces
+## 7. Optional Application Surfaces
 
 Build the semantic graph when you need ontology-aligned artifacts:
 

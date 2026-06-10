@@ -80,14 +80,26 @@ as a comprehensive stress test, not as the only story Gridalyn tells.
 
 ## 4. Create A Small Project
 
+The fastest path is one command that scaffolds and runs a real power-flow
+study:
+
 ```bash
-uv run gridalyn project init projects/my_first_case --template grid-study
+uv run gridalyn quickstart projects/my_first_case
+```
+
+Or do the same steps explicitly, choosing a template
+(`gridalyn project init --list-templates` shows all of them):
+
+```bash
+uv run gridalyn project init projects/my_first_case --template powerflow-demo
 uv run gridalyn project run projects/my_first_case
 uv run gridalyn project status projects/my_first_case --check-artifacts
 ```
 
-This gives you a clean project workspace with a runnable workflow and a valid
-JSON report. Use it to learn the project contract before adding domain logic.
+This gives you a clean project workspace with a runnable workflow, a figure,
+and a valid JSON report. Use it to learn the project contract before adding
+domain logic, then continue with
+[Build Your Own Project](build-your-own-project.md).
 
 ## 5. Choose Your Next Track
 

@@ -17,6 +17,7 @@ nav:
       - Quickstart: getting-started/quickstart.md
       - First Hour With Gridalyn: getting-started/first-hour.md
       - Run Demo Projects: getting-started/run-demo-projects.md
+      - Build Your Own Project: getting-started/build-your-own-project.md
       - Open The Dashboard: tutorials/open-dashboard.md
       - Reproducibility Checklist: getting-started/reproducibility.md
       - Documentation Map: getting-started/documentation-map.md
@@ -40,6 +41,7 @@ nav:
           - Artifacts: concepts/data-and-artifact-model.md
           - Scenarios: concepts/scenarios.md
           - Model States: concepts/model-states.md
+          - Naming Conventions: concepts/naming-conventions.md
           - Semantic Graph: semantic-layer/semantic-graph.md
       - Applications:
           - Applications And Interfaces: platform/applications-and-interfaces.md
