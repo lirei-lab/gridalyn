@@ -16,6 +16,27 @@ def _load_schema(name: str) -> dict:
     return json.loads((SCHEMA_DIR / name).read_text(encoding="utf-8"))
 
 
+def _friendly_hint(error) -> str:
+    """Return a remediation hint for common schema validation failures."""
+    if error.validator == "required":
+        missing = error.message.split("'")[1] if "'" in error.message else "the field"
+        return (
+            f" — add '{missing}:' at this location; "
+            "run 'gridalyn project init' to generate a working template"
+        )
+    if error.validator == "type":
+        expected = error.validator_value
+        if isinstance(expected, list):
+            expected = " or ".join(str(item) for item in expected)
+        return f" — change the value to a YAML {expected}"
+    if error.validator == "enum":
+        allowed = ", ".join(str(item) for item in error.validator_value)
+        return f" — allowed values: {allowed}"
+    if error.validator == "additionalProperties":
+        return " — remove the unrecognized field or check its spelling"
+    return ""
+
+
 def _validate_schema(
     data: dict,
     schema_name: str,
@@ -26,7 +47,7 @@ def _validate_schema(
     validator = Draft202012Validator(schema)
     for error in sorted(validator.iter_errors(data), key=lambda item: list(item.path)):
         path = ".".join(str(part) for part in error.path) or "<root>"
-        report.add_error(f"{label}:{path}: {error.message}")
+        report.add_error(f"{label}:{path}: {error.message}{_friendly_hint(error)}")
 
 
 def validate_project_file(

@@ -17,7 +17,14 @@ from gridalyn.projects.models import (
 
 
 def read_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        location = ""
+        mark = getattr(exc, "problem_mark", None)
+        if mark is not None:
+            location = f" at line {mark.line + 1}, column {mark.column + 1}"
+        raise ValueError(f"{path}: invalid YAML{location}: {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"{path} must contain a YAML mapping")
     return data
