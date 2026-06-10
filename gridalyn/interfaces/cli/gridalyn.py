@@ -14,17 +14,9 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
+from gridalyn.foundation.platform.capabilities import OPTIONAL_CAPABILITY_MODULES
 from gridalyn.foundation.platform.validation import validate_workspace
 from gridalyn.projects.api import list_projects
-
-
-OPTIONAL_CAPABILITY_MODULES = {
-    "geo": ["geopandas", "osmnx", "shapely"],
-    "sim": ["pandapower", "lightsim2grid"],
-    "ops": ["cvxpy", "lightgbm"],
-    "semantic": ["rdflib", "falkordb"],
-    "dashboard": ["folium", "leafmap"],
-}
 
 
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
@@ -114,6 +106,38 @@ def _doctor(args: argparse.Namespace) -> int:
     return 0 if payload["valid"] else 1
 
 
+def _quickstart(args: argparse.Namespace) -> int:
+    from gridalyn.foundation.platform.capabilities import (
+        MissingCapabilityError,
+        require_capabilities,
+    )
+    from gridalyn.projects.api import init_project, run_workflow
+
+    try:
+        require_capabilities("sim", context="the quickstart power-flow demo")
+    except MissingCapabilityError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    target = Path(args.project)
+    created = init_project(target, name=args.name, template="powerflow-demo")
+    print(f"created project workspace: {created.root}", file=sys.stderr)
+    run_workflow(created.root, echo=True)
+
+    figure = created.root / "outputs" / "figures" / "powerflow_demo_voltage_profile.png"
+    report = created.root / "outputs" / "reports" / "powerflow_demo_report.json"
+    print("", file=sys.stderr)
+    print("Quickstart complete. Artifacts:", file=sys.stderr)
+    print(f"  figure: {figure}", file=sys.stderr)
+    print(f"  report: {report}", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Next steps:", file=sys.stderr)
+    print(f"  gridalyn project status {target} --check-artifacts", file=sys.stderr)
+    print(f"  gridalyn project verify {target}", file=sys.stderr)
+    print(f"  edit {target}/scripts/run_powerflow_study.py to make it yours", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="gridalyn",
@@ -123,6 +147,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     subparsers = parser.add_subparsers(dest="domain", required=True)
+
+    quickstart_parser = subparsers.add_parser(
+        "quickstart",
+        help="Create and run a small power-flow demo project (first simulation in one command).",
+    )
+    quickstart_parser.add_argument("project", help="Directory to create the demo project in.")
+    quickstart_parser.add_argument("--name", help="Project name (defaults to the directory name).")
+    quickstart_parser.set_defaults(handler=_quickstart)
 
     validate_parser = subparsers.add_parser(
         "validate",

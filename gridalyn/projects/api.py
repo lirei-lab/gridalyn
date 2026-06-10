@@ -5,15 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
-import json
-import subprocess
-import sys
 
 from gridalyn.projects.loader import load_project as _load_project
 from gridalyn.projects.models import StudyProject, ValidationReport, WorkflowStage
 from gridalyn.projects.outputs import prepare_project_workspace
+from gridalyn.projects.regression import run_project_regression
 from gridalyn.projects.runner import default_manifest_path, plan_stages, run_project
 from gridalyn.projects.sense_checks import project_sense_check as _project_sense_check
+from gridalyn.projects.templates import TEMPLATES
 from gridalyn.projects.validation import validate_project_file
 from gridalyn.foundation.platform.reports import read_json_report, validate_report
 
@@ -66,55 +65,42 @@ def run_workflow(
     project_or_path: StudyProject | Path | str,
     dry_run: bool = False,
     manifest_path: Path | str | None = None,
+    echo: bool = False,
+    stages: list[str] | None = None,
 ) -> list[str]:
-    """Run or dry-run a project workflow."""
+    """Run or dry-run a project workflow.
+
+    ``echo`` streams per-stage progress to stderr. ``stages`` restricts the
+    run to the named stages plus their transitive dependencies.
+    """
     project = (
         project_or_path
         if isinstance(project_or_path, StudyProject)
         else load_project(project_or_path)
     )
-    return run_project(project, dry_run=dry_run, manifest_path=manifest_path)
+    return run_project(
+        project,
+        dry_run=dry_run,
+        manifest_path=manifest_path,
+        echo=echo,
+        stages=stages,
+    )
 
 
 def project_regression(path: Path | str) -> dict:
-    """Run a project-local regression verifier when one is configured."""
+    """Run a project regression baseline when one is configured."""
     project = load_project(path)
-    script = project.root / "scripts" / "verify_regression.py"
-    if not script.exists():
+    baseline = project.root / "baselines" / "results_baseline.json"
+    if not baseline.exists():
         return {
             "project": project.name,
             "valid": False,
             "checked_count": 0,
-            "errors": [f"missing regression verifier: {script}"],
+            "errors": [f"missing regression baseline: {baseline}"],
         }
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script),
-            "--project-root",
-            str(project.root),
-        ],
-        cwd=project.base_dir,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    try:
-        report = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return {
-            "project": project.name,
-            "valid": False,
-            "checked_count": 0,
-            "errors": ["regression verifier did not emit JSON"],
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode,
-        }
-    report["returncode"] = result.returncode
-    if result.stderr:
-        report["stderr"] = result.stderr
+    report = run_project_regression(project_root=project.root)
+    report["returncode"] = 0 if report.get("valid") else 1
     return report
 
 
@@ -288,11 +274,15 @@ def init_project(
     force: bool = False,
     template: str = "minimal",
 ) -> CreatedProject:
-    """Create a minimal project workspace."""
+    """Create a project workspace from a registered template."""
     root = Path(target)
     project_name = _slug(name or root.name)
-    if template not in {"minimal", "grid-study"}:
-        raise ValueError(f"unsupported project template: {template}")
+    if template not in TEMPLATES:
+        available = ", ".join(sorted(TEMPLATES))
+        raise ValueError(
+            f"unsupported project template: {template} (available: {available})"
+        )
+    selected = TEMPLATES[template]
     if root.exists() and any(root.iterdir()) and not force:
         raise FileExistsError(f"target project directory is not empty: {root}")
 
@@ -303,202 +293,21 @@ def init_project(
     project_file = root / "project.yaml"
     workflow_file = root / "workflow.yaml"
     readme_file = root / "README.md"
-    report_script = root / "scripts" / "write_summary_report.py"
 
     if force or not project_file.exists():
-        project_file.write_text(_project_yaml(project_name, template), encoding="utf-8")
+        project_file.write_text(selected.project_yaml(project_name), encoding="utf-8")
     if force or not workflow_file.exists():
-        workflow_file.write_text(_workflow_yaml(project_name, template), encoding="utf-8")
+        workflow_file.write_text(selected.workflow_yaml(project_name), encoding="utf-8")
     if force or not readme_file.exists():
-        readme_file.write_text(_readme(project_name, template), encoding="utf-8")
-    if template == "grid-study" and (force or not report_script.exists()):
-        report_script.write_text(_summary_report_script(project_name), encoding="utf-8")
+        readme_file.write_text(selected.readme(project_name), encoding="utf-8")
+    for relative, builder in selected.scripts.items():
+        script_file = root / relative
+        if force or not script_file.exists():
+            script_file.parent.mkdir(parents=True, exist_ok=True)
+            script_file.write_text(builder(project_name), encoding="utf-8")
 
     return CreatedProject(
         root=root,
         project_file=project_file,
         workflow_file=workflow_file,
     )
-
-
-def _project_yaml(name: str, template: str = "minimal") -> str:
-    required_reports = (
-        "[]"
-        if template == "minimal"
-        else "\n      - outputs/reports/project_summary.json"
-    )
-    sense_checks = (
-        "[]"
-        if template == "minimal"
-        else """
-      - id: project_summary_ready
-        report: outputs/reports/project_summary.json
-        field: summary.ready
-        equals: true"""
-    )
-    experiment_artifacts = (
-        "[]"
-        if template == "minimal"
-        else """
-        - outputs/reports/project_summary.json"""
-    )
-    return f"""apiVersion: gridalyn.io/v1alpha1
-kind: StudyProject
-metadata:
-  name: {name}
-  version: 0.1.0
-spec:
-  pathBase: project
-  problem:
-    type: grid_study
-    dataset: project_inputs
-    environment: project_workflow
-    objective: Define a reproducible Gridalyn project contract.
-    model:
-      type: workflow_model
-      name: {name}_workflow
-    scenarios:
-      - id: baseline
-        role: template_baseline
-        description: Default template scenario for contract validation.
-  experiments:
-    - id: baseline_run
-      scenario: baseline
-      objective: Validate the project contract and declared reports.
-      metrics: []
-      model: {name}_workflow
-      artifacts: {experiment_artifacts}
-  inputs:
-    raw: inputs
-  artifacts:
-    project:
-      data: outputs/data
-      reports: outputs/reports
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-  workflow:
-    file: workflow.yaml
-  validation:
-    requiredReports: {required_reports}
-    requiredFigures: []
-    senseChecks: {sense_checks}
-"""
-
-
-def _workflow_yaml(name: str, template: str = "minimal") -> str:
-    if template == "grid-study":
-        return f"""apiVersion: gridalyn.io/v1alpha1
-kind: Workflow
-metadata:
-  name: {name}_workflow
-spec:
-  stages:
-    - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
-      outputs:
-        - outputs/data
-        - outputs/figures
-        - outputs/manifests
-        - outputs/operations
-        - outputs/reports
-    - id: write_summary_report
-      needs:
-        - prepare_workspace
-      command: python scripts/write_summary_report.py
-      outputs:
-        - outputs/reports/project_summary.json
-"""
-    return f"""apiVersion: gridalyn.io/v1alpha1
-kind: Workflow
-metadata:
-  name: {name}_workflow
-spec:
-  stages:
-    - id: prepare_inputs
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
-      outputs:
-        - outputs/reports
-    - id: validate_outputs
-      needs:
-        - prepare_inputs
-      command: python -c "print('No project-specific validation configured yet')"
-"""
-
-
-def _readme(name: str, template: str = "minimal") -> str:
-    return f"""# {name}
-
-This is a Gridalyn project workspace using the `{template}` template.
-
-## Common Commands
-
-```bash
-uv run gridalyn project validate .
-uv run gridalyn project plan .
-uv run gridalyn project run . --dry-run
-uv run gridalyn project status .
-```
-
-Place raw inputs under `inputs/` and write generated artifacts under
-`outputs/`. Keep reusable implementation in the `gridalyn` package and
-project-specific glue under this workspace.
-
-Use `outputs/operations/` for operational instructions, run records, dispatch
-tables, and settlement-ready artifacts. Use `outputs/reports/` for stable JSON
-reports and `outputs/data/` for derived analytical datasets.
-
-## Report Contract
-
-Project reports should use the platform report contract:
-
-```python
-from gridalyn.foundation.platform import ReportMetadata, write_report
-
-write_report(
-    "outputs/reports/sample_report.json",
-    metadata=ReportMetadata(report_id="sample_report", source_domain="{name}"),
-    summary={{"ready": True}},
-)
-```
-"""
-
-
-def _summary_report_script(name: str) -> str:
-    return f'''"""Write the default project summary report for {name}."""
-
-from __future__ import annotations
-
-import json
-from datetime import datetime, timezone
-from pathlib import Path
-
-
-def main() -> int:
-    output = Path("outputs/reports/project_summary.json")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    payload = {{
-        "report_id": "project_summary",
-        "schema_version": "1.0",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "source_domain": "{name}",
-        "project": {{"name": "{name}"}},
-        "governance": {{"model_version_id": None, "study_run_id": None}},
-        "inputs": [],
-        "artifacts": [
-            {{"path": "outputs/reports/project_summary.json"}}
-        ],
-        "summary": {{
-            "project": "{name}",
-            "template": "grid-study",
-            "ready": True
-        }},
-        "validation": {{"valid": True, "errors": [], "warnings": []}},
-    }}
-    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''

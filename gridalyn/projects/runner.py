@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
+import time
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,10 +63,36 @@ def default_manifest_path(project: StudyProject) -> Path:
     return project.root / "outputs" / "manifests" / "project_run_manifest.json"
 
 
+def select_stages(project: StudyProject, requested: list[str]) -> list[WorkflowStage]:
+    """Return requested stages plus their transitive dependencies, in run order."""
+    stages = {stage.id: stage for stage in project.workflow.stages}
+    unknown = sorted(set(requested) - set(stages))
+    if unknown:
+        available = ", ".join(sorted(stages))
+        raise ValueError(
+            f"unknown workflow stage(s): {', '.join(unknown)} (available: {available})"
+        )
+    selected: set[str] = set()
+    pending = list(requested)
+    while pending:
+        stage_id = pending.pop()
+        if stage_id in selected:
+            continue
+        selected.add(stage_id)
+        pending.extend(stages[stage_id].needs)
+    return [stage for stage in plan_stages(project) if stage.id in selected]
+
+
+def _echo(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
 def run_project(
     project: StudyProject,
     dry_run: bool = False,
     manifest_path: Path | str | None = None,
+    echo: bool = False,
+    stages: list[str] | None = None,
 ) -> list[str]:
     started_at = _utc_now()
     git_commit = _git_commit(project.base_dir)
@@ -86,9 +114,13 @@ def run_project(
         "stages": [],
     }
     output_path = Path(manifest_path) if manifest_path else default_manifest_path(project)
+    planned = select_stages(project, stages) if stages else plan_stages(project)
+    if stages:
+        manifest["stage_filter"] = sorted({stage.id for stage in planned})
+    total = len(planned)
     executed: list[str] = []
     try:
-        for stage in plan_stages(project):
+        for index, stage in enumerate(planned, start=1):
             executed.append(stage.id)
             record = {
                 "id": stage.id,
@@ -100,21 +132,33 @@ def run_project(
             }
             manifest["stages"].append(record)
             if dry_run:
+                if echo:
+                    _echo(f"[{index}/{total}] {stage.id} (planned): {stage.command}")
                 continue
 
+            if echo:
+                _echo(f"[{index}/{total}] {stage.id}: {stage.command}")
+            stage_started = time.monotonic()
             result = subprocess.run(
                 stage.command,
                 cwd=project.base_dir,
                 shell=True,
                 check=False,
             )
+            elapsed = time.monotonic() - stage_started
             record["ended_at"] = _utc_now()
             record["exit_code"] = result.returncode
             if result.returncode != 0:
                 record["status"] = "failed"
                 manifest["status"] = "failed"
+                if echo:
+                    _echo(f"[{index}/{total}] {stage.id} FAILED (exit {result.returncode}) after {elapsed:.1f}s")
+                    _echo(f"Inspect the run manifest: {output_path}")
+                    _echo(f"Re-run just this stage with: gridalyn project run {project.root} --stage {stage.id}")
                 raise subprocess.CalledProcessError(result.returncode, stage.command)
             record["status"] = "completed"
+            if echo:
+                _echo(f"[{index}/{total}] {stage.id} completed in {elapsed:.1f}s")
     except Exception:
         if manifest["status"] == "running":
             manifest["status"] = "failed"
@@ -140,4 +184,7 @@ def run_project(
             },
         ).to_dict()
         _write_manifest(output_path, manifest)
+        if echo and manifest["status"] != "failed":
+            label = "planned" if dry_run else "completed"
+            _echo(f"{label} {len(executed)}/{total} stage(s); manifest: {output_path}")
     return executed

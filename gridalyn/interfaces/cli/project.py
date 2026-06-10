@@ -30,7 +30,23 @@ def _print_json(payload: dict) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def _list_templates(args: argparse.Namespace) -> int:
+    from gridalyn.projects.templates import TEMPLATES
+
+    _print_json(
+        {
+            "templates": [
+                {"name": template.name, "description": template.description}
+                for template in TEMPLATES.values()
+            ]
+        }
+    )
+    return 0
+
+
 def _init(args: argparse.Namespace) -> int:
+    if args.list_templates:
+        return _list_templates(args)
     created = init_project(
         Path(args.project),
         name=args.name,
@@ -75,6 +91,8 @@ def _run(args: argparse.Namespace) -> int:
         Path(args.project),
         dry_run=args.dry_run,
         manifest_path=Path(args.manifest_path) if args.manifest_path else None,
+        echo=not args.quiet,
+        stages=args.stage or None,
     )
     _print_json({"executed": executed})
     return 0
@@ -129,14 +147,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    from gridalyn.projects.templates import TEMPLATES
+
     init_parser = subparsers.add_parser("init")
-    init_parser.add_argument("project")
+    init_parser.add_argument("project", nargs="?", default=".")
     init_parser.add_argument("--name")
     init_parser.add_argument(
         "--template",
         default="minimal",
-        choices=["minimal", "grid-study"],
+        choices=sorted(TEMPLATES),
         help="Project scaffold template to create.",
+    )
+    init_parser.add_argument(
+        "--list-templates",
+        action="store_true",
+        help="List available templates and exit.",
     )
     init_parser.add_argument("--force", action="store_true")
     init_parser.set_defaults(handler=_init)
@@ -154,6 +179,16 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("project")
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--manifest-path")
+    run_parser.add_argument(
+        "--stage",
+        action="append",
+        help="Run only this stage and its dependencies (repeatable).",
+    )
+    run_parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Disable per-stage progress output.",
+    )
     run_parser.set_defaults(handler=_run)
 
     prepare_parser = subparsers.add_parser("prepare-workspace")
