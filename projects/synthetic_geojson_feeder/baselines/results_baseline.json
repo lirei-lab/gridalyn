@@ -34,7 +34,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.9962554018317967,
+      "expected": 0.9968092664796918,
       "id": "summary.min_voltage_pu",
       "json_path": [
         "summary",

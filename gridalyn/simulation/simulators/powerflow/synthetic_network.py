@@ -14,7 +14,7 @@ import hashlib
 import json
 import pickle
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import pandapower as pp
 
@@ -40,6 +40,7 @@ def build_synthetic_network_from_geojson(
     clustering_crs: str | int | None = "auto",
     write_cache: bool = False,
     run_powerflow: bool = False,
+    building_peak_loads_kw: Sequence[float] | None = None,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from building footprints.
 
@@ -54,6 +55,10 @@ def build_synthetic_network_from_geojson(
             ``pp_net_cache.pkl`` in ``out_dir`` for downstream adapters.
         run_powerflow: When true, run a pandapower AC power flow and record
             convergence in the report.
+        building_peak_loads_kw: Optional per-building peak loads (kW) that
+            override the uniform config envelope, one value per network load
+            in load-table order. Transformer and line sizing still use the
+            declared envelope; q/p ratios are preserved.
     """
 
     config_file = Path(config_path)
@@ -66,6 +71,7 @@ def build_synthetic_network_from_geojson(
         clustering_crs=clustering_crs,
         write_cache=write_cache,
         run_powerflow=run_powerflow,
+        building_peak_loads_kw=building_peak_loads_kw,
     )
 
 
@@ -78,6 +84,7 @@ def build_synthetic_network_from_config(
     clustering_crs: str | int | None = "auto",
     write_cache: bool = False,
     run_powerflow: bool = False,
+    building_peak_loads_kw: Sequence[float] | None = None,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from an explicit config mapping."""
 
@@ -92,6 +99,8 @@ def build_synthetic_network_from_config(
 
     _build_graph_hierarchy(power_grid, config)
     net = _build_pandapower_network(power_grid, config)
+    if building_peak_loads_kw is not None:
+        _apply_building_peak_loads(net, building_peak_loads_kw)
 
     powerflow = _run_optional_powerflow(net, run_powerflow)
     topology = _topology_report(power_grid)
@@ -104,6 +113,7 @@ def build_synthetic_network_from_config(
         net=net,
         topology=topology,
         powerflow=powerflow,
+        loads_source="generated" if building_peak_loads_kw is not None else "config_envelope",
     )
 
     report_path: Path | None = None
@@ -194,6 +204,29 @@ def _build_pandapower_network(
     return builder.get_pandapower_net()
 
 
+def _apply_building_peak_loads(
+    net: pp.pandapowerNet,
+    building_peak_loads_kw: Sequence[float],
+) -> None:
+    """Override per-building load magnitudes, preserving each load's q/p ratio."""
+    if len(building_peak_loads_kw) != len(net.load):
+        raise ValueError(
+            f"building_peak_loads_kw has {len(building_peak_loads_kw)} values "
+            f"but the network has {len(net.load)} loads"
+        )
+    for position, load_idx in enumerate(net.load.index):
+        p_old = float(net.load.at[load_idx, "p_mw"])
+        q_old = float(net.load.at[load_idx, "q_mvar"])
+        ratio = q_old / p_old if p_old else 0.0
+        p_new = float(building_peak_loads_kw[position]) / 1000.0
+        if p_new <= 0:
+            raise ValueError(
+                f"building_peak_loads_kw[{position}] must be positive, got {p_new * 1000.0}"
+            )
+        net.load.at[load_idx, "p_mw"] = p_new
+        net.load.at[load_idx, "q_mvar"] = p_new * ratio
+
+
 def _run_optional_powerflow(net: pp.pandapowerNet, run_powerflow: bool) -> dict[str, Any]:
     if not run_powerflow:
         return {"attempted": False, "converged": None, "error": None}
@@ -230,6 +263,7 @@ def _validation_report(
     net: pp.pandapowerNet,
     topology: dict[str, Any],
     powerflow: dict[str, Any],
+    loads_source: str = "config_envelope",
 ) -> dict[str, Any]:
     valid = topology["isolated_nodes_total"] == 0
     if powerflow["attempted"]:
@@ -250,6 +284,7 @@ def _validation_report(
             "clustering_crs": power_grid.clustering_crs,
         },
         "sizing": {
+            "loads_source": loads_source,
             "max_load_per_building_kw": config["loads"]["max_load_per_building"],
             "diversity_factor_lv": config["loads"].get("diversity_factor_lv"),
             "diversity_factor_mv": config["loads"].get("diversity_factor_mv"),

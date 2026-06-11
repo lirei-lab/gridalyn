@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -83,6 +84,11 @@ def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure
         inputs=[
             script.file_reference(script.data_dir / "building_footprints.geojson"),
             script.file_reference(script.root / "inputs/synthetic_network_config.json"),
+            {
+                "name": "loadGeneration",
+                "type": "generated_load_profile",
+                **dict(script.input("loadGeneration")),
+            },
         ],
         artifacts=artifacts,
         summary=summary,
@@ -94,6 +100,20 @@ def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure
     )
 
 
+def _generated_building_peaks_kw(script: ProjectScript) -> list[float]:
+    """Per-building peaks from loadGeneration, anchored to the config envelope mean."""
+    config = json.loads(
+        (script.root / "inputs/synthetic_network_config.json").read_text(encoding="utf-8")
+    )
+    loads = config["loads"]
+    anchor_mean_kw = float(loads["max_load_per_building"]) / float(
+        loads["diversity_factor_lv"]
+    )
+    profiles = script.load_generated_load_profiles()
+    peaks = profiles.max(axis=0)
+    return list(peaks * (anchor_mean_kw / float(peaks.mean())))
+
+
 def main() -> int:
     script = project_script()
     result = build_synthetic_network_from_geojson(
@@ -103,6 +123,7 @@ def main() -> int:
         clustering_crs="auto",
         write_cache=False,
         run_powerflow=True,
+        building_peak_loads_kw=_generated_building_peaks_kw(script),
     )
     tables = write_pandapower_element_tables(result.net, script.data_dir)
     figure_path = _write_figure(script, result)

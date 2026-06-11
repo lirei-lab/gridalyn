@@ -37,6 +37,13 @@ spec:
       note: Small deterministic footprint set used to teach the GeoJSON-to-network pipeline.
     gridConfig:
       path: inputs/synthetic_network_config.json
+    loadGeneration:
+      generator: parametric
+      nUnits: 9
+      seed: 17
+      day: peak
+      resolutionMinutes: 15
+      weather: synthetic
   artifacts:
     project:
       data: outputs/data
