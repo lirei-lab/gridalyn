@@ -22,6 +22,18 @@ _LAZY_EXPORTS = {
     "list_projects": ("gridalyn.projects.api", "list_projects"),
     "load_project": ("gridalyn.projects.api", "load_project"),
     "load_der_dispatch_assets": ("gridalyn.projects.model_inputs", "load_der_dispatch_assets"),
+    "load_generated_bus_loads_mw": (
+        "gridalyn.projects.model_inputs",
+        "load_generated_bus_loads_mw",
+    ),
+    "load_generated_load_multipliers": (
+        "gridalyn.projects.model_inputs",
+        "load_generated_load_multipliers",
+    ),
+    "load_generated_load_profiles": (
+        "gridalyn.projects.model_inputs",
+        "load_generated_load_profiles",
+    ),
     "load_numeric_profile_array": ("gridalyn.projects.model_inputs", "load_numeric_profile_array"),
     "load_prosumer_assets": ("gridalyn.projects.model_inputs", "load_prosumer_assets"),
     "load_radial_feeder_spec": ("gridalyn.projects.model_inputs", "load_radial_feeder_spec"),
@@ -58,6 +70,9 @@ __all__ = [
     "list_projects",
     "load_project",
     "load_der_dispatch_assets",
+    "load_generated_bus_loads_mw",
+    "load_generated_load_multipliers",
+    "load_generated_load_profiles",
     "load_numeric_profile_array",
     "load_prosumer_assets",
     "load_radial_feeder_spec",

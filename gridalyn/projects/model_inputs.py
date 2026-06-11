@@ -283,6 +283,126 @@ def load_standard_powerflow_scenarios(project_or_path: ProjectRef) -> tuple[Any,
     return tuple(scenarios)
 
 
+_LOAD_GENERATION_KEYS = {
+    "generator",
+    "nUnits",
+    "seed",
+    "day",
+    "durationHours",
+    "resolutionMinutes",
+    "weather",
+    "multipliers",
+}
+_LOAD_GENERATION_MULTIPLIER_KEYS = {
+    "intervals",
+    "peakMultiplier",
+    "intervalMinutes",
+    "window",
+}
+
+
+def _load_generation_mapping(
+    project: StudyProject, input_key: str
+) -> Mapping[str, Any]:
+    mapping = project_input(project, input_key)
+    context = f"{project.path}: spec.inputs.{input_key}"
+    unknown = sorted(set(mapping) - _LOAD_GENERATION_KEYS)
+    if unknown:
+        supported = ", ".join(sorted(_LOAD_GENERATION_KEYS))
+        raise ValueError(
+            f"{context} has unsupported keys: {', '.join(unknown)} "
+            f"(supported: {supported})"
+        )
+    return mapping
+
+
+def load_generated_load_profiles(
+    project_or_path: ProjectRef,
+    input_key: str = "loadGeneration",
+) -> Any:
+    """Generate per-unit load profiles declared in ``spec.inputs.<input_key>``.
+
+    Returns the kW DataFrame from
+    :func:`gridalyn.assets.datagen.generate_residential_load_profiles`.
+    ``weather`` defaults to ``"synthetic"`` in project context so results are
+    byte-stable across environments.
+    """
+    from gridalyn.assets.datagen import generate_residential_load_profiles
+
+    project = _project(project_or_path)
+    mapping = _load_generation_mapping(project, input_key)
+    context = f"{project.path}: spec.inputs.{input_key}"
+    return generate_residential_load_profiles(
+        int(_required(mapping, "nUnits", context)),
+        day=str(mapping.get("day", "peak")),
+        duration_hours=int(mapping.get("durationHours", 24)),
+        resolution_minutes=int(mapping.get("resolutionMinutes", 15)),
+        seed=int(_required(mapping, "seed", context)),
+        generator=str(mapping.get("generator", "parametric")),
+        weather=str(mapping.get("weather", "synthetic")),
+    )
+
+
+def load_generated_load_multipliers(
+    project_or_path: ProjectRef,
+    input_key: str = "loadGeneration",
+) -> np.ndarray:
+    """Build a normalized multiplier series from a ``loadGeneration`` input.
+
+    Requires the ``multipliers`` sub-block (``intervals`` and
+    ``peakMultiplier``); the generated aggregate shape is scaled so its
+    maximum equals the declared ``peakMultiplier``.
+    """
+    from gridalyn.assets.datagen import aggregate_load_multipliers
+
+    project = _project(project_or_path)
+    mapping = _load_generation_mapping(project, input_key)
+    context = f"{project.path}: spec.inputs.{input_key}"
+    multipliers = mapping.get("multipliers")
+    if not isinstance(multipliers, Mapping):
+        raise ValueError(
+            f"{context}.multipliers must be a mapping with 'intervals' and "
+            f"'peakMultiplier', found {type(multipliers).__name__}"
+        )
+    unknown = sorted(set(multipliers) - _LOAD_GENERATION_MULTIPLIER_KEYS)
+    if unknown:
+        supported = ", ".join(sorted(_LOAD_GENERATION_MULTIPLIER_KEYS))
+        raise ValueError(
+            f"{context}.multipliers has unsupported keys: {', '.join(unknown)} "
+            f"(supported: {supported})"
+        )
+    multiplier_context = f"{context}.multipliers"
+    interval_minutes = multipliers.get("intervalMinutes")
+    profiles = load_generated_load_profiles(project, input_key)
+    return aggregate_load_multipliers(
+        profiles,
+        intervals=int(_required(multipliers, "intervals", multiplier_context)),
+        interval_minutes=int(interval_minutes) if interval_minutes is not None else None,
+        peak_multiplier=float(
+            _required(multipliers, "peakMultiplier", multiplier_context)
+        ),
+        window=str(multipliers.get("window", "full")),
+    )
+
+
+def load_generated_bus_loads_mw(
+    project_or_path: ProjectRef,
+    input_key: str = "loadGeneration",
+    *,
+    anchor_loads_mw: Mapping[int, float],
+) -> dict[int, float]:
+    """Return a diversified coincident-peak ``loads_mw`` snapshot.
+
+    Per-bus shares come from the generated profiles; the system total is
+    anchored to ``sum(anchor_loads_mw)`` so the declared operating point is
+    preserved.
+    """
+    from gridalyn.assets.datagen import coincident_peak_loads_mw
+
+    profiles = load_generated_load_profiles(project_or_path, input_key)
+    return coincident_peak_loads_mw(profiles, anchor_loads_mw)
+
+
 def load_numeric_profile_array(
     project_or_path: ProjectRef,
     input_key: str,
@@ -306,6 +426,9 @@ def load_numeric_profile_array(
 
 __all__ = [
     "load_der_dispatch_assets",
+    "load_generated_bus_loads_mw",
+    "load_generated_load_multipliers",
+    "load_generated_load_profiles",
     "load_numeric_profile_array",
     "load_prosumer_assets",
     "load_radial_feeder_spec",

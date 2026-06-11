@@ -177,6 +177,14 @@ class ProjectScript:
     def load_numeric_profile_array(self, input_key: str) -> np.ndarray:
         return model_inputs.load_numeric_profile_array(self.project, input_key)
 
+    def load_generated_load_profiles(self, input_key: str = "loadGeneration") -> Any:
+        return model_inputs.load_generated_load_profiles(self.project, input_key)
+
+    def load_generated_load_multipliers(
+        self, input_key: str = "loadGeneration"
+    ) -> np.ndarray:
+        return model_inputs.load_generated_load_multipliers(self.project, input_key)
+
 
 def project_script(
     root: Path | str | None = None,
