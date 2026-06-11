@@ -23,6 +23,7 @@ def test_ieee_33_demo_workflow_is_small_and_explicit() -> None:
         "prepare_workspace",
         "run_ieee33_powerflow",
         "generate_operational_scenarios",
+        "run_daily_timeseries",
     ]
 
 
@@ -47,6 +48,7 @@ def test_ieee_33_demo_runs_and_writes_expected_artifacts() -> None:
         "prepare_workspace",
         "run_ieee33_powerflow",
         "generate_operational_scenarios",
+        "run_daily_timeseries",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

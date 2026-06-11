@@ -42,6 +42,36 @@
       ],
       "source": "outputs/reports/ieee33_scenario_comparison_report.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 24,
+      "id": "daily.summary.converged_hours",
+      "json_path": [
+        "summary",
+        "converged_hours"
+      ],
+      "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.943387226843439,
+      "id": "daily.summary.min_voltage_pu",
+      "json_path": [
+        "summary",
+        "min_voltage_pu"
+      ],
+      "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 45.396608861101285,
+      "id": "daily.summary.daily_energy_mwh",
+      "json_path": [
+        "summary",
+        "daily_energy_mwh"
+      ],
+      "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+      "tolerance": 1e-06
     }
   ]
 }

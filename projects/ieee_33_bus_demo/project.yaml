@@ -65,6 +65,13 @@ spec:
       name: IEEE 33-bus distribution feeder demo
       provider: gridalyn.assets.modeling.IEEE_33_BUS_BENCHMARK
       note: Gridalyn wraps the common Baran-Wu 33-bus radial distribution benchmark as a platform model contract.
+    loadGeneration:
+      generator: parametric
+      nUnits: 32
+      seed: 5
+      day: peak
+      resolutionMinutes: 60
+      weather: synthetic
   artifacts:
     project:
       data: outputs/data
@@ -78,6 +85,17 @@ spec:
     requiredReports:
       - outputs/reports/ieee33_powerflow_report.json
       - outputs/reports/ieee33_scenario_comparison_report.json
+      - outputs/reports/ieee33_daily_timeseries_report.json
     requiredFigures:
       - outputs/figures/ieee33_voltage_profile.png
       - outputs/figures/ieee33_scenario_voltage_comparison.png
+      - outputs/figures/ieee33_daily_voltage_envelope.png
+    senseChecks:
+      - id: daily_timeseries_all_hours_converge
+        report: outputs/reports/ieee33_daily_timeseries_report.json
+        field: summary.converged_hours
+        equals: 24
+      - id: daily_timeseries_voltage_plausible
+        report: outputs/reports/ieee33_daily_timeseries_report.json
+        field: summary.min_voltage_pu
+        min: 0.85

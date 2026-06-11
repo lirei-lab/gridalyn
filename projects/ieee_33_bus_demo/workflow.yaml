@@ -32,3 +32,12 @@ spec:
         - outputs/data/scenario_results.csv
         - outputs/reports/ieee33_scenario_comparison_report.json
         - outputs/figures/ieee33_scenario_voltage_comparison.png
+    - id: run_daily_timeseries
+      needs:
+        - run_ieee33_powerflow
+      command: python scripts/run_daily_timeseries.py
+      outputs:
+        - outputs/data/daily_bus_load_profiles.csv
+        - outputs/data/daily_timeseries_results.csv
+        - outputs/reports/ieee33_daily_timeseries_report.json
+        - outputs/figures/ieee33_daily_voltage_envelope.png
