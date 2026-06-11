@@ -126,6 +126,65 @@
         "valid"
       ],
       "source": "outputs/reports/output_consistency_report.json"
+    },
+    {
+      "expected": 0.039988052119193276,
+      "id": "S3_30pct.stage2_hard_share_mean",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "hard_share",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.2994473286200714,
+      "id": "S4_40pct.stage2_hard_share_mean",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_share",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.8197017084878095,
+      "id": "S4_40pct.stage2_soft_cls_mwh_mean",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "soft_cls_mwh",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.3369164359394836,
+      "id": "S4_40pct.stage2_hard_cls_mwh_mean",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 9,
+      "id": "S3_30pct.stage2_realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 0
     }
   ],
   "project": "flexibility_cls",

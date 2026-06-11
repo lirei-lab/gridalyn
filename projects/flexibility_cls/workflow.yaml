@@ -63,6 +63,15 @@ spec:
         - projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
         - projects/flexibility_cls/outputs/json/ev_summary_results.json
 
+    - id: stage2_realization_replay
+      needs: [market_allocation]
+      command: uv run python projects/flexibility_cls/scripts/pipeline/03_stage2_realization_replay.py
+      inputs:
+        - projects/flexibility_cls/outputs/data/substation_baseline_mc.parquet
+        - projects/flexibility_cls/outputs/data/substation_ev_capability_mc.parquet
+      outputs:
+        - projects/flexibility_cls/outputs/json/stage2_realization_summary.json
+
     - id: pandapower_validation
       needs: [market_allocation]
       command: uv run python projects/flexibility_cls/scripts/pipeline/pandapower_validation.py

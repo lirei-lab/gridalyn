@@ -1058,7 +1058,7 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
 
         self.assertTrue(report["valid"], report)
         self.assertEqual(report["project"], "flexibility_cls")
-        self.assertEqual(report["checked_count"], 13)
+        self.assertEqual(report["checked_count"], 18)
         self.assertFalse(report["errors"])
 
     def test_gridalyn_project_regression_cli_reports_json(self) -> None:
@@ -1078,7 +1078,7 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(payload["valid"], payload)
-        self.assertEqual(payload["checked_count"], 13)
+        self.assertEqual(payload["checked_count"], 18)
 
 
 if __name__ == "__main__":
