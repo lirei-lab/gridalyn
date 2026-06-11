@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pandas as pd
+
 from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
 from gridalyn.assets.modeling.thermal import (
     DEFAULT_S_RATED_KVA,
@@ -21,9 +23,15 @@ def build_thermal_forecast(
     s_rated_kva: float = DEFAULT_S_RATED_KVA,
     theta_max: float = DEFAULT_THETA_MAX_C,
     duration_hours: int = 28,
+    tmy: pd.DataFrame | None = None,
 ) -> ThermalForecast:
-    """Build a synthetic ambient forecast and transformer limit trace from TMY data."""
-    tmy = download_tmy()
+    """Build a synthetic ambient forecast and transformer limit trace from TMY data.
+
+    ``tmy`` lets callers pin an explicit weather table (e.g. a committed
+    project input) instead of the downloaded/cached one.
+    """
+    if tmy is None:
+        tmy = download_tmy()
     cold_day = select_peak_load_day(tmy, duration_hours=duration_hours)
     ambient_c = (
         cold_day["temp_air"]

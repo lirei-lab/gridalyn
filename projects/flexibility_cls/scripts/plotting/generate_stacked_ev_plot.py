@@ -26,8 +26,9 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
+from gridalyn.assets.datagen.data.weather import select_peak_load_day
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
+from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 from projects.flexibility_cls.scripts.data_api import (
     get_baseline_building_load_all,
     get_ev_capability_load_all,
@@ -61,7 +62,7 @@ def main():
     print("=" * 65)
 
     print("\n[1/3] Loading TMY peak-demand day for thermal limit & ambient curve...")
-    tmy = download_tmy()
+    tmy = load_project_tmy()
     # Match the 28-hour peak-demand window used by pipeline 00 so the figure
     # spans exactly the same simulation horizon (midnight day 1 -> 04:00 day 2).
     peak_day = select_peak_load_day(tmy, duration_hours=28)

@@ -54,7 +54,7 @@
       "tolerance": 0
     },
     {
-      "expected": 23.832937707162838,
+      "expected": 21.268407743292133,
       "id": "S4_40pct.unmanaged_peak_mw",
       "json_path": [
         "S4_40pct",
@@ -63,7 +63,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 21.717049710165213,
+      "expected": 19.48208547106226,
       "id": "S4_40pct.managed_peak_mw",
       "json_path": [
         "S4_40pct",
@@ -72,7 +72,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 1.7191149834799866,
+      "expected": 2.4008505367620327,
       "id": "S4_40pct.total_soft_cls_mwh",
       "json_path": [
         "S4_40pct",
@@ -81,7 +81,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 2.707610827361843,
+      "expected": 4.176718823160563,
       "id": "S4_40pct.total_hard_cls_mwh",
       "json_path": [
         "S4_40pct",
@@ -90,7 +90,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 1.884049434355084,
+      "expected": 2.5862389277791706,
       "id": "S4_40pct.total_rebound_mwh",
       "json_path": [
         "S4_40pct",
@@ -99,7 +99,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 22076.517925840915,
+      "expected": 25512.215025521073,
       "id": "S4_40pct.total_market_settlement_usd",
       "json_path": [
         "S4_40pct",

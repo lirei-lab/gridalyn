@@ -3,7 +3,7 @@ generate_substation_cls_data.py
 
 Extracts the entire distribution grid topology (representing a 15 MVA Primary Substation)
 and generates high-fidelity stochastic Building baseline and EV flexibility traces.
-These are exported to Parquet specifically for the CLS algorithm paper experiments.
+These are exported to Parquet for the governed CLS project workflow.
 """
 
 import sys
@@ -18,8 +18,9 @@ from scipy.ndimage import gaussian_filter1d
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.data.weather import download_tmy, select_peak_load_day
+from gridalyn.assets.datagen.data.weather import select_peak_load_day
 from gridalyn.assets.datagen.agents import make_buildings, make_ev_chargers, simulate_buildings
+from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 from projects.flexibility_cls.scripts.config import (
     EV_CHARGER_KW,
     N_REALIZATIONS,
@@ -60,8 +61,8 @@ def main():
     print(f"  -> Extracted exactly {n_buildings} targeted discrete physical buildings.")
     
     # 2. Setup Substation Weather Environment
-    print("[2/4] Downloading local TMY weather...")
-    tmy = download_tmy()
+    print("[2/4] Loading the pinned project TMY weather input...")
+    tmy = load_project_tmy()
     # Use the same 40-hour peak-demand weather window as the congestion forecast
     # and market dispatch stages so building loads and transformer limits are aligned.
     peak_day = select_peak_load_day(tmy, duration_hours=28)

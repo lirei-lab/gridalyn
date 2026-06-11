@@ -3,6 +3,19 @@
 This folder is the project-local input boundary for replacing the default
 building-footprint source used to synthesize the network topology.
 
+## Pinned Study Weather (committed)
+
+```text
+projects/flexibility_cls/inputs/tmy_trois_rivieres.csv
+```
+
+The PVGIS SARAH-3 TMY for Trois-Rivières used by every pipeline stage, loaded
+through `scripts/weather_input.py:load_project_tmy()`. It is committed so the
+published study day (January 19, T_min = -24.9 °C) reproduces byte-identically
+on any machine. Do not switch stages back to `download_tmy()`: its silent
+synthetic fallback changes the study day and invalidates the manuscript
+numbers.
+
 The committed workflow uses the lightweight demo footprint declared in
 `project.yaml`:
 

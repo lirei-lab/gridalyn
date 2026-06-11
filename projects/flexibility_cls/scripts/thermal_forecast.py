@@ -10,6 +10,7 @@ from gridalyn.assets.modeling.thermal import (
     thermal_forecast_metadata,
 )
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, THETA_MAX
+from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 
 
 def build_thermal_forecast(
@@ -22,6 +23,7 @@ def build_thermal_forecast(
         resolution_minutes=resolution_minutes,
         s_rated_kva=S_RATED_KVA,
         theta_max=THETA_MAX,
+        tmy=load_project_tmy(),
     )
 
 

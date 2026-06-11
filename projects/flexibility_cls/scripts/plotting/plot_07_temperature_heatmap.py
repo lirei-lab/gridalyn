@@ -10,7 +10,8 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
-from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
+from gridalyn.assets.datagen.data.weather import select_peak_load_day
+from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 
 def main():
     print("="*60)
@@ -35,9 +36,9 @@ def main():
 
     # Get weather
     try:
-        tmy = download_tmy()
-        cold = select_cold_day(tmy)
-        t_out = cold["temp_air"].resample("5min").mean().values
+        tmy = load_project_tmy()
+        peak_day = select_peak_load_day(tmy, duration_hours=28)
+        t_out = peak_day["temp_air"].resample("5min").mean().values
         if len(t_out) < n_steps:
             t_out = np.pad(t_out, (0, n_steps - len(t_out)), mode='edge')
         t_out = t_out[:n_steps]
