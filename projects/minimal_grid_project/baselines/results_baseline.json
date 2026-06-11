@@ -14,7 +14,7 @@
       "tolerance": 0
     },
     {
-      "expected": 1.0098061102947706,
+      "expected": 1.0097973462536918,
       "id": "summary.min_voltage_pu",
       "json_path": [
         "summary",
@@ -24,7 +24,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2.8346723036099917,
+      "expected": 2.834697084369379,
       "id": "summary.max_line_loading_pct",
       "json_path": [
         "summary",

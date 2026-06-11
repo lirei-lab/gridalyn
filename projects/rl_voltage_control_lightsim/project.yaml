@@ -38,8 +38,99 @@ spec:
   inputs:
     sourceNetwork:
       name: Synthetic 10-bus feeder for RL control
-      provider: gridalyn project script
-      note: Deterministic radial feeder with PV and controllable battery load/injection.
+      provider: project.yaml
+      note: Declarative feeder, DER, and profile contracts loaded through gridalyn.projects model-input helpers.
+      model:
+        type: radial_feeder
+        name: synthetic_10_bus_rl_feeder
+        busCount: 10
+        snMva: 2.0
+        baseVoltageKv: 12.47
+        slackVmPu: 1.01
+        loadsMw:
+          1: 0.08
+          2: 0.09
+          3: 0.10
+          4: 0.11
+          5: 0.10
+          6: 0.09
+          7: 0.08
+          8: 0.07
+          9: 0.06
+        qToPRatio: 0.30
+        lineLengthKm: 0.85
+        lineLengthsKm:
+          1: 0.90
+          2: 0.85
+          3: 0.90
+          4: 0.85
+          5: 0.90
+          6: 0.85
+          7: 0.90
+          8: 0.85
+          9: 0.90
+        lineROhmPerKm: 0.82
+        lineXOhmPerKm: 0.44
+        lineCNfPerKm: 5.0
+        lineMaxIKa: 0.16
+        busYStep: 0.18
+    voltageControlDer:
+      id: der:rl_voltage_control
+      controlledBusId: 9
+      pvBusId: 9
+      batteryBusId: 9
+      pvCapacityMw: 1.25
+      battery:
+        id: battery:rl_voltage_control
+        powerMw: 0.12
+        capacityMwh: 0.42
+        initialSocMwh: 0.20
+        minSocMwh: 0.05
+      maxSocMwh: 0.40
+      actionSpaceMw:
+        - -0.12
+        - 0.0
+        - 0.12
+    loadGeneration:
+      generator: parametric
+      nUnits: 12
+      seed: 11
+      day: peak
+      resolutionMinutes: 60
+      weather: synthetic
+      multipliers:
+        intervals: 24
+        peakMultiplier: 1.26
+    pvProfile:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.02
+      - 0.08
+      - 0.20
+      - 0.42
+      - 0.62
+      - 0.82
+      - 0.96
+      - 1.00
+      - 0.98
+      - 0.88
+      - 0.68
+      - 0.44
+      - 0.22
+      - 0.06
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    environment:
+      timestepHours: 0.25
+      voltageTargetPu: 1.01
+      voltageLowPu: 0.98
+      voltageHighPu: 1.04
     learning:
       algorithm: gridalyn tabular voltage-control trainer
       simulator: lightsim2grid

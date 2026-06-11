@@ -6,6 +6,11 @@ want to understand the platform contract before opening the larger demos.
 The workflow builds a five-bus radial feeder, runs one AC power flow, writes
 CSV tables, creates one JSON report, and saves one voltage-profile figure.
 
+Even this minimal project uses the platform load generators: the
+`loadGeneration` block in `project.yaml` declares a seeded synthetic
+residential fleet, and the declared `loadsMw` anchor the system total while
+the generated coincident-peak snapshot diversifies the per-bus shares.
+
 Run it from the repository root:
 
 ```bash

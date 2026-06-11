@@ -17,45 +17,37 @@ from gridalyn.projects.scripting import ProjectScript, project_script
 from network_model import build_synthetic_feeder
 
 
-MARKET_CONFIG = ProsumerRealtimeMarketConfig(
-    interval_minutes=5,
-    interval_count=12,
-    import_limit_mw=2.55,
-    forecast_horizon_intervals=4,
-    reserve_fraction=0.55,
-    locational_credit_usd_per_mwh=2.0,
-    scarcity_adder_usd_per_mwh=6.0,
-    load_multipliers=(
-        0.98,
-        1.03,
-        1.08,
-        1.12,
-        1.17,
-        1.22,
-        1.24,
-        1.21,
-        1.16,
-        1.10,
-        1.04,
-        0.99,
-    ),
-    pv_factors=(
-        0.34,
-        0.30,
-        0.25,
-        0.19,
-        0.13,
-        0.08,
-        0.04,
-        0.02,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    ),
-    load_forecast_bias_by_lead=(0.0, 0.006, -0.004, 0.01),
-    pv_forecast_bias_by_lead=(0.0, -0.015, 0.01, -0.02),
-)
+def _market_config(script: ProjectScript) -> ProsumerRealtimeMarketConfig:
+    """Market parameters; the load shape comes from the declared loadGeneration."""
+    return ProsumerRealtimeMarketConfig(
+        interval_minutes=5,
+        interval_count=12,
+        import_limit_mw=2.55,
+        forecast_horizon_intervals=4,
+        reserve_fraction=0.55,
+        locational_credit_usd_per_mwh=2.0,
+        scarcity_adder_usd_per_mwh=6.0,
+        load_multipliers=tuple(
+            round(float(value), 4)
+            for value in script.load_generated_load_multipliers()
+        ),
+        pv_factors=(
+            0.34,
+            0.30,
+            0.25,
+            0.19,
+            0.13,
+            0.08,
+            0.04,
+            0.02,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ),
+        load_forecast_bias_by_lead=(0.0, 0.006, -0.004, 0.01),
+        pv_forecast_bias_by_lead=(0.0, -0.015, 0.01, -0.02),
+    )
 
 
 def _write_tables(script: ProjectScript, result) -> dict[str, Path]:
@@ -76,18 +68,19 @@ def _write_tables(script: ProjectScript, result) -> dict[str, Path]:
 
 def main() -> int:
     script = project_script()
+    market_config = _market_config(script)
     prosumer_path = script.data_dir / "prosumers.csv"
     prosumers = pd.read_csv(prosumer_path)
     result = run_prosumer_realtime_market(
         prosumers=prosumers,
         build_feeder=build_synthetic_feeder,
-        config=MARKET_CONFIG,
+        config=market_config,
     )
     paths = _write_tables(script, result)
     figure_path = write_prosumer_market_dispatch_figure(
         result.clearing,
         script.figures_dir / "prosumer_market_dispatch.png",
-        import_limit_mw=MARKET_CONFIG.import_limit_mw,
+        import_limit_mw=market_config.import_limit_mw,
     )
     valid = bool(
         result.powerflow["converged"].all()
@@ -102,13 +95,18 @@ def main() -> int:
             {
                 "name": "real_time_import_limit",
                 "type": "market_parameter",
-                "import_limit_mw": MARKET_CONFIG.import_limit_mw,
+                "import_limit_mw": market_config.import_limit_mw,
             },
             {
                 "name": "market_algorithm",
                 "type": "published_method_family",
                 "algorithm": "rolling_horizon_uniform_price_auction",
-                "forecast_horizon_intervals": MARKET_CONFIG.forecast_horizon_intervals,
+                "forecast_horizon_intervals": market_config.forecast_horizon_intervals,
+            },
+            {
+                "name": "loadGeneration",
+                "type": "generated_load_profile",
+                **dict(script.input("loadGeneration")),
             },
         ],
         artifacts=[
@@ -118,7 +116,7 @@ def main() -> int:
             script.file_reference(paths["powerflow"]),
             script.file_reference(figure_path),
         ],
-        summary=build_prosumer_realtime_market_summary(result, config=MARKET_CONFIG),
+        summary=build_prosumer_realtime_market_summary(result, config=market_config),
         validation={
             "valid": valid,
             "errors": []

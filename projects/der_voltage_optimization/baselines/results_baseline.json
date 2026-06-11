@@ -14,7 +14,7 @@
       "tolerance": 0
     },
     {
-      "expected": 1.0480220230730766,
+      "expected": 1.0479444287401185,
       "id": "summary.verified_max_voltage_after_pu",
       "json_path": [
         "summary",
@@ -24,7 +24,7 @@
       "tolerance": 0.0001
     },
     {
-      "expected": 2.459492019004247,
+      "expected": 2.481124545350498,
       "id": "summary.total_pv_dispatch_mw",
       "json_path": [
         "summary",
@@ -34,7 +34,7 @@
       "tolerance": 0.0001
     },
     {
-      "expected": 0.30050798099575315,
+      "expected": 0.2788754546495019,
       "id": "summary.total_pv_curtailment_mw",
       "json_path": [
         "summary",

@@ -31,10 +31,88 @@ spec:
         - outputs/reports/der_feeder_report.json
         - outputs/reports/der_voltage_optimization_report.json
   inputs:
+    loadGeneration:
+      generator: parametric
+      nUnits: 60
+      seed: 31
+      day: peak
+      resolutionMinutes: 15
+      weather: synthetic
     sourceNetwork:
       name: Synthetic 16-bus DER hosting feeder
-      provider: gridalyn project script
-      note: Deterministic high-R/X radial feeder with downstream PV and batteries.
+      provider: project.yaml
+      note: >-
+        Declarative radial feeder contract loaded through gridalyn.projects
+        model-input helpers. loadsMw declares the per-bus magnitude anchors;
+        the per-bus shares are diversified by the generated coincident-peak
+        snapshot from loadGeneration.
+      model:
+        type: radial_feeder
+        name: synthetic_16_bus_der_feeder
+        busCount: 16
+        snMva: 5.0
+        baseVoltageKv: 12.47
+        slackVmPu: 1.02
+        loadsMw:
+          1: 0.04
+          2: 0.05
+          3: 0.05
+          4: 0.06
+          5: 0.04
+          6: 0.05
+          7: 0.05
+          8: 0.04
+          9: 0.04
+          10: 0.05
+          11: 0.04
+          12: 0.05
+          13: 0.04
+          14: 0.04
+          15: 0.04
+        qToPRatio: 0.28
+        lineLengthKm: 0.65
+        lineLengthsKm:
+          1: 0.69
+          2: 0.73
+          3: 0.65
+          4: 0.69
+          5: 0.73
+          6: 0.65
+          7: 0.69
+          8: 0.73
+          9: 0.65
+          10: 0.69
+          11: 0.73
+          12: 0.65
+          13: 0.69
+          14: 0.73
+          15: 0.65
+        lineROhmPerKm: 0.58
+        lineXOhmPerKm: 0.36
+        lineCNfPerKm: 6.0
+        lineMaxIKa: 0.18
+        busYStep: 0.20
+    derAssets:
+      - id: DER01
+        busId: 8
+        pvAvailableMw: 0.52
+        batteryChargePowerMw: 0.16
+      - id: DER02
+        busId: 10
+        pvAvailableMw: 0.58
+        batteryChargePowerMw: 0.18
+      - id: DER03
+        busId: 12
+        pvAvailableMw: 0.56
+        batteryChargePowerMw: 0.18
+      - id: DER04
+        busId: 14
+        pvAvailableMw: 0.62
+        batteryChargePowerMw: 0.20
+      - id: DER05
+        busId: 15
+        pvAvailableMw: 0.48
+        batteryChargePowerMw: 0.16
     optimization:
       solver: gridalyn_der_voltage_dispatch
       product: voltage-constrained DER hosting and battery charging dispatch

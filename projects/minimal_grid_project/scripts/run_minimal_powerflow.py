@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import dataclasses
+
+from gridalyn.projects import load_generated_bus_loads_mw
 from gridalyn.projects.scripting import project_script
 from gridalyn.simulation import (
     StandardPowerflowScenario,
@@ -16,6 +19,14 @@ from gridalyn.simulation import (
 def main() -> int:
     script = project_script()
     feeder = script.load_radial_feeder_spec()
+    # The declared loadsMw anchor the system total; the per-bus shares come
+    # from the generated coincident-peak snapshot declared in loadGeneration.
+    feeder = dataclasses.replace(
+        feeder,
+        loads_mw=load_generated_bus_loads_mw(
+            script.project, anchor_loads_mw=feeder.loads_mw
+        ),
+    )
     net = build_radial_pandapower_feeder(feeder)
     run_standard_powerflow_scenario(
         net,

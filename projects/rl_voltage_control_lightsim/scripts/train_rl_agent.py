@@ -53,6 +53,11 @@ def main() -> int:
         inputs=[
             script.file_reference(script.data_dir / "rl_assets.csv"),
             {"name": "lightsim2grid_gridmodel", "type": "fast_powerflow_simulator"},
+            {
+                "name": "loadGeneration",
+                "type": "generated_load_profile",
+                **dict(script.input("loadGeneration")),
+            },
         ],
         artifacts=[
             script.file_reference(episodes_path),

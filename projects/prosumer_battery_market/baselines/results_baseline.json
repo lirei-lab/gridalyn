@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.1213750000000003,
+      "expected": 0.2498650000000006,
       "id": "summary.total_cleared_mwh",
       "json_path": [
         "summary",
@@ -24,7 +24,7 @@
       "tolerance": 0.0001
     },
     {
-      "expected": 0.9971457100831225,
+      "expected": 0.9968847881052209,
       "id": "summary.min_voltage_after_pu",
       "json_path": [
         "summary",

@@ -31,10 +31,21 @@ spec:
         - outputs/reports/minimal_grid_report.json
         - outputs/figures/minimal_voltage_profile.png
   inputs:
+    loadGeneration:
+      generator: parametric
+      nUnits: 20
+      seed: 7
+      day: peak
+      resolutionMinutes: 60
+      weather: synthetic
     sourceNetwork:
       name: Five-bus radial teaching feeder
       provider: project.yaml
-      note: Declarative radial feeder contract loaded through gridalyn.projects model-input helpers.
+      note: >-
+        Declarative radial feeder contract loaded through gridalyn.projects
+        model-input helpers. loadsMw declares the per-bus magnitude anchors;
+        the per-bus shares are diversified by the generated coincident-peak
+        snapshot from loadGeneration.
       model:
         type: radial_feeder
         name: minimal_5_bus_radial_feeder

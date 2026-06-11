@@ -31,10 +31,125 @@ spec:
         - outputs/reports/synthetic_feeder_report.json
         - outputs/reports/prosumer_realtime_market_report.json
   inputs:
+    loadGeneration:
+      generator: parametric
+      nUnits: 120
+      seed: 23
+      day: peak
+      resolutionMinutes: 15
+      weather: synthetic
+      multipliers:
+        intervals: 12
+        intervalMinutes: 5
+        peakMultiplier: 1.24
+        window: peak
     sourceNetwork:
       name: Synthetic 14-bus radial distribution feeder
-      provider: gridalyn project script
-      note: Deterministic compact feeder generated locally for reproducible prosumer market experiments.
+      provider: project.yaml
+      note: Declarative radial feeder contract loaded through gridalyn.projects model-input helpers.
+      model:
+        type: radial_feeder
+        name: synthetic_14_bus_radial_feeder
+        busCount: 14
+        snMva: 5.0
+        baseVoltageKv: 12.47
+        slackVmPu: 1.02
+        loadsMw:
+          1: 0.12
+          2: 0.16
+          3: 0.18
+          4: 0.20
+          5: 0.14
+          6: 0.22
+          7: 0.17
+          8: 0.24
+          9: 0.21
+          10: 0.19
+          11: 0.23
+          12: 0.18
+          13: 0.16
+        qToPRatio: 0.32
+        lineLengthKm: 0.35
+        lineLengthsKm:
+          1: 0.38
+          2: 0.41
+          3: 0.44
+          4: 0.35
+          5: 0.38
+          6: 0.41
+          7: 0.44
+          8: 0.35
+          9: 0.38
+          10: 0.41
+          11: 0.44
+          12: 0.35
+          13: 0.38
+        lineROhmPerKm: 0.38
+        lineXOhmPerKm: 0.32
+        lineCNfPerKm: 8.0
+        lineMaxIKa: 0.22
+        busYStep: 0.35
+    prosumerAssets:
+      - id: P01
+        busId: 4
+        offerPriceUsdPerMwh: 58.0
+        pv:
+          id: pv:P01
+          capacityMw: 0.18
+        battery:
+          id: battery:P01
+          powerMw: 0.12
+          capacityMwh: 0.36
+          initialSocMwh: 0.25
+          minSocMwh: 0.07
+      - id: P02
+        busId: 6
+        offerPriceUsdPerMwh: 52.0
+        pv:
+          id: pv:P02
+          capacityMw: 0.22
+        battery:
+          id: battery:P02
+          powerMw: 0.14
+          capacityMwh: 0.42
+          initialSocMwh: 0.30
+          minSocMwh: 0.08
+      - id: P03
+        busId: 8
+        offerPriceUsdPerMwh: 55.0
+        pv:
+          id: pv:P03
+          capacityMw: 0.20
+        battery:
+          id: battery:P03
+          powerMw: 0.13
+          capacityMwh: 0.40
+          initialSocMwh: 0.28
+          minSocMwh: 0.08
+      - id: P04
+        busId: 10
+        offerPriceUsdPerMwh: 49.0
+        pv:
+          id: pv:P04
+          capacityMw: 0.24
+        battery:
+          id: battery:P04
+          powerMw: 0.15
+          capacityMwh: 0.45
+          initialSocMwh: 0.32
+          minSocMwh: 0.09
+      - id: P05
+        busId: 12
+        offerPriceUsdPerMwh: 51.0
+        pv:
+          id: pv:P05
+          capacityMw: 0.21
+        battery:
+          id: battery:P05
+          powerMw: 0.14
+          capacityMwh: 0.42
+          initialSocMwh: 0.31
+          minSocMwh: 0.08
     market:
       intervalMinutes: 5
       intervalCount: 12
