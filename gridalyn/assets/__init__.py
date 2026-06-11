@@ -28,6 +28,10 @@ _LAZY_EXPORTS = {
         "gridalyn.assets.modeling",
         "der_dispatch_assets_to_frame",
     ),
+    "generate_residential_load_profiles": (
+        "gridalyn.assets.datagen",
+        "generate_residential_load_profiles",
+    ),
     "calculate_area": ("gridalyn.twin.adapters", "calculate_area"),
     "calculate_centroid": ("gridalyn.twin.adapters", "calculate_centroid"),
     "extract_building_data": ("gridalyn.twin.adapters", "extract_building_data"),

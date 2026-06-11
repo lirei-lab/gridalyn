@@ -13,6 +13,22 @@ from importlib import import_module
 _LAZY_EXPORTS = {
     "Feeder": ("gridalyn.assets.datagen.grid.network", "Feeder"),
     "GridLoadFacade": ("gridalyn.assets.datagen.core", "GridLoadFacade"),
+    "aggregate_load_multipliers": (
+        "gridalyn.assets.datagen.api",
+        "aggregate_load_multipliers",
+    ),
+    "coincident_peak_loads_mw": (
+        "gridalyn.assets.datagen.api",
+        "coincident_peak_loads_mw",
+    ),
+    "generate_residential_load_profiles": (
+        "gridalyn.assets.datagen.api",
+        "generate_residential_load_profiles",
+    ),
+    "scale_profiles_to_peaks": (
+        "gridalyn.assets.datagen.api",
+        "scale_profiles_to_peaks",
+    ),
     "MVNetwork": ("gridalyn.assets.datagen.grid.network", "MVNetwork"),
     "MVNetworkConfig": ("gridalyn.assets.datagen.grid.network", "MVNetworkConfig"),
     "ParametricArxGenerator": (
