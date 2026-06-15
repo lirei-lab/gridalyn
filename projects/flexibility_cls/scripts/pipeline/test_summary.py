@@ -91,5 +91,35 @@ def test_raises_on_empty_input() -> None:
 
 
 def test_raises_on_nan_input() -> None:
-    with pytest.raises(ValueError, match="NaN"):
+    with pytest.raises(ValueError, match="non-finite"):
         summarize_array(np.array([1.0, np.nan, 3.0], dtype=float), round_decimals=6)
+
+
+def test_raises_on_inf_input() -> None:
+    with pytest.raises(ValueError, match="non-finite"):
+        summarize_array(np.array([1.0, np.inf, 3.0], dtype=float), round_decimals=6)
+    with pytest.raises(ValueError, match="non-finite"):
+        summarize_array(np.array([1.0, -np.inf, 3.0], dtype=float), round_decimals=6)
+
+
+def test_signed_zero_is_hash_canonical() -> None:
+    # IEEE-754 +0.0 and -0.0 are numerically equal but have different byte
+    # patterns; the content hash must collapse them so sub-floor jitter across
+    # a zero crossing cannot flip the cross-environment tripwire (CR-01).
+    pos = summarize_array(np.array([0.0, 1.5, 2.5], dtype=float), round_decimals=6)
+    neg = summarize_array(np.array([-0.0, 1.5, 2.5], dtype=float), round_decimals=6)
+
+    # The hash is identical despite the -0.0 vs +0.0 difference...
+    assert pos["content_sha256"] == neg["content_sha256"]
+    # ...and every descriptive stat is identical too.
+    assert pos["sum"] == neg["sum"]
+    assert pos["mean"] == neg["mean"]
+    assert pos["min"] == neg["min"]
+    assert pos["max"] == neg["max"]
+    assert pos["quantiles"] == neg["quantiles"]
+
+    # A value that rounds to -0.0 (tiny negative residual) must hash identically
+    # to the same value computed as a tiny positive residual at the same floor.
+    rounds_neg = summarize_array(np.array([-1e-10], dtype=float), round_decimals=6)
+    rounds_pos = summarize_array(np.array([1e-10], dtype=float), round_decimals=6)
+    assert rounds_neg["content_sha256"] == rounds_pos["content_sha256"]

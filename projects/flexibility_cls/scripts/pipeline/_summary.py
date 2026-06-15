@@ -62,17 +62,27 @@ def summarize_array(arr: np.ndarray, *, round_decimals: int) -> dict[str, object
         applies (no numpy scalar types leak).
 
     Raises:
-        ValueError: If ``arr`` is empty or contains any NaN -- summarizing
-            garbage would silently produce a meaningless hash (V5 input
-            validation).
+        ValueError: If ``arr`` is empty or contains any non-finite value
+            (NaN or +/-inf) -- summarizing garbage would silently produce a
+            meaningless hash, and a non-finite value serializes as the
+            non-standard JSON token ``NaN``/``Infinity`` that breaks the
+            golden-master JSON contract (V5 input validation).
     """
     a = np.asarray(arr, dtype=float)
     if a.size == 0:
         raise ValueError("summarize_array: input array is empty")
-    if np.isnan(a).any():
-        raise ValueError("summarize_array: input array contains NaN")
+    if not np.isfinite(a).all():
+        raise ValueError(
+            "summarize_array: input array contains non-finite values (NaN/inf)"
+        )
 
     a = np.ascontiguousarray(np.round(a, round_decimals))
+    # Collapse signed zero (-0.0 -> +0.0) so the content hash is sign-of-zero
+    # canonical: IEEE-754 -0.0 and +0.0 are numerically equal but have
+    # different byte patterns, and sub-floor jitter across a zero crossing
+    # rounds to -0.0 on one machine and +0.0 on another, which would otherwise
+    # flip the hash while every descriptive stat stays identical (CR-01).
+    a = a + 0.0
     q = np.percentile(a, [5, 25, 50, 75, 95])
     return {
         "shape": [int(dim) for dim in a.shape],
