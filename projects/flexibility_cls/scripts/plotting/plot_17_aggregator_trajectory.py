@@ -2,17 +2,15 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 from pathlib import Path
 
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.operations.market.dso_dispatch import DSODispatcher
-from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
-from gridalyn.operations.market.engine import MarketSimulationEngine
+from gridalyn.interfaces import apply_hour_axis, save_figure_pair
+from gridalyn.operations.flexibility import prepare_cls_market_replay_context
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, P_LIMIT_KW, THETA_MAX
+from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
 def main():
     print("Generating Aggregator Limitation Contract Trajectory...")
@@ -25,38 +23,30 @@ def main():
     df_base = pd.read_parquet(data_dir / "substation_baseline_mc.parquet")
     df_ev = pd.read_parquet(data_dir / "substation_ev_capability_mc.parquet")
     
-    p_base_kw_mean = df_base.mean(axis=1).values * 1000.0
-    p_base_kw_std = df_base.std(axis=1).values * 1000.0
-    
-    p_ev_kw_mean = df_ev.mean(axis=1).values * 1000.0
-    p_ev_kw_std = df_ev.std(axis=1).values * 1000.0
-    
-    tmy = download_tmy()
-    cold_day = select_cold_day(tmy, duration_hours=28)
-    t_out_trace = cold_day["temp_air"].resample(f"{RES_MINUTES}min").interpolate().values
-    
-    # Initialize components
-    from gridalyn.assets.modeling.transformers import TransformerThermalModel
-    thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
-    network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
-    dt_h = RES_MINUTES / 60.0
-    dispatcher = DSODispatcher(network=network, dt_man_h=dt_h, epsilon=0.05, stochastic_failure_rate=0.05)
-    market_engine = MarketSimulationEngine(network=network, dispatcher=dispatcher)
+    context = prepare_cls_market_replay_context(
+        baseline_mw=df_base,
+        ev_capability_mw=df_ev,
+        thermal_forecast=build_thermal_forecast(len(df_base.index)),
+        ev_percent=30.0,
+        resolution_minutes=RES_MINUTES,
+        s_rated_kva=S_RATED_KVA,
+        p_limit_kw=P_LIMIT_KW,
+        theta_max=THETA_MAX,
+        n_feeder_blocks=160,
+        participation_rate=0.30,
+        market_resolution_h=0.5,
+    )
+    p_base_kw_mean = context.p_base_kw_mean
     
     N_TOTAL_BLOCKS = 160
     MARKET_RES_H = 0.5  # 30-min clearing periods
     
     # Single run: Soft-CLS Firm DA Contract (sub-period clearing)
-    df_res = market_engine.run(
-        p_base_kw_mean=p_base_kw_mean, p_base_kw_std=p_base_kw_std,
-        p_ev_kw_mean=p_ev_kw_mean, p_ev_kw_std=p_ev_kw_std,
-        t_out_trace_c=t_out_trace, dt_man_h=dt_h, n_total_blocks=N_TOTAL_BLOCKS,
-        participation_rate=0.30, epsilon=0.05, is_profiled=True,
-        market_resolution_h=MARKET_RES_H         
-    )
+    df_res = context.run(is_profiled=True)
     
     n_steps = len(p_base_kw_mean)
-    t_hours = np.arange(n_steps) * dt_h
+    dt_h = context.dt_h
+    t_hours = context.t_hours
     
     block_id = 0
     alloc_kw = df_res[f"alloc_{block_id}"].values       # curtailment per step (kW)
@@ -102,13 +92,6 @@ def main():
     # ---- PLOTTING ----
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
     
-    # HH:MM time formatter
-    def format_time(x, pos):
-        h = int(x % 24)
-        m = int(round((x % 1) * 60))
-        if m == 60: h = (h + 1) % 24; m = 0
-        return f"{h:02d}:{m:02d}"
-    
     # ==== Subplot 1: Limitation Contract ====
     # P_nominal: INSTALLED HEATING CAPACITY — horizontal reference
     axes[0].axhline(y=p_nominal_kw, color='#2c3e50', lw=2.0, ls='-.',
@@ -132,7 +115,6 @@ def main():
                          label=r"Firm Curtailment $\Delta P = P_{base} - P_{limit}$")
     
     axes[0].set_ylabel("Power\n[kW]", fontsize=12)
-    # No title — caption managed by LaTeX
     axes[0].grid(True, linestyle='--', alpha=0.5)
     axes[0].legend(loc="lower left", fontsize=10)
     
@@ -157,20 +139,13 @@ def main():
     ax2_left.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=10)
 
     # Shared X axis: extend to 04:00 (28h)
-    axes[1].set_xlim(0, 28)
-    axes[1].set_xticks(np.arange(0, 29, 4))
-    axes[1].xaxis.set_major_formatter(ticker.FuncFormatter(format_time))
-    axes[1].set_xlabel("Time of Day [HH:MM]", fontsize=12)
+    apply_hour_axis(axes[1], start=0, end=28, step=4, fontsize=12)
 
     plt.tight_layout()
 
-    out_path = out_dir / "plot_17_aggregator_trajectory.png"
-    out_pdf_path = out_path.with_suffix(".pdf")
-    fig.savefig(out_pdf_path, bbox_inches="tight")
-    print(f"Saved PDF to {out_pdf_path}")
-
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
-    print(f"Saved to {out_path}")
+    paths = save_figure_pair(fig, out_dir / "plot_17_aggregator_trajectory.png")
+    print(f"Saved PDF to {paths['pdf']}")
+    print(f"Saved to {paths['png']}")
 
 if __name__ == "__main__":
     main()

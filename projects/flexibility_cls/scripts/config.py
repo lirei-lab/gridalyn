@@ -1,8 +1,4 @@
-"""
-config.py – Centralized Paper Analysis Configuration
-Unifies structural analysis variables and limits globally across the paper tracking scripts
-to guarantee mathematical consistency when rendering bounds and thresholds.
-"""
+"""Centralized Flexibility CLS project configuration."""
 
 from pathlib import Path
 import json
@@ -48,6 +44,17 @@ PAPER_CONFIG = {
         "non_delivery_penalty": 10.0,
         "delivery_failure_rate": 0.05,
         "clearing_interval_h": 0.5,
+        # Heterogeneous aggregator supply-curve bounds ($/(kW*h)): the base
+        # discomfort cost of the most flexible (min) and least flexible (max)
+        # participating block. These anchor the merit-order ladder below the
+        # Hard-CLS ceiling so the auction picks cheap blocks first.
+        "min_aggregator_cost": 3.0,
+        "max_aggregator_cost": 8.0,
+        # Settlement convention (paper Eq. 17): a cleared 30-min capacity block
+        # pays the availability reservation for its full duration, not only the
+        # 5-min timesteps with an active real-time deficit. True = capacity
+        # product (paper); False = utilization-only payment (legacy).
+        "pay_full_block": True,
     },
     "ev": {
         # 240 V / 16 A residential Level-2 charger used by the EV simulator.
@@ -59,7 +66,8 @@ PAPER_CONFIG = {
     }
 }
 
-# The analytical capacity target (20 MVA) supersedes the native PP default explicitly for EV scaling limits
+# The analytical capacity target supersedes the native PP default explicitly for
+# EV scaling limits.
 S_RATED_MVA = PAPER_CONFIG["ev_analysis"]["transformer_mva"]
 S_RATED_KVA = S_RATED_MVA * 1000.0
 THETA_MAX   = PAPER_CONFIG["ev_analysis"]["theta_max_c"]
@@ -86,4 +94,7 @@ HARD_CLS_PRICE = PAPER_CONFIG["market"]["hard_cls_price"]
 NON_DELIVERY_PENALTY = PAPER_CONFIG["market"]["non_delivery_penalty"]
 DELIVERY_FAILURE_RATE = PAPER_CONFIG["market"]["delivery_failure_rate"]
 MARKET_CLEARING_INTERVAL_H = PAPER_CONFIG["market"]["clearing_interval_h"]
+MIN_AGGREGATOR_COST = PAPER_CONFIG["market"]["min_aggregator_cost"]
+MAX_AGGREGATOR_COST = PAPER_CONFIG["market"]["max_aggregator_cost"]
+PAY_FULL_BLOCK = PAPER_CONFIG["market"]["pay_full_block"]
 EV_CHARGER_KW = PAPER_CONFIG["ev"]["charger_kw"]

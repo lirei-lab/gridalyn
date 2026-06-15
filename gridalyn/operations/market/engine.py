@@ -42,7 +42,11 @@ class MarketSimulationEngine:
         is_profiled: bool = False,
         p_tot_kw_realized: np.ndarray = None,
         p_ev_kw_realized: np.ndarray = None,
-        market_resolution_h: float = 0.5
+        market_resolution_h: float = 0.5,
+        non_delivery_penalty: float = 10.0,
+        min_aggregator_cost: float = 3.0,
+        max_aggregator_cost: float = 8.0,
+        pay_full_block: bool = False,
     ) -> pd.DataFrame:
         """
         Executes the flexibility market simulation over the provided time horizon.
@@ -105,8 +109,8 @@ class MarketSimulationEngine:
             p_native_aggregate_kw_trace=p_base_kw_mean,
             n_total_blocks=n_total_blocks,
             participation_rate=participation_rate,
-            min_cost=3.0,
-            max_cost=8.0,
+            min_cost=min_aggregator_cost,
+            max_cost=max_aggregator_cost,
             time_step_h=dt_man_h
         )
         
@@ -185,7 +189,8 @@ class MarketSimulationEngine:
         block_c_mcp = None
         block_peak_t = None
         block_contract_caps = None
-        
+        block_cleared_kw = 0.0
+
         for t in range(n_steps):
             offer = {}  # Initialize empty offer for this timestep
             
@@ -251,11 +256,18 @@ class MarketSimulationEngine:
                     block_allocations = auction_res["allocations"]
                     block_c_mcp = auction_res["c_mcp"]
                     block_contract_caps = auction_res.get("contract_caps", {})
+                    # Total cleared Soft-CLS capacity reserved for this block.
+                    # The aggregators commit this capacity for the full block
+                    # duration, so it is the basis of the availability payment.
+                    block_cleared_kw = float(
+                        sum(sum(bids.values()) for bids in block_allocations.values())
+                    )
                 else:
                     block_allocations = None
                     block_c_mcp = None
                     block_peak_t = None
                     block_contract_caps = None
+                    block_cleared_kw = 0.0
             
             if target_deficit > 0:
                 # Execute Dispatcher for specific physical period t
@@ -325,7 +337,7 @@ class MarketSimulationEngine:
                         c_mcp_lambda=offer["c_soft_price"],
                         actual_p_meter_kw=actual_meter,
                         dt_h=dt_man_h,
-                        lambda_pen_penalty=10.0,
+                        lambda_pen_penalty=non_delivery_penalty,
                         p_cap_limit_kw=a.get("p_cap_limit_kw")
                     )
                     period_net_profit += receipt.net_profit
@@ -334,6 +346,16 @@ class MarketSimulationEngine:
                 res_soft_payments[t] = period_net_profit
                 res_soft_penalties[t] = period_penalty
                 res_contracted_soft_kw[t] = period_contracted_kw
+
+            elif pay_full_block and block_allocations is not None and block_c_mcp:
+                # Capacity-availability payment (paper Eq. 17): a cleared block
+                # reserves capacity for its full duration, so the aggregators are
+                # paid the reservation at every timestep of the block — not only
+                # the timesteps with an active real-time deficit. The building is
+                # released here (no curtailment), so its meter stays at native
+                # load below the contracted cap and accrues no breach penalty.
+                res_soft_payments[t] = block_cleared_kw * block_c_mcp * dt_man_h
+                res_contracted_soft_kw[t] = block_cleared_kw
 
             # --- Stateful thermal update (UNCONDITIONAL per timestep) ---
             # Building thermal recovery (rebound) must be processed every timestep.

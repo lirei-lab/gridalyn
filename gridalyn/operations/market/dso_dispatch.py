@@ -37,12 +37,17 @@ class DSODispatcher:
         dt_man_h: float = 5.0 / 60.0,
         epsilon: float = 0.05,
         stochastic_failure_rate: float = 0.05,
+        hard_cls_price: float = 10.0,
     ):
         self.network = network
         self.dt_man_h = dt_man_h
         self.epsilon = epsilon
         self.failure_rate = stochastic_failure_rate
-        
+        # Hard-CLS ceiling price ($/(kW*h)): the Soft auction clears merit-order
+        # offers only up to this anchor; pricier blocks are left for the
+        # mandatory Hard-CLS backstop instead.
+        self.hard_cls_price = hard_cls_price
+
         # Calculate the required over-procurement margin (gamma)
         # If 5% fail, we need to procure 1 / 0.95 = ~1.052x the requirement
         self.gamma = (1.0 / (1.0 - self.failure_rate)) - 1.0 if self.failure_rate < 1.0 else 0.0
@@ -170,7 +175,7 @@ class DSODispatcher:
         plus the explicit contractual cap recorded at clearing.
         delta_p_soft_kw = max(0, p_ref_kw - p_cap_kw) is the cleared limitation volume.
         """
-        c_hard = 10.0  # Hard-CLS ceiling price ($/(kW*h) over the clearing interval)
+        c_hard = self.hard_cls_price  # Hard-CLS ceiling price ($/(kW*h) over the clearing interval)
         target_curtailment = d_required_kw * (1.0 + self.gamma)
         
         # Collect all voluntary limitation offers for the specific period

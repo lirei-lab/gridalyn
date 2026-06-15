@@ -41,6 +41,10 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.artifacts",
         "build_pandapower_summary",
     ),
+    "cache_counts": (
+        "gridalyn.simulation.simulators.powerflow.topology_cache",
+        "cache_counts",
+    ),
     "build_ieee33_benchmark_feeder": (
         "gridalyn.simulation.simulators.powerflow.benchmarks",
         "build_ieee33_benchmark_feeder",
@@ -69,6 +73,10 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.artifacts",
         "configure_headless_matplotlib",
     ),
+    "prepare_synthetic_topology_cache": (
+        "gridalyn.simulation.simulators.powerflow.topology_cache",
+        "prepare_synthetic_topology_cache",
+    ),
     "write_pandapower_element_tables": (
         "gridalyn.simulation.simulators.powerflow.artifacts",
         "write_pandapower_element_tables",
@@ -76,6 +84,26 @@ _LAZY_EXPORTS = {
     "write_powerflow_report": (
         "gridalyn.simulation.simulators.powerflow.artifacts",
         "write_powerflow_report",
+    ),
+    "validate_building_footprints": (
+        "gridalyn.simulation.simulators.powerflow.topology_cache",
+        "validate_building_footprints",
+    ),
+    "TransformerPeakValidationConfig": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "TransformerPeakValidationConfig",
+    ),
+    "create_transformer_peak_validation_network": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "create_transformer_peak_validation_network",
+    ),
+    "register_transformer_peak_validation_type": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "register_transformer_peak_validation_type",
+    ),
+    "validate_transformer_peak_scenarios": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "validate_transformer_peak_scenarios",
     ),
     "run_standard_powerflow_scenario": (
         "gridalyn.simulation.simulators.powerflow.scenarios",

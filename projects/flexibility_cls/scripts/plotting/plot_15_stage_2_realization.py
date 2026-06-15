@@ -9,9 +9,8 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.operations.market.dso_dispatch import DSODispatcher
-from gridalyn.operations.market.engine import MarketSimulationEngine
+from gridalyn.interfaces import apply_hour_axis, save_figure_pair, style_timeseries_axis
+from gridalyn.operations.flexibility import prepare_cls_market_replay_context
 from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, P_LIMIT_KW, THETA_MAX
 from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
@@ -36,45 +35,33 @@ def main():
     df_base = pd.read_parquet(data_dir / "substation_baseline_mc.parquet")
     df_ev = pd.read_parquet(data_dir / "substation_ev_capability_mc.parquet")
     
-    p_base_kw_mean = df_base.mean(axis=1).values * 1000.0
-    p_base_kw_std = df_base.std(axis=1).values * 1000.0
-    
-    # 40% EV penetration (Standardized for unified visual narrative showing Hard-CLS)
-    p_ev_kw_mean = df_ev.mean(axis=1).values * 1000.0 * (40.0 / 30.0) 
-    p_ev_kw_std = df_ev.std(axis=1).values * 1000.0 * (40.0 / 30.0)
-    
-    thermal_forecast = build_thermal_forecast(len(df_base.index))
-    t_out_trace = thermal_forecast.ambient_c
-    
-    # Initialize components
-    from gridalyn.assets.modeling.transformers import TransformerThermalModel
-    thermal_model = TransformerThermalModel(theta_max=THETA_MAX, s_rated_kva=S_RATED_KVA)
-    network = MVNetwork(thermal_model=thermal_model, p_rated_kw=P_LIMIT_KW)
-    dt_h = RES_MINUTES / 60.0
-    dispatcher = DSODispatcher(network=network, dt_man_h=dt_h, epsilon=0.05, stochastic_failure_rate=0.05)
-    market_engine = MarketSimulationEngine(network=network, dispatcher=dispatcher)
+    context = prepare_cls_market_replay_context(
+        baseline_mw=df_base,
+        ev_capability_mw=df_ev,
+        thermal_forecast=build_thermal_forecast(len(df_base.index)),
+        ev_percent=40.0,
+        resolution_minutes=RES_MINUTES,
+        s_rated_kva=S_RATED_KVA,
+        p_limit_kw=P_LIMIT_KW,
+        theta_max=THETA_MAX,
+        n_feeder_blocks=160,
+        participation_rate=0.30,
+        market_resolution_h=0.5,
+    )
+    p_base_kw_mean = context.p_base_kw_mean
+    p_ev_kw_mean = context.p_ev_kw_mean
+    dt_h = context.dt_h
     
     candidates = []
     selected = None
 
     for col_name in df_base.columns:
         realization_idx = int(col_name.rsplit("_", 1)[-1])
-        p_base_kw_realized = df_base[col_name].values * 1000.0
-        p_ev_kw_realized = df_ev[col_name].values * 1000.0 * (40.0 / 30.0)
-        p_tot_kw_realized = p_base_kw_realized + p_ev_kw_realized
+        p_base_kw_realized, p_ev_kw_realized, p_tot_kw_realized = context.realization_traces(col_name)
 
         # Run the engine (Real-Time Execution mode)
-        df_candidate = market_engine.run(
-            p_base_kw_mean=p_base_kw_mean,
-            p_base_kw_std=p_base_kw_std,
-            p_ev_kw_mean=p_ev_kw_mean,
-            p_ev_kw_std=p_ev_kw_std,
-            t_out_trace_c=t_out_trace,
-            dt_man_h=dt_h,
-            n_total_blocks=160,
-            participation_rate=0.30, # 30% aggregator participation
-            epsilon=0.05,            # 95% Confidence
-            is_profiled=True, market_resolution_h=0.5,         # Profiled (block) contract
+        df_candidate = context.run(
+            is_profiled=True,
             p_tot_kw_realized=p_tot_kw_realized,
             p_ev_kw_realized=p_ev_kw_realized
         )
@@ -134,7 +121,7 @@ def main():
         "scenario": "S4_40pct",
         "selection_rule": (
             "Maximize total CLS energy multiplied by Soft/Hard balance, so the "
-            "paper realization visibly exercises both voluntary Soft-CLS and "
+            "selected realization visibly exercises both voluntary Soft-CLS and "
             "firm Hard-CLS recourse rather than only the most extreme hard event."
         ),
         "selected_realization": selected_metrics,
@@ -142,12 +129,12 @@ def main():
     }
     report_path = reports_dir / "stage_4_realtime_realization_selection.json"
     report_path.write_text(json.dumps(selection_report, indent=2))
-    print(f"Selected {selected_metrics['realization']} for paper realization figure")
+    print(f"Selected {selected_metrics['realization']} for realization figure")
     print(f"Wrote selection report to {report_path}")
     
-    t_hours = np.arange(len(p_base_kw_mean)) * (RES_MINUTES / 60)
+    t_hours = context.t_hours
     
-    p_limit = thermal_forecast.p_limit_kw / 1000.0
+    p_limit = context.p_limit_mw
         
     p_soft_cls = df_res["soft_cls_kw"].values / 1000.0
     p_hard_cls = df_res["hard_cls_kw"].values / 1000.0
@@ -200,36 +187,17 @@ def main():
     # Formatting
     ax.set_ylabel("Substation Power Demand [MW]", fontsize=14)
     
-    # Title removed — provided by LaTeX caption in paper
-    
-    ax.set_xlim(0, 28)
     y_min = np.min(p_base_kw_mean / 1000.0) * 0.85
     ax.set_ylim(y_min, np.max(p_unmanaged_total) * 1.1)
-    
-    ax.set_xticks(np.arange(0, 29, 4))
-
-    # Elegant Time Formatting (HH:MM) starting from offset 12:00
-    import matplotlib.ticker as ticker
-    def format_time(x, pos):
-        h = int(x % 24)
-        m = int(round((x % 1) * 60))
-        if m == 60: h = (h + 1) % 24; m = 0
-        return f"{h:02d}:{m:02d}"
-    ax.xaxis.set_major_formatter(ticker.FuncFormatter(format_time))
-    ax.set_xlabel("Time of Day [HH:MM]", fontsize=14)
-
-    ax.grid(True, linestyle='--', alpha=0.4)
+    apply_hour_axis(ax, start=0, end=28, step=4, fontsize=14)
+    style_timeseries_axis(ax)
     ax.legend(loc="upper left", fontsize=12, framealpha=0.9)
 
     plt.tight_layout()
 
-    out_path = out_dir / "plot_15_stage_2_realization.png"
-    out_pdf_path = out_path.with_suffix(".pdf")
-    fig.savefig(out_pdf_path, bbox_inches="tight")
-    print(f"Saved PDF to {out_pdf_path}")
-
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
-    print(f"Saved to {out_path}")
+    paths = save_figure_pair(fig, out_dir / "plot_15_stage_2_realization.png")
+    print(f"Saved PDF to {paths['pdf']}")
+    print(f"Saved to {paths['png']}")
 
 if __name__ == "__main__":
     main()

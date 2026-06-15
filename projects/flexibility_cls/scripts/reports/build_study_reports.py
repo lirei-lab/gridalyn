@@ -7,8 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
@@ -19,31 +17,11 @@ from gridalyn.interfaces.reporting.schemas import (
     write_json,
     write_report,
 )
+from gridalyn.interfaces.reporting import dispatch_timeseries_metrics
 
 
 def _scenario_items(summary: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {key: value for key, value in summary.items() if isinstance(value, dict)}
-
-
-def _dispatch_metrics(dispatch_path: Path) -> dict[str, Any]:
-    if not dispatch_path.exists():
-        return {}
-    dispatch = pd.read_parquet(dispatch_path)
-    if len(dispatch) < 2 or "t_hours" not in dispatch:
-        return {"n_timesteps": int(len(dispatch))}
-    dt_h = float(dispatch["t_hours"].iloc[1] - dispatch["t_hours"].iloc[0])
-    metrics = {"n_timesteps": int(len(dispatch)), "resolution_hours": dt_h}
-    for column, key in (
-        ("p_soft_cls_mw", "soft_cls_mwh"),
-        ("p_hard_cls_mw", "hard_cls_mwh"),
-        ("p_rebound_mw", "rebound_mwh"),
-    ):
-        if column in dispatch:
-            metrics[key] = float(dispatch[column].sum() * dt_h)
-    if "p_limit_trace_mw" in dispatch:
-        metrics["dynamic_limit_min_mw"] = float(dispatch["p_limit_trace_mw"].min())
-        metrics["dynamic_limit_max_mw"] = float(dispatch["p_limit_trace_mw"].max())
-    return metrics
 
 
 def build_study_reports(
@@ -147,7 +125,7 @@ def build_study_reports(
                 }
                 for scenario_id, values in scenarios.items()
             },
-            "dispatch_timeseries": _dispatch_metrics(dispatch_path),
+            "dispatch_timeseries": dispatch_timeseries_metrics(dispatch_path),
         },
         artifacts={
             "market_dispatch_timeseries": relpath(dispatch_path, root) if dispatch_path.exists() else None,
@@ -173,7 +151,7 @@ def build_study_reports(
         ],
         metrics={
             "s4_summary": scenarios.get("S4_40pct", {}),
-            "dispatch_timeseries": _dispatch_metrics(dispatch_path),
+            "dispatch_timeseries": dispatch_timeseries_metrics(dispatch_path),
             "spatial_cls": spatial,
             "provider_selection_shadow": provider_shadow.get("summary", {}),
             "operational_kpis": operational_kpi.get("summary", {}),

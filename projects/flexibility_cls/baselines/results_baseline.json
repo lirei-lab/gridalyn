@@ -99,7 +99,7 @@
       "source": "outputs/json/ev_summary_results.json"
     },
     {
-      "expected": 25512.215025521073,
+      "expected": 25887.983057538833,
       "id": "S4_40pct.total_market_settlement_usd",
       "json_path": [
         "S4_40pct",

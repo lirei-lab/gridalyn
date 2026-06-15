@@ -27,11 +27,17 @@ from gridalyn.operations.flexibility import (
     summarize_stage2_realizations,
 )
 from projects.flexibility_cls.scripts.config import (
+    DELIVERY_FAILURE_RATE,
     EV_PERCENTAGES,
+    HARD_CLS_PRICE,
     MARKET_CLEARING_INTERVAL_H,
+    MAX_AGGREGATOR_COST,
+    MIN_AGGREGATOR_COST,
     N_FEEDER_BLOCKS,
+    NON_DELIVERY_PENALTY,
     P_LIMIT_KW,
     PARTICIPATION_RATE,
+    PAY_FULL_BLOCK,
     RES_MINUTES,
     S_RATED_KVA,
     THETA_MAX,
@@ -81,6 +87,12 @@ def main():
             n_feeder_blocks=N_FEEDER_BLOCKS,
             participation_rate=PARTICIPATION_RATE,
             market_resolution_h=MARKET_CLEARING_INTERVAL_H,
+            stochastic_failure_rate=DELIVERY_FAILURE_RATE,
+            hard_cls_price=HARD_CLS_PRICE,
+            non_delivery_penalty=NON_DELIVERY_PENALTY,
+            min_aggregator_cost=MIN_AGGREGATOR_COST,
+            max_aggregator_cost=MAX_AGGREGATOR_COST,
+            pay_full_block=PAY_FULL_BLOCK,
         )
         summary = summarize_stage2_realizations(context)
         payload["scenarios"][label] = summary

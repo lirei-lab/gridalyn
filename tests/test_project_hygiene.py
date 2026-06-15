@@ -92,6 +92,44 @@ class ProjectHygieneTest(unittest.TestCase):
             tracked,
         )
 
+    def test_projects_do_not_define_canonical_report_schema_helpers(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        offenders = []
+        for path in sorted((repo_root / "projects").rglob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if (
+                "def canonical_report(" in text
+                or "def artifact_references(" in text
+                or "def report_input(" in text
+            ):
+                offenders.append(path.relative_to(repo_root).as_posix())
+
+        self.assertEqual([], offenders)
+
+    def test_projects_do_not_define_regression_engines(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        offenders = []
+        for path in sorted((repo_root / "projects").rglob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if (
+                "def compare_metric(" in text
+                or "def build_regression_report(" in text
+                or "def resolve_json_path(" in text
+            ):
+                offenders.append(path.relative_to(repo_root).as_posix())
+
+        self.assertEqual([], offenders)
+
+    def test_project_scripts_do_not_contain_manuscript_figure_generators(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        offenders = [
+            path.relative_to(repo_root).as_posix()
+            for path in sorted((repo_root / "projects").glob("*/scripts/manuscript_figures"))
+            if path.exists()
+        ]
+
+        self.assertEqual([], offenders)
+
     def test_datagen_weather_cache_defaults_to_generated_workspace(self):
         from gridalyn.assets.datagen.data import weather
 
@@ -122,6 +160,43 @@ class ProjectHygieneTest(unittest.TestCase):
         self.assertTrue(
             result.stdout.strip().endswith("projects/demo/outputs/cache/tmy_trois_rivieres.pkl")
         )
+
+    def test_datagen_weather_synthetic_tmy_is_versioned_and_plausible(self):
+        from gridalyn.assets.datagen.data import weather
+
+        tmy = weather._synthetic_winter_tmy()
+        temp = tmy["temp_air"]
+
+        self.assertEqual(
+            weather._CACHE_SCHEMA_VERSION,
+            tmy.attrs.get(weather._SCHEMA_ATTR),
+        )
+        self.assertEqual("synthetic_climate_normals", tmy.attrs.get(weather._SOURCE_ATTR))
+        self.assertTrue(weather._is_valid_cached_tmy(tmy))
+        self.assertGreaterEqual(float(temp.min()), weather._MIN_REASONABLE_TEMP_C)
+        self.assertLessEqual(float(temp.max()), weather._MAX_REASONABLE_TEMP_C)
+        self.assertLess(float(temp.diff().abs().dropna().quantile(0.99)), 3.0)
+
+    def test_datagen_weather_cache_validator_rejects_legacy_or_extreme_tmy(self):
+        import pandas as pd
+
+        from gridalyn.assets.datagen.data import weather
+
+        idx = pd.date_range(
+            "2023-01-01",
+            periods=8760,
+            freq="h",
+            tz="America/Toronto",
+        )
+        legacy = pd.DataFrame({"temp_air": [-10.0] * len(idx)}, index=idx)
+
+        self.assertFalse(weather._is_valid_cached_tmy(legacy))
+
+        extreme = legacy.copy()
+        extreme.attrs[weather._SCHEMA_ATTR] = weather._CACHE_SCHEMA_VERSION
+        extreme.loc[idx[0], "temp_air"] = -60.0
+
+        self.assertFalse(weather._is_valid_cached_tmy(extreme))
 
     def test_parametric_arx_generator_uses_gridalyn_model_weights(self):
         from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator

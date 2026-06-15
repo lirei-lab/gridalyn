@@ -27,6 +27,10 @@ class CLSMarketReplayContext:
     participation_rate: float
     epsilon: float
     market_resolution_h: float
+    non_delivery_penalty: float
+    min_aggregator_cost: float
+    max_aggregator_cost: float
+    pay_full_block: bool
     p_base_kw_mean: np.ndarray
     p_base_kw_std: np.ndarray
     p_ev_kw_mean: np.ndarray
@@ -69,6 +73,10 @@ class CLSMarketReplayContext:
             market_resolution_h=self.market_resolution_h,
             p_tot_kw_realized=p_tot_kw_realized,
             p_ev_kw_realized=p_ev_kw_realized,
+            non_delivery_penalty=self.non_delivery_penalty,
+            min_aggregator_cost=self.min_aggregator_cost,
+            max_aggregator_cost=self.max_aggregator_cost,
+            pay_full_block=self.pay_full_block,
         )
 
     def realization_traces(self, column: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -100,6 +108,11 @@ def prepare_cls_market_replay_context(
     epsilon: float = 0.05,
     stochastic_failure_rate: float = 0.05,
     market_resolution_h: float = 0.5,
+    hard_cls_price: float = 10.0,
+    non_delivery_penalty: float = 10.0,
+    min_aggregator_cost: float = 3.0,
+    max_aggregator_cost: float = 8.0,
+    pay_full_block: bool = False,
 ) -> CLSMarketReplayContext:
     """Prepare reusable CLS replay inputs from Monte Carlo profile tables."""
     if baseline_mw.empty or ev_capability_mw.empty:
@@ -123,6 +136,7 @@ def prepare_cls_market_replay_context(
         dt_man_h=float(resolution_minutes) / 60.0,
         epsilon=epsilon,
         stochastic_failure_rate=stochastic_failure_rate,
+        hard_cls_price=hard_cls_price,
     )
     market_engine = MarketSimulationEngine(network=network, dispatcher=dispatcher)
 
@@ -136,6 +150,10 @@ def prepare_cls_market_replay_context(
         participation_rate=float(participation_rate),
         epsilon=float(epsilon),
         market_resolution_h=float(market_resolution_h),
+        non_delivery_penalty=float(non_delivery_penalty),
+        min_aggregator_cost=float(min_aggregator_cost),
+        max_aggregator_cost=float(max_aggregator_cost),
+        pay_full_block=bool(pay_full_block),
         p_base_kw_mean=p_base_kw_mean,
         p_base_kw_std=p_base_kw_std,
         p_ev_kw_mean=p_ev_kw_mean,

@@ -37,6 +37,10 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.control",
         "TabularVoltageControlResult",
     ),
+    "TransformerPeakValidationConfig": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "TransformerPeakValidationConfig",
+    ),
     "apply_battery_dispatch_to_pandapower": (
         "gridalyn.simulation.simulators.powerflow.energy_assets",
         "apply_battery_dispatch_to_pandapower",
@@ -129,6 +133,10 @@ _LAZY_EXPORTS = {
     "train_tabular_voltage_controller": (
         "gridalyn.simulation.control",
         "train_tabular_voltage_controller",
+    ),
+    "validate_transformer_peak_scenarios": (
+        "gridalyn.simulation.simulators.powerflow.transformer_validation",
+        "validate_transformer_peak_scenarios",
     ),
     "write_tabular_voltage_control_figure": (
         "gridalyn.simulation.control",

@@ -16,12 +16,14 @@ from gridalyn.interfaces.reporting.schemas import (
     write_json,
     write_report,
 )
+from gridalyn.interfaces.reporting.metrics import dispatch_timeseries_metrics
 
 __all__ = [
     "artifact_references",
     "build_dashboard_catalog",
     "build_digital_twin_reports",
     "canonical_report",
+    "dispatch_timeseries_metrics",
     "load_json",
     "now_iso",
     "relpath",

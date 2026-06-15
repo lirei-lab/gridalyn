@@ -420,7 +420,24 @@ def _check_flexibility(project: StudyProject, checks: CheckList) -> None:
     _check(checks, "flexibility_dispatch_operation_completed", stage4.get("operation_run", {}).get("status") == "completed", stage4.get("operation_run", {}).get("status"), "completed")
     _check(checks, "flexibility_realization_balances_soft_hard", realization.get("selected_realization", {}).get("soft_cls_mwh", 0) > 0 and realization.get("selected_realization", {}).get("hard_cls_mwh", 0) > 0, realization.get("selected_realization", {}), "soft and hard energy > 0")
     settlements = settlement.get("total_market_settlement_usd", {})
-    _check(checks, "flexibility_settlement_positive", all(float(v) > 0 for v in settlements.values()), settlements, "all > 0")
+    scenarios = stage1.get("scenarios", {})
+    active_scenarios = [
+        scenario_id
+        for scenario_id, values in scenarios.items()
+        if float(values.get("total_soft_cls_mwh", 0.0)) > 0
+        or float(values.get("total_hard_cls_mwh", 0.0)) > 0
+    ]
+    settlement_ok = all(float(v) >= 0 for v in settlements.values()) and all(
+        float(settlements.get(scenario_id, 0.0)) > 0
+        for scenario_id in active_scenarios
+    )
+    _check(
+        checks,
+        "flexibility_settlement_positive_when_cls_active",
+        settlement_ok,
+        {"settlement_usd": settlements, "active_scenarios": active_scenarios},
+        ">= 0 for all scenarios and > 0 when CLS is active",
+    )
 
 
 def _list_monotonic(values: list[Any]) -> bool:
