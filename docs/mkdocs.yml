@@ -51,6 +51,7 @@ nav:
   - SDK:
       - Python SDK Overview: sdk/overview.md
       - SDK Public Contract: sdk/public-contract.md
+      - Operations Clearing Contract: sdk/CONTRACT.md
       - Public Python API: development/public-api.md
       - Network Repository: sdk/network-repository.md
       - Adapters: sdk/adapters.md
