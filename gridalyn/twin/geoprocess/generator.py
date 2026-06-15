@@ -32,7 +32,6 @@ class FakeGeoJSONGenerator:
         """
         if seed is not None:
             random.seed(seed)
-            np.random.seed(seed)
         # Base coordinates (Quebec City area)
         self.base_lon: float = -72.6
         self.irregularity: float = irregularity
