@@ -15,6 +15,7 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.operations.flexibility import run_cls_capacity_allocation
+from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
 from projects.flexibility_cls.scripts.config import (
     DELIVERY_FAILURE_RATE,
     EV_PERCENTAGES,
@@ -35,6 +36,12 @@ from projects.flexibility_cls.scripts.config import (
 from projects.flexibility_cls.scripts.thermal_forecast import (
     build_thermal_forecast,
 )
+
+# Downstream (Stage-01/02) arrays are pinned at a finer rounding floor than the
+# jitter-prone Stage-00 MC arrays; the dispatch timeseries hash is a PRIMARY
+# cross-environment tripwire.
+STAGE_DOWNSTREAM_ROUND_DECIMALS = 6
+
 
 def main():
     print("="*60)
@@ -97,7 +104,34 @@ def main():
         data_dir / "market_dispatch_timeseries.parquet",
         index=False,
     )
-    
+
+    # Stage-02 boundary summary: the dispatch timeseries is the PRIMARY tripwire
+    # array; allocation totals are recorded here per scenario. This is the
+    # stage-boundary summary, kept in a separate file from the envelope headline
+    # (ev_summary_results.json) so envelope and replay quantities never share a
+    # source (D-04).
+    allocation_totals = {
+        scenario_key: {
+            "total_soft_cls_mwh": float(values["total_soft_cls_mwh"]),
+            "total_hard_cls_mwh": float(values["total_hard_cls_mwh"]),
+            "total_rebound_mwh": float(values["total_rebound_mwh"]),
+        }
+        for scenario_key, values in result.summary.items()
+        if isinstance(values, dict) and "total_soft_cls_mwh" in values
+    }
+    allocation_summary = {
+        "market_dispatch_timeseries": summarize_array(
+            result.dispatch_timeseries.to_numpy(),
+            round_decimals=STAGE_DOWNSTREAM_ROUND_DECIMALS,
+        ),
+        "allocation_totals": allocation_totals,
+    }
+    summary_path = out_dir / "stage02_allocation_summary.json"
+    summary_path.write_text(
+        json.dumps(allocation_summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     print(f"\n  -> Results dumped to {out_dir / 'ev_summary_results.json'}")
     print(f"  -> Dispatch timeseries saved to {data_dir / 'market_dispatch_timeseries.parquet'}")
     print("  ✓ Step 2 Complete\n")

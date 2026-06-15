@@ -7,6 +7,7 @@ These are exported to Parquet for the governed CLS project workflow.
 """
 
 import sys
+import json
 import pickle
 from pathlib import Path
 
@@ -20,7 +21,14 @@ sys.path.insert(0, str(ROOT))
 
 from gridalyn.assets.datagen.data.weather import select_peak_load_day
 from gridalyn.assets.datagen.agents import make_buildings, make_ev_chargers, simulate_buildings
+from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
 from projects.flexibility_cls.scripts.weather_input import load_project_tmy
+
+# Stage-00 Monte-Carlo arrays are the rawest, most cross-environment
+# jitter-prone outputs, so they are pinned STATS-PRIMARY (Open Q2 resolution):
+# the content hash rides a deliberately COARSE rounding floor (tripwire only),
+# strictly coarser than the downstream Stage-01/02 floor.
+STAGE00_ROUND_DECIMALS = 3
 from projects.flexibility_cls.scripts.config import (
     EV_CHARGER_KW,
     N_REALIZATIONS,
@@ -158,11 +166,19 @@ def main():
         "resolution_minutes": RES_MINUTES,
         "n_realizations": N_REALIZATIONS,
         "baseline_mean_peak_mw": float(df_baseline.max(axis=0).mean()),
-        "ev_mean_peak_mw": float(df_ev_total.max(axis=0).mean())
+        "ev_mean_peak_mw": float(df_ev_total.max(axis=0).mean()),
+        # Stage-00 boundary arrays: stats-primary, coarse tripwire hash.
+        "substation_baseline_mc": summarize_array(
+            df_baseline.to_numpy(), round_decimals=STAGE00_ROUND_DECIMALS
+        ),
+        "substation_ev_capability_mc": summarize_array(
+            df_ev_total.to_numpy(), round_decimals=STAGE00_ROUND_DECIMALS
+        ),
     }
-    with open(out_outputs / "stochastic_profiles_summary.json", "w") as f:
-        import json
-        json.dump(summary_data, f, indent=4)
+    out_summary = out_outputs / "stochastic_profiles_summary.json"
+    out_summary.write_text(
+        json.dumps(summary_data, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
         
     print("="*70)
     print("  SUCCESS! Substation data isolated and ready for Jupyter Notebooks.")

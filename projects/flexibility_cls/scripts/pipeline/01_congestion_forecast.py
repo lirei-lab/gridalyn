@@ -24,6 +24,7 @@ from projects.flexibility_cls.scripts.config import (
     P_RATED_KW,
     RES_MINUTES,
 )
+from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
 from projects.flexibility_cls.scripts.thermal_forecast import (
     build_thermal_forecast,
 )
@@ -31,6 +32,11 @@ from projects.flexibility_cls.scripts.thermal_forecast import (
 DATA_DIR = ROOT / "projects/flexibility_cls/outputs/data"
 OUTPUTS_DIR = ROOT / "projects/flexibility_cls/outputs/json"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Downstream (Stage-01/02) boundary arrays are the more-aggregated, less
+# jitter-prone outputs and serve as the PRIMARY cross-environment tripwires,
+# so they are pinned at a finer rounding floor than the Stage-00 MC arrays.
+STAGE_DOWNSTREAM_ROUND_DECIMALS = 6
 
 
 def _load_mc_profiles() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -79,6 +85,26 @@ def main():
     result.temporal_bounds.to_parquet(
         DATA_DIR / "congestion_temporal_bounds.parquet",
         index=False,
+    )
+
+    forecast_summary = {
+        "base_peak_vals": summarize_array(
+            np.asarray(result.base_peak_values_mw),
+            round_decimals=STAGE_DOWNSTREAM_ROUND_DECIMALS,
+        ),
+        "s2_peak_vals": summarize_array(
+            np.asarray(result.target_peak_values_mw),
+            round_decimals=STAGE_DOWNSTREAM_ROUND_DECIMALS,
+        ),
+        "congestion_temporal_bounds": summarize_array(
+            result.temporal_bounds.to_numpy(),
+            round_decimals=STAGE_DOWNSTREAM_ROUND_DECIMALS,
+        ),
+    }
+    summary_path = OUTPUTS_DIR / "stage01_forecast_summary.json"
+    summary_path.write_text(
+        json.dumps(forecast_summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
 
     print(f"  -> Saved dynamic thermal bounds to {OUTPUTS_DIR / 'flex_requirements.json'}")
