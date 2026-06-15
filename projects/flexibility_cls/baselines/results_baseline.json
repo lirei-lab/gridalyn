@@ -14,6 +14,65 @@
       "tolerance": 0
     },
     {
+      "expected": 0.0,
+      "id": "S1_10pct.Eomega.hard_cls_mwh.mean",
+      "json_path": [
+        "scenarios",
+        "S1_10pct",
+        "hard_cls_mwh",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S1_10pct.Eomega.hard_cls_mwh.p5",
+      "json_path": [
+        "scenarios",
+        "S1_10pct",
+        "hard_cls_mwh",
+        "p5"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S1_10pct.Eomega.hard_cls_mwh.p50",
+      "json_path": [
+        "scenarios",
+        "S1_10pct",
+        "hard_cls_mwh",
+        "p50"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S1_10pct.Eomega.hard_cls_mwh.p95",
+      "json_path": [
+        "scenarios",
+        "S1_10pct",
+        "hard_cls_mwh",
+        "p95"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0,
+      "id": "S1_10pct.Eomega.realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S1_10pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 0
+    },
+    {
       "expected": 324,
       "id": "S1_10pct.n_ev",
       "json_path": [
@@ -21,6 +80,65 @@
         "n_ev"
       ],
       "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.0003662573514677307,
+      "id": "S2_20pct.Eomega.hard_cls_mwh.mean",
+      "json_path": [
+        "scenarios",
+        "S2_20pct",
+        "hard_cls_mwh",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S2_20pct.Eomega.hard_cls_mwh.p5",
+      "json_path": [
+        "scenarios",
+        "S2_20pct",
+        "hard_cls_mwh",
+        "p5"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S2_20pct.Eomega.hard_cls_mwh.p50",
+      "json_path": [
+        "scenarios",
+        "S2_20pct",
+        "hard_cls_mwh",
+        "p50"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0005781930222374123,
+      "id": "S2_20pct.Eomega.hard_cls_mwh.p95",
+      "json_path": [
+        "scenarios",
+        "S2_20pct",
+        "hard_cls_mwh",
+        "p95"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0,
+      "id": "S2_20pct.Eomega.realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S2_20pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
       "tolerance": 0
     },
     {
@@ -34,79 +152,63 @@
       "tolerance": 0
     },
     {
-      "expected": 970,
-      "id": "S3_30pct.n_ev",
+      "expected": 0.10811461317964285,
+      "id": "S3_30pct.Eomega.hard_cls_mwh.mean",
       "json_path": [
+        "scenarios",
         "S3_30pct",
-        "n_ev"
+        "hard_cls_mwh",
+        "mean"
       ],
-      "source": "outputs/json/ev_summary_results.json",
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "S3_30pct.Eomega.hard_cls_mwh.p5",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "hard_cls_mwh",
+        "p5"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.005648337434138132,
+      "id": "S3_30pct.Eomega.hard_cls_mwh.p50",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "hard_cls_mwh",
+        "p50"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.40820993195934824,
+      "id": "S3_30pct.Eomega.hard_cls_mwh.p95",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "hard_cls_mwh",
+        "p95"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 9,
+      "id": "S3_30pct.Eomega.realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
       "tolerance": 0
-    },
-    {
-      "expected": 1294,
-      "id": "S4_40pct.n_ev",
-      "json_path": [
-        "S4_40pct",
-        "n_ev"
-      ],
-      "source": "outputs/json/ev_summary_results.json",
-      "tolerance": 0
-    },
-    {
-      "expected": 21.268407743292133,
-      "id": "S4_40pct.unmanaged_peak_mw",
-      "json_path": [
-        "S4_40pct",
-        "unmanaged_peak_mw"
-      ],
-      "source": "outputs/json/ev_summary_results.json"
-    },
-    {
-      "expected": 19.48208547106226,
-      "id": "S4_40pct.managed_peak_mw",
-      "json_path": [
-        "S4_40pct",
-        "managed_peak_mw"
-      ],
-      "source": "outputs/json/ev_summary_results.json"
-    },
-    {
-      "expected": 2.4008505367620327,
-      "id": "S4_40pct.total_soft_cls_mwh",
-      "json_path": [
-        "S4_40pct",
-        "total_soft_cls_mwh"
-      ],
-      "source": "outputs/json/ev_summary_results.json"
-    },
-    {
-      "expected": 4.176718823160563,
-      "id": "S4_40pct.total_hard_cls_mwh",
-      "json_path": [
-        "S4_40pct",
-        "total_hard_cls_mwh"
-      ],
-      "source": "outputs/json/ev_summary_results.json"
-    },
-    {
-      "expected": 2.5862389277791706,
-      "id": "S4_40pct.total_rebound_mwh",
-      "json_path": [
-        "S4_40pct",
-        "total_rebound_mwh"
-      ],
-      "source": "outputs/json/ev_summary_results.json"
-    },
-    {
-      "expected": 25887.983057538833,
-      "id": "S4_40pct.total_market_settlement_usd",
-      "json_path": [
-        "S4_40pct",
-        "total_market_settlement_usd"
-      ],
-      "source": "outputs/json/ev_summary_results.json",
-      "tolerance": 0.01
     },
     {
       "expected": true,
@@ -119,13 +221,14 @@
       "source": "outputs/json/pandapower_validation.json"
     },
     {
-      "expected": true,
-      "id": "output_consistency.valid",
+      "expected": 970,
+      "id": "S3_30pct.n_ev",
       "json_path": [
-        "validation",
-        "valid"
+        "S3_30pct",
+        "n_ev"
       ],
-      "source": "outputs/reports/output_consistency_report.json"
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
     },
     {
       "expected": 0.039988052119193276,
@@ -134,6 +237,107 @@
         "scenarios",
         "S3_30pct",
         "hard_share",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 9,
+      "id": "S3_30pct.stage2_realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S3_30pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1.3369164359394836,
+      "id": "S4_40pct.Eomega.hard_cls_mwh.mean",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
+        "mean"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0054390075586853385,
+      "id": "S4_40pct.Eomega.hard_cls_mwh.p5",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
+        "p5"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.1784457516284585,
+      "id": "S4_40pct.Eomega.hard_cls_mwh.p50",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
+        "p50"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 3.184031865106009,
+      "id": "S4_40pct.Eomega.hard_cls_mwh.p95",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
+        "p95"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 26,
+      "id": "S4_40pct.Eomega.realizations_with_hard_cls",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "realizations_with_hard_cls"
+      ],
+      "source": "outputs/json/stage2_realization_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 19.48208547106226,
+      "id": "S4_40pct.managed_peak_mw",
+      "json_path": [
+        "S4_40pct",
+        "managed_peak_mw"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 1294,
+      "id": "S4_40pct.n_ev",
+      "json_path": [
+        "S4_40pct",
+        "n_ev"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1.3369164359394836,
+      "id": "S4_40pct.stage2_hard_cls_mwh_mean",
+      "json_path": [
+        "scenarios",
+        "S4_40pct",
+        "hard_cls_mwh",
         "mean"
       ],
       "source": "outputs/json/stage2_realization_summary.json",
@@ -164,27 +368,437 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.3369164359394836,
-      "id": "S4_40pct.stage2_hard_cls_mwh_mean",
+      "expected": 4.176718823160563,
+      "id": "S4_40pct.total_hard_cls_mwh",
       "json_path": [
-        "scenarios",
         "S4_40pct",
-        "hard_cls_mwh",
+        "total_hard_cls_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 25887.983057538833,
+      "id": "S4_40pct.total_market_settlement_usd",
+      "json_path": [
+        "S4_40pct",
+        "total_market_settlement_usd"
+      ],
+      "source": "outputs/json/ev_summary_results.json",
+      "tolerance": 0.01
+    },
+    {
+      "expected": 2.5862389277791706,
+      "id": "S4_40pct.total_rebound_mwh",
+      "json_path": [
+        "S4_40pct",
+        "total_rebound_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 2.4008505367620327,
+      "id": "S4_40pct.total_soft_cls_mwh",
+      "json_path": [
+        "S4_40pct",
+        "total_soft_cls_mwh"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": 21.268407743292133,
+      "id": "S4_40pct.unmanaged_peak_mw",
+      "json_path": [
+        "S4_40pct",
+        "unmanaged_peak_mw"
+      ],
+      "source": "outputs/json/ev_summary_results.json"
+    },
+    {
+      "expected": true,
+      "id": "output_consistency.valid",
+      "json_path": [
+        "validation",
+        "valid"
+      ],
+      "source": "outputs/reports/output_consistency_report.json"
+    },
+    {
+      "expected": "24b34a3fbcaa21f0b04c59e55b8c90a9a56e34525fe4e11b4f35d0c82d3d4b5d",
+      "id": "stage00.substation_baseline_mc.hash",
+      "json_path": [
+        "substation_baseline_mc",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 16.654051091269842,
+      "id": "stage00.substation_baseline_mc.mean",
+      "json_path": [
+        "substation_baseline_mc",
         "mean"
       ],
-      "source": "outputs/json/stage2_realization_summary.json",
+      "source": "outputs/json/stochastic_profiles_summary.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 9,
-      "id": "S3_30pct.stage2_realizations_with_hard_cls",
+      "expected": 13.37095,
+      "id": "stage00.substation_baseline_mc.p5",
       "json_path": [
-        "scenarios",
-        "S3_30pct",
-        "realizations_with_hard_cls"
+        "substation_baseline_mc",
+        "quantiles",
+        "p5"
       ],
-      "source": "outputs/json/stage2_realization_summary.json",
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 17.356,
+      "id": "stage00.substation_baseline_mc.p50",
+      "json_path": [
+        "substation_baseline_mc",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 19.049,
+      "id": "stage00.substation_baseline_mc.p95",
+      "json_path": [
+        "substation_baseline_mc",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 167872.83500000002,
+      "id": "stage00.substation_baseline_mc.sum",
+      "json_path": [
+        "substation_baseline_mc",
+        "sum"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": "f3bb9415306a3f3bfa45000ca798cd20146ff5f51ff2c764dbfaf912dd2955b5",
+      "id": "stage00.substation_ev_capability_mc.hash",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
       "tolerance": 0
+    },
+    {
+      "expected": 0.8481511904761906,
+      "id": "stage00.substation_ev_capability_mc.mean",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "mean"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "stage00.substation_ev_capability_mc.p5",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "quantiles",
+        "p5"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "stage00.substation_ev_capability_mc.p50",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2.467,
+      "id": "stage00.substation_ev_capability_mc.p95",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 8549.364000000001,
+      "id": "stage00.substation_ev_capability_mc.sum",
+      "json_path": [
+        "substation_ev_capability_mc",
+        "sum"
+      ],
+      "source": "outputs/json/stochastic_profiles_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": "9d1763992ec125932bcbc36d233135e4d5c9f96ad1483dff3919cfc329fc198f",
+      "id": "stage01.base_peak_vals.hash",
+      "json_path": [
+        "base_peak_vals",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 18.446941566666666,
+      "id": "stage01.base_peak_vals.mean",
+      "json_path": [
+        "base_peak_vals",
+        "mean"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 17.861912500000003,
+      "id": "stage01.base_peak_vals.p5",
+      "json_path": [
+        "base_peak_vals",
+        "quantiles",
+        "p5"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 18.492814000000003,
+      "id": "stage01.base_peak_vals.p50",
+      "json_path": [
+        "base_peak_vals",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 19.066836600000002,
+      "id": "stage01.base_peak_vals.p95",
+      "json_path": [
+        "base_peak_vals",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 553.408247,
+      "id": "stage01.base_peak_vals.sum",
+      "json_path": [
+        "base_peak_vals",
+        "sum"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": "1cfa02a4ca03b4b9ab745398e2b62ba1d6b2dc0b2d3bfafc447eb355f6966ebd",
+      "id": "stage01.congestion_temporal_bounds.hash",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 16.948069258928573,
+      "id": "stage01.congestion_temporal_bounds.mean",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "mean"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 11.19583355,
+      "id": "stage01.congestion_temporal_bounds.p5",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "quantiles",
+        "p5"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 17.778764000000002,
+      "id": "stage01.congestion_temporal_bounds.p50",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 20.32308165,
+      "id": "stage01.congestion_temporal_bounds.p95",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 45556.410168,
+      "id": "stage01.congestion_temporal_bounds.sum",
+      "json_path": [
+        "congestion_temporal_bounds",
+        "sum"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": "e6c38efc308d90c5b5440f457056c01bcbb803eb16f34a989ad10386e10df2b0",
+      "id": "stage01.s2_peak_vals.hash",
+      "json_path": [
+        "s2_peak_vals",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 19.80551213333333,
+      "id": "stage01.s2_peak_vals.mean",
+      "json_path": [
+        "s2_peak_vals",
+        "mean"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 19.093170399999998,
+      "id": "stage01.s2_peak_vals.p5",
+      "json_path": [
+        "s2_peak_vals",
+        "quantiles",
+        "p5"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 19.8997115,
+      "id": "stage01.s2_peak_vals.p50",
+      "json_path": [
+        "s2_peak_vals",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 20.398061549999998,
+      "id": "stage01.s2_peak_vals.p95",
+      "json_path": [
+        "s2_peak_vals",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 594.165364,
+      "id": "stage01.s2_peak_vals.sum",
+      "json_path": [
+        "s2_peak_vals",
+        "sum"
+      ],
+      "source": "outputs/json/stage01_forecast_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": "d6af235fbb1b2bee33d37672ec3e91b6cfe8e84b1ee6e40aef528a59759d6288",
+      "id": "stage02.market_dispatch_timeseries.hash",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "content_sha256"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 9.431675990155679,
+      "id": "stage02.market_dispatch_timeseries.mean",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "mean"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "stage02.market_dispatch_timeseries.p5",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "quantiles",
+        "p5"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 12.8008195,
+      "id": "stage02.market_dispatch_timeseries.p50",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "quantiles",
+        "p50"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 20.2487477,
+      "id": "stage02.market_dispatch_timeseries.p95",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "quantiles",
+        "p95"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 41197.560725,
+      "id": "stage02.market_dispatch_timeseries.sum",
+      "json_path": [
+        "market_dispatch_timeseries",
+        "sum"
+      ],
+      "source": "outputs/json/stage02_allocation_summary.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "flexibility_cls",
