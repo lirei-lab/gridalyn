@@ -10,9 +10,9 @@ from typing import Any
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
-from gridalyn.operations.flexibility.constraints import build_network_constraint_set
-from gridalyn.operations.flexibility.contracts import build_operation_context
-from gridalyn.operations.flexibility.domain import (
+from gridalyn.operations.constraints import build_network_constraint_set
+from gridalyn.operations.contracts import build_operation_context
+from gridalyn.operations.domain import (
     build_dispatch_instructions,
     build_provider_offers,
     build_settlement_records,

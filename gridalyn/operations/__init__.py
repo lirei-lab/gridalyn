@@ -21,59 +21,62 @@ from gridalyn.operations.runs import (  # noqa: F401  (re-exported via __all__)
 # zero behavior change; later sub-merges re-point individual entries at the
 # canonical concept modules without touching this facade's shape.
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    # --- Flexibility clearing/settlement operations (current home: flexibility) ---
-    "AggregatorPortfolio": ("gridalyn.operations.flexibility", "AggregatorPortfolio"),
-    "DispatchInstruction": ("gridalyn.operations.flexibility", "DispatchInstruction"),
-    "FlexibilityOffer": ("gridalyn.operations.flexibility", "FlexibilityOffer"),
-    "FlexibilityOperationContext": (
-        "gridalyn.operations.flexibility",
-        "FlexibilityOperationContext",
-    ),
-    "FlexibilityOperationValidation": (
-        "gridalyn.operations.flexibility",
-        "FlexibilityOperationValidation",
-    ),
-    "NetworkConstraint": ("gridalyn.operations.flexibility", "NetworkConstraint"),
-    "SettlementRecord": ("gridalyn.operations.flexibility", "SettlementRecord"),
+    # --- Domain contracts (canonical home: gridalyn.operations.domain) ---
+    "AggregatorPortfolio": ("gridalyn.operations.domain", "AggregatorPortfolio"),
+    "DispatchInstruction": ("gridalyn.operations.domain", "DispatchInstruction"),
+    "FlexibilityOffer": ("gridalyn.operations.domain", "FlexibilityOffer"),
+    "SettlementRecord": ("gridalyn.operations.domain", "SettlementRecord"),
     "build_aggregator_portfolios": (
-        "gridalyn.operations.flexibility",
+        "gridalyn.operations.domain",
         "build_aggregator_portfolios",
     ),
     "build_dispatch_instructions": (
-        "gridalyn.operations.flexibility",
+        "gridalyn.operations.domain",
         "build_dispatch_instructions",
     ),
-    "build_network_constraint_set": (
-        "gridalyn.operations.flexibility",
-        "build_network_constraint_set",
+    "build_provider_offers": (
+        "gridalyn.operations.domain",
+        "build_provider_offers",
+    ),
+    "build_settlement_records": (
+        "gridalyn.operations.domain",
+        "build_settlement_records",
+    ),
+    # --- Operation contracts (canonical home: gridalyn.operations.contracts) ---
+    "FlexibilityOperationContext": (
+        "gridalyn.operations.contracts",
+        "FlexibilityOperationContext",
+    ),
+    "FlexibilityOperationValidation": (
+        "gridalyn.operations.contracts",
+        "FlexibilityOperationValidation",
     ),
     "build_operation_context": (
-        "gridalyn.operations.flexibility",
+        "gridalyn.operations.contracts",
         "build_operation_context",
     ),
+    "validate_flexibility_operation_inputs": (
+        "gridalyn.operations.contracts",
+        "validate_flexibility_operation_inputs",
+    ),
+    # --- Network constraints (canonical home: gridalyn.operations.constraints) ---
+    "NetworkConstraint": ("gridalyn.operations.constraints", "NetworkConstraint"),
+    "build_network_constraint_set": (
+        "gridalyn.operations.constraints",
+        "build_network_constraint_set",
+    ),
+    "summarize_network_constraints": (
+        "gridalyn.operations.constraints",
+        "summarize_network_constraints",
+    ),
+    # --- Flexibility clearing/settlement operations (current home: flexibility) ---
     "build_operational_kpi_report": (
         "gridalyn.operations.flexibility",
         "build_operational_kpi_report",
     ),
-    "build_provider_offers": (
-        "gridalyn.operations.flexibility",
-        "build_provider_offers",
-    ),
-    "build_settlement_records": (
-        "gridalyn.operations.flexibility",
-        "build_settlement_records",
-    ),
     "run_flexibility_clearing_operation": (
         "gridalyn.operations.flexibility",
         "run_flexibility_clearing_operation",
-    ),
-    "summarize_network_constraints": (
-        "gridalyn.operations.flexibility",
-        "summarize_network_constraints",
-    ),
-    "validate_flexibility_operation_inputs": (
-        "gridalyn.operations.flexibility",
-        "validate_flexibility_operation_inputs",
     ),
     # --- DER-voltage dispatch (out of scope for the merge, still routed) ---
     "DERVoltageDispatchConfig": (

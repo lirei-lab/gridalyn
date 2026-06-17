@@ -6,21 +6,21 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.operations.market.locational_clearing import build_locational_clearing
-from gridalyn.operations.flexibility.contracts import (
+from gridalyn.operations.constraints import (
+    build_network_constraint_set,
+    summarize_network_constraints,
+)
+from gridalyn.operations.contracts import (
     build_operation_context,
     validate_flexibility_operation_inputs,
 )
-from gridalyn.operations.flexibility.domain import (
+from gridalyn.operations.domain import (
     build_aggregator_portfolios,
     build_dispatch_instructions,
     build_settlement_records,
 )
-from gridalyn.operations.flexibility.constraints import (
-    build_network_constraint_set,
-    summarize_network_constraints,
-)
 from gridalyn.operations.flexibility.kpis import build_operational_kpi_report
+from gridalyn.operations.market.locational_clearing import build_locational_clearing
 
 
 def run_flexibility_clearing_operation(

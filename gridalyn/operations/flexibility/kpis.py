@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.operations.flexibility.contracts import FlexibilityOperationContext
+from gridalyn.operations.contracts import FlexibilityOperationContext
 
 
 def build_operational_kpi_report(
