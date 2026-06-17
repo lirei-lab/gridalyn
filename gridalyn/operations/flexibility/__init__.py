@@ -91,19 +91,19 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "webpath": ("gridalyn.operations.flexibility.artifacts", "webpath"),
     "run_flexibility_clearing_operation": (
-        "gridalyn.operations.flexibility.clearing",
+        "gridalyn.operations.clearing.selection",
         "run_flexibility_clearing_operation",
     ),
     "CLSCapacityAllocationResult": (
-        "gridalyn.operations.flexibility.cls_market",
+        "gridalyn.operations.clearing.engine_mode",
         "CLSCapacityAllocationResult",
     ),
     "run_cls_capacity_allocation": (
-        "gridalyn.operations.flexibility.cls_market",
+        "gridalyn.operations.clearing.engine_mode",
         "run_cls_capacity_allocation",
     ),
     "scenario_label": (
-        "gridalyn.operations.flexibility.cls_market",
+        "gridalyn.operations.clearing.engine_mode",
         "scenario_label",
     ),
     "CLSMarketReplayContext": (

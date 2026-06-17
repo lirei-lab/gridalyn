@@ -9,7 +9,7 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.operations.market.providers import select_providers_for_constraint
+from gridalyn.operations.clearing.selection import select_providers_for_constraint
 
 
 def _dispatch_dt_h(dispatch: pd.DataFrame) -> float:

@@ -20,8 +20,6 @@ import inspect
 import subprocess
 import sys
 
-import pytest
-
 # The 10-symbol minimal canonical surface (D-01 / D-01a). All are present in
 # ``_FLEXIBILITY_EXPORTS`` today; the contract is declared OVER that machinery.
 FROZEN_SYMBOLS = {
@@ -166,13 +164,61 @@ def test_frozen_dataclasses_are_frozen_dataclasses() -> None:
         )
 
 
-@pytest.mark.xfail(strict=False, reason="determinism mechanic is CLEAR-03, Phase 3")
 def test_clearing_is_deterministic() -> None:
-    """Placeholder: canonical clearing promises a unique deterministic result.
+    """Canonical clearing yields a unique result, order-independent (CLEAR-03).
 
-    The determinism mechanic (total sort / explicit tie-break, ordered build
-    order, pinned solver + tolerances) is a FUTURE obligation enforced in
-    Phase 3 (CLEAR-03). This xfail marks the forward hook; it must not assert
-    present-tense determinism.
+    CLEAR-03 landed in Phase 3 sub-merge 2: the existing
+    ``sort_values([..., "provider_id"])`` tie-break makes the locational
+    selection order reproducible regardless of provider-row build order. This
+    asserts that property directly (the two-PYTHONHASHSEED harness in
+    ``tests/test_operations_determinism.py`` is the complementary gate).
     """
-    raise AssertionError("determinism not yet enforced (CLEAR-03, Phase 3)")
+    import pandas as pd
+
+    from gridalyn.operations import run_flexibility_clearing_operation
+
+    scenario_id = "sc1"
+    requirements = pd.DataFrame(
+        [{"timestep": 0, "constraint_id": "c1", "required_kw": 50.0}]
+    )
+    provider_rows = [
+        {
+            "provider_id": pid,
+            "scenario_id": scenario_id,
+            "provider_type": "soft_cls_building",
+            "available_capacity_kw": 30.0,
+            "base_cost_per_kw_h": 1.0,
+            "selection_priority": 0,
+        }
+        for pid in ("p_a", "p_b", "p_c")
+    ]
+    impact_rows = [
+        {
+            "provider_id": r["provider_id"],
+            "scenario_id": scenario_id,
+            "constraint_id": "c1",
+            "predicted_deliverability_factor": 1.0,
+            "predicted_relief_kw": 30.0,
+            "selection_score": 1.0,
+        }
+        for r in provider_rows
+    ]
+
+    def clear(rows: list[dict]) -> str:
+        providers = pd.DataFrame(rows)
+        impact = pd.DataFrame(impact_rows)
+        _events, selections, _report = run_flexibility_clearing_operation(
+            requirements=requirements,
+            providers=providers,
+            impact=impact,
+            scenario_id=scenario_id,
+            dt_h=1.0,
+        )
+        cols = sorted(selections.columns)
+        ordered = (
+            selections.sort_values(["event_id", "provider_id"])
+            .reset_index(drop=True)[cols]
+        )
+        return ordered.to_json(orient="records")
+
+    assert clear(provider_rows) == clear(list(reversed(provider_rows)))

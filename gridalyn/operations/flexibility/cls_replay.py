@@ -10,8 +10,10 @@ import pandas as pd
 from gridalyn.assets.datagen.grid.network import MVNetwork
 from gridalyn.assets.modeling.thermal import ThermalForecast
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
-from gridalyn.operations.market.dso_dispatch import DSODispatcher
-from gridalyn.operations.market.engine import MarketSimulationEngine
+from gridalyn.operations.clearing.engine_mode import (
+    DSODispatcher,
+    MarketSimulationEngine,
+)
 
 
 @dataclass(frozen=True)

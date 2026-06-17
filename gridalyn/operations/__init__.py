@@ -75,7 +75,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "build_operational_kpi_report",
     ),
     "run_flexibility_clearing_operation": (
-        "gridalyn.operations.flexibility",
+        "gridalyn.operations.clearing.selection",
         "run_flexibility_clearing_operation",
     ),
     # --- DER-voltage dispatch (out of scope for the merge, still routed) ---
@@ -99,59 +99,67 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.der_voltage",
         "write_der_voltage_dispatch_figure",
     ),
-    # --- Market clearing/locational/spatial (current home: market) ---
-    "SpatialClsResult": ("gridalyn.operations.market", "SpatialClsResult"),
+    # --- Clearing SELECTION core (canonical home: clearing.selection) ---
+    "build_constraint_requirements": (
+        "gridalyn.operations.clearing.selection",
+        "build_constraint_requirements",
+    ),
+    "build_locational_clearing": (
+        "gridalyn.operations.clearing.selection",
+        "build_locational_clearing",
+    ),
+    "build_network_sensitivity": (
+        "gridalyn.operations.clearing.selection",
+        "build_network_sensitivity",
+    ),
+    "build_provider_registry": (
+        "gridalyn.operations.clearing.selection",
+        "build_provider_registry",
+    ),
+    "select_providers_for_constraint": (
+        "gridalyn.operations.clearing.selection",
+        "select_providers_for_constraint",
+    ),
+    "summarize_provider_registry": (
+        "gridalyn.operations.clearing.selection",
+        "summarize_provider_registry",
+    ),
+    "write_locational_clearing_outputs": (
+        "gridalyn.operations.clearing.selection",
+        "write_locational_clearing_outputs",
+    ),
+    # --- Clearing ALLOCATION core (canonical home: clearing.allocation) ---
+    "SpatialClsResult": ("gridalyn.operations.clearing.allocation", "SpatialClsResult"),
     "allocate_addition_by_headroom": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.clearing.allocation",
         "allocate_addition_by_headroom",
     ),
-    "allocate_reduction": ("gridalyn.operations.market", "allocate_reduction"),
+    "allocate_reduction": (
+        "gridalyn.operations.clearing.allocation",
+        "allocate_reduction",
+    ),
+    "apply_spatial_cls": (
+        "gridalyn.operations.clearing.allocation",
+        "apply_spatial_cls",
+    ),
+    # --- Verification/scorecard/shadow (current home: market; move later) ---
     "apply_locational_selections": (
         "gridalyn.operations.market",
         "apply_locational_selections",
-    ),
-    "apply_spatial_cls": ("gridalyn.operations.market", "apply_spatial_cls"),
-    "build_constraint_requirements": (
-        "gridalyn.operations.market",
-        "build_constraint_requirements",
     ),
     "build_flexibility_clearing_scorecard": (
         "gridalyn.operations.market",
         "build_flexibility_clearing_scorecard",
     ),
-    "build_locational_clearing": (
-        "gridalyn.operations.market",
-        "build_locational_clearing",
-    ),
     "build_locational_clearing_verification_report": (
         "gridalyn.operations.market",
         "build_locational_clearing_verification_report",
     ),
-    "build_network_sensitivity": (
-        "gridalyn.operations.market",
-        "build_network_sensitivity",
-    ),
-    "build_provider_registry": (
-        "gridalyn.operations.market",
-        "build_provider_registry",
-    ),
     "build_shadow_report": ("gridalyn.operations.market", "build_shadow_report"),
-    "select_providers_for_constraint": (
-        "gridalyn.operations.market",
-        "select_providers_for_constraint",
-    ),
-    "summarize_provider_registry": (
-        "gridalyn.operations.market",
-        "summarize_provider_registry",
-    ),
     "write_shadow_report": ("gridalyn.operations.market", "write_shadow_report"),
     "write_flexibility_clearing_scorecard": (
         "gridalyn.operations.market",
         "write_flexibility_clearing_scorecard",
-    ),
-    "write_locational_clearing_outputs": (
-        "gridalyn.operations.market",
-        "write_locational_clearing_outputs",
     ),
     "write_locational_verification_outputs": (
         "gridalyn.operations.market",
