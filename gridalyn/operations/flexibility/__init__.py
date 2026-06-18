@@ -107,15 +107,15 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "scenario_label",
     ),
     "CLSMarketReplayContext": (
-        "gridalyn.operations.flexibility.cls_replay",
+        "gridalyn.operations.replay",
         "CLSMarketReplayContext",
     ),
     "prepare_cls_market_replay_context": (
-        "gridalyn.operations.flexibility.cls_replay",
+        "gridalyn.operations.replay",
         "prepare_cls_market_replay_context",
     ),
     "summarize_stage2_realizations": (
-        "gridalyn.operations.flexibility.cls_replay",
+        "gridalyn.operations.replay",
         "summarize_stage2_realizations",
     ),
     "build_operational_kpi_report": (
@@ -123,11 +123,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "build_operational_kpi_report",
     ),
     "CongestionForecastResult": (
-        "gridalyn.operations.flexibility.thermal_screening",
+        "gridalyn.operations.replay",
         "CongestionForecastResult",
     ),
     "build_congestion_forecast": (
-        "gridalyn.operations.flexibility.thermal_screening",
+        "gridalyn.operations.replay",
         "build_congestion_forecast",
     ),
     "CLSOutputConsistencyResult": (
