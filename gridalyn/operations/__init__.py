@@ -142,9 +142,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.clearing.allocation",
         "apply_spatial_cls",
     ),
-    # --- Verification/scorecard/shadow (current home: market; move later) ---
+    # --- Verification capability (canonical home: verification) ---
     "apply_locational_selections": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.verification",
         "apply_locational_selections",
     ),
     "build_flexibility_clearing_scorecard": (
@@ -152,17 +152,17 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "build_flexibility_clearing_scorecard",
     ),
     "build_locational_clearing_verification_report": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.verification",
         "build_locational_clearing_verification_report",
     ),
-    "build_shadow_report": ("gridalyn.operations.market", "build_shadow_report"),
-    "write_shadow_report": ("gridalyn.operations.market", "write_shadow_report"),
+    "build_shadow_report": ("gridalyn.operations.verification", "build_shadow_report"),
+    "write_shadow_report": ("gridalyn.operations.verification", "write_shadow_report"),
     "write_flexibility_clearing_scorecard": (
         "gridalyn.operations.settlement",
         "write_flexibility_clearing_scorecard",
     ),
     "write_locational_verification_outputs": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.verification",
         "write_locational_verification_outputs",
     ),
 }

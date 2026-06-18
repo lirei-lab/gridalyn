@@ -131,11 +131,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "build_congestion_forecast",
     ),
     "CLSOutputConsistencyResult": (
-        "gridalyn.operations.flexibility.validation",
+        "gridalyn.operations.verification",
         "CLSOutputConsistencyResult",
     ),
     "validate_cls_output_consistency": (
-        "gridalyn.operations.flexibility.validation",
+        "gridalyn.operations.verification",
         "validate_cls_output_consistency",
     ),
 }

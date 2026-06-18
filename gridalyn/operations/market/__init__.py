@@ -15,15 +15,16 @@ from gridalyn.operations.clearing.allocation import (
     allocate_reduction,
     apply_spatial_cls,
 )
-from gridalyn.operations.market.provider_shadow import build_shadow_report, write_shadow_report
 from gridalyn.operations.settlement import (
     build_flexibility_clearing_scorecard,
     write_flexibility_clearing_scorecard,
 )
-from gridalyn.operations.market.locational_verification import (
+from gridalyn.operations.verification import (
     apply_locational_selections,
     build_locational_clearing_verification_report,
+    build_shadow_report,
     write_locational_verification_outputs,
+    write_shadow_report,
 )
 from gridalyn.operations.market.prosumer_realtime import (
     ProsumerRealtimeMarketConfig,
