@@ -119,7 +119,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "summarize_stage2_realizations",
     ),
     "build_operational_kpi_report": (
-        "gridalyn.operations.flexibility.kpis",
+        "gridalyn.operations.settlement",
         "build_operational_kpi_report",
     ),
     "CongestionForecastResult": (

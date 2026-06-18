@@ -17,8 +17,8 @@ from gridalyn.operations.domain import (
     build_provider_offers,
     build_settlement_records,
 )
-from gridalyn.operations.flexibility.kpis import build_operational_kpi_report
 from gridalyn.operations.runs import build_operation_run, write_operation_run
+from gridalyn.operations.settlement import build_operational_kpi_report
 
 
 def materialize_flexibility_operation_artifacts(

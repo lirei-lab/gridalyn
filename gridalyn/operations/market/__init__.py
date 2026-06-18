@@ -16,7 +16,7 @@ from gridalyn.operations.clearing.allocation import (
     apply_spatial_cls,
 )
 from gridalyn.operations.market.provider_shadow import build_shadow_report, write_shadow_report
-from gridalyn.operations.market.scorecard import (
+from gridalyn.operations.settlement import (
     build_flexibility_clearing_scorecard,
     write_flexibility_clearing_scorecard,
 )

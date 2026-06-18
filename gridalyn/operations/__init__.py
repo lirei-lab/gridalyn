@@ -69,9 +69,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.constraints",
         "summarize_network_constraints",
     ),
-    # --- Flexibility clearing/settlement operations (current home: flexibility) ---
+    # --- Settlement / KPI / scorecard (canonical home: settlement) ---
     "build_operational_kpi_report": (
-        "gridalyn.operations.flexibility",
+        "gridalyn.operations.settlement",
         "build_operational_kpi_report",
     ),
     "run_flexibility_clearing_operation": (
@@ -148,7 +148,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "apply_locational_selections",
     ),
     "build_flexibility_clearing_scorecard": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.settlement",
         "build_flexibility_clearing_scorecard",
     ),
     "build_locational_clearing_verification_report": (
@@ -158,7 +158,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "build_shadow_report": ("gridalyn.operations.market", "build_shadow_report"),
     "write_shadow_report": ("gridalyn.operations.market", "write_shadow_report"),
     "write_flexibility_clearing_scorecard": (
-        "gridalyn.operations.market",
+        "gridalyn.operations.settlement",
         "write_flexibility_clearing_scorecard",
     ),
     "write_locational_verification_outputs": (

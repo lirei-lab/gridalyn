@@ -22,9 +22,11 @@ CLEAR-03 determinism is LOCKED, not invented: the shared
 merit order, the insertion-ordered offer/allocation dicts, and the ordered
 ``portfolios`` list are all moved verbatim — no draw site is reordered.
 
-The ``NetworkConstraintModel`` Protocol and ``calculate_period_settlement``
-remain at their ``market/`` homes (they are engine-path collaborators that were
-intentionally not duplicated); this module imports them downward unchanged.
+The ``NetworkConstraintModel`` Protocol remains at its ``market/`` home (it is an
+engine-path collaborator that was intentionally not duplicated); this module
+imports it downward unchanged. ``calculate_period_settlement`` is now imported
+from its canonical home :mod:`gridalyn.operations.settlement` (the baseline
+source, §4), reached as the engine-path settlement collaborator.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ from gridalyn.assets.modeling.thermal import (
 )
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
 from gridalyn.operations.market.network_constraints import NetworkConstraintModel
-from gridalyn.operations.market.settlement import calculate_period_settlement
+from gridalyn.operations.settlement import calculate_period_settlement
 
 
 # ---------------------------------------------------------------------------
