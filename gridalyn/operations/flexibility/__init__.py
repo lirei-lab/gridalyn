@@ -60,36 +60,36 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.constraints",
         "summarize_network_constraints",
     ),
-    # --- still living in the flexibility package (no deprecation) ---
+    # --- artifacts now canonical at gridalyn.operations.artifacts ---
     "build_operations_catalog": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "build_operations_catalog",
     ),
     "clearing_method_from_events": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "clearing_method_from_events",
     ),
-    "infer_dt_h": ("gridalyn.operations.flexibility.artifacts", "infer_dt_h"),
-    "json_default": ("gridalyn.operations.flexibility.artifacts", "json_default"),
+    "infer_dt_h": ("gridalyn.operations.artifacts", "infer_dt_h"),
+    "json_default": ("gridalyn.operations.artifacts", "json_default"),
     "materialize_flexibility_operation_artifacts": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "materialize_flexibility_operation_artifacts",
     ),
     "model_version_id_from_artifacts": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "model_version_id_from_artifacts",
     ),
-    "relpath": ("gridalyn.operations.flexibility.artifacts", "relpath"),
+    "relpath": ("gridalyn.operations.artifacts", "relpath"),
     "scenario_frame": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "scenario_frame",
     ),
-    "scenario_ids": ("gridalyn.operations.flexibility.artifacts", "scenario_ids"),
+    "scenario_ids": ("gridalyn.operations.artifacts", "scenario_ids"),
     "study_run_id_from_manifest": (
-        "gridalyn.operations.flexibility.artifacts",
+        "gridalyn.operations.artifacts",
         "study_run_id_from_manifest",
     ),
-    "webpath": ("gridalyn.operations.flexibility.artifacts", "webpath"),
+    "webpath": ("gridalyn.operations.artifacts", "webpath"),
     "run_flexibility_clearing_operation": (
         "gridalyn.operations.clearing.selection",
         "run_flexibility_clearing_operation",
