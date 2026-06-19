@@ -2,20 +2,22 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.operations.flexibility import (
-    build_aggregator_portfolios,
-    build_dispatch_instructions,
-    build_operation_context,
-    build_provider_offers,
-    build_settlement_records,
-    run_flexibility_clearing_operation,
-)
+from gridalyn.operations import build_aggregator_portfolios
 from gridalyn.operations import (
     build_aggregator_portfolios as public_build_aggregator_portfolios,
+)
+from gridalyn.operations import build_dispatch_instructions
+from gridalyn.operations import (
     build_dispatch_instructions as public_build_dispatch_instructions,
-    build_provider_offers as public_build_provider_offers,
+)
+from gridalyn.operations import build_operation_context
+from gridalyn.operations import build_provider_offers
+from gridalyn.operations import build_provider_offers as public_build_provider_offers
+from gridalyn.operations import build_settlement_records
+from gridalyn.operations import (
     build_settlement_records as public_build_settlement_records,
 )
+from gridalyn.operations import run_flexibility_clearing_operation
 
 
 class FlexibilityOperationDomainContractsTest(unittest.TestCase):

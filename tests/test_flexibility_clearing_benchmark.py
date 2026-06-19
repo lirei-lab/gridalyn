@@ -1,8 +1,6 @@
 import unittest
 
-from gridalyn.operations.market.scorecard import (
-    build_flexibility_clearing_scorecard,
-)
+from gridalyn.operations import build_flexibility_clearing_scorecard
 
 
 class FlexibilityClearingBenchmarkTest(unittest.TestCase):
@@ -191,13 +189,21 @@ class FlexibilityClearingBenchmarkTest(unittest.TestCase):
         self.assertEqual(aggregate["delivery_ratio"], 1.0)
         self.assertAlmostEqual(constraint_aware["delivery_ratio"], 2.0 / 3.0)
         self.assertAlmostEqual(locational["delivery_ratio"], 2.5 / 3.0)
-        self.assertEqual(locational["source_report"], "locational_clearing_verification")
+        self.assertEqual(
+            locational["source_report"], "locational_clearing_verification"
+        )
         self.assertAlmostEqual(topology["delivery_ratio"], 1.0 / 6.0)
         self.assertEqual(topology["overload_reduction_count"], 3)
         self.assertEqual(physics["comparison_vs_aggregate"]["shortfall_delta_mwh"], 4.5)
-        self.assertEqual(scorecard["summary"]["best_delivery_policy_id"], "aggregate_cls")
-        self.assertEqual(scorecard["summary"]["best_delivery_ratio_policy_id"], "aggregate_cls")
-        self.assertEqual(scorecard["summary"]["best_overload_policy_id"], "topology_locational")
+        self.assertEqual(
+            scorecard["summary"]["best_delivery_policy_id"], "aggregate_cls"
+        )
+        self.assertEqual(
+            scorecard["summary"]["best_delivery_ratio_policy_id"], "aggregate_cls"
+        )
+        self.assertEqual(
+            scorecard["summary"]["best_overload_policy_id"], "topology_locational"
+        )
 
 
 if __name__ == "__main__":

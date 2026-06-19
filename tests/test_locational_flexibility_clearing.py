@@ -5,11 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.operations.market.locational_clearing import (
+from gridalyn.operations import (
     build_locational_clearing,
     write_locational_clearing_outputs,
 )
-from gridalyn.projects.workflows.scripts.generate_locational_flexibility_clearing import _infer_dt_h
+from gridalyn.projects.workflows.scripts.generate_locational_flexibility_clearing import (
+    _infer_dt_h,
+)
 
 
 class LocationalFlexibilityClearingTest(unittest.TestCase):
@@ -117,7 +119,9 @@ class LocationalFlexibilityClearingTest(unittest.TestCase):
         self.assertEqual(report["scenario_id"], "S4")
         self.assertEqual(report["summary"]["constraint_event_count"], 2)
         self.assertAlmostEqual(report["summary"]["required_mwh"], 15.0 * 0.25 / 1000.0)
-        self.assertAlmostEqual(report["summary"]["selected_relief_mwh"], 15.0 * 0.25 / 1000.0)
+        self.assertAlmostEqual(
+            report["summary"]["selected_relief_mwh"], 15.0 * 0.25 / 1000.0
+        )
         self.assertAlmostEqual(report["summary"]["shortfall_mwh"], 0.0)
         self.assertEqual(report["summary"]["unique_provider_count"], 3)
 

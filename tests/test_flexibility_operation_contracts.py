@@ -2,15 +2,15 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.operations.flexibility import (
-    build_operation_context,
-    run_flexibility_clearing_operation,
-    validate_flexibility_operation_inputs,
-)
+from gridalyn.operations import build_operation_context
 from gridalyn.operations import (
     build_operation_context as public_build_operation_context,
+)
+from gridalyn.operations import run_flexibility_clearing_operation
+from gridalyn.operations import (
     run_flexibility_clearing_operation as public_run_flexibility_clearing_operation,
 )
+from gridalyn.operations import validate_flexibility_operation_inputs
 
 
 class FlexibilityOperationContractsTest(unittest.TestCase):
@@ -128,7 +128,9 @@ class FlexibilityOperationContractsTest(unittest.TestCase):
         )
 
         self.assertFalse(validation.valid)
-        self.assertIn("impact is missing required columns: selection_score", validation.errors)
+        self.assertIn(
+            "impact is missing required columns: selection_score", validation.errors
+        )
 
     def test_clearing_operation_wraps_market_result_with_context_and_traceability(self):
         requirements, providers, impact = self._fixtures()

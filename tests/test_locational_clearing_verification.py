@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gridalyn.operations.market.locational_verification import (
+from gridalyn.operations import (
     apply_locational_selections,
     build_locational_clearing_verification_report,
     write_locational_verification_outputs,
@@ -85,8 +85,12 @@ class LocationalClearingVerificationTest(unittest.TestCase):
         self.assertAlmostEqual(result["soft_delivered_kw"][1], 7.0)
         self.assertAlmostEqual(result["soft_shortfall_kw"][1], 3.0)
         self.assertAlmostEqual(result["hard_delivered_kw"][0], 2.0)
-        self.assertAlmostEqual(result["summary"]["total_delivered_mwh"], 15.0 * 0.25 / 1000.0)
-        self.assertAlmostEqual(result["summary"]["total_shortfall_mwh"], 3.0 * 0.25 / 1000.0)
+        self.assertAlmostEqual(
+            result["summary"]["total_delivered_mwh"], 15.0 * 0.25 / 1000.0
+        )
+        self.assertAlmostEqual(
+            result["summary"]["total_shortfall_mwh"], 3.0 * 0.25 / 1000.0
+        )
 
     def test_build_report_compares_locational_clearing_to_unmanaged(self):
         report = build_locational_clearing_verification_report(

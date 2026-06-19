@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.operations.market.provider_shadow import build_shadow_report
+from gridalyn.operations import build_shadow_report
 
 
 class ProviderSelectionShadowReportTest(unittest.TestCase):

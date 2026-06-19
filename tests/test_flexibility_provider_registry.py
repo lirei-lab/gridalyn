@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.operations.market.providers import (
+from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
     select_providers_for_constraint,
@@ -149,8 +149,13 @@ class FlexibilityProviderRegistryTest(unittest.TestCase):
         self.assertEqual(soft["building_model_id"], "building_model:building:0")
         self.assertEqual(soft["scenario_device_count"], 2)
         self.assertEqual(soft["device_types"], "hvac_cooling;hvac_heating")
-        self.assertIn("scenario_device:S4:device:building:0:hvac_heating", soft["scenario_device_ids"])
-        self.assertEqual(hard["scenario_device_ids"], "scenario_device:S4:device:building:0:evse_l2")
+        self.assertIn(
+            "scenario_device:S4:device:building:0:hvac_heating",
+            soft["scenario_device_ids"],
+        )
+        self.assertEqual(
+            hard["scenario_device_ids"], "scenario_device:S4:device:building:0:evse_l2"
+        )
         self.assertEqual(hard["device_ids"], "device:building:0:evse_l2")
         self.assertEqual(hard["aggregator_id"], "aggregator:S4:default")
 

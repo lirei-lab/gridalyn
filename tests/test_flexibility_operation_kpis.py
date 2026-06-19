@@ -2,17 +2,19 @@ import unittest
 
 import pandas as pd
 
-from gridalyn.operations.flexibility import (
-    build_dispatch_instructions,
-    build_network_constraint_set,
-    build_operation_context,
-    build_operational_kpi_report,
-    build_settlement_records,
-    run_flexibility_clearing_operation,
-)
+from gridalyn.operations import build_dispatch_instructions
+from gridalyn.operations import build_network_constraint_set
 from gridalyn.operations import (
     build_network_constraint_set as public_build_network_constraint_set,
+)
+from gridalyn.operations import build_operation_context
+from gridalyn.operations import build_operational_kpi_report
+from gridalyn.operations import (
     build_operational_kpi_report as public_build_operational_kpi_report,
+)
+from gridalyn.operations import (
+    build_settlement_records,
+    run_flexibility_clearing_operation,
 )
 
 
@@ -174,9 +176,15 @@ class FlexibilityOperationKpiTest(unittest.TestCase):
         self.assertAlmostEqual(report["summary"]["hard_selected_mwh"], 0.00075)
         self.assertEqual(report["summary"]["selected_provider_count"], 2)
         self.assertEqual(report["summary"]["selected_aggregator_count"], 2)
-        self.assertAlmostEqual(report["summary"]["aggregator_concentration_top1_pct"], 0.625)
-        self.assertAlmostEqual(report["summary"]["topological_concentration_top1_pct"], 1.0)
-        self.assertEqual(report["constraint_summary"][0]["constraint_id"], "transformer:64")
+        self.assertAlmostEqual(
+            report["summary"]["aggregator_concentration_top1_pct"], 0.625
+        )
+        self.assertAlmostEqual(
+            report["summary"]["topological_concentration_top1_pct"], 1.0
+        )
+        self.assertEqual(
+            report["constraint_summary"][0]["constraint_id"], "transformer:64"
+        )
 
     def test_clearing_operation_report_includes_constraints_and_kpis(self):
         events, selections, report = run_flexibility_clearing_operation(
@@ -193,7 +201,9 @@ class FlexibilityOperationKpiTest(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(len(selections), 2)
         self.assertEqual(report["network_constraints"]["active_constraint_count"], 1)
-        self.assertEqual(report["operational_kpis"]["report_id"], "operational_kpi_report")
+        self.assertEqual(
+            report["operational_kpis"]["report_id"], "operational_kpi_report"
+        )
         self.assertAlmostEqual(
             report["operational_kpis"]["summary"]["delivered_mwh"],
             0.002,

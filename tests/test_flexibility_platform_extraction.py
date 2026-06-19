@@ -7,11 +7,10 @@ import pandas as pd
 import pytest
 
 from gridalyn.assets.modeling.thermal import build_thermal_forecast_from_ambient
-from gridalyn.operations.flexibility import (
+from gridalyn.operations import (
     build_congestion_forecast,
     prepare_cls_market_replay_context,
     run_cls_capacity_allocation,
-    scenario_label,
     validate_cls_output_consistency,
 )
 from gridalyn.simulation.simulators.powerflow.topology_cache import (
@@ -21,6 +20,7 @@ from gridalyn.simulation.simulators.powerflow.transformer_validation import (
     TransformerPeakValidationConfig,
     validate_transformer_peak_scenarios,
 )
+from projects.flexibility_cls.scripts._serialize import scenario_label
 
 
 def _mc_frame(values: list[list[float]]) -> pd.DataFrame:
