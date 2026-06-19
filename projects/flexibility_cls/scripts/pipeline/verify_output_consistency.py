@@ -15,7 +15,7 @@ import pandas as pd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.operations.flexibility import validate_cls_output_consistency
+from gridalyn.operations import validate_cls_output_consistency
 from projects.flexibility_cls.scripts.config import N_BUILDINGS
 
 DATA_DIR = ROOT / "projects" / "flexibility_cls" / "outputs" / "data"

@@ -17,7 +17,7 @@ import pandas as pd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.operations.flexibility import build_congestion_forecast
+from gridalyn.operations import build_congestion_forecast
 from projects.flexibility_cls.scripts.config import (
     EV_PERCENTAGES,
     N_REALIZATIONS,
@@ -25,9 +25,7 @@ from projects.flexibility_cls.scripts.config import (
     RES_MINUTES,
 )
 from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
-from projects.flexibility_cls.scripts.thermal_forecast import (
-    build_thermal_forecast,
-)
+from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
 DATA_DIR = ROOT / "projects/flexibility_cls/outputs/data"
 OUTPUTS_DIR = ROOT / "projects/flexibility_cls/outputs/json"
@@ -107,8 +105,12 @@ def main():
         encoding="utf-8",
     )
 
-    print(f"  -> Saved dynamic thermal bounds to {OUTPUTS_DIR / 'flex_requirements.json'}")
-    print(f"  -> Saved temporal trace limits to {DATA_DIR / 'congestion_temporal_bounds.parquet'}")
+    print(
+        f"  -> Saved dynamic thermal bounds to {OUTPUTS_DIR / 'flex_requirements.json'}"
+    )
+    print(
+        f"  -> Saved temporal trace limits to {DATA_DIR / 'congestion_temporal_bounds.parquet'}"
+    )
     print("  ✓ Step 1 Complete\n")
 
 

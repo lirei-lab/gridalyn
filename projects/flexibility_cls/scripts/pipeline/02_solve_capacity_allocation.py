@@ -6,16 +6,16 @@ Invokes MarketSimulationEngine and clears the Multi-Block Soft-CLS supply curve.
 Outputs: market_dispatch_timeseries.parquet, ev_summary_results.json
 """
 
-import sys
 import json
-import pandas as pd
+import sys
 from pathlib import Path
+
+import pandas as pd
 
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.operations.flexibility import run_cls_capacity_allocation
-from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
+from gridalyn.operations import run_cls_capacity_allocation
 from projects.flexibility_cls.scripts.config import (
     DELIVERY_FAILURE_RATE,
     EV_PERCENTAGES,
@@ -33,9 +33,8 @@ from projects.flexibility_cls.scripts.config import (
     S_RATED_KVA,
     THETA_MAX,
 )
-from projects.flexibility_cls.scripts.thermal_forecast import (
-    build_thermal_forecast,
-)
+from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
+from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
 # Downstream (Stage-01/02) arrays are pinned at a finer rounding floor than the
 # jitter-prone Stage-00 MC arrays; the dispatch timeseries hash is a PRIMARY
@@ -44,24 +43,26 @@ STAGE_DOWNSTREAM_ROUND_DECIMALS = 6
 
 
 def main():
-    print("="*60)
+    print("=" * 60)
     print("  [Step 2] Solve Market Allocation (Soft/Hard CLS)")
-    print("="*60)
-    
+    print("=" * 60)
+
     data_dir = ROOT / "projects/flexibility_cls/outputs/data"
     out_dir = ROOT / "projects/flexibility_cls/outputs/json"
     out_dir.mkdir(exist_ok=True, parents=True)
-    
+
     b_path = data_dir / "substation_baseline_mc.parquet"
     ev_path = data_dir / "substation_ev_capability_mc.parquet"
-    
+
     if not b_path.exists() or not ev_path.exists():
-        print("[!] Parquet data not found. Please run 00_generate_stochastic_profiles.py first.")
+        print(
+            "[!] Parquet data not found. Please run 00_generate_stochastic_profiles.py first."
+        )
         return
-        
+
     df_base = pd.read_parquet(b_path)
     df_ev = pd.read_parquet(ev_path)
-    
+
     thermal_forecast = build_thermal_forecast(len(df_base.index))
     result = run_cls_capacity_allocation(
         baseline_mw=df_base,
@@ -133,8 +134,11 @@ def main():
     )
 
     print(f"\n  -> Results dumped to {out_dir / 'ev_summary_results.json'}")
-    print(f"  -> Dispatch timeseries saved to {data_dir / 'market_dispatch_timeseries.parquet'}")
+    print(
+        f"  -> Dispatch timeseries saved to {data_dir / 'market_dispatch_timeseries.parquet'}"
+    )
     print("  ✓ Step 2 Complete\n")
+
 
 if __name__ == "__main__":
     main()

@@ -12,12 +12,8 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.foundation import ArtifactLayout
-from gridalyn.operations.flexibility import (
-    json_default,
-    materialize_flexibility_operation_artifacts,
-    relpath,
-)
-
+from gridalyn.operations import materialize_flexibility_operation_artifacts
+from projects.flexibility_cls.scripts._serialize import json_default, relpath
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_FLEX_DIR = DEFAULT_LAYOUT.flexibility

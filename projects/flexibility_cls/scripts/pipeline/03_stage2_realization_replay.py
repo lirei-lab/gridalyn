@@ -12,8 +12,8 @@ load at every timestep.
 Outputs: outputs/json/stage2_realization_summary.json
 """
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -21,11 +21,11 @@ import pandas as pd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.operations.flexibility import (
+from gridalyn.operations import (
     prepare_cls_market_replay_context,
-    scenario_label,
     summarize_stage2_realizations,
 )
+from projects.flexibility_cls.scripts._serialize import scenario_label
 from projects.flexibility_cls.scripts.config import (
     DELIVERY_FAILURE_RATE,
     EV_PERCENTAGES,
@@ -104,7 +104,9 @@ def main():
         )
 
     out_path = out_dir / "stage2_realization_summary.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(f"\n  -> Saved {out_path}")
     return 0
 
