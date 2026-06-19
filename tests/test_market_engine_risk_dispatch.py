@@ -1,9 +1,12 @@
-import numpy as np
 import unittest
 
+import numpy as np
+
 from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.operations.market.dso_dispatch import DSODispatcher
-from gridalyn.operations.market.engine import MarketSimulationEngine
+from gridalyn.operations.clearing.engine_mode import (
+    DSODispatcher,
+    MarketSimulationEngine,
+)
 
 
 class FixedLimitThermalModel:
@@ -17,7 +20,9 @@ class FixedLimitThermalModel:
 
 
 class MarketEngineRiskDispatchTest(unittest.TestCase):
-    def test_hard_cls_covers_chance_constrained_shortfall_when_mean_is_below_limit(self):
+    def test_hard_cls_covers_chance_constrained_shortfall_when_mean_is_below_limit(
+        self,
+    ):
         network = MVNetwork(
             p_limit_kw=100.0,
             p_emergency_kw=120.0,

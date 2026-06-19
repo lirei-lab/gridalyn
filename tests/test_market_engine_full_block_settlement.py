@@ -7,12 +7,15 @@ the 5-min timesteps with an active real-time deficit. These tests lock in that
 that it never pays less than the utilization-only convention.
 """
 
-import numpy as np
 import unittest
 
+import numpy as np
+
 from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.operations.market.dso_dispatch import DSODispatcher
-from gridalyn.operations.market.engine import MarketSimulationEngine
+from gridalyn.operations.clearing.engine_mode import (
+    DSODispatcher,
+    MarketSimulationEngine,
+)
 
 
 class LoadEqualsThetaModel:
