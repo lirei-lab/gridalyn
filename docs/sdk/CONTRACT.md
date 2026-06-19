@@ -81,6 +81,37 @@ contract must not treat them as part of this surface:
 | `summarize_der_voltage_dispatch` | function |
 | `write_der_voltage_dispatch_figure` | function |
 
+## Staged-pipeline API
+
+Alongside the frozen single entry point, `gridalyn.operations` also exposes a
+small set of **staged-pipeline** building blocks. These are the additive,
+canonical public surface that the `flexibility_cls` proving-ground study composes
+to run its multi-stage day-ahead / capacity-allocation / Stage-2 replay pipeline.
+They are reachable the same way as the frozen surface — directly via
+`from gridalyn.operations import ...` (the lazy `__getattr__` facade) — and are
+blessed, citable public symbols. The bundled
+`run_flexibility_clearing_operation` remains the **frozen** single entry point;
+these staged symbols are an additive convenience tier for studies that need the
+individual stages, not a replacement for it.
+
+| Symbol | Kind | Stage role |
+| --- | --- | --- |
+| `build_congestion_forecast` | function | Build the day-ahead congestion forecast input |
+| `prepare_cls_market_replay_context` | function | Prepare the Stage-2 market replay context |
+| `summarize_stage2_realizations` | function | Summarize out-of-sample Stage-2 realizations |
+| `run_cls_capacity_allocation` | function | Run the CLS capacity-allocation clearing |
+| `validate_cls_output_consistency` | function | Validate cross-stage CLS output consistency |
+| `materialize_flexibility_operation_artifacts` | function | Materialize governed operation artifacts |
+
+This tier is **additive and may grow**; unlike the frozen surface, the staged
+API is not pinned against drift by the contract test — it is documented as the
+supported public composition surface for staged studies.
+
+The pure serialization/labeling helpers `json_default`, `relpath`, and
+`scenario_label` are **not** part of this surface. They are study-local helpers
+(they live in `projects/flexibility_cls/scripts/_serialize.py`), not SDK public
+API, and must not be imported from `gridalyn.operations`.
+
 ## Internal / Provisional (Not Frozen)
 
 The `operations/market/*` builders (e.g. `build_locational_clearing`,
