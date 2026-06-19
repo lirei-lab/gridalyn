@@ -1,15 +1,21 @@
 import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
 
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.interfaces import apply_hour_axis, save_figure_pair, style_timeseries_axis
-from gridalyn.operations.flexibility import prepare_cls_market_replay_context
-from projects.flexibility_cls.scripts.config import RES_MINUTES, S_RATED_KVA, P_LIMIT_KW, THETA_MAX
+from gridalyn.operations import prepare_cls_market_replay_context
+from projects.flexibility_cls.scripts.config import (
+    P_LIMIT_KW,
+    RES_MINUTES,
+    S_RATED_KVA,
+    THETA_MAX,
+)
 from projects.flexibility_cls.scripts.thermal_forecast import build_thermal_forecast
 
 PALETTE = {
@@ -18,12 +24,15 @@ PALETTE = {
     "evs_worst": "#d35400",
     "soft_cls_contract": "#2ecc71",
     "hard_cls_expected": "#9b59b6",
-    "thermal_limit": "#c0392b"
+    "thermal_limit": "#c0392b",
 }
+
 
 def main():
     data_dir = ROOT / "projects/flexibility_cls/outputs/data"
-    out_dir = ROOT / "projects/flexibility_cls/outputs/figures/04_stage3_market_clearing"
+    out_dir = (
+        ROOT / "projects/flexibility_cls/outputs/figures/04_stage3_market_clearing"
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     df_base = pd.read_parquet(data_dir / "substation_baseline_mc.parquet")
@@ -57,15 +66,18 @@ def main():
     contracted_soft_mw = df_res["contracted_soft_kw"].values / 1000.0
 
     from scipy.stats import norm
+
     z_score = norm.ppf(1 - 0.05)
     p_worst = p_tot_mean + z_score * p_tot_std
 
     # ── Build individual MC trajectories (S4: 40% EV) ───────────────────────────
     # Data is in MW at substation level; scale EV from 30% to 40%
     n_reals = df_base.shape[1]
-    base_vals = df_base.values[:n_steps, :]      # (n_steps, 30) MW
-    ev_vals   = df_ev.values[:n_steps, :]         # (n_steps, 30) MW
-    s4_mc     = base_vals + ev_vals * (40.0/30.0) # (n_steps, 30) MW — individual trajectories
+    base_vals = df_base.values[:n_steps, :]  # (n_steps, 30) MW
+    ev_vals = df_ev.values[:n_steps, :]  # (n_steps, 30) MW
+    s4_mc = base_vals + ev_vals * (
+        40.0 / 30.0
+    )  # (n_steps, 30) MW — individual trajectories
 
     # ── Plot ────────────────────────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(14, 7))
@@ -73,33 +85,76 @@ def main():
     # Individual MC trajectories (thin, translucent)
     for i in range(n_reals):
         label = r"MC Realizations ($n=30$, S4)" if i == 0 else None
-        ax.plot(t_hours, s4_mc[:, i], color="#E67E22", alpha=0.18,
-                linewidth=0.5, zorder=2, label=label)
+        ax.plot(
+            t_hours,
+            s4_mc[:, i],
+            color="#E67E22",
+            alpha=0.18,
+            linewidth=0.5,
+            zorder=2,
+            label=label,
+        )
 
     # Mean (μ) and worst-case envelope (μ + Z·σ) — keep for CLS reference
-    ax.plot(t_hours, p_tot_mean, color='black', lw=2.0, zorder=5,
-            label=r"Expected Unmanaged Load ($\mu$)")
-    ax.plot(t_hours, p_worst, color=PALETTE["evs_worst"], lw=2.0, ls='--', zorder=5,
-            label=r"95th Pct. Worst-Case Envelope ($\mu + Z \cdot \sigma$)")
+    ax.plot(
+        t_hours,
+        p_tot_mean,
+        color="black",
+        lw=2.0,
+        zorder=5,
+        label=r"Expected Unmanaged Load ($\mu$)",
+    )
+    ax.plot(
+        t_hours,
+        p_worst,
+        color=PALETTE["evs_worst"],
+        lw=2.0,
+        ls="--",
+        zorder=5,
+        label=r"95th Pct. Worst-Case Envelope ($\mu + Z \cdot \sigma$)",
+    )
 
     # Dynamic thermal limit
-    ax.plot(t_hours, p_limit, color=PALETTE["thermal_limit"], lw=3, ls='-', zorder=6,
-            label=r"Dynamic Thermal Limit ($\theta_H$)")
+    ax.plot(
+        t_hours,
+        p_limit,
+        color=PALETTE["thermal_limit"],
+        lw=3,
+        ls="-",
+        zorder=6,
+        label=r"Dynamic Thermal Limit ($\theta_H$)",
+    )
 
     # ── Flexibility surfaces (unchanged) ────────────────────────────────────────
     # Expected Activations for visualization
-    expected_soft_act_mw = np.minimum(contracted_soft_mw, np.maximum(0, p_worst - p_limit))
+    expected_soft_act_mw = np.minimum(
+        contracted_soft_mw, np.maximum(0, p_worst - p_limit)
+    )
     expected_hard_act_mw = np.maximum(0, p_worst - p_limit - expected_soft_act_mw)
 
     # 1. Fill Expected Soft-CLS Activation
-    ax.fill_between(t_hours, p_worst - expected_soft_act_mw, p_worst, where=(expected_soft_act_mw > 0),
-                    color=PALETTE["soft_cls_contract"], alpha=0.8, label="Soft-CLS: Firm Contracted Capacity",
-                    zorder=7)
+    ax.fill_between(
+        t_hours,
+        p_worst - expected_soft_act_mw,
+        p_worst,
+        where=(expected_soft_act_mw > 0),
+        color=PALETTE["soft_cls_contract"],
+        alpha=0.8,
+        label="Soft-CLS: Firm Contracted Capacity",
+        zorder=7,
+    )
 
     # 2. Fill Expected Hard-CLS Activation
-    ax.fill_between(t_hours, p_worst - expected_soft_act_mw - expected_hard_act_mw, p_worst - expected_soft_act_mw, where=(expected_hard_act_mw > 0),
-                    color=PALETTE["hard_cls_expected"], alpha=0.6, label="Hard-CLS: Expected Interruptible Recourse",
-                    zorder=7)
+    ax.fill_between(
+        t_hours,
+        p_worst - expected_soft_act_mw - expected_hard_act_mw,
+        p_worst - expected_soft_act_mw,
+        where=(expected_hard_act_mw > 0),
+        color=PALETTE["hard_cls_expected"],
+        alpha=0.6,
+        label="Hard-CLS: Expected Interruptible Recourse",
+        zorder=7,
+    )
 
     # 3. Expected Post-Congestion Rebound (energy-conserving with the green area)
     # Physical principle: all curtailed energy must eventually return as rebound.
@@ -111,8 +166,10 @@ def main():
     # accumulate deficit from the green area, then drain it post-congestion using
     # P-controller dynamics clamped by the available thermal margin.
     dt_h = RES_MINUTES / 60.0
-    K_P = 2.0   # P-controller gain [kW/kWh] — matches BuildingAggregator.K_P_REBOUND
-    OVERSIZE = 1.30  # HVAC headroom factor — matches BuildingAggregator.HEATING_OVERSIZE
+    K_P = 2.0  # P-controller gain [kW/kWh] — matches BuildingAggregator.K_P_REBOUND
+    OVERSIZE = (
+        1.30  # HVAC headroom factor — matches BuildingAggregator.HEATING_OVERSIZE
+    )
 
     accumulated_deficit_mwh = 0.0
     drawn_rebound = np.zeros(len(t_hours))
@@ -141,14 +198,22 @@ def main():
             rebound_power = min(rebound_power, max_drain)
 
             drawn_rebound[t] = rebound_power
-            accumulated_deficit_mwh = max(0, accumulated_deficit_mwh - rebound_power * dt_h)
+            accumulated_deficit_mwh = max(
+                0, accumulated_deficit_mwh - rebound_power * dt_h
+            )
 
     if np.max(drawn_rebound) > 0:
-        ax.fill_between(t_hours, p_tot_mean, p_tot_mean + drawn_rebound,
-                        where=(drawn_rebound > 0.001),
-                        color="#D9534F", alpha=0.8, hatch='\\\\', label="Expected Post-Congestion Rebound",
-                        zorder=7)
-
+        ax.fill_between(
+            t_hours,
+            p_tot_mean,
+            p_tot_mean + drawn_rebound,
+            where=(drawn_rebound > 0.001),
+            color="#D9534F",
+            alpha=0.8,
+            hatch="\\\\",
+            label="Expected Post-Congestion Rebound",
+            zorder=7,
+        )
 
     ax.set_ylabel("Substation Power Demand [MW]", fontsize=14)
 
@@ -164,6 +229,7 @@ def main():
     paths = save_figure_pair(fig, out_dir / "plot_14b_stage_1_profiled.png")
     print(f"Saved PDF to {paths['pdf']}")
     print(f"Saved to {paths['png']}")
+
 
 if __name__ == "__main__":
     main()

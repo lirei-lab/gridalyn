@@ -18,17 +18,23 @@ by re-running `gridalyn project regression projects/flexibility_cls` (green,
 Stages 02 and 03 call the **flexibility facade**, never the market OO engine
 directly:
 
-- `02_solve_capacity_allocation.py:17,59` →
-  `from gridalyn.operations.flexibility import run_cls_capacity_allocation`
-- `03_stage2_realization_replay.py:24-28,78` →
-  `from gridalyn.operations.flexibility import prepare_cls_market_replay_context`
+- `02_solve_capacity_allocation.py` →
+  `from gridalyn.operations import run_cls_capacity_allocation`
+- `03_stage2_realization_replay.py` →
+  `from gridalyn.operations import prepare_cls_market_replay_context`
 
-The facade functions are exported from
-`gridalyn/operations/flexibility/__init__.py:21,26` (`run_cls_capacity_allocation`,
-`prepare_cls_market_replay_context`).
+As of Phase 4 the study imports these symbols **only** through the top-level
+`gridalyn.operations` facade (the canonical surface); no study script reaches
+into `gridalyn.operations.flexibility` / `gridalyn.operations.market` or any
+concept submodule. The `tests/test_study_facade_boundaries.py` (D-04) guard
+locks this facade-only rule for all study code.
 
-Internally the facade constructs the market OO engine. In
-`gridalyn/operations/flexibility/cls_market.py`:
+The descriptions below trace what the facade does **internally** — this is
+`cls_market.py` plumbing that is **interior to the facade, not study-facing**.
+The legacy `gridalyn/operations/flexibility/` and `gridalyn/operations/market/`
+packages still exist as quiet deprecation shims (deletion is Phase 5 / CLEAN-02);
+they are not removed by this migration. In
+`gridalyn/operations/flexibility/cls_market.py` (interior plumbing):
 
 - `:17` `from gridalyn.operations.market.dso_dispatch import DSODispatcher`
 - `:18` `from gridalyn.operations.market.engine import MarketSimulationEngine`
