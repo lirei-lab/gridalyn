@@ -37,9 +37,22 @@ class ProsumerRealtimeMarketConfig:
 
         Raises:
             ValueError: If a forecast-bias tuple is shorter than
-                ``forecast_horizon_intervals``, naming the offending field
-                and the expected length.
+                ``forecast_horizon_intervals`` or a per-interval multiplier
+                tuple is shorter than ``interval_count``, naming the offending
+                field and the expected length.
         """
+        if len(self.load_multipliers) < self.interval_count:
+            raise ValueError(
+                "ProsumerRealtimeMarketConfig.load_multipliers must have at least "
+                f"interval_count={self.interval_count} entries, found "
+                f"{len(self.load_multipliers)}."
+            )
+        if len(self.pv_factors) < self.interval_count:
+            raise ValueError(
+                "ProsumerRealtimeMarketConfig.pv_factors must have at least "
+                f"interval_count={self.interval_count} entries, found "
+                f"{len(self.pv_factors)}."
+            )
         if len(self.load_forecast_bias_by_lead) < self.forecast_horizon_intervals:
             raise ValueError(
                 "ProsumerRealtimeMarketConfig.load_forecast_bias_by_lead must have at "
