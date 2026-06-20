@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from gridalyn.assets import der_dispatch_assets_to_frame
+from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     build_der_dispatch_pandapower_network,
@@ -25,6 +26,7 @@ def _write_tables(script: ProjectScript, net) -> dict[str, Path]:
 
 def main() -> int:
     script = project_script()
+    require_capabilities("sim", context="the DER feeder build")
     der_assets = der_dispatch_assets_to_frame(DER_ASSETS)
     net = build_der_dispatch_pandapower_network(
         build_der_feeder,

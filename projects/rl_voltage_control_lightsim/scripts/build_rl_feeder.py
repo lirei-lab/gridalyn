@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from gridalyn.assets import voltage_control_assets_to_frame
+from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     LightSimPowerflowAdapter,
@@ -43,6 +44,7 @@ def _write_inputs(script: ProjectScript, net) -> dict[str, Path]:
 
 def main() -> int:
     script = project_script()
+    require_capabilities("sim", context="the RL feeder build")
     net = build_rl_feeder()
     _apply_profile(net, 11)
     run_standard_powerflow_scenario(

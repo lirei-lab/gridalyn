@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.operations import (
     DERVoltageDispatchConfig,
     run_der_voltage_dispatch,
@@ -22,6 +23,7 @@ PERTURBATION_MW = 0.05
 
 def main() -> int:
     script = project_script()
+    require_capabilities("sim", context="the DER voltage optimization")
     der_assets_path = script.data_dir / "der_assets.csv"
     der_assets = pd.read_csv(der_assets_path)
     result = run_der_voltage_dispatch(

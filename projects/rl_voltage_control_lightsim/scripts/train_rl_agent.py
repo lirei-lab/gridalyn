@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
 from gridalyn.simulation import (
     TabularVoltageControlConfig,
@@ -21,6 +22,7 @@ V_HIGH = 1.04
 
 def main() -> int:
     script = project_script()
+    require_capabilities("sim", context="RL voltage-controller training")
     environment_spec = build_rl_environment_spec()
     training_config = TabularVoltageControlConfig(
         episode_count=EPISODE_COUNT,
