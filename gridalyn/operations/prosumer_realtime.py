@@ -134,7 +134,24 @@ def clear_prosumer_interval(
     *,
     config: ProsumerRealtimeMarketConfig,
 ) -> tuple[list[dict], list[dict], float, float, float | None]:
-    """Clear one interval of the rolling-horizon prosumer market."""
+    """Clear one interval of the rolling-horizon prosumer market.
+
+    Args:
+        prosumers: Per-prosumer battery/offer parameters for this interval.
+        soc: Mutable map of ``prosumer_id`` to state-of-charge in MWh.
+            **Mutated in place:** each cleared prosumer's entry is decremented
+            by its dispatched energy so that state carries across intervals.
+            ``run_prosumer_realtime_market`` relies on this contract to thread
+            SoC through the rolling horizon. Callers that need to reuse a SoC
+            map across independent runs must pass a fresh copy to avoid state
+            bleed.
+        forecast: Rolling-horizon forecast frame for this issue interval.
+        config: Market configuration parameters.
+
+    Returns:
+        A tuple of (dispatch_rows, offers, cleared_mw, cleared_cost,
+        clearing_price).
+    """
     dispatch_rows: list[dict] = []
     offers: list[dict] = []
     current = forecast.loc[forecast["lead_interval"] == 0].iloc[0]
