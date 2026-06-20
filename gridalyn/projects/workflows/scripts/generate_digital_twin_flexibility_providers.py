@@ -8,19 +8,17 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[4]
-
 from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
-from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
     summarize_provider_registry,
 )
+from gridalyn.twin.network import NetworkModelRepository
 
+ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios

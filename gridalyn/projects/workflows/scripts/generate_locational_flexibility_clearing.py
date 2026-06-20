@@ -9,18 +9,16 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[4]
-
 from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
 from gridalyn.operations import (
     build_constraint_requirements,
     build_locational_clearing,
     write_locational_clearing_outputs,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
 DEFAULT_IMPACT = DEFAULT_LAYOUT.flexibility / "network_impact_predictions.parquet"

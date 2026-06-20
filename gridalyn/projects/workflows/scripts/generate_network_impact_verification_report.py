@@ -10,12 +10,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[4]
-
 from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
+from gridalyn.operations import (
+    allocate_addition_by_headroom,
+    apply_spatial_cls,
+)
+from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import (
+    DEFAULT_CACHE_DIR,
+    DEFAULT_MARKET_DISPATCH_PATH,
+    _load_s4_inputs,
+    _powerflow_metrics,
+)
 from gridalyn.simulation.analytics.network_impact.verification_report import (
     build_constraint_aware_dispatch,
     build_constraint_requirements,
@@ -25,17 +30,10 @@ from gridalyn.simulation.analytics.network_impact.verification_report import (
     summarize_dispatch,
     write_network_impact_verification_report,
 )
-from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import (
-    DEFAULT_CACHE_DIR,
-    DEFAULT_MARKET_DISPATCH_PATH,
-    _load_s4_inputs,
-    _powerflow_metrics,
-)
-from gridalyn.operations import (
-    allocate_addition_by_headroom,
-    apply_spatial_cls,
-)
 
+ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
 DEFAULT_SENSITIVITY = DEFAULT_LAYOUT.flexibility / "network_sensitivity.parquet"

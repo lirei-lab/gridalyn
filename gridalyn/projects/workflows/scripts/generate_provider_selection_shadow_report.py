@@ -8,17 +8,15 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[4]
-
 from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
 from gridalyn.operations import (
     build_shadow_report,
     write_shadow_report,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 DEFAULT_DISPATCH = DEFAULT_LAYOUT.flexibility / "market_dispatch_timeseries.parquet"
 DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"

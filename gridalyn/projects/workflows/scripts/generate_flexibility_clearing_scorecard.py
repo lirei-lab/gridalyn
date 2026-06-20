@@ -7,17 +7,15 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[4]
-
 from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
 from gridalyn.operations import (
     build_flexibility_clearing_scorecard,
     write_flexibility_clearing_scorecard,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+
+DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 DEFAULT_REPORT_DIR = DEFAULT_LAYOUT.flexibility
 DEFAULT_TOPOLOGY_REPORT = DEFAULT_REPORT_DIR / "network_impact_verification_report.json"

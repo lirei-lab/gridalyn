@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from gridalyn.foundation import ArtifactLayout
 from gridalyn.operations import (
     apply_locational_selections,
     build_locational_clearing_verification_report,
@@ -20,10 +21,7 @@ from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import
     _powerflow_metrics,
 )
 
-
 ROOT = Path(__file__).resolve().parents[4]
-
-from gridalyn.foundation import ArtifactLayout
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
