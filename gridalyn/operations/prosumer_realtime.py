@@ -140,7 +140,10 @@ def clear_prosumer_interval(
             float(row.battery_power_mw),
             available_energy_mwh / config.dt_h,
         )
-        locational_priority = float(row.bus_id) / float(prosumers["bus_id"].max())
+        max_bus_id = float(prosumers["bus_id"].max())
+        locational_priority = (
+            float(row.bus_id) / max_bus_id if max_bus_id > 0 else 0.0
+        )
         submitted_price = (
             float(row.offer_price_usd_per_mwh)
             + config.scarcity_adder_usd_per_mwh * scarcity_ratio
