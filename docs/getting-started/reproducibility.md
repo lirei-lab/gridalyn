@@ -27,17 +27,30 @@ machine. Two pins make that possible and are non-negotiable:
   host's system interpreter (e.g. 3.10) or a stray `.pyc` (e.g. cpython-313) would
   otherwise resolve a different numeric stack and silently move the numbers.
 - **Frozen dependency resolution** — install against the committed `uv.lock`
-  **without re-resolving**:
+  **without re-resolving**, and **with the capabilities the citable result
+  needs**:
 
 ```bash
-uv sync --frozen
+uv sync --frozen --extra sim --extra ops --extra dev
 uv run gridalyn --help
 ```
 
 `uv sync --frozen` fails loudly if `uv.lock` is stale rather than silently
-upgrading a transitive dependency. This — pinned 3.12 + `uv sync --frozen` — is
-**the** reproducible install. Plain `uv sync` (used in the convenience steps
-below) is for day-to-day work, not for reproducing a published result.
+upgrading a transitive dependency. This — pinned 3.12 + `uv sync --frozen
+--extra sim --extra ops --extra dev` — is **the** reproducible install. Plain
+`uv sync` (used in the convenience steps below) is for day-to-day work, not for
+reproducing a published result.
+
+> **The extras are not optional for the citable numbers.** A bare
+> `uv sync --frozen` installs **base deps only**, leaving the optional `sim`
+> (`lightsim2grid`) and `ops` (`cvxpy`, `lightgbm`) capabilities uninstalled —
+> `gridalyn doctor` then reports `cvxpy=false`, `lightgbm=false`,
+> `lightsim2grid=false`. The `flexibility_cls` study **silently degrades** onto
+> fallback code paths (still exit 0) and **moves 51/74 regression metrics**
+> (only 23/74 valid). The `sim` + `ops` extras are required to reproduce the
+> committed baseline; `dev` provides `pytest` for the determinism leg. This is a
+> D-07 pinning/recipe correction (the install recipe was the defect) — **not** a
+> re-baseline and **not** a tolerance change.
 
 ### Stage `uv run` invocation (no mid-run re-resolve)
 
@@ -48,7 +61,7 @@ environment so each stage `uv run` no-ops against the same interpreter and lock:
 
 ```bash
 # Activate the frozen environment once, then run the workflow.
-uv sync --frozen
+uv sync --frozen --extra sim --extra ops --extra dev
 source .venv/bin/activate           # stage `uv run`s now reuse this env
 gridalyn project run projects/flexibility_cls
 ```
@@ -64,13 +77,23 @@ whole block top-to-bottom; every step must be green and the committed baseline
 must reproduce bit-for-bit.
 
 ```bash
-# 1. Build a clean, frozen environment on pinned 3.12.
+# 1. Build a clean, frozen environment on pinned 3.12 WITH the required extras.
+#    The citable flexibility_cls numbers depend on the optional `sim`
+#    (lightsim2grid) and `ops` (cvxpy, lightgbm) capabilities; `dev` provides
+#    pytest for the determinism leg below. A bare `uv sync --frozen` installs
+#    base deps only — the study then silently degrades and moves 51/74 metrics
+#    (see the D-07 note above and the doctor check on the next line).
 rm -rf .venv
-uv sync --frozen
+uv sync --frozen --extra sim --extra ops --extra dev
 # Tripwire (Pitfall 1): this MUST print Python 3.12.x — not 3.10 / 3.13.
 # uv selects 3.12 from the committed .python-version; a different version here
 # means the pin is not being honoured and the numbers will move.
 uv run python --version
+# Capability tripwire: cvxpy, lightgbm, and lightsim2grid MUST all be true here.
+# If any reads false, the extras above did not install and the regression will
+# go red on degraded fallback paths — that is a recipe defect (D-07), not a
+# baseline change.
+uv run gridalyn doctor
 
 # 2. Activate the frozen environment ONCE so every stage `uv run python ...`
 #    subprocess (25 of them) reuses this exact interpreter+lock and cannot
