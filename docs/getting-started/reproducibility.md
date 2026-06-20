@@ -58,29 +58,56 @@ Equivalently, pass `--frozen` / `--no-sync` to the stage invocations
 
 ### Fresh-venv Definition-of-Done recipe
 
-The Phase-5 DoD is a clean-room rebuild from a fresh virtual environment:
+The Phase-5 DoD (REPRO-05) is a clean-room rebuild from a fresh virtual
+environment that a stranger can copy-paste verbatim from the repo root. Run the
+whole block top-to-bottom; every step must be green and the committed baseline
+must reproduce bit-for-bit.
 
 ```bash
 # 1. Build a clean, frozen environment on pinned 3.12.
 rm -rf .venv
 uv sync --frozen
+# Tripwire (Pitfall 1): this MUST print Python 3.12.x — not 3.10 / 3.13.
+# uv selects 3.12 from the committed .python-version; a different version here
+# means the pin is not being honoured and the numbers will move.
+uv run python --version
 
-# 2. Run the study and confirm the regression baseline is byte-identical.
-uv run gridalyn project run projects/flexibility_cls
-uv run gridalyn project regression projects/flexibility_cls   # expect "valid": true (74/74)
+# 2. Activate the frozen environment ONCE so every stage `uv run python ...`
+#    subprocess (25 of them) reuses this exact interpreter+lock and cannot
+#    re-resolve the environment mid-run (Pitfall 2). Then run the study.
+source .venv/bin/activate
+gridalyn project run projects/flexibility_cls            # expect exit 0
+#    Equivalent without activating: prefix each stage with `uv run --frozen`
+#    (or `--no-sync`) so no stage can silently re-resolve the lock.
 
-# 3. Determinism leg — the run must be identical under two PYTHONHASHSEED values.
-PYTHONHASHSEED=0 uv run gridalyn project regression projects/flexibility_cls
-PYTHONHASHSEED=1 uv run gridalyn project regression projects/flexibility_cls
+# 3. Regression gate — this is the DoD. The committed baseline must reproduce.
+gridalyn project regression projects/flexibility_cls     # expect "valid": true (74/74)
 
-# 4. Network-free leg — the run must not depend on a live PVGIS fetch (the
-#    committed TMY CSV is pinned; "auto" weather is guarded, never used).
+# 4. Determinism leg — the baseline must be byte-identical under two
+#    PYTHONHASHSEED values (independent hash randomization, same numbers).
+PYTHONHASHSEED=0 python -m pytest -q tests/test_repro_dod.py   # expect 0 exit
+PYTHONHASHSEED=1 python -m pytest -q tests/test_repro_dod.py   # expect 0 exit
+
+# 5. Network-free leg — the run must NOT depend on a live PVGIS fetch: the
+#    committed TMY CSV (inputs/tmy_trois_rivieres.csv) is the only weather
+#    source, `download_tmy` is never called, and an "auto" source is guarded.
+#    tests/test_repro_dod.py::test_run_is_network_free asserts this; you can
+#    also confirm no PVGIS fetch appears in the stage logs and that the run
+#    manifest `provenance.python_version` records 3.12.x.
 ```
 
 `PYTHONHASHSEED`, the interpreter version, the clearing-engine versions, the run
 seeds, and the input file hashes are all recorded in the run manifest's
 `provenance` block, so a divergence is an auditable **pinning defect**, not a
 mystery.
+
+> **D-07 — divergence is a pinning defect, never a re-baseline.** If the
+> fresh-venv re-run does not reproduce the committed baseline bit-for-bit,
+> **tighten the pin** (`.python-version`, the frozen `uv.lock`, a transitive
+> dependency) until it matches. **Never** edit `results_baseline.json` and never
+> loosen a tolerance to absorb the drift. A deliberate re-baseline is a separate,
+> explicit, user-gated decision with a written rationale — it is never the
+> automatic response to a red gate.
 
 ## 1. Start From The Repository Root
 
