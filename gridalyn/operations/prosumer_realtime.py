@@ -32,6 +32,27 @@ class ProsumerRealtimeMarketConfig:
     locational_credit_usd_per_mwh: float = 2.0
     scarcity_adder_usd_per_mwh: float = 6.0
 
+    def __post_init__(self) -> None:
+        """Validate that tuple dimensions cover the configured horizons.
+
+        Raises:
+            ValueError: If a forecast-bias tuple is shorter than
+                ``forecast_horizon_intervals``, naming the offending field
+                and the expected length.
+        """
+        if len(self.load_forecast_bias_by_lead) < self.forecast_horizon_intervals:
+            raise ValueError(
+                "ProsumerRealtimeMarketConfig.load_forecast_bias_by_lead must have at "
+                f"least forecast_horizon_intervals={self.forecast_horizon_intervals} "
+                f"entries, found {len(self.load_forecast_bias_by_lead)}."
+            )
+        if len(self.pv_forecast_bias_by_lead) < self.forecast_horizon_intervals:
+            raise ValueError(
+                "ProsumerRealtimeMarketConfig.pv_forecast_bias_by_lead must have at "
+                f"least forecast_horizon_intervals={self.forecast_horizon_intervals} "
+                f"entries, found {len(self.pv_forecast_bias_by_lead)}."
+            )
+
     @property
     def dt_h(self) -> float:
         return self.interval_minutes / 60.0
