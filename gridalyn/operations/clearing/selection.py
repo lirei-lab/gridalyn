@@ -42,7 +42,7 @@ from gridalyn.operations.domain import (
     build_dispatch_instructions,
     build_settlement_records,
 )
-from gridalyn.operations.flexibility.kpis import build_operational_kpi_report
+from gridalyn.operations.settlement import build_operational_kpi_report
 
 
 SOFT_BASE_COST_PER_KW_H = 3.0

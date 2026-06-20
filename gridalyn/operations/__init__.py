@@ -61,6 +61,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     ),
     # --- Network constraints (canonical home: gridalyn.operations.constraints) ---
     "NetworkConstraint": ("gridalyn.operations.constraints", "NetworkConstraint"),
+    "NetworkConstraintModel": (
+        "gridalyn.operations.constraints",
+        "NetworkConstraintModel",
+    ),
     "build_network_constraint_set": (
         "gridalyn.operations.constraints",
         "build_network_constraint_set",
@@ -189,6 +193,41 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "materialize_flexibility_operation_artifacts": (
         "gridalyn.operations.artifacts",
         "materialize_flexibility_operation_artifacts",
+    ),
+    # --- Prosumer real-time market (canonical home: prosumer_realtime, D-01) ---
+    # Deferred so the leaf-module ``import pandapower`` never fires at
+    # ``import gridalyn.operations`` (boundary purity, T-05-12).
+    "ProsumerRealtimeMarketConfig": (
+        "gridalyn.operations.prosumer_realtime",
+        "ProsumerRealtimeMarketConfig",
+    ),
+    "ProsumerRealtimeMarketResult": (
+        "gridalyn.operations.prosumer_realtime",
+        "ProsumerRealtimeMarketResult",
+    ),
+    "build_interval_forecast": (
+        "gridalyn.operations.prosumer_realtime",
+        "build_interval_forecast",
+    ),
+    "build_prosumer_realtime_market_summary": (
+        "gridalyn.operations.prosumer_realtime",
+        "build_prosumer_realtime_market_summary",
+    ),
+    "clear_prosumer_interval": (
+        "gridalyn.operations.prosumer_realtime",
+        "clear_prosumer_interval",
+    ),
+    "run_prosumer_powerflow": (
+        "gridalyn.operations.prosumer_realtime",
+        "run_prosumer_powerflow",
+    ),
+    "run_prosumer_realtime_market": (
+        "gridalyn.operations.prosumer_realtime",
+        "run_prosumer_realtime_market",
+    ),
+    "write_prosumer_market_dispatch_figure": (
+        "gridalyn.operations.prosumer_realtime",
+        "write_prosumer_market_dispatch_figure",
     ),
 }
 
