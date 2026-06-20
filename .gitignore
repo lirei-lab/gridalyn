@@ -77,6 +77,10 @@ ipython_config.py
 
 # pyenv
 .python-version
+# ...except the committed repo-wide interpreter pin (D-05): a reproducible
+# flexibility_cls run must resolve CPython 3.12 on every machine, so this file
+# is intentionally tracked.
+!/.python-version
 
 # celery beat schedule file
 celerybeat-schedule

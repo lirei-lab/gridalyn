@@ -17,6 +17,71 @@ A reproducible run must have:
 | Healthy code | tests pass | `uv run --with pytest python -m pytest -q` |
 | Published docs | MkDocs builds strictly | `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml` |
 
+## 0. The Canonical Reproducible Install (Pinned 3.12, Frozen Lock)
+
+A citable `flexibility_cls` result must be rebuildable bit-for-bit on a stranger's
+machine. Two pins make that possible and are non-negotiable:
+
+- **Interpreter pin** — the repo commits `.python-version` (`3.12`) at the root.
+  `uv` and `pyenv` read it to select CPython 3.12, closing the divergence where a
+  host's system interpreter (e.g. 3.10) or a stray `.pyc` (e.g. cpython-313) would
+  otherwise resolve a different numeric stack and silently move the numbers.
+- **Frozen dependency resolution** — install against the committed `uv.lock`
+  **without re-resolving**:
+
+```bash
+uv sync --frozen
+uv run gridalyn --help
+```
+
+`uv sync --frozen` fails loudly if `uv.lock` is stale rather than silently
+upgrading a transitive dependency. This — pinned 3.12 + `uv sync --frozen` — is
+**the** reproducible install. Plain `uv sync` (used in the convenience steps
+below) is for day-to-day work, not for reproducing a published result.
+
+### Stage `uv run` invocation (no mid-run re-resolve)
+
+The `flexibility_cls` workflow runs each stage as a separate `uv run python ...`
+subprocess. To stop any of those 25 stage commands from re-resolving the
+environment mid-run, run the whole workflow inside the already-frozen
+environment so each stage `uv run` no-ops against the same interpreter and lock:
+
+```bash
+# Activate the frozen environment once, then run the workflow.
+uv sync --frozen
+source .venv/bin/activate           # stage `uv run`s now reuse this env
+gridalyn project run projects/flexibility_cls
+```
+
+Equivalently, pass `--frozen` / `--no-sync` to the stage invocations
+(`uv run --frozen ...`) so no stage can silently re-resolve the lock.
+
+### Fresh-venv Definition-of-Done recipe
+
+The Phase-5 DoD is a clean-room rebuild from a fresh virtual environment:
+
+```bash
+# 1. Build a clean, frozen environment on pinned 3.12.
+rm -rf .venv
+uv sync --frozen
+
+# 2. Run the study and confirm the regression baseline is byte-identical.
+uv run gridalyn project run projects/flexibility_cls
+uv run gridalyn project regression projects/flexibility_cls   # expect "valid": true (74/74)
+
+# 3. Determinism leg — the run must be identical under two PYTHONHASHSEED values.
+PYTHONHASHSEED=0 uv run gridalyn project regression projects/flexibility_cls
+PYTHONHASHSEED=1 uv run gridalyn project regression projects/flexibility_cls
+
+# 4. Network-free leg — the run must not depend on a live PVGIS fetch (the
+#    committed TMY CSV is pinned; "auto" weather is guarded, never used).
+```
+
+`PYTHONHASHSEED`, the interpreter version, the clearing-engine versions, the run
+seeds, and the input file hashes are all recorded in the run manifest's
+`provenance` block, so a divergence is an auditable **pinning defect**, not a
+mystery.
+
 ## 1. Start From The Repository Root
 
 All commands in this guide run from the repository root unless a command says
