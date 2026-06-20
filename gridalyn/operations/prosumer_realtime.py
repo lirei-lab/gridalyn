@@ -145,7 +145,9 @@ def clear_prosumer_interval(
     total_power_mw = float(prosumers["battery_power_mw"].sum())
     future_required_mwh = float(
         (
-            forecast.loc[forecast["lead_interval"] > 0, "forecast_required_reduction_mw"]
+            forecast.loc[
+                forecast["lead_interval"] > 0, "forecast_required_reduction_mw"
+            ]
             * config.dt_h
         ).sum()
     )
@@ -175,9 +177,7 @@ def clear_prosumer_interval(
             available_energy_mwh / config.dt_h,
         )
         max_bus_id = float(prosumers["bus_id"].max())
-        locational_priority = (
-            float(row.bus_id) / max_bus_id if max_bus_id > 0 else 0.0
-        )
+        locational_priority = float(row.bus_id) / max_bus_id if max_bus_id > 0 else 0.0
         submitted_price = (
             float(row.offer_price_usd_per_mwh)
             + config.scarcity_adder_usd_per_mwh * scarcity_ratio
@@ -212,8 +212,8 @@ def clear_prosumer_interval(
             break
 
     clearing_price = max(accepted_offer_prices) if accepted_offer_prices else None
-    cleared_cost = sum(cleared_by_prosumer.values()) * config.dt_h * float(
-        clearing_price or 0.0
+    cleared_cost = (
+        sum(cleared_by_prosumer.values()) * config.dt_h * float(clearing_price or 0.0)
     )
 
     for row in prosumers.sort_values("prosumer_id").itertuples(index=False):
@@ -231,7 +231,9 @@ def clear_prosumer_interval(
                     offer.network_adjusted_bid_price_usd_per_mwh
                 ),
                 "market_clearing_price_usd_per_mwh": clearing_price,
-                "settlement_price_usd_per_mwh": clearing_price if dispatch_mw > 0 else 0.0,
+                "settlement_price_usd_per_mwh": (
+                    clearing_price if dispatch_mw > 0 else 0.0
+                ),
                 "dispatch_mw": dispatch_mw,
                 "dispatch_mwh": dispatch_mw * config.dt_h,
                 "payment_usd": dispatch_mw * config.dt_h * float(clearing_price or 0.0),
@@ -385,7 +387,9 @@ def build_prosumer_realtime_market_summary(
         "unserved_reduction_mwh": float((clearing["unserved_mw"] * config.dt_h).sum()),
         "total_market_cost_usd": float(clearing["cleared_cost_usd"].sum()),
         "min_voltage_after_pu": float(powerflow["min_voltage_pu"].min()),
-        "max_line_loading_after_percent": float(powerflow["max_line_loading_percent"].max()),
+        "max_line_loading_after_percent": float(
+            powerflow["max_line_loading_percent"].max()
+        ),
     }
 
 
