@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import pandapower as pp
 import pandas as pd
 
 from gridalyn.assets import IEEE_33_BUS_BENCHMARK
 from gridalyn.assets.datagen import scale_profiles_to_peaks
+from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import build_ieee33_benchmark_feeder
 
@@ -41,6 +41,9 @@ def _write_envelope_figure(script: ProjectScript, results: pd.DataFrame) -> str:
 
 def main() -> int:
     script = project_script()
+    require_capabilities("sim", context="the IEEE 33-bus daily time-series power flow")
+    import pandapower as pp
+
     net = build_ieee33_benchmark_feeder()
     base_p = net.load["p_mw"].copy()
     base_q = net.load["q_mvar"].copy()
