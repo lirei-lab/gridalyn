@@ -331,11 +331,13 @@ def _prepare_candidates(
         impact_frame["expected_capacity_relief_kw"] = impact_frame[
             "available_relief_kw"
         ].astype(float)
-        impact_frame["rank_score"] = impact_frame["expected_capacity_relief_kw"] / (
-            impact_frame.get("base_cost_per_kw_h", 1.0).astype(float).clip(lower=0.001)
-            if "base_cost_per_kw_h" in impact_frame
-            else 1.0
-        )
+        # The topology impact frame carries no cost column (base_cost_per_kw_h
+        # lives on the providers frame, merged later), so rank_score is purely
+        # the expected relief. Final selection order is re-derived downstream
+        # from the merged providers via effective_cost_per_relief_kw_h.
+        impact_frame["rank_score"] = impact_frame[
+            "expected_capacity_relief_kw"
+        ]
     else:
         raise ValueError("clearing_method must be 'surrogate' or 'topology'")
 
