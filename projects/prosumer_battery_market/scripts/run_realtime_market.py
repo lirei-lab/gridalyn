@@ -19,9 +19,26 @@ from network_model import build_synthetic_feeder
 
 def _market_config(script: ProjectScript) -> ProsumerRealtimeMarketConfig:
     """Market parameters; the load shape comes from the declared loadGeneration."""
+    # pv_factors is the single source of truth for the interval count; deriving
+    # interval_count from its length keeps the two in lockstep (avoids the
+    # magic-number duplication flagged in review).
+    pv_factors = (
+        0.34,
+        0.30,
+        0.25,
+        0.19,
+        0.13,
+        0.08,
+        0.04,
+        0.02,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
     return ProsumerRealtimeMarketConfig(
         interval_minutes=5,
-        interval_count=12,
+        interval_count=len(pv_factors),
         import_limit_mw=2.55,
         forecast_horizon_intervals=4,
         reserve_fraction=0.55,
@@ -31,20 +48,7 @@ def _market_config(script: ProjectScript) -> ProsumerRealtimeMarketConfig:
             round(float(value), 4)
             for value in script.load_generated_load_multipliers()
         ),
-        pv_factors=(
-            0.34,
-            0.30,
-            0.25,
-            0.19,
-            0.13,
-            0.08,
-            0.04,
-            0.02,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        ),
+        pv_factors=pv_factors,
         load_forecast_bias_by_lead=(0.0, 0.006, -0.004, 0.01),
         pv_forecast_bias_by_lead=(0.0, -0.015, 0.01, -0.02),
     )
