@@ -10,9 +10,9 @@ import pandas as pd
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
     build_pandapower_summary,
+    build_synthetic_network_from_geojson,
     write_pandapower_element_tables,
 )
-from gridalyn.simulation.simulators.powerflow.synthetic_network import build_synthetic_network_from_geojson
 
 
 def _bus_positions(net) -> pd.DataFrame:
