@@ -278,22 +278,25 @@ def run_project(
         if manifest["status"] == "running":
             manifest["status"] = "planned" if dry_run else "completed"
         manifest["ended_at"] = _utc_now()
-        manifest["study_run"] = build_study_run(
-            project_id=project.name,
-            project_version=project.version,
-            workflow_id=project.workflow.name,
-            dry_run=dry_run,
-            status=str(manifest["status"]),
-            started_at=started_at,
-            ended_at=str(manifest["ended_at"]) if manifest["ended_at"] else None,
-            git_commit=git_commit,
-            stages=list(manifest["stages"]),
-            lineage={
-                "project_path": str(project.path),
-                "project_root": str(project.root),
-                "workflow_path": str(project.workflow.path),
-            },
-        ).to_dict()
+        try:
+            manifest["study_run"] = build_study_run(
+                project_id=project.name,
+                project_version=project.version,
+                workflow_id=project.workflow.name,
+                dry_run=dry_run,
+                status=str(manifest["status"]),
+                started_at=started_at,
+                ended_at=str(manifest["ended_at"]) if manifest["ended_at"] else None,
+                git_commit=git_commit,
+                stages=list(manifest["stages"]),
+                lineage={
+                    "project_path": str(project.path),
+                    "project_root": str(project.root),
+                    "workflow_path": str(project.workflow.path),
+                },
+            ).to_dict()
+        except Exception as exc:  # never lose the manifest over a provenance sub-step
+            manifest["study_run_error"] = repr(exc)
         _write_manifest(output_path, manifest)
         if echo and manifest["status"] != "failed":
             label = "planned" if dry_run else "completed"
