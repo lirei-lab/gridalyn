@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pandapower as pp
 
-from gridalyn.operations.market import (
+from gridalyn.operations import (
     ProsumerRealtimeMarketConfig,
     run_prosumer_realtime_market,
 )

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.foundation import GridalynWorkspace
-from gridalyn.operations.market.spatial_cls import (
+from gridalyn.operations import (
     allocate_addition_by_headroom,
     apply_spatial_cls,
 )

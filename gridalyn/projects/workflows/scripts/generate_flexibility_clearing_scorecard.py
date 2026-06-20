@@ -13,7 +13,7 @@ from gridalyn.foundation import ArtifactLayout
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
-from gridalyn.operations.market.scorecard import (
+from gridalyn.operations import (
     build_flexibility_clearing_scorecard,
     write_flexibility_clearing_scorecard,
 )

@@ -15,7 +15,7 @@ from gridalyn.foundation import ArtifactLayout
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
 from gridalyn.twin.network import NetworkModelRepository
-from gridalyn.operations.market.providers import (
+from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
     summarize_provider_registry,

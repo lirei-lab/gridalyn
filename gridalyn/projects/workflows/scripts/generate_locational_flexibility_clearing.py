@@ -15,7 +15,7 @@ from gridalyn.foundation import ArtifactLayout
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
-from gridalyn.operations.market.locational_clearing import (
+from gridalyn.operations import (
     build_constraint_requirements,
     build_locational_clearing,
     write_locational_clearing_outputs,

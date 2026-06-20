@@ -31,7 +31,7 @@ from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import
     _load_s4_inputs,
     _powerflow_metrics,
 )
-from gridalyn.operations.market.spatial_cls import (
+from gridalyn.operations import (
     allocate_addition_by_headroom,
     apply_spatial_cls,
 )

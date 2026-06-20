@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.operations.market import (
+from gridalyn.operations import (
     ProsumerRealtimeMarketConfig,
     build_prosumer_realtime_market_summary,
     run_prosumer_realtime_market,
