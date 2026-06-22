@@ -254,7 +254,8 @@ def test_load_aware_end_to_end(tmp_path: Path) -> None:
     # Ratings vary now.
     assert net.line["max_i_ka"].nunique() > 1
 
-    # Positive correlation between downstream coincident load and rating.
+    # Positive correlation between full (non-coincident) downstream load and
+    # rating: lines are sized for the load the power flow actually injects.
     diag = analyze_line_sizing(net)
     loads = np.array([r["downstream_load_mw"] for r in diag.rows], dtype=float)
     ratings = np.array([r["max_i_ka"] for r in diag.rows], dtype=float)
@@ -275,6 +276,19 @@ def test_load_aware_end_to_end(tmp_path: Path) -> None:
         assert trunk["max_i_ka"] >= leaf["max_i_ka"]
         found_pair = True
     assert found_pair, "expected at least one level with >=2 lines to compare"
+
+    # A high-downstream-load trunk selects a STRICTLY larger conductor than a
+    # single-building leaf line (the diversity divide is gone, so the spread in
+    # injected load propagates into a spread in conductor rating). Compare the
+    # globally-heaviest line against the lightest; with the full non-coincident
+    # load basis these must differ in rating.
+    all_rows = sorted(diag.rows, key=lambda r: r["downstream_load_mw"])
+    lightest, heaviest = all_rows[0], all_rows[-1]
+    assert heaviest["downstream_load_mw"] > lightest["downstream_load_mw"]
+    assert heaviest["max_i_ka"] > lightest["max_i_ka"], (
+        "heaviest trunk must pick a larger conductor than the lightest leaf "
+        "under the full-load sizing basis"
+    )
 
     # Power flow still converges.
     pp.runpp(net)

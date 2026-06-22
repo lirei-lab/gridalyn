@@ -12,13 +12,23 @@ For each on-tree line the design current is
 
     ``I_design = S_down / (sqrt(3) * V_line_kv)``
 
-where ``S_down`` is the *coincident* downstream demand (non-coincident subtree
-load divided by the per-level diversity factor, mirroring the transformer
-sizing convention) and ``V_line_kv`` is the line's ``from_bus`` nominal voltage.
-The line is then snapped to the first pandapower standard line type of the
-matching voltage family whose ``max_i_ka >= I_design * utilization_margin``; the
-chosen catalog row's ``r/x/c/max_i_ka`` are copied verbatim onto the line so the
-network stays physically consistent (impedances are never hand-invented).
+where ``S_down`` is the *full, non-coincident* downstream subtree demand — the
+sum of the per-building loads the power flow actually injects — and
+``V_line_kv`` is the line's ``from_bus`` nominal voltage. The line is then
+snapped to the first pandapower standard line type of the matching voltage
+family whose ``max_i_ka >= I_design * utilization_margin``; the chosen catalog
+row's ``r/x/c/max_i_ka`` are copied verbatim onto the line so the network stays
+physically consistent (impedances are never hand-invented).
+
+**Why full (non-coincident) load, not a diversified value.** The synthetic
+generator assigns each building its FULL per-building load and the power flow
+injects those loads in full (no coincidence/diversity reduction is applied at
+simulation time). Sizing conductors for a diversity-reduced (coincident)
+demand therefore undersizes every line by ~the diversity factor (~5x at LV) and
+drives the simulated network into massive thermal overload (LV lines >400%, MV
+>180%). This module SUPERSEDES the earlier "divide by the per-level
+diversity_factor" approach: design current is matched to the load the power
+flow imposes, so the regenerated twin is no longer overloaded.
 
 The ``uniform`` default never calls into this module, guaranteeing byte-identity
 with the historical generator output.
@@ -41,7 +51,6 @@ from gridalyn.simulation.analytics.line_sizing import (
     _root_and_accumulate,
 )
 
-_DEFAULT_DIVERSITY = {"LV": 5.0, "MV": 1.3, "HV": 1.1}
 _DEFAULT_UTILIZATION_MARGIN = 0.8
 _SUMMARY_FLOAT_DECIMALS = 6
 
@@ -118,50 +127,36 @@ def select_line_std_type(
     return chosen_name, catalog_row, over_capacity
 
 
-def _diversity_factors(config: dict[str, Any]) -> dict[str, float]:
-    """Resolve per-level diversity factors from the config (with defaults).
-
-    Args:
-        config: Synthetic-network configuration mapping.
-
-    Returns:
-        Mapping from level name to diversity factor, mirroring the transformer
-        sizing convention (``loads.diversity_factor_{lv,mv,hv}``).
-    """
-    loads = config.get("loads", {})
-    return {
-        "LV": float(loads.get("diversity_factor_lv", _DEFAULT_DIVERSITY["LV"])),
-        "MV": float(loads.get("diversity_factor_mv", _DEFAULT_DIVERSITY["MV"])),
-        "HV": float(loads.get("diversity_factor_hv", _DEFAULT_DIVERSITY["HV"])),
-    }
-
-
 def size_lines_load_aware(net: Any, config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Rewrite each on-tree line's conductor from its downstream coincident load.
+    """Rewrite each on-tree line's conductor from its full downstream load.
 
     This is an **in-place** post-pass intended to run on the builder's network
     during generation, before any cache is written. For every line that lies on
-    the radial tree rooted at the ext_grid bus it computes the coincident
-    downstream demand, derives the design current, snaps to a pandapower
-    standard line type via :func:`select_line_std_type`, and copies the chosen
-    ``std_type`` plus ``max_i_ka`` / ``r_ohm_per_km`` / ``x_ohm_per_km`` /
-    ``c_nf_per_km`` onto the line row. Lines not on the rooted tree keep their
-    current values.
+    the radial tree rooted at the ext_grid bus it computes the FULL
+    (non-coincident) downstream subtree demand — the load the power flow actually
+    injects — derives the design current, snaps to a pandapower standard line
+    type via :func:`select_line_std_type`, and copies the chosen ``std_type``
+    plus ``max_i_ka`` / ``r_ohm_per_km`` / ``x_ohm_per_km`` / ``c_nf_per_km``
+    onto the line row. Lines not on the rooted tree keep their current values.
+
+    No diversity/coincidence reduction is applied: the generator assigns each
+    building its full load and the power flow injects it in full, so sizing for
+    a diversified demand would undersize conductors by ~the diversity factor and
+    overload the simulated network.
 
     Args:
         net: A pandapower network. Mutated in place (line table only).
         config: Synthetic-network configuration mapping. Reads
-            ``loads.diversity_factor_{lv,mv,hv}`` and
             ``lines.sizing.utilization_margin`` (default ``0.8``).
 
     Returns:
         A per-line sizing summary list in ``net.line`` index order, one dict per
         on-tree line with keys ``idx``, ``level``, ``downstream_load_mw``,
         ``i_design_ka``, ``chosen_std_type``, ``max_i_ka`` and ``over_capacity``.
-        Float fields are rounded to 6 decimals to stay below the 1e-6 regression
-        noise floor.
+        ``downstream_load_mw`` is the FULL non-coincident subtree load. Float
+        fields are rounded to 6 decimals to stay below the 1e-6 regression noise
+        floor.
     """
-    diversity = _diversity_factors(config)
     utilization_margin = float(
         config.get("lines", {})
         .get("sizing", {})
@@ -186,9 +181,9 @@ def size_lines_load_aware(net: Any, config: dict[str, Any]) -> list[dict[str, An
 
         vn_kv = float(bus_vn[from_bus])
         level = _classify_level(vn_kv)
+        # Full (non-coincident) downstream load — what the power flow injects.
         s_noncoincident = float(subtree_load[child])
-        s_down = s_noncoincident / diversity[level]
-        i_design_ka = s_down / (math.sqrt(3.0) * vn_kv) if vn_kv > 0 else 0.0
+        i_design_ka = s_noncoincident / (math.sqrt(3.0) * vn_kv) if vn_kv > 0 else 0.0
 
         std_type, catalog_row, over_capacity = select_line_std_type(
             net,
@@ -207,7 +202,7 @@ def size_lines_load_aware(net: Any, config: dict[str, Any]) -> list[dict[str, An
             {
                 "idx": int(line_idx),
                 "level": level,
-                "downstream_load_mw": round(s_down, _SUMMARY_FLOAT_DECIMALS),
+                "downstream_load_mw": round(s_noncoincident, _SUMMARY_FLOAT_DECIMALS),
                 "i_design_ka": round(i_design_ka, _SUMMARY_FLOAT_DECIMALS),
                 "chosen_std_type": std_type,
                 "max_i_ka": round(catalog_row["max_i_ka"], _SUMMARY_FLOAT_DECIMALS),
