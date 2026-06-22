@@ -1,7 +1,10 @@
 """Synthetic residential load-profile generators."""
 
+from __future__ import annotations
+
 import os
 import pickle
+import warnings
 from pathlib import Path
 from typing import Tuple
 
@@ -50,13 +53,27 @@ class ParametricArxGenerator:
         self,
         model_dir: str | os.PathLike[str] | None = None,
         random_seed: int | None = 4242,
-    ):
+        mean_preserving_diversity: bool = False,
+    ) -> None:
+        """Initialize the generator.
+
+        Args:
+            model_dir: Directory holding the packaged LightGBM macro weights.
+                When ``None`` the packaged default directory is used.
+            random_seed: Base seed for the reproducible diversity streams.
+            mean_preserving_diversity: When ``True``, de-bias the log-normal
+                diversity factor (``exp(ar - sigma**2 / 2)``) so the aggregate
+                energy is not inflated by the multiplicative noise. Defaults to
+                ``False``, which keeps the historical (byte-identical) traces.
+        """
         self.model_dir = Path(model_dir) if model_dir is not None else DEFAULT_MODEL_DIR
         self.heat_model_path = self.model_dir / "lgbm_heating_macro.pkl"
         self.bg_model_path = self.model_dir / "lgbm_bg_macro.pkl"
         self.heat_model = None
         self.bg_model = None
         self.random_seed = random_seed
+        self.mean_preserving_diversity = mean_preserving_diversity
+        self.model_provenance: str | None = None
 
     def fit(self, df_meteo: pd.DataFrame, df_heating: pd.DataFrame, df_bg: pd.DataFrame):
         """Train and serialize the packaged macro-shape models."""
@@ -127,10 +144,34 @@ class ParametricArxGenerator:
         self.heat_model = _AnalyticalMacroModel("heat")
         self.bg_model = _AnalyticalMacroModel("background")
 
+    def _warn_silent_fallback(self, reason: str) -> None:
+        """Emit a reproducibility warning when the analytical macro is used."""
+        warnings.warn(
+            "ParametricArxGenerator: packaged LightGBM macro weights "
+            f"unavailable ({reason}); silently falling back to the "
+            "deterministic analytical macro model. Aggregate shapes now come "
+            "from the analytical fallback, NOT the trained LightGBM weights -- "
+            "results are reproducible but differ from a weighted run. Install "
+            "the weights (and the optional 'lightgbm' runtime) for the trained "
+            "path. Inspect ParametricArxGenerator.model_provenance to confirm "
+            "which path produced a given trace.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     def load(self):
-        """Load packaged model weights, or use the analytical fallback."""
+        """Load packaged model weights, or use the analytical fallback.
+
+        On the trained path ``model_provenance`` is set to ``"lgbm"``. On either
+        fallback branch (missing weights or an absent ``lightgbm`` runtime) it is
+        set to ``"analytical"`` and a :class:`UserWarning` is emitted naming the
+        silent swap. Neither the provenance flag nor the warning changes the
+        numeric traces.
+        """
         if not self.heat_model_path.exists() or not self.bg_model_path.exists():
             self._load_analytical_fallback()
+            self.model_provenance = "analytical"
+            self._warn_silent_fallback("weight files not found")
             return
 
         try:
@@ -138,8 +179,11 @@ class ParametricArxGenerator:
                 self.heat_model = pickle.load(f)
             with open(self.bg_model_path, 'rb') as f:
                 self.bg_model = pickle.load(f)
+            self.model_provenance = "lgbm"
         except ModuleNotFoundError:
             self._load_analytical_fallback()
+            self.model_provenance = "analytical"
+            self._warn_silent_fallback("optional 'lightgbm' runtime not installed")
             
     def _rng(self, stream_offset: int = 0) -> np.random.Generator:
         if self.random_seed is None:
@@ -206,12 +250,15 @@ class ParametricArxGenerator:
         rho_heat = np.exp(-dt_hours / tau_heat)
         rho_bg = np.exp(-dt_hours / tau_bg)
 
-        # Generate AR(1) diversity noise.
+        # Generate AR(1) diversity noise. Bind the sigmas to named locals so the
+        # optional mean-preserving de-bias term below reuses the SAME value.
+        sigma_heat = 0.6
+        sigma_bg = 0.4
         ar_heat = self._generate_ar1_noise(
-            steps, n_houses, rho=rho_heat, sigma=0.6, rng=self._rng(0)
+            steps, n_houses, rho=rho_heat, sigma=sigma_heat, rng=self._rng(0)
         )
         ar_bg = self._generate_ar1_noise(
-            steps, n_houses, rho=rho_bg, sigma=0.4, rng=self._rng(1)
+            steps, n_houses, rho=rho_bg, sigma=sigma_bg, rng=self._rng(1)
         )
         
         # 4. Preserve per-household structural consistency across calls.
@@ -238,8 +285,19 @@ class ParametricArxGenerator:
             shifted_macro_bg[:, i] = np.roll(macro_bg, shift_steps)
             
         # 5. Apply positive log-normal diversity around the aggregate shape.
-        raw_heat = (shifted_macro_heat * self._multiplier_heat[np.newaxis, :]) * np.exp(ar_heat)
-        raw_bg   = (shifted_macro_bg   * self._multiplier_bg[np.newaxis, :])   * np.exp(ar_bg)
+        # When mean_preserving_diversity is enabled, subtract sigma**2/2 from the
+        # AR(1) term so E[exp(ar - sigma**2/2)] ~ 1 and the multiplicative noise
+        # no longer inflates aggregate energy. Default (False) keeps exp(ar)
+        # unchanged, preserving byte-identity with the historical traces.
+        if self.mean_preserving_diversity:
+            factor_heat = np.exp(ar_heat - 0.5 * sigma_heat**2)
+            factor_bg = np.exp(ar_bg - 0.5 * sigma_bg**2)
+        else:
+            factor_heat = np.exp(ar_heat)
+            factor_bg = np.exp(ar_bg)
+
+        raw_heat = (shifted_macro_heat * self._multiplier_heat[np.newaxis, :]) * factor_heat
+        raw_bg   = (shifted_macro_bg   * self._multiplier_bg[np.newaxis, :])   * factor_bg
 
         # Preserve a small background standby floor.
         raw_bg = np.maximum(raw_bg, 0.05)
