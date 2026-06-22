@@ -147,6 +147,19 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
     }
 
     load_by_bus = net.load.groupby("bus")["p_mw"].sum()
+
+    # Phase-9 sidecars (GUARD-02): expose per-bus nameplate kW + building count
+    # as JSON so stage 3 stays pandapower-free (never reads the pickled net).
+    # Both serialized in SORTED bus order with deterministic _write_json.
+    node_nameplate_kw = {
+        str(int(bus)): round(float(p_mw) * 1000.0, ROUND_DECIMALS)
+        for bus, p_mw in sorted(load_by_bus.items())
+    }
+    building_count_by_bus = net.load.groupby("bus").size()
+    node_building_count = {
+        str(int(bus)): int(n) for bus, n in sorted(building_count_by_bus.items())
+    }
+
     feeder_downstream = downstream_map[f"transformer:{feeder_idx}"]
     selected_feeder_load_kw = round(
         float(load_by_bus.reindex(list(feeder_downstream)).fillna(0.0).sum())
@@ -165,10 +178,22 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
         "feeder_id_override": FEEDER_ID,
     }
     feeder_path = _write_json(cache_dir / "feeder_selection.json", feeder_selection)
+    nameplate_path = _write_json(
+        cache_dir / "node_nameplate_kw.json", node_nameplate_kw
+    )
+    building_count_path = _write_json(
+        cache_dir / "node_building_count.json", node_building_count
+    )
 
     n_line_downstream = sum(1 for key in downstream_map if key.startswith("line:"))
     return {
-        "artifact_paths": [ratings_path, downstream_path, feeder_path],
+        "artifact_paths": [
+            ratings_path,
+            downstream_path,
+            feeder_path,
+            nameplate_path,
+            building_count_path,
+        ],
         "summary": {
             "n_buses": int(len(net.bus)),
             "n_lines": int(len(net.line)),
@@ -176,6 +201,7 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
             "feeder_transformer_idx": feeder_idx,
             "n_downstream_lines": int(n_line_downstream),
             "selected_feeder_load_kw": selected_feeder_load_kw,
+            "n_load_buses": int(len(node_nameplate_kw)),
         },
     }
 
