@@ -14,6 +14,16 @@ spec:
       Expand a feeder's annual EV hosting capacity by trading a small amount of
       winter charging curtailment for year-round growth via per-node flexibility
       contracts.
+    model:
+      type: operations_model
+      name: radial_congestion_flexibility_hosting
+    scenarios:
+      - id: baseline
+        role: firm_hosting_baseline
+        description: >-
+          Single radial feeder with no flexibility contracts — establishes the
+          firm hosting limit (first line overload) that the flexible case
+          expands upon.
   inputs:
     geography:
       source: configs/geography/tr01.json
