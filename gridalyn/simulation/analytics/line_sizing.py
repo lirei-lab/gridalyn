@@ -14,6 +14,7 @@ on a deep copy so the build result's network is likewise left untouched.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path  # noqa: F401  (re-exported for typed wrapper signatures)
 from typing import Any, Mapping, Sequence
@@ -292,6 +293,45 @@ def _build_correlations(rows: list[dict[str, Any]]) -> dict[str, dict[str, float
     return correlations
 
 
+def _resolve_root(net: Any) -> int:
+    """Resolve the rooted-tree root, guarding 0 or >1 ext_grid rows.
+
+    A multi-feeder twin (several ext_grids) or a malformed twin (no ext_grid)
+    would silently under-report or crash on ``.iloc[0]``. This warns -- naming
+    the exact count and the remediation -- then returns a deterministic root so
+    the read-only diagnostic still runs.
+
+    Args:
+        net: A pandapower (or duck-typed) network. Not mutated.
+
+    Returns:
+        The root bus index: the first ext_grid bus when exactly one (or more)
+        exist, otherwise the lowest bus index as a deterministic fallback.
+    """
+    n_ext = len(net.ext_grid)
+    if n_ext == 0:
+        warnings.warn(
+            "analyze_line_sizing: 0 ext_grid rows -- the network has no slack "
+            "bus to root the radial tree. Falling back to the lowest bus index "
+            "as the root so the diagnostic still runs, but downstream-load "
+            "accumulation may be meaningless. Attach exactly one ext_grid / "
+            "slack bus.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return int(net.bus.index.min())
+    if n_ext > 1:
+        warnings.warn(
+            f"analyze_line_sizing: {n_ext} ext_grid rows -- only the first is "
+            "rooted, so a multi-feeder twin may under-report downstream load on "
+            "the un-rooted feeders. Root each feeder separately, or attach a "
+            "single ext_grid.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return int(net.ext_grid["bus"].iloc[0])
+
+
 def analyze_line_sizing(
     net: Any, *, assume_converged: bool | None = None
 ) -> LineSizingResult:
@@ -321,8 +361,19 @@ def analyze_line_sizing(
     )
     load_by_bus: dict[int, float] = net.load.groupby("bus")["p_mw"].sum().to_dict()
     graph = _build_bus_graph(net)
-    root = int(net.ext_grid["bus"].iloc[0])
+    root = _resolve_root(net)
     parent, subtree_load, subtree_count = _root_and_accumulate(graph, root, load_by_bus)
+    unreached = len(net.bus) - len(parent)
+    if unreached > 0:
+        warnings.warn(
+            f"analyze_line_sizing: rooted BFS reached {len(parent)} of "
+            f"{len(net.bus)} buses -- {unreached} bus(es) are unreachable from "
+            "the root (disconnected components / off-tree buses), so their lines "
+            "are silently excluded from the diagnostic. Ensure the network is a "
+            "single connected radial tree rooted at the ext_grid.",
+            UserWarning,
+            stacklevel=2,
+        )
     rows = _build_rows(net, parent, subtree_load, subtree_count, converged)
     return LineSizingResult(
         converged=converged,

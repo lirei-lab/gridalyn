@@ -12,10 +12,12 @@ from __future__ import annotations
 import hashlib
 import json
 import pickle
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
+import numpy as np
 import pandapower as pp
 
 from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
@@ -45,6 +47,7 @@ def build_synthetic_network_from_geojson(
     write_cache: bool = False,
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
+    check_line_sizing: bool = False,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from building footprints.
 
@@ -63,6 +66,10 @@ def build_synthetic_network_from_geojson(
             override the uniform config envelope, one value per network load
             in load-table order. Transformer and line sizing still use the
             declared envelope; q/p ratios are preserved.
+        check_line_sizing: When true, run the read-only line-sizing diagnostic
+            on a deep copy after the build and emit a runtime warning on
+            over-100% loading or a ~0 downstream-load/conductor correlation.
+            Adds no report bytes. Defaults to ``False`` (zero behavior change).
     """
 
     config_file = Path(config_path)
@@ -76,6 +83,7 @@ def build_synthetic_network_from_geojson(
         write_cache=write_cache,
         run_powerflow=run_powerflow,
         building_peak_loads_kw=building_peak_loads_kw,
+        check_line_sizing=check_line_sizing,
     )
 
 
@@ -89,8 +97,28 @@ def build_synthetic_network_from_config(
     write_cache: bool = False,
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
+    check_line_sizing: bool = False,
 ) -> SyntheticNetworkBuildResult:
-    """Build a synthetic distribution network from an explicit config mapping."""
+    """Build a synthetic distribution network from an explicit config mapping.
+
+    Args:
+        footprints_path: GeoJSON file with building polygons.
+        config: Grid configuration mapping.
+        out_dir: Optional directory for cache files and validation report.
+        config_source: Provenance label or path recorded in the report.
+        clustering_crs: Metric CRS for clustering (``"auto"`` estimates UTM).
+        write_cache: When true, write the graph/net cache pickles to ``out_dir``.
+        run_powerflow: When true, run an AC power flow and record convergence.
+        building_peak_loads_kw: Optional per-building peak loads (kW) overriding
+            the uniform config envelope.
+        check_line_sizing: When true, run the read-only line-sizing diagnostic
+            on a deep copy after the build and warn on over-100% loading or a
+            ~0 downstream-load/conductor correlation. Adds no report bytes.
+            Defaults to ``False`` (zero behavior change).
+
+    Returns:
+        A :class:`SyntheticNetworkBuildResult`.
+    """
 
     footprints = Path(footprints_path)
     output_dir = Path(out_dir) if out_dir is not None else None
@@ -123,6 +151,9 @@ def build_synthetic_network_from_config(
         line_sizing=line_sizing,
     )
 
+    if check_line_sizing:
+        _warn_on_line_sizing(net)
+
     report_path: Path | None = None
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -139,6 +170,57 @@ def build_synthetic_network_from_config(
         validation_report=report,
         report_path=report_path,
     )
+
+
+def _warn_on_line_sizing(net: pp.pandapowerNet) -> None:
+    """Run the read-only line-sizing diagnostic on a copy and warn on issues.
+
+    The diagnostic runs on a deep copy so the build result's network is never
+    mutated. A runtime warning (no report bytes) is emitted when any voltage
+    level shows lines loaded over 100% at design, or when the structural
+    downstream-load vs ``max_i_ka`` correlation is finite and near zero (the
+    conductor-bias signal: ratings that do not track downstream load).
+
+    Args:
+        net: The freshly built pandapower network. Not mutated.
+    """
+    # Local import keeps the default import graph unchanged (mirrors the local
+    # ``line_sizing_select`` import on the load-aware path); the diagnostic is
+    # read-only and runs no power flow here.
+    import copy
+
+    from gridalyn.simulation.analytics.line_sizing import analyze_line_sizing
+
+    diag = analyze_line_sizing(copy.deepcopy(net))
+
+    over_levels = [
+        level
+        for level, agg in diag.per_level.items()
+        if agg.get("share_above_100pct") is not None
+        and float(agg["share_above_100pct"]) > 0
+    ]
+    if over_levels:
+        warnings.warn(
+            "check_line_sizing: lines loaded over 100% at design on level(s) "
+            f"{sorted(over_levels)} -- some conductors are undersized for the "
+            "load they carry. Review the line catalog or enable load-aware "
+            "sizing.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    pearson = (
+        diag.correlations.get("downstream_load_vs_max_i_ka", {}).get("pearson")
+    )
+    if pearson is not None and np.isfinite(pearson) and abs(float(pearson)) < 0.1:
+        warnings.warn(
+            "check_line_sizing: downstream-load vs max_i_ka correlation is "
+            f"~0 (pearson={float(pearson):.3f}) -- conductor ratings do not "
+            "track downstream load (uniform-per-level sizing). Enable "
+            "load-aware sizing to size lines for transiting load.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def _load_json(path: Path) -> dict[str, Any]:
