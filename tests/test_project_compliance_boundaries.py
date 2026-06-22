@@ -198,6 +198,29 @@ def test_project_scripts_have_no_eager_heavy_dependency_imports() -> None:
     assert violations == [], violations
 
 
+def test_project_scripts_scan_corpus_is_non_vacuous() -> None:
+    """The GUARD-01/02 file-set scans actually cover every project's scripts (WR-01).
+
+    Both file-set guards iterate ``_PROJECT_SCRIPTS`` and ``assert violations ==
+    []``. If the glob ever resolves to an empty list — the ``projects/`` tree is
+    relocated/renamed, scripts move out of ``scripts/``, or the suite runs from an
+    unexpected CWD — those loops execute zero iterations and pass *vacuously while
+    scanning nothing*. This corpus-floor asserts the scans cannot silently
+    self-disable: the corpus must be non-empty and span the expected number of
+    distinct projects. The project count (7) is the stable invariant — the
+    per-project file count is intentionally not hardcoded (brittle). The distinct
+    count is derived from ``_PROJECT_SCRIPTS`` itself (the path component directly
+    under ``projects/``), so it also catches a single project's scripts vanishing.
+    """
+    assert (
+        _PROJECT_SCRIPTS
+    ), "no project scripts discovered — GUARD scans would be vacuous"
+    projects_seen = {
+        path.relative_to(_REPO_ROOT / "projects").parts[0] for path in _PROJECT_SCRIPTS
+    }
+    assert len(projects_seen) == 7, sorted(projects_seen)
+
+
 def test_guard01_predicate_flags_phase6_breach_and_passes_public_facade() -> None:
     """GUARD-01 is non-vacuous: it flags the Phase-6 breach, not the facade (D-09).
 
