@@ -95,17 +95,25 @@ def test_select_line_std_type_first_above_margin() -> None:
     )
 
     net = pp.create_empty_network()
+    i_design = 0.05
+    margin = 0.8
     name, row, over = select_line_std_type(
-        net, level="MV", i_design_ka=0.05, utilization_margin=0.8
+        net, level="MV", i_design_ka=i_design, utilization_margin=margin
     )
-    threshold = 0.05 * 0.8
-    assert row["max_i_ka"] >= threshold
+    # Corrected, headroom-reserving semantics: required rating = i_design / margin
+    # (>= 1.25x design at margin 0.8). An earlier inverted formula used
+    # i_design * margin, which snapped BELOW design current and overloaded the
+    # twin; this is the deliberate contract correction.
+    required_rating = i_design / margin
+    assert row["max_i_ka"] >= required_rating
     assert not over
-    # FIRST above the threshold: nothing smaller in the catalog clears it.
+    # A line at its design load sits at <= margin of the chosen rating.
+    assert i_design / float(row["max_i_ka"]) <= margin + 1e-12
+    # FIRST above the required rating: nothing smaller in the catalog clears it.
     cat = pp.available_std_types(net, element="line")
     mv = cat[cat["voltage_rating"] == "MV"]
     smaller = mv[mv["max_i_ka"] < row["max_i_ka"]]
-    assert (smaller["max_i_ka"] < threshold).all()
+    assert (smaller["max_i_ka"] < required_rating).all()
 
 
 @requires_sim

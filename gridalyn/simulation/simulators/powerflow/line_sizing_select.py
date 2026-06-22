@@ -16,9 +16,20 @@ where ``S_down`` is the *full, non-coincident* downstream subtree demand — the
 sum of the per-building loads the power flow actually injects — and
 ``V_line_kv`` is the line's ``from_bus`` nominal voltage. The line is then
 snapped to the first pandapower standard line type of the matching voltage
-family whose ``max_i_ka >= I_design * utilization_margin``; the chosen catalog
+family whose ``max_i_ka >= I_design / utilization_margin``; the chosen catalog
 row's ``r/x/c/max_i_ka`` are copied verbatim onto the line so the network stays
 physically consistent (impedances are never hand-invented).
+
+**The utilization margin RESERVES HEADROOM.** ``utilization_margin`` (default
+``0.8``) is the target ratio of design current to conductor rating, so the
+required rating is ``I_design / utilization_margin`` (>= 1.25x design at 0.8): a
+line carrying its design load then sits at <= 80% of its chosen ampacity. This
+matches the transformer-sizing precedent in ``gridalyn/twin/core/graph.py``
+(``required capacity = coincident_peak / capacity_utilization_factor``). An
+earlier formula used ``I_design * utilization_margin``, which inverted the
+margin — it snapped to a conductor *below* the design current and drove the
+twin into thermal overload (LV max ~184%, MV ~135%, min bus voltage ~0.597 pu).
+That inverted-margin formula is corrected here.
 
 **Why full (non-coincident) load, not a diversified value.** The synthetic
 generator assigns each building its FULL per-building load and the power flow
@@ -67,19 +78,28 @@ def select_line_std_type(
     The catalog is :func:`pandapower.available_std_types` filtered to the
     matching ``voltage_rating`` family and sorted ascending by
     ``(max_i_ka, std_type_name)`` so ties are deterministic regardless of
-    catalog/dict ordering. The first entry whose ``max_i_ka`` is at least
-    ``i_design_ka * utilization_margin`` is chosen. When the required current
-    exceeds the largest entry, the largest is returned with ``over_capacity``
-    set so the shortfall is surfaced rather than silently clipped (parallel
-    feeders are out of scope).
+    catalog/dict ordering. The first entry whose ``max_i_ka`` is at least the
+    required rating ``i_design_ka / utilization_margin`` is chosen — the margin
+    RESERVES HEADROOM (a line at design load sits at <= ``utilization_margin``
+    of its chosen ampacity). When the required current exceeds the largest
+    entry, the largest is returned with ``over_capacity`` set so the shortfall
+    is surfaced rather than silently clipped (parallel feeders are out of
+    scope).
+
+    .. note::
+        An earlier formula used ``i_design_ka * utilization_margin``, which
+        inverted the margin (snapped *below* design current) and overloaded the
+        twin. This is the corrected, headroom-reserving form.
 
     Args:
         net: A pandapower network (read only; used to read the std-type catalog).
         level: Voltage level family, ``"LV"`` / ``"MV"`` / ``"HV"``
             (case-insensitive).
         i_design_ka: Design current in kA.
-        utilization_margin: Headroom factor in ``(0, 1]`` applied to the design
-            current before snapping (e.g. ``0.8`` reserves 20% headroom).
+        utilization_margin: Target design-current-to-rating ratio in ``(0, 1]``;
+            the required rating is ``i_design_ka / utilization_margin`` (e.g.
+            ``0.8`` reserves 20% headroom). Values ``<= 0`` are treated as
+            no-margin (required rating == ``i_design_ka``).
 
     Returns:
         A tuple ``(std_type_name, catalog_row, over_capacity)`` where
@@ -105,7 +125,11 @@ def select_line_std_type(
         subset.iterrows(),
         key=lambda item: (float(item[1]["max_i_ka"]), str(item[0])),
     )
-    threshold = i_design_ka * utilization_margin
+    # Margin reserves headroom: required rating >= i_design / margin (>= design).
+    # margin <= 0 is treated as no-margin (required rating == i_design).
+    threshold = (
+        i_design_ka / utilization_margin if utilization_margin > 0 else i_design_ka
+    )
 
     chosen_name: str | None = None
     chosen_row: Any = None
@@ -147,7 +171,10 @@ def size_lines_load_aware(net: Any, config: dict[str, Any]) -> list[dict[str, An
     Args:
         net: A pandapower network. Mutated in place (line table only).
         config: Synthetic-network configuration mapping. Reads
-            ``lines.sizing.utilization_margin`` (default ``0.8``).
+            ``lines.sizing.utilization_margin`` (default ``0.8``). The margin
+            reserves headroom: each line is snapped to a rating
+            ``>= i_design / margin`` so it sits at <= ``margin`` of ampacity at
+            design load (corrects an earlier inverted ``* margin`` formula).
 
     Returns:
         A per-line sizing summary list in ``net.line`` index order, one dict per
