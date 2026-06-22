@@ -1,0 +1,37 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: ev_hosting_flex
+  version: 0.1.0
+  description: EV hosting-capacity flexibility study on a single radial distribution feeder.
+spec:
+  pathBase: repo
+  problem:
+    type: ev_hosting_capacity_flexibility
+    dataset: synthetic_trois_rivieres_distribution_twin
+    environment: radial_congestion_proxy_and_peak_powerflow_validation
+    objective: >-
+      Expand a feeder's annual EV hosting capacity by trading a small amount of
+      winter charging curtailment for year-round growth via per-node flexibility
+      contracts.
+  inputs:
+    geography:
+      source: configs/geography/tr01.json
+    buildingFootprints:
+      source: projects/ev_hosting_flex/inputs/buildings.geojson
+      format: GeoJSON FeatureCollection
+      role: Project-local Trois-Rivieres building footprints used to synthesize the topology cache (D-03).
+    grid:
+      config: configs/grid/config.json
+  artifacts:
+    project:
+      data: projects/ev_hosting_flex/outputs/data
+      json: projects/ev_hosting_flex/outputs/json
+      reports: projects/ev_hosting_flex/outputs/reports
+      cache: projects/ev_hosting_flex/outputs/cache
+      figures: projects/ev_hosting_flex/outputs/figures
+  workflow:
+    file: projects/ev_hosting_flex/workflow.yaml
+  validation:
+    requiredReports:
+      - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
