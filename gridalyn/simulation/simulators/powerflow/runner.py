@@ -175,6 +175,7 @@ class PowerflowMonteCarloRunner:
                 "lv": {"std_type": "94-AL1/15-ST1A 0.4", "min_length_km": 0.001},
                 "mv": {"std_type": "149-AL1/24-ST1A 10.0", "min_length_km": 0.001},
                 "hv": {"std_type": "149-AL1/24-ST1A 10.0", "min_length_km": 0.001},
+                "sizing": {"mode": "uniform", "utilization_margin": 0.8},
             },
             "transformers": {
                 "lv_mv": {

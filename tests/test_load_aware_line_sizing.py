@@ -51,6 +51,7 @@ def _build_small_net(tmp_path: Path, config: dict[str, Any]) -> Any:
     )
     from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
 
+    tmp_path.mkdir(parents=True, exist_ok=True)
     footprints_path = tmp_path / "buildings.geojson"
     generator = FakeGeoJSONGenerator(grid_size=3, seed=11, rectangular=True)
     footprints_path.write_text(

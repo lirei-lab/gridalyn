@@ -109,6 +109,14 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.scenarios",
         "run_standard_powerflow_scenario",
     ),
+    "select_line_std_type": (
+        "gridalyn.simulation.simulators.powerflow.line_sizing_select",
+        "select_line_std_type",
+    ),
+    "size_lines_load_aware": (
+        "gridalyn.simulation.simulators.powerflow.line_sizing_select",
+        "size_lines_load_aware",
+    ),
     "scenario_to_record": (
         "gridalyn.simulation.simulators.powerflow.scenarios",
         "scenario_to_record",

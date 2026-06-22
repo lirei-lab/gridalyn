@@ -201,7 +201,17 @@ def _build_pandapower_network(
     builder.build_mv_hv_power_transformers()
     builder.connect_hv_bus_to_ext_grid()
     builder.create_bus_geodata()
-    return builder.get_pandapower_net()
+    net = builder.get_pandapower_net()
+    mode = config.get("lines", {}).get("sizing", {}).get("mode", "uniform")
+    if mode == "load_aware":
+        # Local import keeps the default ``uniform`` path's import graph
+        # unchanged, preserving byte-identity with the historical generator.
+        from gridalyn.simulation.simulators.powerflow.line_sizing_select import (
+            size_lines_load_aware,
+        )
+
+        size_lines_load_aware(net, config)
+    return net
 
 
 def _apply_building_peak_loads(
