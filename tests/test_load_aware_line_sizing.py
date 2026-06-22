@@ -73,6 +73,30 @@ def _base_config() -> dict[str, Any]:
     return json.loads(Path("configs/grid/config.json").read_text(encoding="utf-8"))
 
 
+def _build_report(tmp_path: Path, config: dict[str, Any]) -> dict[str, Any]:
+    """Build a small synthetic net and return its validation report."""
+    from gridalyn.simulation.simulators.powerflow.synthetic_network import (
+        build_synthetic_network_from_config,
+    )
+    from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
+
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    footprints_path = tmp_path / "buildings.geojson"
+    generator = FakeGeoJSONGenerator(grid_size=3, seed=11, rectangular=True)
+    footprints_path.write_text(
+        json.dumps(generator.generate_geojson()),
+        encoding="utf-8",
+    )
+    build = build_synthetic_network_from_config(
+        footprints_path=footprints_path,
+        config=config,
+        clustering_crs="auto",
+        write_cache=False,
+        run_powerflow=False,
+    )
+    return build.validation_report
+
+
 def _line_tuples(net: Any) -> list[tuple[Any, ...]]:
     """Return the per-line identity tuples used for byte-identity assertions."""
     tuples: list[tuple[Any, ...]] = []
@@ -309,3 +333,71 @@ def test_size_lines_load_aware_reachable_through_facade() -> None:
 
     assert callable(size_lines_load_aware)
     assert callable(select_line_std_type)
+
+
+# ---------------------------------------------------------------------------
+# CR-01: over-capacity surfaced in the validation report (gated on load_aware)
+# ---------------------------------------------------------------------------
+
+
+@requires_sim
+def test_uniform_report_has_no_line_sizing_key(tmp_path: Path) -> None:
+    """Default ``uniform`` mode must add no new bytes (byte-identity guard)."""
+    legacy_config = _base_config()  # no lines.sizing key at all
+    uniform_config = _base_config()
+    uniform_config["lines"]["sizing"] = {"mode": "uniform", "utilization_margin": 0.8}
+
+    legacy_report = _build_report(tmp_path / "legacy", legacy_config)
+    uniform_report = _build_report(tmp_path / "uniform", uniform_config)
+
+    assert "line_sizing" not in legacy_report
+    assert "line_sizing" not in uniform_report
+    # No warnings channel introduced on the default path either.
+    assert "warnings" not in legacy_report
+    assert "warnings" not in uniform_report
+
+
+@requires_sim
+def test_load_aware_report_surfaces_line_sizing(tmp_path: Path) -> None:
+    """``load_aware`` mode records a deterministic ``line_sizing`` block."""
+    config = _base_config()
+    config["lines"]["sizing"] = {"mode": "load_aware", "utilization_margin": 0.8}
+
+    report = _build_report(tmp_path, config)
+
+    assert "line_sizing" in report
+    sizing = report["line_sizing"]
+    assert sizing["mode"] == "load_aware"
+    assert sizing["lines_sized"] > 0
+    over_count = sizing["over_capacity_count"]
+    assert over_count >= 0
+    assert isinstance(sizing["over_capacity_levels"], dict)
+    assert sum(sizing["over_capacity_levels"].values()) == over_count
+    assert len(sizing["over_capacity_line_indices"]) == min(over_count, 32)
+
+    if over_count > 0:
+        # A human-readable warning must accompany any over-capacity shortfall.
+        warnings = report.get("warnings", [])
+        assert any("over capacity" in str(w) for w in warnings)
+    # Over-capacity at the catalog ceiling is an accepted physical limit, not a
+    # build failure: it must never silently flip ``valid`` to false.
+    assert report["valid"] is True
+
+
+@requires_sim
+def test_load_aware_over_capacity_surfaced_when_undersized(tmp_path: Path) -> None:
+    """An over-capacity case yields a non-zero count and a matching warning."""
+    config = _base_config()
+    # A vanishing utilization margin drives the required rating arbitrarily high
+    # so design current exceeds the largest catalog conductor on every level,
+    # guaranteeing the over-capacity surface is exercised.
+    config["lines"]["sizing"] = {"mode": "load_aware", "utilization_margin": 1e-9}
+
+    report = _build_report(tmp_path, config)
+
+    sizing = report["line_sizing"]
+    assert sizing["over_capacity_count"] > 0
+    warnings = report.get("warnings", [])
+    assert any("over capacity" in str(w) for w in warnings)
+    # Still a valid build — the shortfall is surfaced, not treated as a failure.
+    assert report["valid"] is True

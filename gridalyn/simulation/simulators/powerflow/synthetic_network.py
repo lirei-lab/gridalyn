@@ -9,17 +9,21 @@ workflows, tests, and future utility adapters.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
 import pickle
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
 import pandapower as pp
 
-from gridalyn.twin.core.graph import PowerGridGraph
 from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
+from gridalyn.twin.core.graph import PowerGridGraph
+
+# Cap on the number of over-capacity line indices recorded in the report so a
+# pathologically undersized network cannot bloat the JSON; counts remain exact.
+_OVER_CAPACITY_INDEX_CAP = 32
 
 
 @dataclass(frozen=True)
@@ -98,7 +102,7 @@ def build_synthetic_network_from_config(
     )
 
     _build_graph_hierarchy(power_grid, config)
-    net = _build_pandapower_network(power_grid, config)
+    net, line_sizing = _build_pandapower_network(power_grid, config)
     if building_peak_loads_kw is not None:
         _apply_building_peak_loads(net, building_peak_loads_kw)
 
@@ -113,14 +117,19 @@ def build_synthetic_network_from_config(
         net=net,
         topology=topology,
         powerflow=powerflow,
-        loads_source="generated" if building_peak_loads_kw is not None else "config_envelope",
+        loads_source=(
+            "generated" if building_peak_loads_kw is not None else "config_envelope"
+        ),
+        line_sizing=line_sizing,
     )
 
     report_path: Path | None = None
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
         report_path = output_dir / "synthetic_network_validation_report.json"
-        report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+        report_path.write_text(
+            json.dumps(report, indent=2, default=str), encoding="utf-8"
+        )
         if write_cache:
             _write_cache(output_dir, power_grid, net)
 
@@ -182,7 +191,15 @@ def _build_graph_hierarchy(power_grid: PowerGridGraph, config: dict[str, Any]) -
 def _build_pandapower_network(
     power_grid: PowerGridGraph,
     config: dict[str, Any],
-) -> pp.pandapowerNet:
+) -> tuple[pp.pandapowerNet, dict[str, Any] | None]:
+    """Build the pandapower network and optional load-aware sizing summary.
+
+    Returns:
+        A tuple ``(net, line_sizing)`` where ``line_sizing`` is ``None`` under
+        the default ``uniform`` sizing mode (so the validation report stays
+        byte-identical to the historical generator output) and a deterministic
+        summary block when the opt-in ``load_aware`` post-pass ran.
+    """
     pp_config = {
         "buses": config["buses"],
         "lines": config["lines"],
@@ -203,6 +220,7 @@ def _build_pandapower_network(
     builder.create_bus_geodata()
     net = builder.get_pandapower_net()
     mode = config.get("lines", {}).get("sizing", {}).get("mode", "uniform")
+    line_sizing: dict[str, Any] | None = None
     if mode == "load_aware":
         # Local import keeps the default ``uniform`` path's import graph
         # unchanged, preserving byte-identity with the historical generator.
@@ -210,8 +228,45 @@ def _build_pandapower_network(
             size_lines_load_aware,
         )
 
-        size_lines_load_aware(net, config)
-    return net
+        sizing_rows = size_lines_load_aware(net, config)
+        line_sizing = _summarize_line_sizing(sizing_rows)
+    return net, line_sizing
+
+
+def _summarize_line_sizing(sizing_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Reduce per-line sizing rows to a deterministic report summary block.
+
+    Surfaces conductor over-capacity (a line whose design current exceeds the
+    largest catalog conductor, so it stays thermally over 100% at design load).
+    These shortfalls are an accepted physical limit at the catalog ceiling
+    rather than a build failure, but they must be visible in the report instead
+    of silently dropped (CR-01).
+
+    Args:
+        sizing_rows: The per-line summary returned by
+            :func:`size_lines_load_aware` (one dict per on-tree line).
+
+    Returns:
+        A deterministic summary block with the sizing mode, the count of lines
+        sized, the over-capacity count, the per-level over-capacity breakdown
+        (only non-zero levels, level-sorted), and a capped, sorted list of the
+        over-capacity line indices.
+    """
+    over_rows = [row for row in sizing_rows if row.get("over_capacity")]
+    over_levels: dict[str, int] = {}
+    for row in over_rows:
+        level = str(row["level"])
+        over_levels[level] = over_levels.get(level, 0) + 1
+
+    return {
+        "mode": "load_aware",
+        "lines_sized": len(sizing_rows),
+        "over_capacity_count": len(over_rows),
+        "over_capacity_levels": dict(sorted(over_levels.items())),
+        "over_capacity_line_indices": sorted(int(row["idx"]) for row in over_rows)[
+            :_OVER_CAPACITY_INDEX_CAP
+        ],
+    }
 
 
 def _apply_building_peak_loads(
@@ -237,7 +292,9 @@ def _apply_building_peak_loads(
         net.load.at[load_idx, "q_mvar"] = p_new * ratio
 
 
-def _run_optional_powerflow(net: pp.pandapowerNet, run_powerflow: bool) -> dict[str, Any]:
+def _run_optional_powerflow(
+    net: pp.pandapowerNet, run_powerflow: bool
+) -> dict[str, Any]:
     if not run_powerflow:
         return {"attempted": False, "converged": None, "error": None}
     try:
@@ -274,12 +331,13 @@ def _validation_report(
     topology: dict[str, Any],
     powerflow: dict[str, Any],
     loads_source: str = "config_envelope",
+    line_sizing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     valid = topology["isolated_nodes_total"] == 0
     if powerflow["attempted"]:
         valid = valid and bool(powerflow["converged"])
 
-    return {
+    report: dict[str, Any] = {
         "report_id": "synthetic_network_validation",
         "valid": valid,
         "source": {
@@ -299,7 +357,9 @@ def _validation_report(
             "diversity_factor_lv": config["loads"].get("diversity_factor_lv"),
             "diversity_factor_mv": config["loads"].get("diversity_factor_mv"),
             "diversity_factor_hv": config["loads"].get("diversity_factor_hv"),
-            "lv_mv_transformer_capacity_kva": config["transformers"]["lv_mv"]["capacity_kva"],
+            "lv_mv_transformer_capacity_kva": config["transformers"]["lv_mv"][
+                "capacity_kva"
+            ],
             "lv_mv_utilization_margin": config["transformers"]["lv_mv"].get(
                 "utilization_margin"
             ),
@@ -322,6 +382,25 @@ def _validation_report(
         "powerflow": powerflow,
     }
 
+    # Strictly gated on the opt-in load-aware path: under ``uniform``/default
+    # ``line_sizing`` is ``None`` and NO key (no new bytes) is added, so
+    # historical project reports stay byte-identical (LINESIZE-01 / CR-01).
+    if line_sizing is not None:
+        report["line_sizing"] = line_sizing
+        over_count = int(line_sizing.get("over_capacity_count", 0))
+        if over_count > 0:
+            levels = line_sizing.get("over_capacity_levels", {})
+            warning = (
+                f"line_sizing: {over_count} line(s) over capacity at the "
+                f"catalog conductor ceiling (per-level: {levels}); design "
+                "current exceeds the largest available conductor so these "
+                "lines stay thermally over 100% at design load (accepted "
+                "physical limit, surfaced not silently clipped)."
+            )
+            report.setdefault("warnings", []).append(warning)
+
+    return report
+
 
 def _graph_node_count(graph: Any) -> int:
     return int(len(graph.nodes)) if graph is not None else 0
@@ -343,7 +422,9 @@ def _config_sha256(config: dict[str, Any], source: Path | str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _write_cache(out_dir: Path, power_grid: PowerGridGraph, net: pp.pandapowerNet) -> None:
+def _write_cache(
+    out_dir: Path, power_grid: PowerGridGraph, net: pp.pandapowerNet
+) -> None:
     with (out_dir / "pg_graph_cache.pkl").open("wb") as handle:
         pickle.dump(power_grid, handle)
     with (out_dir / "pp_net_cache.pkl").open("wb") as handle:
