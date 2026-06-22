@@ -110,6 +110,10 @@ _LAZY_EXPORTS = {
     ),
     "fit_physics_surrogate": ("gridalyn.simulation.analytics.network_impact", "fit_physics_surrogate"),
     "predict_physics_impact": ("gridalyn.simulation.analytics.network_impact", "predict_physics_impact"),
+    "prepare_synthetic_topology_cache": (
+        "gridalyn.simulation.simulators.powerflow.topology_cache",
+        "prepare_synthetic_topology_cache",
+    ),
     "run_standard_powerflow_scenario": (
         "gridalyn.simulation.simulators.powerflow.scenarios",
         "run_standard_powerflow_scenario",
