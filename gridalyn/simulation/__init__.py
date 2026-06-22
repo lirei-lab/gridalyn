@@ -41,6 +41,18 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.transformer_validation",
         "TransformerPeakValidationConfig",
     ),
+    "LineSizingResult": (
+        "gridalyn.simulation.analytics.line_sizing",
+        "LineSizingResult",
+    ),
+    "analyze_line_sizing": (
+        "gridalyn.simulation.analytics.line_sizing",
+        "analyze_line_sizing",
+    ),
+    "analyze_synthetic_line_sizing": (
+        "gridalyn.simulation.analytics.line_sizing",
+        "analyze_synthetic_line_sizing",
+    ),
     "apply_battery_dispatch_to_pandapower": (
         "gridalyn.simulation.simulators.powerflow.energy_assets",
         "apply_battery_dispatch_to_pandapower",
@@ -81,7 +93,10 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.artifacts",
         "configure_headless_matplotlib",
     ),
-    "build_graph_snapshot": ("gridalyn.simulation.analytics.network_impact", "build_graph_snapshot"),
+    "build_graph_snapshot": (
+        "gridalyn.simulation.analytics.network_impact",
+        "build_graph_snapshot",
+    ),
     "build_network_impact_catalog": (
         "gridalyn.simulation.analytics.network_impact",
         "build_network_impact_catalog",
@@ -98,8 +113,14 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.analytics.network_impact",
         "build_provider_impact_predictions",
     ),
-    "build_surrogate_report": ("gridalyn.simulation.analytics.network_impact", "build_surrogate_report"),
-    "build_training_dataset": ("gridalyn.simulation.analytics.network_impact", "build_training_dataset"),
+    "build_surrogate_report": (
+        "gridalyn.simulation.analytics.network_impact",
+        "build_surrogate_report",
+    ),
+    "build_training_dataset": (
+        "gridalyn.simulation.analytics.network_impact",
+        "build_training_dataset",
+    ),
     "build_synthetic_network_from_config": (
         "gridalyn.simulation.simulators.powerflow.synthetic_network",
         "build_synthetic_network_from_config",
@@ -108,8 +129,14 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.synthetic_network",
         "build_synthetic_network_from_geojson",
     ),
-    "fit_physics_surrogate": ("gridalyn.simulation.analytics.network_impact", "fit_physics_surrogate"),
-    "predict_physics_impact": ("gridalyn.simulation.analytics.network_impact", "predict_physics_impact"),
+    "fit_physics_surrogate": (
+        "gridalyn.simulation.analytics.network_impact",
+        "fit_physics_surrogate",
+    ),
+    "predict_physics_impact": (
+        "gridalyn.simulation.analytics.network_impact",
+        "predict_physics_impact",
+    ),
     "prepare_synthetic_topology_cache": (
         "gridalyn.simulation.simulators.powerflow.topology_cache",
         "prepare_synthetic_topology_cache",
