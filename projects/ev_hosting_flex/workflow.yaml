@@ -25,7 +25,7 @@ spec:
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py
         - projects/ev_hosting_flex/scripts/config.py
-        - configs/grid/config.json
+        - projects/ev_hosting_flex/inputs/synthetic_network_config.json
       outputs:
         - projects/ev_hosting_flex/outputs/cache/pg_graph_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl

@@ -16,7 +16,12 @@ PROJECT_CACHE_DIR = PROJECT_OUTPUTS_DIR / "cache"
 TOPOLOGY_CACHE_MANIFEST = PROJECT_CACHE_DIR / "topology_cache_manifest.json"
 
 # ─── Load the underlying physical system configuration ──────────────────
-with open(ROOT / "configs/grid/config.json") as f:
+# Project-local mirror of ``configs/grid/config.json`` that opts into
+# ``lines.sizing.mode = "load_aware"`` (08.1-02). Keeping a SEPARATE file leaves
+# the shared ``configs/grid/config.json`` byte-identical so flexibility_cls, the
+# tutorials, and test_line_sizing_diagnostic stay green (LINESIZE-01).
+GRID_CONFIG_PATH = PROJECT_ROOT / "inputs" / "synthetic_network_config.json"
+with open(GRID_CONFIG_PATH) as f:
     GRID_CONFIG = json.load(f)
 
 # ─── Phase-8 locked reproducibility + threshold conventions ─────────────

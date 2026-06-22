@@ -39,7 +39,7 @@ spec:
       format: GeoJSON FeatureCollection
       role: Project-local Trois-Rivieres building footprints used to synthesize the topology cache (D-03).
     grid:
-      config: configs/grid/config.json
+      config: projects/ev_hosting_flex/inputs/synthetic_network_config.json
   artifacts:
     project:
       data: projects/ev_hosting_flex/outputs/data
