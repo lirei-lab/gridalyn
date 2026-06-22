@@ -159,9 +159,7 @@ def test_select_line_std_type_unknown_level_raises() -> None:
 
     net = pp.create_empty_network()
     with pytest.raises(ValueError, match="no .* line catalog entry"):
-        select_line_std_type(
-            net, level="ZZ", i_design_ka=0.05, utilization_margin=0.8
-        )
+        select_line_std_type(net, level="ZZ", i_design_ka=0.05, utilization_margin=0.8)
 
 
 @requires_sim
@@ -238,9 +236,7 @@ def test_uniform_is_byte_identical_to_legacy(tmp_path: Path) -> None:
 
     assert legacy_tuples == uniform_tuples
     # Sanity: uniform really is uniform (one rating per level, as today).
-    assert net_legacy.line["max_i_ka"].nunique() <= len(
-        set(net_legacy.bus["vn_kv"])
-    )
+    assert net_legacy.line["max_i_ka"].nunique() <= len(set(net_legacy.bus["vn_kv"]))
 
 
 @requires_sim
