@@ -231,3 +231,85 @@ def test_select_feeder_config_override() -> None:
     dmap = build_downstream_map(net)
     # Explicit feeder_id override returns that index verbatim.
     assert select_feeder(net, dmap, {"feeder_id": 1}) == 1
+
+
+# ─── 08.1-02: load-aware adoption regression ────────────────────────────
+#
+# ev_hosting_flex opts into ``lines.sizing.mode = "load_aware"`` via its OWN
+# project-local config (``inputs/synthetic_network_config.json``), leaving the
+# shared ``configs/grid/config.json`` byte-identical (LINESIZE-01/LINESIZE-03).
+# These pin the adoption WITHOUT depending on the 787KB buildings.geojson or
+# the gitignored runtime cache: they build a SMALL synthetic net through the
+# public build hook with the ev_hosting_flex GRID_CONFIG.
+
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from gridalyn.foundation.platform.capabilities import (  # noqa: E402
+    missing_capability_modules,
+)
+
+requires_sim = pytest.mark.skipif(
+    bool(missing_capability_modules("sim")),
+    reason="requires the 'sim' extra (pandapower)",
+)
+
+
+def test_ev_hosting_flex_config_opts_into_load_aware() -> None:
+    """ev_hosting_flex GRID_CONFIG carries load_aware; shared config untouched."""
+    from projects.ev_hosting_flex.scripts.config import GRID_CONFIG
+
+    sizing = GRID_CONFIG["lines"].get("sizing")
+    assert sizing is not None, "ev_hosting_flex GRID_CONFIG must declare lines.sizing"
+    assert sizing["mode"] == "load_aware", sizing
+    assert sizing.get("utilization_margin") == 0.8, sizing
+    # The mirrored config keeps the downstream-required loads block.
+    assert "n_buildings_cache" in GRID_CONFIG["loads"]
+
+    # The shared config must NOT have been mutated into load_aware (LINESIZE-01).
+    shared = json.loads(Path("configs/grid/config.json").read_text(encoding="utf-8"))
+    assert "sizing" not in shared.get("lines", {}), shared["lines"].get("sizing")
+
+
+@requires_sim
+def test_ev_hosting_flex_load_aware_net_radial_varied_convergent(
+    tmp_path: Path,
+) -> None:
+    """A small ev_hosting_flex net stays radial+gen-free, varies conductors, PF converges."""
+    import pandapower as pp
+
+    from gridalyn.simulation.simulators.powerflow.synthetic_network import (
+        build_synthetic_network_from_config,
+    )
+    from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
+    from projects.ev_hosting_flex.scripts.config import GRID_CONFIG
+
+    # Sanity: this test exercises the load-aware path the project opts into.
+    assert GRID_CONFIG["lines"]["sizing"]["mode"] == "load_aware"
+
+    footprints_path = tmp_path / "buildings.geojson"
+    generator = FakeGeoJSONGenerator(grid_size=4, seed=11, rectangular=True)
+    footprints_path.write_text(
+        json.dumps(generator.generate_geojson()),
+        encoding="utf-8",
+    )
+
+    build = build_synthetic_network_from_config(
+        footprints_path=footprints_path,
+        config=GRID_CONFIG,
+        out_dir=tmp_path / "network",
+        clustering_crs="auto",
+        write_cache=False,
+        run_powerflow=False,
+    )
+    net = build.net
+
+    # Gate: a single radial tree with no embedded generation (TWIN-04).
+    assert assert_radial_no_generation(net) is None
+
+    # Load-aware actually varied the conductors (no longer one value per level).
+    assert net.line["max_i_ka"].nunique() > 1, net.line["max_i_ka"].unique()
+
+    # The chosen conductors keep the AC power flow convergent.
+    pp.runpp(net, algorithm="nr", max_iteration=100)
+    assert net.converged is True
