@@ -36,24 +36,24 @@ spec:
     # ── Stage 3: annual 8760h profiles (declared/stubbed — Phase 9) ──────
     - id: generate_annual_profiles
       needs: [prepare_topology_cache]
-      command: python -c "print('STUB generate_annual_profiles — implemented in Phase 9')"
+      command: echo "STUB generate_annual_profiles — implemented in Phase 9"
 
     # ── Stage 4: congestion proxy + firm hosting limit (stubbed — Phase 9) ─
     - id: compute_congestion
       needs: [generate_annual_profiles]
-      command: python -c "print('STUB compute_congestion — implemented in Phase 9')"
+      command: echo "STUB compute_congestion — implemented in Phase 9"
 
     # ── Stage 5: flexibility contracts + flexible limit (stubbed — Phase 10) ─
     - id: apply_flexibility_contracts
       needs: [compute_congestion]
-      command: python -c "print('STUB apply_flexibility_contracts — implemented in Phase 10')"
+      command: echo "STUB apply_flexibility_contracts — implemented in Phase 10"
 
     # ── Stage 6: pandapower AC peak-hour validation (stubbed — Phase 11) ─
     - id: validate_powerflow
       needs: [compute_congestion]
-      command: python -c "print('STUB validate_powerflow — implemented in Phase 11')"
+      command: echo "STUB validate_powerflow — implemented in Phase 11"
 
     # ── Stage 7: canonical reports + baseline (stubbed — Phase 12) ───────
     - id: build_study_reports
       needs: [apply_flexibility_contracts, validate_powerflow]
-      command: python -c "print('STUB build_study_reports — implemented in Phase 12')"
+      command: echo "STUB build_study_reports — implemented in Phase 12"

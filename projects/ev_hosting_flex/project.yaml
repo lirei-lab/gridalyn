@@ -24,6 +24,13 @@ spec:
           Single radial feeder with no flexibility contracts — establishes the
           firm hosting limit (first line overload) that the flexible case
           expands upon.
+  experiments:
+    - id: firm_hosting_baseline
+      scenario: baseline
+      objective: >-
+        Measure the firm EV hosting limit (first line/transformer overload) on
+        the radial feeder without flexibility contracts. Extended with the
+        flexible case and hosting-expansion headline in Phases 9-10.
   inputs:
     geography:
       source: configs/geography/tr01.json
