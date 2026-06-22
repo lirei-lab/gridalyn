@@ -68,11 +68,20 @@ def _imported_modules(tree: ast.AST) -> list[str]:
     (``node.module``) to module-path strings. GUARD-01 uses this directly because
     the denylist applies to imports anywhere, not only at module scope.
 
+    For ``from x import y`` the imported *name* is also reconstructed as
+    ``f"{x}.{y}"`` (WR-02): binding an internal package by name — e.g.
+    ``from gridalyn.simulation import simulators`` — is the semantic equivalent of
+    the deep-private breach GUARD-01 forbids, so the name-bound form must be
+    visible to the denylist, not only the dotted path before ``import``. Relative
+    imports (``from . import x``, where ``node.module`` is ``None``) are skipped to
+    avoid crashing on a missing module path.
+
     Args:
         tree: The parsed module AST to inspect.
 
     Returns:
-        Every imported module-path string found anywhere in the tree.
+        Every imported module-path string found anywhere in the tree, including
+        the reconstructed ``module.name`` of each ``from``-imported name.
     """
     modules: list[str] = []
     for node in ast.walk(tree):
@@ -80,6 +89,7 @@ def _imported_modules(tree: ast.AST) -> list[str]:
             modules.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             modules.append(node.module)
+            modules.extend(f"{node.module}.{alias.name}" for alias in node.names)
     return modules
 
 
@@ -207,6 +217,29 @@ def test_guard01_predicate_flags_phase6_breach_and_passes_public_facade() -> Non
         m for m in _imported_modules(alias_tree) if _is_deep_private_gridalyn_import(m)
     ]
     assert alias_flagged, "GUARD-01 must flag the alias-form deep-private breach"
+
+    # WR-02: name-binding form. ``from gridalyn.simulation import simulators`` binds
+    # the internal ``simulators`` package by name; ``node.module`` alone
+    # (``gridalyn.simulation``) is clean, so the reconstructed ``module.name`` must
+    # be what the denylist catches.
+    name_breach = "from gridalyn.simulation import simulators"
+    name_tree = ast.parse(name_breach)
+    name_flagged = [
+        m for m in _imported_modules(name_tree) if _is_deep_private_gridalyn_import(m)
+    ]
+    assert name_flagged, "GUARD-01 must flag the name-binding deep-private breach"
+
+    # WR-02: relative ``from . import x`` has ``node.module is None`` and must be
+    # handled without crashing (and must not be flagged).
+    relative = "from . import helper"
+    relative_flagged = [
+        m
+        for m in _imported_modules(ast.parse(relative))
+        if _is_deep_private_gridalyn_import(m)
+    ]
+    assert (
+        relative_flagged == []
+    ), "GUARD-01 must not flag (or crash on) relative imports"
 
     clean = "from gridalyn.projects import scripting"
     clean_tree = ast.parse(clean)
