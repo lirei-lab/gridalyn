@@ -13,6 +13,8 @@ Thermostat: ON/OFF hysteresis band around setpoint T_set ± deadband/2
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 from dataclasses import dataclass, field
 
@@ -114,6 +116,7 @@ class Building:
         p_bg_kw: float,
         p_cap_kw: float | None = None,
         dt_min: float = 1.0,
+        integrator: str = "euler",
     ) -> dict:
         """
         Advance one simulation step by dt_min minutes.
@@ -125,11 +128,22 @@ class Building:
         p_bg_kw      : rigorously precalculated exact ARX background appliance trace for this instant
         p_cap_kw     : if not None, total building power cap (CLS active)
         dt_min       : time step in minutes
+        integrator   : thermal-update scheme; ``"euler"`` (default) keeps the
+                       byte-identical forward-Euler update, ``"exact"`` opts into
+                       the exact-discrete RC update. Any other value raises a
+                       located ``ValueError``.
 
         Returns
         -------
         dict with p_total, p_heat, p_cool, p_bg, T_in
         """
+        if integrator not in ("euler", "exact"):
+            raise ValueError(
+                f"Building.step: unsupported integrator {integrator!r}; "
+                "allowed values are 'euler' (default, forward-Euler) and "
+                "'exact' (exact-discrete RC update)."
+            )
+
         bg = max(float(p_bg_kw), 0.0)
 
         # ── 2.  Thermostat control (constant 21°C setpoint)
@@ -177,13 +191,26 @@ class Building:
             p_heat_actual = p_heat_desired
             p_cool_actual = p_cool_desired
 
-        # ── 4.  Thermal dynamics (Euler forward)
-        dT = (dt_min / 60.0) / self.C * (
-            (t_out - self.T_in) / self.R 
-            + ETA_HEAT * p_heat_actual 
-            - ETA_COOL * p_cool_actual
-        )
-        self.T_in += dT
+        # ── 4.  Thermal dynamics
+        if integrator == "euler":
+            # Forward-Euler update (default, byte-identical to historical runs).
+            dT = (dt_min / 60.0) / self.C * (
+                (t_out - self.T_in) / self.R
+                + ETA_HEAT * p_heat_actual
+                - ETA_COOL * p_cool_actual
+            )
+            self.T_in += dT
+        else:
+            # Exact-discrete RC update: integrate the same continuous-time
+            # dynamics dT/dt = (T_eq - T_in)/tau exactly over the step, where
+            # tau = R*C (hours) and T_eq is the steady-state air temperature for
+            # the held forcing. Unconditionally stable for large dt_min.
+            tau = self.R * self.C
+            dt_h = dt_min / 60.0
+            t_eq = t_out + self.R * (
+                ETA_HEAT * p_heat_actual - ETA_COOL * p_cool_actual
+            )
+            self.T_in += (1.0 - math.exp(-dt_h / tau)) * (t_eq - self.T_in)
 
         p_total_actual = p_heat_actual + p_cool_actual + bg
         return {
