@@ -133,3 +133,25 @@ denominator before Phase 10 builds the flexible leg. ONLY the selected feeder
 transformer is resized (project-local in ``_topology.py`` /
 ``prepare_topology_cache.py``); the SDK transformer builder and the shared
 ``configs/grid/config.json`` stay byte-identical (LINESIZE-01)."""
+
+# ─── Phase-10 (FLEX-03): flexible-sweep acceptability tolerance ──────────
+# APPENDED below the locked constants (do NOT edit any constant above). These
+# pin the FLEX-03 acceptability gate the flexible sweep classifies each swept EV
+# count against (feasible AND tolerance); the locked D-12 reproducibility
+# contract (LINE_LOADING_LIMIT_PERCENT, DTYPE, SEED, ROUND_DECIMALS, EV_SWEEP,
+# POWER_FACTOR) above is untouched.
+
+TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX = 0.01
+"""Strict-``<`` primary acceptability gate (D-06): the annual curtailed-energy
+fraction must be < 1% for a swept EV count to pass. A point sitting EXACTLY at
+this value does NOT pass (strict ``<``, pinned)."""
+
+TOLERANCE_ACTIVATION_HOURS_MAX = 100
+"""Secondary acceptability gate (D-06): the max total contract activation hours
+a swept EV count may incur and still pass when ``TOLERANCE_PRIMARY`` selects
+``"activation_hours"``."""
+
+TOLERANCE_PRIMARY = "curtailed_energy_fraction"
+"""Active acceptability-criterion selector (D-06): the only accepted values are
+``"curtailed_energy_fraction"`` (the default primary strict-``<`` gate) and
+``"activation_hours"`` (the secondary ``<=`` gate)."""
