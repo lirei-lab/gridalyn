@@ -188,6 +188,35 @@ def test_flex_metrics_rejects_empty() -> None:
         )
 
 
+def test_flex_metrics_reconciliation_tolerates_per_node_rounding() -> None:
+    """Many-node per-node rounding accumulation must not false-trip recon (D-10).
+
+    Each per-node energy is rounded to ROUND_DECIMALS independently, so summing
+    n_bus of them drifts from the once-rounded total by up to half a ULP per
+    node. With a real feeder's many buses this exceeds a fixed 1e-6 tolerance
+    even though the decomposition is exact — the guard must scale with n_bus.
+
+    20 nodes x 1.2349 kWh: Σ round(1.2349/1000, 6) = 20*0.001235 = 0.024700,
+    while round(24.698/1000, 6) = 0.024698 — a 2e-6 drift that trips a fixed
+    1e-6 guard but is pure rounding noise (relative error ~8e-5), not a
+    double/under-count.
+    """
+    n_bus = 20
+    curtailed = np.full((n_bus, 1), 1.2349, dtype="float64")
+    node_annual = np.full(n_bus, 1000.0, dtype="float64")  # >> per-node shed
+    m = flex_metrics(
+        curtailed,
+        curtailed,
+        node_annual,
+        total_annual_ev_demand=float(n_bus * 1000.0),
+    )
+    drift = abs(sum(m["per_node_curtailed_energy_mwh"]) - m["curtailed_energy_mwh"])
+    # The drift is real rounding noise above the old fixed 1e-6 tolerance...
+    assert drift > 10.0**-6
+    # ...yet bounded by the per-node rounding budget (half a ULP per node).
+    assert drift <= (n_bus * 0.5 + 0.5) * 10.0**-6
+
+
 # ─── flexible_ev_count: sweep, tolerance boundary, monotonicity ─────────────
 
 

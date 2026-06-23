@@ -246,13 +246,20 @@ def flex_metrics(
         ],
     }
 
-    # Reconciliation: Σ per-node energy == total within ROUND_DECIMALS.
+    # Reconciliation: the reported per-node energies sum to the reported total.
+    # Each per-node value is independently rounded to ROUND_DECIMALS, so summing
+    # n_bus of them can drift from the once-rounded total by up to half a ULP per
+    # node (plus half a ULP on the total's own rounding). The tolerance scales
+    # with n_bus accordingly — a genuine double/under-count is orders of
+    # magnitude larger and still trips this guard.
     recon_total = sum(metrics["per_node_curtailed_energy_mwh"])
-    if abs(recon_total - metrics["curtailed_energy_mwh"]) > 10.0**-ROUND_DECIMALS:
+    recon_tol = (per_node_curtailed_kwh.size * 0.5 + 0.5) * 10.0**-ROUND_DECIMALS
+    if abs(recon_total - metrics["curtailed_energy_mwh"]) > recon_tol:
         raise ValueError(
             "flex_metrics reconciliation failed: Σ per-node curtailed energy "
             f"({recon_total} MWh) != total ({metrics['curtailed_energy_mwh']} MWh) "
-            f"beyond ROUND_DECIMALS={ROUND_DECIMALS}. Remediation: a double-count "
+            f"beyond tolerance {recon_tol} (n_bus={per_node_curtailed_kwh.size}, "
+            f"ROUND_DECIMALS={ROUND_DECIMALS}). Remediation: a double-count "
             "or under-count in the per-node energy reduction."
         )
     return metrics
