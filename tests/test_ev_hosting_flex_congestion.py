@@ -11,7 +11,10 @@ GUARD-02: the kernel is numpy-only; this test never ``import pandapower``.
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
+import pandas as pd
 import pytest
 
 from projects.ev_hosting_flex.scripts._congestion import (
@@ -201,3 +204,99 @@ def test_proxy_loading_rejects_nonpositive_elem_kw() -> None:
     demand = np.array([[10.0]], dtype="float64")
     with pytest.raises(ValueError, match="elem_kw"):
         proxy_loading(indicator, demand, np.array([0.0], dtype="float64"))
+
+
+# ─── End-to-end derive_congestion binding-state metrics (09-04, GAP 2 / CR-01) ───
+# Closes the test gap that let CR-01 ship: an end-to-end derive_congestion run must
+# report NON-ZERO binding-state CONG-02 metrics + a NON-EMPTY constraint set at the
+# reported first-overload state, while keeping firm_ev_count as the unchanged headline
+# scalar strictly below the metrics ev_count.
+
+from pathlib import Path  # noqa: E402
+
+from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    PROJECT_CACHE_DIR,
+    PROJECT_OUTPUTS_DIR,
+)
+from projects.ev_hosting_flex.scripts.pipeline.compute_congestion import (  # noqa: E402
+    derive_congestion,
+)
+
+_PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
+_REQUIRED_CACHE = [
+    "line_transformer_ratings_kw.json",
+    "downstream_bus_map.json",
+    "feeder_selection.json",
+    "node_building_count.json",
+    "grid_cache_meta.json",
+]
+_REQUIRED_PROFILES = ["base_load_8760.parquet", "ev_load_unit.parquet"]
+
+
+def _project_cache_ready() -> bool:
+    """True iff the stage-2/3 cache + profiles are present in the project outputs."""
+    if not all((PROJECT_CACHE_DIR / name).is_file() for name in _REQUIRED_CACHE):
+        return False
+    return all((_PROJECT_DATA_DIR / name).is_file() for name in _REQUIRED_PROFILES)
+
+
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex stage-2/3 cache + profiles not present; run "
+        "prepare_topology_cache.py + generate_annual_profiles.py first"
+    ),
+)
+def test_derive_congestion_binding_state_metrics_nonzero(tmp_path: Path) -> None:
+    """End-to-end: the binding-state CONG-02 metrics + constraint set are non-zero.
+
+    Runs derive_congestion against the regenerated (09-03) project cache + stage-3
+    profiles into a tmp json_dir and asserts the five metrics describe the BINDING
+    (first-overload) congestion: n_congested_lines > 0, congested_line_hours > 0,
+    congested_hours_per_year > 0, peak_overload_kw > 0.0, state == "first_overload",
+    and a non-empty constraint set. firm_ev_count is the unchanged headline scalar
+    strictly below the metrics ev_count (the CR-01 test gap is closed).
+    """
+    derived = derive_congestion(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
+    summary = derived["summary"]
+
+    # Binding-state metrics must all be strictly non-zero (the CR-01 defect made
+    # four of these zero at the firm count).
+    assert summary["n_congested_lines"] > 0, summary
+    assert summary["congested_line_hours"] > 0, summary
+    assert summary["congested_hours_per_year"] > 0, summary
+    assert summary["peak_overload_kw"] > 0.0, summary
+    assert summary["max_line_loading_percent"] > 100.0, summary
+
+    # The metrics describe the BINDING (first-overload) state, not the firm baseline.
+    assert summary["state"] == "first_overload"
+    assert summary["metrics_state"] == "first_overload"
+
+    # The CIM constraint set built at the binding state is non-empty (D-11).
+    assert summary["constraint_set_rows"] > 0, summary
+
+    # firm_ev_count is the UNCHANGED headline scalar, strictly below the metrics
+    # ev_count (firm baseline is non-congested by construction).
+    assert summary["firm_ev_count"] > 0
+    assert summary["firm_ev_count"] < summary["ev_count_at_metrics"]
+
+    # The metrics JSON carries exactly the five CONG-02 metric names + the labels.
+    metrics_json = json.loads((tmp_path / "congestion_metrics.json").read_text())
+    for name in (
+        "max_line_loading_percent",
+        "n_congested_lines",
+        "congested_line_hours",
+        "congested_hours_per_year",
+        "peak_overload_kw",
+    ):
+        assert name in metrics_json, metrics_json
+    assert metrics_json["state"] == "first_overload"
+
+    # The distinct binding-state parquet exists and its max loading exceeds the firm
+    # baseline's max (binding state is more loaded than the firm baseline).
+    binding = pd.read_parquet(
+        _PROJECT_DATA_DIR / "line_loading_first_overload.parquet"
+    )
+    firm = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_firm.parquet")
+    assert binding.shape == firm.shape
+    assert binding.values.max() > firm.values.max()
