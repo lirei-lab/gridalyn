@@ -93,11 +93,19 @@ def _radial_fixture() -> _FakeNet:
     )
 
 
-def _two_feeder_fixture() -> _FakeNet:
-    """Two MV/LV (25/0.4) distribution trafos; trafo 1 carries the larger load.
+def _closest_homes_fixture() -> _FakeNet:
+    """Two MV/LV (25/0.4) distribution trafos; trafo 1 sits closest to TARGET_HOMES.
 
-    Used to prove deterministic max-downstream-load feeder selection picks the
-    transformer index with the largest downstream building load.
+    Phase-10.1 re-points ``select_feeder`` to the transformer whose downstream
+    HOME count is closest to ``TARGET_HOMES`` (D-01/D-03), NOT the max-load one.
+    Here ``TARGET_HOMES`` defaults to 6:
+
+    * trafo idx 1 (lv_bus 2) feeds 5 homes (distance 1) — selected.
+    * trafo idx 2 (lv_bus 3) feeds 20 homes BUT a much larger load (distance 14).
+
+    Proving idx 1 wins demonstrates the ranking is closest-to-target on home
+    count, deliberately diverging from the old max-downstream-load rule (which
+    would have picked idx 2).
     """
     bus = pd.DataFrame(
         {"vn_kv": [120.0, 25.0, 0.4, 0.4]},
@@ -119,8 +127,59 @@ def _two_feeder_fixture() -> _FakeNet:
             "max_i_ka": pd.Series([], dtype="float64"),
         }
     )
-    # trafo index 1 (lv_bus 2) → 0.1 MW; trafo index 2 (lv_bus 3) → 0.3 MW (max)
-    load = pd.DataFrame({"bus": [2, 3], "p_mw": [0.1, 0.3]}, index=[0, 1])
+    # 5 homes on bus 2 (small, near-target) vs 20 homes on bus 3 (large, far).
+    # Each home draws a small p_mw; bus 3 also carries the LARGER total load so a
+    # max-load rule would (wrongly) pick idx 2 — the closest-homes rule picks idx 1.
+    load = pd.DataFrame(
+        {
+            "bus": [2] * 5 + [3] * 20,
+            "p_mw": [0.01] * 5 + [0.05] * 20,
+        },
+        index=list(range(25)),
+    )
+    ext_grid = pd.DataFrame({"bus": [0]}, index=[0])
+    empty_gen = pd.DataFrame({"bus": pd.Series([], dtype="int64")})
+    return _FakeNet(
+        bus=bus,
+        line=line,
+        trafo=trafo,
+        load=load,
+        ext_grid=ext_grid,
+        gen=empty_gen.copy(),
+        sgen=empty_gen.copy(),
+    )
+
+
+def _no_near_target_fixture() -> _FakeNet:
+    """One MV/LV (25/0.4) trafo whose home count is FAR from TARGET_HOMES.
+
+    A single distribution trafo feeding 20 homes (distance |20-6|=14 > tolerance
+    2). Proves ``select_feeder`` raises the located+remediating ValueError when no
+    transformer sits near ``TARGET_HOMES`` (Pitfall 4 — fail loudly, not silently).
+    """
+    bus = pd.DataFrame(
+        {"vn_kv": [120.0, 25.0, 0.4]},
+        index=[0, 1, 2],
+    )
+    trafo = pd.DataFrame(
+        {
+            "hv_bus": [0, 1],
+            "lv_bus": [1, 2],
+            "sn_mva": [15.0, 0.21],
+        },
+        index=[0, 1],
+    )
+    line = pd.DataFrame(
+        {
+            "from_bus": pd.Series([], dtype="int64"),
+            "to_bus": pd.Series([], dtype="int64"),
+            "max_i_ka": pd.Series([], dtype="float64"),
+        }
+    )
+    load = pd.DataFrame(
+        {"bus": [2] * 20, "p_mw": [0.01] * 20},
+        index=list(range(20)),
+    )
     ext_grid = pd.DataFrame({"bus": [0]}, index=[0])
     empty_gen = pd.DataFrame({"bus": pd.Series([], dtype="int64")})
     return _FakeNet(
@@ -223,21 +282,39 @@ def test_radiality_assert_fail_gen() -> None:
     assert "remediation" in msg.lower() or "exclude" in msg.lower()
 
 
-# ─── D-02: deterministic feeder selection ───────────────────────────────
+# ─── D-01/D-03: closest-to-TARGET_HOMES feeder re-pointing ──────────────
 
 
-def test_select_feeder() -> None:
-    net = _two_feeder_fixture()
+def test_select_feeder_picks_closest_to_target_homes() -> None:
+    """Re-pointed ranking selects the closest-to-TARGET_HOMES small LV trafo.
+
+    trafo idx 1 feeds 5 homes (distance |5-6|=1) and trafo idx 2 feeds 20 homes
+    (distance 14) AND carries the LARGER downstream load. The closest-homes rule
+    picks idx 1; the OLD max-downstream-load rule would have (wrongly) picked
+    idx 2 — so this asserts the new mechanism, not the deprecated one.
+    """
+    net = _closest_homes_fixture()
     dmap = build_downstream_map(net)
-    # trafo index 2 (lv_bus 3) carries 0.3 MW vs trafo 1's 0.1 MW → wins.
-    assert select_feeder(net, dmap, None) == 2
+    assert select_feeder(net, dmap, None) == 1
+
+
+def test_select_feeder_raises_when_no_near_target_candidate() -> None:
+    """No transformer near TARGET_HOMES → located+remediating ValueError (Pitfall 4)."""
+    net = _no_near_target_fixture()
+    dmap = build_downstream_map(net)
+    with pytest.raises(ValueError) as excinfo:
+        select_feeder(net, dmap, None)
+    msg = str(excinfo.value)
+    assert "ev_hosting_flex" in msg  # located
+    assert "TARGET_HOMES" in msg
+    assert "remediation" in msg.lower()  # remediating
 
 
 def test_select_feeder_config_override() -> None:
-    net = _two_feeder_fixture()
+    net = _closest_homes_fixture()
     dmap = build_downstream_map(net)
-    # Explicit feeder_id override returns that index verbatim.
-    assert select_feeder(net, dmap, {"feeder_id": 1}) == 1
+    # Explicit feeder_id override returns that index verbatim (bypasses ranking).
+    assert select_feeder(net, dmap, {"feeder_id": 2}) == 2
 
 
 # ─── 09-03: project-local feeder-transformer load-aware sizing ──────────

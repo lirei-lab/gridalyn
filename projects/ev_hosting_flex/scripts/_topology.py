@@ -26,7 +26,9 @@ are graph/numeric helpers, not in the heavy denylist.
 
 Numeric anchors verified against the real cached net (RESEARCH.md Code Examples
 263-359): line0 ≈ 230.363 kW, trafo0 = 199.50 kW at pf=0.95, ext_grid root bus
-3561, selected ``trafo_idx=64``.
+3561. Phase-10.1 re-points :func:`select_feeder` to the closest-to-``TARGET_HOMES``
+small MV/LV transformer (D-01/D-03) — in the current twin ``trafo_idx=62`` (7
+downstream homes, the closest to ``TARGET_HOMES=6``).
 """
 
 from __future__ import annotations
@@ -41,8 +43,14 @@ from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_HOURS,
     FEEDER_ID,
     POWER_FACTOR,
+    TARGET_HOMES,
     TRANSFORMER_UTILIZATION_MARGIN,
 )
+
+# Re-pointing tolerance (D-03): the selected MV/LV transformer's downstream home
+# count must land within this many homes of TARGET_HOMES, else the twin lacks a
+# representative small LV unit and selection fails loudly (Pitfall 4).
+_TARGET_HOMES_TOLERANCE = 2
 
 # MV/LV distribution-transformer voltage signature (kV) used for feeder ranking.
 _MV_LV_VOLTAGE = (25.0, 0.4)
@@ -309,9 +317,17 @@ def select_feeder(
     """Deterministically select the study feeder's MV/LV transformer index.
 
     Honors a ``config["feeder_id"]`` (or module ``FEEDER_ID``) override; otherwise
-    ranks the MV/LV (25→0.4 kV) distribution transformers by their downstream
-    building load and picks the maximum, with a deterministic ``(-load_kw, idx)``
-    tie-break (D-01/D-02).
+    ranks the MV/LV (25→0.4 kV) distribution transformers by how close their
+    downstream HOME count is to :data:`TARGET_HOMES` and picks the closest, with a
+    deterministic ``(distance, idx)`` tie-break (Option C, D-01/D-03).
+
+    This re-points the study from the Phase-9 max-downstream-load aggregated feeder
+    to a representative small HQ residential LV transformer (~``TARGET_HOMES``
+    homes). The ranking keys off the downstream home count (NOT a hardcoded index)
+    so it stays robust to twin regeneration. After selection a runtime guard
+    asserts the chosen transformer's home count is within
+    ``_TARGET_HOMES_TOLERANCE`` of ``TARGET_HOMES`` — a twin lacking a small
+    near-target LV unit trips HERE (Pitfall 4), not silently downstream.
 
     Args:
         net: Loaded pandapower-style net.
@@ -321,6 +337,11 @@ def select_feeder(
 
     Returns:
         The selected transformer integer index.
+
+    Raises:
+        ValueError: If no MV/LV (25/0.4 kV) transformer exists, or the closest
+            candidate's downstream home count is farther than
+            ``_TARGET_HOMES_TOLERANCE`` from ``TARGET_HOMES``.
     """
     override = config.get("feeder_id") if config else None
     if override is None:
@@ -328,18 +349,19 @@ def select_feeder(
     if override is not None:
         return int(override)
 
-    load_by_bus = net.load.groupby("bus")["p_mw"].sum()
+    # Per-bus building (home) count — the re-pointing ranks on this, not load.
+    homes_by_bus = net.load.groupby("bus").size()
     vn = net.bus["vn_kv"]
-    candidates: list[tuple[float, int]] = []
+    # candidate = (distance_to_target, idx, home_count)
+    candidates: list[tuple[int, int, int]] = []
     for idx, row in net.trafo.iterrows():
         signature = (float(vn.loc[int(row.hv_bus)]), float(vn.loc[int(row.lv_bus)]))
         if signature != _MV_LV_VOLTAGE:
             continue
         downstream = downstream_map[f"transformer:{int(idx)}"]
-        load_kw = (
-            float(load_by_bus.reindex(list(downstream)).fillna(0.0).sum()) * 1000.0
-        )
-        candidates.append((load_kw, int(idx)))
+        home_count = int(homes_by_bus.reindex(list(downstream)).fillna(0).sum())
+        distance = abs(home_count - int(TARGET_HOMES))
+        candidates.append((distance, int(idx), home_count))
 
     if not candidates:
         raise ValueError(
@@ -349,6 +371,21 @@ def select_feeder(
             "config.py to the intended transformer index."
         )
 
-    # Deterministic: largest downstream load, then smallest transformer index.
-    candidates.sort(key=lambda item: (-item[0], item[1]))
-    return candidates[0][1]
+    # Deterministic: closest-to-TARGET_HOMES, then smallest transformer index.
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    distance, selected_idx, home_count = candidates[0]
+
+    if distance > _TARGET_HOMES_TOLERANCE:
+        raise ValueError(
+            "ev_hosting_flex feeder selection found no MV/LV (25/0.4 kV) "
+            f"transformer within {_TARGET_HOMES_TOLERANCE} homes of "
+            f"TARGET_HOMES={int(TARGET_HOMES)}: the closest is transformer "
+            f"{selected_idx} with {home_count} downstream home(s) (distance "
+            f"{distance}). The re-calibration requires a representative small LV "
+            "transformer (~6 homes) as the unit of congestion (D-01/D-03). "
+            "Remediation: add a small-transformer sizing knob to "
+            "inputs/synthetic_network_config.json (or set FEEDER_ID in config.py to "
+            "a chosen near-target candidate) before re-running "
+            "prepare_topology_cache.py --force-rebuild."
+        )
+    return selected_idx
