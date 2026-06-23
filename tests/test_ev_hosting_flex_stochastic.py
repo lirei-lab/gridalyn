@@ -30,7 +30,6 @@ from projects.ev_hosting_flex.scripts._stochastic import (
 from projects.ev_hosting_flex.scripts.config import (
     ADMD_KW,
     BG_KW,
-    K,
     PLUGIN_PROB,
     R_THERM,
     SEED,
@@ -120,7 +119,7 @@ def test_tmy_base_short_rows_raises_located_error() -> None:
 # pinned RNG draw order (random -> choice -> lognormal -> normal) or the K stack
 # canonicalization trips this literal (Pitfall 2 / D-13). Recompute deliberately
 # (and document the re-baseline) if the draw order is intentionally changed.
-_GOLDEN_EV_SHA256 = "__PENDING__"
+_GOLDEN_EV_SHA256 = "be7963476d1271b3cf3acf835ea5b60f1d83a856cbcdf3117e24d9cb205dd31e"
 
 
 def _content_sha256(arr: np.ndarray) -> str:

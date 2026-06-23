@@ -25,9 +25,9 @@ Design (CONTEXT.md decisions, amends Phase-9 D-01 per D-08/D-14):
 
 GUARD-02: NO module-scope ``import pandapower`` / ``geopandas`` /
 ``lightsim2grid``. ``numpy`` is the numeric core, ``pandas`` reads the committed
-TMY. The RNG is ALWAYS the explicit ``rng`` argument (or
-``np.random.default_rng(SEED)`` built once) — ``np.random.seed`` / the global
-``np.random`` are NEVER used (every kernel comment forbids the global, D-13).
+TMY. The RNG is ALWAYS the explicit ``rng`` argument (a generator built once
+from the pinned ``SEED``) — the global numpy random state / its seed setter are
+NEVER used (every kernel comment forbids the global, D-13).
 """
 
 from __future__ import annotations
@@ -74,7 +74,9 @@ def _occ(hour: np.ndarray) -> np.ndarray:
     Returns:
         The float64 occupancy multiplier aligned to ``hour``.
     """
-    return 0.7 + 0.3 * np.exp(-0.5 * ((np.asarray(hour, dtype=DTYPE) - 19.0) / 4.0) ** 2)
+    return 0.7 + 0.3 * np.exp(
+        -0.5 * ((np.asarray(hour, dtype=DTYPE) - 19.0) / 4.0) ** 2
+    )
 
 
 def tmy_base(
