@@ -210,11 +210,21 @@ After the resize, at **0 EVs the worst element sits at ≈79.9 %** (the ~80 % ta
 recorded in `feeder_selection.json → feeder_transformer_sizing`), so the base feeder is
 healthy and congestion is **EV-driven**: `firm_ev_count = 20`, first overload at 40 EVs.
 
-> **Known limitation (D-01 / FUT-04).** The profile is fully coincident
-> (`diversity = 1`), which is **pessimistic** for all-electric Québec feeders (real LV
-> winter diversity ≈ 1.5–2.5 — thermostat cycling, DHW, occupancy). The hosting
-> headline is therefore conservative. Stochastic per-home diversity is deferred to a
-> future milestone (FUT-04).
+> **Diversity assumption (D-01 / FUT-04).** The profile is fully coincident
+> (`diversity = 1`). For an **hourly, all-electric, cold-climate** feeder this is
+> **defensible** — space-heating load is intrinsically highly coincident (cold-driven
+> peaks line up across homes; the literature puts the heating diversity factor at
+> ≈ **1.0–1.2**, i.e. ≤ ~15 % peak reduction). It is at most *mildly* conservative —
+> **not** the 1.5–2.5 range, which applies to instantaneous thermostat cycling or mixed
+> loads, not the hourly heating envelope. The per-home winter peak (~17.6 kW) sits at the
+> high end of the realistic ~10–15 kW band for a Québec all-electric dwelling (~13 kW
+> installed baseboard + DHW/appliances). The parameter that is genuinely *inconsistent*
+> with this load type is the **topology** `diversity_factor_lv = 5` (suited to mixed
+> urban load, not all-electric heat) — but the stage-2 subtree resize already sizes the
+> feeder to the diversity-1 profile, so that knob now only affects transformer *count*.
+> See [`CALIBRATION.md`](CALIBRATION.md) for the Québec sources and the
+> `TRANSFORMER_UTILIZATION_MARGIN` / `diversity_factor_lv` calibration. Stochastic
+> per-home diversity is deferred to FUT-04.
 
 ## Configuration
 
