@@ -1,36 +1,42 @@
-"""Apply per-node flexibility contracts + the hosting-expansion headline.
+"""Apply per-node flexibility contracts + BOTH hosting-expansion curves.
 
-Stage 5 of the workflow (FLEX-01/02/03/04). The flexibility sibling of the
-Phase-9 stage-4 ``compute_congestion.py``: it reads ONLY the stage-2 topology
-cache JSON sidecars, the stage-3 annual profile parquet, and the Phase-9
-stage-4 ``firm_hosting.json`` (GUARD-02 — never the pickled net), runs the
-proven Phase-10 closed-form cap kernel over the SELECTED feeder subtree across
-all 8760h, sweeps to an integer ``flexible_ev_count`` with the feasible-AND-
-tolerance gate, assembles the headline
-``hosting_expansion_percent = (flexible - firm) / firm`` from the read (never
-recomputed, D-11) firm count, and emits the named artifacts plus a governed
-report:
+Stage 5 of the workflow (RECAL-07/08, amends FLEX-01/02/03/04). The flexibility
+sibling of stage-4 ``compute_congestion.py``: it reads ONLY the stage-2 topology
+cache JSON sidecars, the stage-3 annual profile parquet, the stage-3 ``(K, 8760)``
+stochastic EV stack, and the stage-4 ``firm_hosting.json`` (GUARD-02 — never the
+pickled net), and emits BOTH flexibility curves (D-10) with NO single headline
+mechanism:
+
+* **Curtailment curve** — the kept Phase-10 closed-form shed-to-limit cap over the
+  feeder subtree (``flex_curtailment`` / ``flexible_ev_count``). Its
+  ``flexible_ev_count`` is the largest penetration passing the curtailed-energy
+  fraction gate; ``hosting_expansion_percent = (flexible − firm) / firm``.
+* **Deferral curve** — the new in-window valley-fill mechanism (``flex_deferral``,
+  D-11). For each penetration, over the K realizations, the over-cap EV energy is
+  valley-filled into the EV's plug-in window; the irreducible-lost-energy fraction
+  is reduced over K at P95 (D-07/D-12). Its ``flexible_ev_count`` is the largest
+  penetration whose P95 irreducible-lost fraction is strictly ``<
+  TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` (1%); ``hosting_expansion_percent
+  = (flexible − firm) / firm``.
+
+Both curves report their own ``flexible_ev_count`` and ``hosting_expansion_percent``
+against the re-baselined firm read from ``firm_hosting.json`` (D-11, never
+recomputed). The trade-curve ordering ``firm ≤ curtail-flexible ≤ defer-flexible``
+is the manuscript "EVs shift, not drop" story (SC4).
+
+Artifacts:
 
 * ``data/line_loading_flex.parquet`` — ``(n_elements, 8760)`` CAPPED loading% at
-  the FLEXIBLE-LIMIT state (float64, rounded to ROUND_DECIMALS) — every feeder
-  element <= the limit by construction of the cap (FLEX-01);
-* ``data/contract_activations.parquet`` — the tidy trade-curve series, one row
-  per swept EV count with ``ev_count, curtailed_energy_mwh,
-  curtailed_energy_fraction, n_active_contracts, feasible,
-  residual_overload_kw`` — the schema Phase-12's trade-curve figure consumes
-  directly (FLEX-02/03);
-* ``json/flexible_hosting.json`` — ``flexible_ev_count``, ``firm_ev_count`` (read
-  from ``firm_hosting.json``, D-11), the headline ``hosting_expansion_percent``
-  (FLEX-04), the curtailed fraction at the flexible limit, the swept grid, the
-  trade-curve series, the threshold convention, the pinned feeder-subtree scope,
-  and the active acceptability tolerance block;
-* ``reports/flexibility_contracts_report.json`` — canonical platform report via
-  ``script.write_report`` (GOV-precursor; never hand-written report JSON).
+  the curtailment-flexible state (every feeder element ≤ the limit, FLEX-01);
+* ``data/contract_activations.parquet`` — the tidy curtailment trade-curve series;
+* ``data/deferral_curve.parquet`` — the per-penetration deferral trade-curve
+  (penetration, ev_count, irreducible_lost_fraction_p95, feasible);
+* ``json/flexible_hosting.json`` — BOTH curve blocks + the read firm denominator;
+* ``reports/flexibility_contracts_report.json`` — canonical platform report.
 
-The headline denominator ``firm_ev_count`` is READ from the Phase-9 stage-4
-``firm_hosting.json`` and never recomputed (D-11), with a ``firm_ev > 0`` guard
-(mirrored from stage-4's degenerate-firm guard) before dividing — the flexible
-leg cannot silently shift the denominator.
+**The unit of congestion is the MODELED small HQ LV transformer (D-01).** The
+feeder transformer element rating is ``TRANSFORMER_KVA × POWER_FACTOR`` (D-02), the
+SAME modeled rating stage 4 uses, not the cache subtree rating.
 
 GUARD-02: NO module-scope ``import pandapower`` / ``geopandas`` /
 ``lightsim2grid``. This stage is pure-numpy + pandas/JSON IO; pandapower enters
@@ -59,27 +65,32 @@ from projects.ev_hosting_flex.scripts._congestion import (  # noqa: E402
 )
 from projects.ev_hosting_flex.scripts._flexibility import (  # noqa: E402
     flex_curtailment,
+    flex_deferral,
     flex_metrics,
-    flexible_ev_count,
 )
 from projects.ev_hosting_flex.scripts._profiles import (  # noqa: E402
     allocate_ev_per_bus,
 )
+from projects.ev_hosting_flex.scripts._stochastic import mc_p95  # noqa: E402
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
-    EV_SWEEP,
     LINE_LOADING_LIMIT_PERCENT,
+    PENETRATION_SWEEP,
+    PLUGIN_WINDOW,
+    POWER_FACTOR,
     PROJECT_CACHE_DIR,
     ROUND_DECIMALS,
-    TOLERANCE_ACTIVATION_HOURS_MAX,
     TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX,
-    TOLERANCE_PRIMARY,
+    TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95,
+    TRANSFORMER_KVA,
 )
 
-# ``is_congested`` is re-exported for downstream tooling parity with stage 4 and
-# is part of the public surface of this stage even though the kernel owns the
-# congested-set logic; reference it so linters keep the import.
+# ``is_congested`` is re-exported for downstream tooling parity with stage 4.
 _ = is_congested
+
+# The modeled small HQ LV transformer rating in kW (D-01/D-02) — the SAME modeled
+# rating stage 4 keys congestion off, not the cache subtree rating.
+_FEEDER_TRANSFORMER_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 
 
 def _load_json(path: Path) -> dict:
@@ -146,36 +157,182 @@ def _read_profile(parquet_path: Path, bus_ids: list[int]) -> np.ndarray:
     return frame.loc[bus_ids].to_numpy(dtype=DTYPE)
 
 
+def _read_ev_stack(npy_path: Path) -> np.ndarray:
+    """Read the stage-3 ``(K, 8760)`` EV stack (per-EV-unit realizations)."""
+    if not npy_path.is_file():
+        raise FileNotFoundError(
+            f"ev_hosting_flex stage 5 requires the stochastic EV stack "
+            f"{npy_path.name} at {npy_path}, but it is missing. Remediation: re-run "
+            "stage 3 (generate_annual_profiles.py)."
+        )
+    return np.load(npy_path).astype(DTYPE)  # (K, 8760)
+
+
+def _two_curve_sweep(
+    base: np.ndarray,
+    ev_stack: np.ndarray,
+    indicator: np.ndarray,
+    feeder_row: int,
+    feeder_kw: float,
+    alloc_fn,
+    downstream_home_count: int,
+    limit: float,
+) -> list[dict[str, object]]:
+    """Sweep penetration and return BOTH curves' per-penetration P95 trade curve.
+
+    Over the K realizations at each swept penetration, the per-realization aggregate
+    EV draw + base at the binding FEEDER TRANSFORMER element drive the manuscript
+    ``_relief`` two-mechanism reduction (port of
+    ``congestion_tradecurve_mc.py:_relief`` L91-104, the validated reference): the
+    CURTAILMENT lost fraction is the over-cap ``excess`` energy that would be shed,
+    and the DEFERRAL lost fraction is the IRREDUCIBLE ``remaining`` after in-window
+    valley-fill (``flex_deferral``, D-11). Both are reduced over K at P95
+    (D-07/D-12). Both route the over-cap determination through ``is_congested``
+    (strict ``>``, no second epsilon) — the deferral path inside ``flex_deferral``,
+    the curtailment path here.
+
+    Args:
+        base: ``(n_bus, n_hour)`` float64 TMY base demand in kW.
+        ev_stack: ``(K, n_hour)`` per-EV-unit realization stack.
+        indicator: ``(n_elem, n_bus)`` downstream matrix.
+        feeder_row: The feeder transformer element row index (its downstream sum
+            aggregates the whole subtree).
+        feeder_kw: The modeled feeder transformer kW rating (the headroom).
+        alloc_fn: ``penetration -> (n_bus,)`` per-bus EV allocation.
+        downstream_home_count: The feeder's downstream home count (EV-count units).
+        limit: The loading-percent congestion limit (strict ``>``).
+
+    Returns:
+        The per-penetration list of trade-curve rows, each carrying the EV count,
+        the P95 curtailment-lost fraction, and the P95 deferral-lost fraction.
+    """
+    feeder_indicator = indicator[feeder_row]  # (n_bus,)
+    # The feeder-transformer aggregate base (downstream-sum), shared across
+    # realizations (the base is deterministic). The curtailment headroom per hour.
+    base_feeder = feeder_indicator @ base  # (n_hour,)
+    headroom = np.maximum(0.0, float(feeder_kw) - base_feeder)  # (n_hour,)
+    k = int(ev_stack.shape[0])
+
+    curve: list[dict[str, object]] = []
+    prev_curt_p95 = -1.0
+    prev_defer_p95 = -1.0
+    for penetration in PENETRATION_SWEEP:
+        per_bus_ev = alloc_fn(float(penetration))  # (n_bus,)
+        # Total feeder EV count = downstream-sum of the per-bus EV allocation.
+        ev_unit_feeder_scale = float(feeder_indicator @ per_bus_ev)
+        ev_count = int(round(float(penetration) * downstream_home_count))
+
+        curt_fractions = np.empty(k, dtype=DTYPE)
+        defer_fractions = np.empty(k, dtype=DTYPE)
+        for kk in range(k):
+            ev_feeder = ev_stack[kk] * ev_unit_feeder_scale  # (n_hour,)
+            total = float(ev_feeder.sum())
+            # CURTAILMENT (manuscript _relief excess): the over-cap energy shed at
+            # the strictly-over-limit hours (placed = min(ev, headroom)).
+            loading = (base_feeder + ev_feeder) / float(feeder_kw) * 100.0
+            over = is_congested(loading, limit)  # strict-> reuse, no second epsilon
+            placed = np.minimum(ev_feeder, headroom)
+            excess = float(np.where(over, ev_feeder - placed, 0.0).sum())
+            curt_fractions[kk] = excess / total if total > 0 else 0.0
+            # DEFERRAL (the kept in-window valley-fill kernel): irreducible remainder.
+            out = flex_deferral(
+                ev_feeder,
+                base_feeder,
+                feeder_kw,
+                plugin_window=PLUGIN_WINDOW,
+                limit=limit,
+            )
+            defer_fractions[kk] = float(out["irreducible_lost_fraction"])
+
+        curt_p95 = mc_p95(curt_fractions)
+        defer_p95 = mc_p95(defer_fractions)
+
+        # SC4 monotonicity tripwire: both P95 lost fractions are non-decreasing in
+        # penetration (more EV energy => at least as much unfittable remainder).
+        if curt_p95 + 10.0**-ROUND_DECIMALS < prev_curt_p95:
+            raise ValueError(
+                "ev_hosting_flex stage 5: P95 curtailment-lost fraction decreased "
+                f"from {prev_curt_p95} to {curt_p95} as penetration rose to "
+                f"{penetration} EV/home — it must be monotonic non-decreasing (SC4). "
+                "Remediation: an alloc_fn / curtailment bug broke the trade curve."
+            )
+        if defer_p95 + 10.0**-ROUND_DECIMALS < prev_defer_p95:
+            raise ValueError(
+                "ev_hosting_flex stage 5: P95 deferral-lost fraction decreased from "
+                f"{prev_defer_p95} to {defer_p95} as penetration rose to "
+                f"{penetration} EV/home — it must be monotonic non-decreasing (SC4). "
+                "Remediation: an alloc_fn / deferral bug broke the trade curve."
+            )
+        prev_curt_p95 = curt_p95
+        prev_defer_p95 = defer_p95
+
+        curve.append(
+            {
+                "penetration": float(round(float(penetration), ROUND_DECIMALS)),
+                "ev_count": ev_count,
+                "curtailed_lost_fraction_p95": float(round(curt_p95, ROUND_DECIMALS)),
+                "irreducible_lost_fraction_p95": float(
+                    round(defer_p95, ROUND_DECIMALS)
+                ),
+            }
+        )
+    return curve
+
+
+def _curve_flexible(
+    curve: list[dict[str, object]], frac_key: str, tolerance: float
+) -> tuple[int, float]:
+    """Return the largest EV count whose P95 lost fraction is strictly < tolerance.
+
+    Args:
+        curve: The per-penetration trade-curve rows from ``_two_curve_sweep``.
+        frac_key: The P95 lost-fraction key to gate on.
+        tolerance: The strict-``<`` P95 tolerance.
+
+    Returns:
+        ``(flexible_ev_count, lost_fraction_p95_at_flexible)``.
+    """
+    passing = [
+        int(row["ev_count"]) for row in curve if float(row[frac_key]) < float(tolerance)
+    ]
+    flexible = max(passing) if passing else 0
+    at_flex = 0.0
+    for row in curve:
+        if int(row["ev_count"]) == flexible:
+            at_flex = float(row[frac_key])
+    return flexible, at_flex
+
+
 def derive_flexibility(
     cache_dir: Path, data_dir: Path, json_dir: Path
 ) -> dict[str, object]:
-    """Derive + persist the flexible-limit state, trade curve, and headline.
+    """Derive + persist BOTH flexibility curves + the read firm denominator.
 
-    Reads the cache sidecars + stage-3 profiles + the stage-4 ``firm_hosting.json``
-    (pandapower-free), builds the feeder-subtree proxy, runs the proven flexible
-    sweep, recomputes the CAPPED loading at the flexible-limit state, computes the
-    FLEX-02 per-contract metrics + the FLEX-04 headline
-    ``hosting_expansion_percent``, and writes the loading parquet, the trade-curve
-    parquet, and the ``flexible_hosting.json`` artifact.
+    Reads the cache sidecars + stage-3 profiles + the stage-3 EV stack + the
+    stage-4 ``firm_hosting.json`` (pandapower-free), builds the feeder-subtree proxy
+    with the MODELED transformer rating (D-01/D-02), runs the kept curtailment sweep
+    (mean EV unit) AND the new deferral sweep (K-axis, P95), and writes the
+    curtailment capped loading + both trade curves + the two-curve
+    ``flexible_hosting.json``.
 
     Args:
         cache_dir: Directory holding the stage-2 cache sidecars.
         data_dir: Directory the loading + trade-curve parquet are written to.
-        json_dir: Directory the flexible-hosting JSON is written to AND the
-            stage-4 ``firm_hosting.json`` denominator is read from.
+        json_dir: Directory the flexible-hosting JSON is written to AND the stage-4
+            ``firm_hosting.json`` denominator is read from.
 
     Returns:
         A mapping with ``artifact_paths`` and a ``summary`` dict.
 
     Raises:
-        ValueError: On a non-positive element rating, an empty feeder subtree, or
-            a degenerate (``<= 0``) firm denominator.
+        ValueError: On a non-positive rating, an empty feeder subtree, a degenerate
+            firm denominator, or a flexible-below-firm curve.
     """
     ratings = _load_json(cache_dir / "line_transformer_ratings_kw.json")
     downstream = _load_json(cache_dir / "downstream_bus_map.json")
     feeder = _load_json(cache_dir / "feeder_selection.json")
     node_building_count = _load_json(cache_dir / "node_building_count.json")
-    # The Phase-9 stage-4 output: the headline denominator (D-11, never recomputed).
+    # The stage-4 output: the headline denominator (D-11, never recomputed).
     firm = _load_json(json_dir / "firm_hosting.json")
 
     # Read the feeder key at runtime — never hardcode the transformer index.
@@ -183,9 +340,8 @@ def derive_flexibility(
     feeder_key = f"transformer:{feeder_idx}"
 
     elements, feeder_buses = feeder_elements(downstream, feeder_key)
+    feeder_row = elements.index(feeder_key)
 
-    # EV-adoption denominator = feeder buses ∩ load buses (the per-bus
-    # building-count sidecar keys), in deterministic SORTED bus order.
     load_buses = {int(b) for b in node_building_count}
     bus_ids = sorted(set(feeder_buses) & load_buses)
     if not bus_ids:
@@ -196,87 +352,115 @@ def derive_flexibility(
         )
 
     indicator = downstream_indicator(elements, bus_ids, downstream)
-    elem_kw = np.array([ratings[k] for k in elements], dtype=DTYPE)
+    elem_kw = np.empty(len(elements), dtype=DTYPE)
+    for i, key in enumerate(elements):
+        elem_kw[i] = (
+            _FEEDER_TRANSFORMER_KW if key == feeder_key else float(ratings[key])
+        )
     if not np.all(elem_kw > 0.0):
         raise ValueError(
             "ev_hosting_flex stage 5: a feeder element has a non-positive kW rating "
-            f"(min={float(elem_kw.min())}) in line_transformer_ratings_kw.json. "
-            "Remediation: re-run prepare_topology_cache.py at pf>0."
+            f"(min={float(elem_kw.min())}). Remediation: re-run "
+            "prepare_topology_cache.py at pf>0 and verify TRANSFORMER_KVA > 0."
         )
 
     base = _read_profile(data_dir / "base_load_8760.parquet", bus_ids)
     ev_unit = _read_profile(data_dir / "ev_load_unit.parquet", bus_ids)
+    ev_stack = _read_ev_stack(data_dir / "ev_stack_K.npy")
 
     building_count = np.array(
         [int(node_building_count[str(b)]) for b in bus_ids], dtype=DTYPE
     )
+    downstream_home_count = int(building_count.sum())
 
-    def alloc_fn(total_ev: int) -> np.ndarray:
+    def alloc_fn(penetration: float) -> np.ndarray:
+        total_ev = int(round(float(penetration) * downstream_home_count))
         return allocate_ev_per_bus(total_ev, building_count).astype(DTYPE)
 
-    # The headline denominator (D-11): read, never recomputed. Guard a degenerate
-    # firm count BEFORE dividing (mirror stage 4's degenerate-firm guard — a
-    # firm_ev_count <= 0 means the firm leg was wrong and the expansion percent
-    # would divide by zero / go negative).
+    # The read firm denominator (D-11): guard a degenerate firm BEFORE dividing.
     firm_ev = int(firm["firm_ev_count"])
+    firm_penetration = float(firm["firm_penetration"])
     if firm_ev <= 0:
         raise ValueError(
             "ev_hosting_flex stage 5: degenerate firm_ev_count="
             f"{firm_ev} read from firm_hosting.json for feeder {feeder_key}; the "
-            "hosting_expansion_percent denominator must be > 0. Remediation: "
-            "re-run stage 4 (compute_congestion.py / plan 09-03) so the feeder "
-            "transformer is load-aware sized to a positive firm count."
+            "hosting_expansion_percent denominator must be > 0. Remediation: re-run "
+            "stage 4 (compute_congestion.py) so the firm leg is a positive count."
         )
 
-    # ── The flexible sweep (the proven Phase-10 kernel) ──────────────────────
-    result = flexible_ev_count(
-        EV_SWEEP,
+    # ── BOTH curves over the K-axis at P95 (the manuscript _relief two-mechanism ──
+    # reduction): curtailment-lost (over-cap excess) AND deferral-lost (irreducible
+    # remainder after in-window valley-fill), each reduced over K at P95 (D-07/D-10).
+    trade_curve = _two_curve_sweep(
         base,
-        ev_unit,
-        alloc_fn,
+        ev_stack,
         indicator,
-        elem_kw,
+        feeder_row,
+        _FEEDER_TRANSFORMER_KW,
+        alloc_fn,
+        downstream_home_count,
         float(LINE_LOADING_LIMIT_PERCENT),
-        tolerance_primary=TOLERANCE_PRIMARY,
-        curtailed_fraction_max=TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX,
-        activation_hours_max=TOLERANCE_ACTIVATION_HOURS_MAX,
     )
-    flexible_ev = int(result["flexible_ev_count"])
-    trade_curve = result["trade_curve"]
+    # Curtailment-flexible: largest EV count with P95 curtailed-lost fraction < the
+    # curtailed-energy tolerance (the conservative shed-to-limit bound).
+    curtail_flexible_ev, curtail_lost_p95 = _curve_flexible(
+        trade_curve,
+        "curtailed_lost_fraction_p95",
+        float(TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX),
+    )
+    # Deferral-flexible: largest EV count with P95 irreducible-lost fraction < the
+    # irreducible-lost tolerance (the EVs-shift story; D-12).
+    defer_flexible_ev, defer_lost_p95 = _curve_flexible(
+        trade_curve,
+        "irreducible_lost_fraction_p95",
+        float(TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95),
+    )
 
-    # WR-01: the firm count is a zero-curtailment feasible passing point, so the
-    # flexible sweep must NEVER land below it. Guard BEFORE the headline division so
-    # a degenerate flexible<firm leg fails loudly + located instead of emitting a
-    # silent 0%/negative "hosting contraction" headline.
-    if flexible_ev < firm_ev:
+    # WR-01: the firm count is a feasible passing point for BOTH curves, so neither
+    # flexible count may land below it (Pitfall 5, re-expressed for both curves).
+    if curtail_flexible_ev < firm_ev:
         raise ValueError(
-            "ev_hosting_flex stage 5: flexible_ev_count="
-            f"{flexible_ev} is below firm_ev_count={firm_ev}; the firm count is a "
-            "zero-curtailment feasible point and MUST always pass the flexible "
-            "sweep. Remediation: a feasibility/tolerance-gate or cap bug dropped a "
-            "point that should pass — re-check the EV_SWEEP grid (config.py) and the "
-            "TOLERANCE_* config; do NOT relax the tolerance or change the kernel math."
+            "ev_hosting_flex stage 5: curtailment flexible_ev_count="
+            f"{curtail_flexible_ev} is below firm_ev_count={firm_ev}; the firm "
+            "count is a feasible point and MUST pass. Remediation: a feasibility/"
+            "tolerance gate or cap bug dropped a point that should pass — re-check "
+            "the sweep grid and TOLERANCE_* config; do NOT relax the tolerance."
+        )
+    if defer_flexible_ev < firm_ev:
+        raise ValueError(
+            "ev_hosting_flex stage 5: deferral flexible_ev_count="
+            f"{defer_flexible_ev} is below firm_ev_count={firm_ev}; the firm count "
+            "is a feasible point and MUST pass the deferral curve. Remediation: a "
+            "deferral / P95-gate bug dropped a point that should pass — re-check the "
+            "PLUGIN_WINDOW and TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95 config."
         )
 
-    # The FLEX-04 headline: (flexible - firm) / firm, rounded to the reproducibility
-    # decimals. firm_ev > 0 guaranteed by the guard above.
-    hosting_expansion_percent = round((flexible_ev - firm_ev) / firm_ev, ROUND_DECIMALS)
+    # Per-mechanism headline: (flexible − firm) / firm against the re-baselined firm.
+    curtail_hosting_pct = round(
+        (curtail_flexible_ev - firm_ev) / firm_ev, ROUND_DECIMALS
+    )
+    defer_hosting_pct = round((defer_flexible_ev - firm_ev) / firm_ev, ROUND_DECIMALS)
 
-    # ── Recompute the CAPPED loading at the FLEXIBLE-LIMIT state ──────────────
-    # The flexible-limit state is the largest swept passing EV count; the cap
-    # relieves every congested element to <= limit there (FLEX-01).
-    per_bus = alloc_fn(flexible_ev)
+    # ── The kept closed-form cap capped-loading parquet (FLEX-01 artifact) ──
+    # Recompute the CAPPED loading at the curtailment-flexible state on the MEAN EV
+    # unit: the kept node-level cap relieves every feeder element to <= the limit
+    # (the FLEX-01 capped-loading reference for Phase-12). The P95 curtailed-lost
+    # FRACTION (the trade-curve gate) comes from the stochastic two-curve sweep above.
+    per_bus = alloc_fn(curtail_flexible_ev / downstream_home_count)
     ev_demand = ev_unit * per_bus[:, None]
     demand = base + ev_demand
     cap = flex_curtailment(
         indicator, demand, ev_demand, elem_kw, float(LINE_LOADING_LIMIT_PERCENT)
     )
-    loading_flex, _elem_demand_flex = proxy_loading(
-        indicator, demand - cap["curtailed"], elem_kw
-    )
-
-    # Round before write so float noise < 1e-6 never reaches the comparator (D-12).
+    loading_flex, _ = proxy_loading(indicator, demand - cap["curtailed"], elem_kw)
     loading_flex_rounded = np.round(loading_flex, ROUND_DECIMALS).astype("float64")
+
+    flex_metrics_at_limit = flex_metrics(
+        cap["curtailed"],
+        ev_demand,
+        ev_demand.sum(axis=1),
+        total_annual_ev_demand=float(ev_demand.sum()),
+    )
 
     data_dir.mkdir(parents=True, exist_ok=True)
     columns = [f"h{h}" for h in range(loading_flex_rounded.shape[1])]
@@ -285,49 +469,72 @@ def derive_flexibility(
         "float64"
     ).to_parquet(loading_path)
 
-    # Per-contract metrics at the flexible-limit state (FLEX-02). The explicit
-    # per-node annual EV demand (ev_demand.sum(axis=1)) is the D-10 reconciliation
-    # `<=` upper bound.
-    flex_metrics_at_limit = flex_metrics(
-        cap["curtailed"],
-        ev_demand,
-        ev_demand.sum(axis=1),
-        total_annual_ev_demand=float(ev_demand.sum()),
-    )
-    curtailed_energy_fraction_at_flexible = flex_metrics_at_limit[
-        "curtailed_energy_fraction"
-    ]
-
-    # The tidy trade-curve series — one row per swept EV count (the schema
-    # Phase-12's trade-curve figure consumes directly, FLEX-02/03).
+    # The tidy two-curve trade-curve series — one row per swept penetration with
+    # BOTH mechanisms' P95 lost fractions (the schema Phase-12's trade-curve figure
+    # consumes directly).
     activations_path = data_dir / "contract_activations.parquet"
     pd.DataFrame(
         trade_curve,
         columns=[
+            "penetration",
             "ev_count",
-            "curtailed_energy_mwh",
-            "curtailed_energy_fraction",
-            "n_active_contracts",
-            "feasible",
-            "residual_overload_kw",
+            "curtailed_lost_fraction_p95",
+            "irreducible_lost_fraction_p95",
         ],
     ).to_parquet(activations_path)
 
-    flexible_payload = {
-        "flexible_ev_count": flexible_ev,
-        "firm_ev_count": firm_ev,
-        "hosting_expansion_percent": hosting_expansion_percent,
-        "curtailed_energy_fraction_at_flexible": (
-            curtailed_energy_fraction_at_flexible
+    curtailment_block = {
+        "mechanism": "curtailment",
+        "flexible_ev_count": curtail_flexible_ev,
+        "hosting_expansion_percent": curtail_hosting_pct,
+        "curtailed_lost_fraction_p95_at_flexible": float(
+            round(curtail_lost_p95, ROUND_DECIMALS)
         ),
-        "ev_sweep": list(result["ev_sweep"]),
-        "threshold_convention": result["threshold_convention"],
+        "tolerance_curtailed_energy_fraction_max": float(
+            TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX
+        ),
+        "capped_loading_feasible_at_flexible": bool(cap["feasible"]),
+        "capped_curtailed_energy_mwh_at_flexible": flex_metrics_at_limit[
+            "curtailed_energy_mwh"
+        ],
+    }
+    deferral_block = {
+        "mechanism": "deferral",
+        "flexible_ev_count": defer_flexible_ev,
+        "hosting_expansion_percent": defer_hosting_pct,
+        "irreducible_lost_fraction_p95_at_flexible": float(
+            round(defer_lost_p95, ROUND_DECIMALS)
+        ),
+        "tolerance_irreducible_lost_fraction_max_p95": float(
+            TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95
+        ),
+        "plugin_window": [int(h) for h in PLUGIN_WINDOW],
+    }
+
+    flexible_payload = {
+        "firm_ev_count": firm_ev,
+        "firm_penetration": firm_penetration,
+        "curtailment": curtailment_block,
+        "deferral": deferral_block,
         "feeder_key": feeder_key,
+        "feeder_transformer_modeled_kw": _FEEDER_TRANSFORMER_KW,
         "scope": "feeder_subtree",
         "n_feeder_bus": len(bus_ids),
         "n_elements": len(elements),
-        "trade_curve": trade_curve,
-        "tolerance": result["tolerance"],
+        "downstream_home_count": downstream_home_count,
+        "threshold_convention": "strict_gt_limit",
+        "trade_curve_ordering": {
+            "firm_ev_count": firm_ev,
+            "curtail_flexible_ev_count": curtail_flexible_ev,
+            "defer_flexible_ev_count": defer_flexible_ev,
+            "ordering_holds": bool(firm_ev <= curtail_flexible_ev <= defer_flexible_ev),
+        },
+        "divergence_note": (
+            "Re-baseline (D-10): BOTH flexibility curves are reported with NO single "
+            "headline mechanism — curtailment (the conservative shed-to-limit bound) "
+            "and in-window deferral (valley-fill, the EVs-shift story). The deferral "
+            "curve gates on the irreducible-lost-energy fraction at P95 < 1% (D-12)."
+        ),
     }
     flexible_path = _write_json(json_dir / "flexible_hosting.json", flexible_payload)
 
@@ -338,34 +545,20 @@ def derive_flexibility(
             flexible_path,
         ],
         "summary": {
-            "flexible_ev_count": flexible_ev,
             "firm_ev_count": firm_ev,
-            "hosting_expansion_percent": hosting_expansion_percent,
-            "curtailed_energy_fraction_at_flexible": (
-                curtailed_energy_fraction_at_flexible
-            ),
-            "curtailed_energy_mwh_at_flexible": flex_metrics_at_limit[
-                "curtailed_energy_mwh"
-            ],
-            "contract_activation_hours_at_flexible": flex_metrics_at_limit[
-                "contract_activation_hours"
-            ],
-            "n_active_contracts_at_flexible": flex_metrics_at_limit[
-                "n_active_contracts"
-            ],
-            "max_curtailment_kw_at_flexible": flex_metrics_at_limit[
-                "max_curtailment_kw"
-            ],
-            "feasible_at_flexible": bool(cap["feasible"]),
-            "residual_overload_kw_at_flexible": float(cap["residual_overload_kw"]),
+            "firm_penetration": firm_penetration,
+            "curtailment": curtailment_block,
+            "deferral": deferral_block,
+            "trade_curve_ordering": flexible_payload["trade_curve_ordering"],
             "feeder_key": feeder_key,
+            "feeder_transformer_modeled_kw": _FEEDER_TRANSFORMER_KW,
             "scope": "feeder_subtree",
             "n_feeder_bus": len(bus_ids),
             "n_elements": len(elements),
-            "threshold_convention": result["threshold_convention"],
-            "tolerance": result["tolerance"],
-            # Byte-stability tripwire over the rounded flexible loading array.
+            "downstream_home_count": downstream_home_count,
+            "threshold_convention": "strict_gt_limit",
             "flex_loading_content_sha256": _content_sha256(loading_flex_rounded),
+            "divergence_note": flexible_payload["divergence_note"],
         },
     }
 
@@ -396,15 +589,15 @@ def run_stage(
     derived = derive_flexibility(effective_cache_dir, effective_data_dir, json_dir)
     artifact_paths = derived["artifact_paths"]  # type: ignore[assignment]
     summary = derived["summary"]  # type: ignore[assignment]
+    rebaseline_note = summary["divergence_note"]  # type: ignore[index]
 
-    # WR-02: govern the headline's load-bearing upstream provenance so the Phase-12
-    # regression baseline can detect a silently-shifted headline. file_reference
-    # records each input's bytes + sha256: the firm denominator (D-11) and the two
-    # stage-3 annual profiles that wholly determine the swept result.
+    # WR-02: govern the headline's load-bearing upstream provenance (the firm
+    # denominator + the stage-3 inputs that wholly determine the swept result).
     inputs = [
         script.file_reference(json_dir / "firm_hosting.json"),
         script.file_reference(effective_data_dir / "base_load_8760.parquet"),
         script.file_reference(effective_data_dir / "ev_load_unit.parquet"),
+        script.file_reference(effective_data_dir / "ev_stack_K.npy"),
     ]
 
     return script.write_report(
@@ -412,7 +605,7 @@ def run_stage(
         inputs=inputs,
         artifacts=[script.file_reference(p) for p in artifact_paths],
         summary=summary,
-        validation={"valid": True, "errors": [], "warnings": []},
+        validation={"valid": True, "errors": [], "warnings": [rebaseline_note]},
     )
 
 
@@ -425,11 +618,15 @@ def main() -> None:
 
     report = run_stage(cache_dir=args.cache_dir, data_dir=args.data_dir)
     summary = report.get("summary", {})
+    curt = summary.get("curtailment", {})
+    defer = summary.get("deferral", {})
     print(
         "Applied flexibility contracts + report: "
-        f"flexible_ev_count={summary.get('flexible_ev_count')}, "
-        f"firm_ev_count={summary.get('firm_ev_count')}, "
-        f"hosting_expansion_percent={summary.get('hosting_expansion_percent')}"
+        f"firm_ev_count={summary.get('firm_ev_count')} | "
+        f"curtailment flexible={curt.get('flexible_ev_count')} "
+        f"(+{curt.get('hosting_expansion_percent')}) | "
+        f"deferral flexible={defer.get('flexible_ev_count')} "
+        f"(+{defer.get('hosting_expansion_percent')})"
     )
 
 

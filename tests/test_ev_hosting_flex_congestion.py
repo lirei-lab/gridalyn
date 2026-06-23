@@ -352,17 +352,18 @@ def test_proxy_loading_rejects_nonpositive_elem_kw() -> None:
         proxy_loading(indicator, demand, np.array([0.0], dtype="float64"))
 
 
-# ─── End-to-end derive_congestion binding-state metrics (09-04, GAP 2 / CR-01) ───
-# Closes the test gap that let CR-01 ship: an end-to-end derive_congestion run must
-# report NON-ZERO binding-state CONG-02 metrics + a NON-EMPTY constraint set at the
-# reported first-overload state, while keeping firm_ev_count as the unchanged headline
-# scalar strictly below the metrics ev_count.
+# ─── End-to-end derive_congestion: re-calibrated firm = P(cong)<=tol + P95 (10.1) ─
+# The re-calibrated stage 4 reduces over the K-axis to firm = P(cong) <=
+# FIRM_PCONG_TOLERANCE (D-06) and reports P95 congestion metrics (D-07), asserting
+# the selected feeder is the ~6-home small LV unit (Pitfall 4).
 
 from pathlib import Path  # noqa: E402
 
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    FIRM_PCONG_TOLERANCE,
     PROJECT_CACHE_DIR,
     PROJECT_OUTPUTS_DIR,
+    TARGET_HOMES,
 )
 from projects.ev_hosting_flex.scripts.pipeline.compute_congestion import (  # noqa: E402
     derive_congestion,
@@ -376,7 +377,11 @@ _REQUIRED_CACHE = [
     "node_building_count.json",
     "grid_cache_meta.json",
 ]
-_REQUIRED_PROFILES = ["base_load_8760.parquet", "ev_load_unit.parquet"]
+_REQUIRED_PROFILES = [
+    "base_load_8760.parquet",
+    "ev_load_unit.parquet",
+    "ev_stack_K.npy",
+]
 
 
 def _project_cache_ready() -> bool:
@@ -393,40 +398,37 @@ def _project_cache_ready() -> bool:
         "prepare_topology_cache.py + generate_annual_profiles.py first"
     ),
 )
-def test_derive_congestion_binding_state_metrics_nonzero(tmp_path: Path) -> None:
-    """End-to-end: the binding-state CONG-02 metrics + constraint set are non-zero.
+def test_derive_congestion_firm_pcong_and_p95(tmp_path: Path) -> None:
+    """End-to-end: firm = P(cong)<=tol over K + P95 metrics + ~6-home feeder.
 
-    Runs derive_congestion against the regenerated (09-03) project cache + stage-3
-    profiles into a tmp json_dir and asserts the five metrics describe the BINDING
-    (first-overload) congestion: n_congested_lines > 0, congested_line_hours > 0,
-    congested_hours_per_year > 0, peak_overload_kw > 0.0, state == "first_overload",
-    and a non-empty constraint set. firm_ev_count is the unchanged headline scalar
-    strictly below the metrics ev_count (the CR-01 test gap is closed).
+    Runs the re-calibrated derive_congestion against the regenerated project cache +
+    stage-3 TMY/stochastic profiles and asserts the probabilistic firm gate, the P95
+    headline, and the ~6-home (25/0.4 kV) feeder assertion.
     """
     derived = derive_congestion(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
     summary = derived["summary"]
 
-    # Binding-state metrics must all be strictly non-zero (the CR-01 defect made
-    # four of these zero at the firm count).
-    assert summary["n_congested_lines"] > 0, summary
-    assert summary["congested_line_hours"] > 0, summary
-    assert summary["congested_hours_per_year"] > 0, summary
-    assert summary["peak_overload_kw"] > 0.0, summary
-    assert summary["max_line_loading_percent"] > 100.0, summary
+    # The firm gate is the probabilistic P(cong) <= FIRM_PCONG_TOLERANCE crossing.
+    assert 0.0 < summary["firm_penetration"] <= 2.0, summary
+    assert summary["firm_ev_count"] > 0, summary
+    assert summary["p_cong_at_firm"] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, summary
+    assert summary["state"] == "p95_firm"
 
-    # The metrics describe the BINDING (first-overload) state, not the firm baseline.
-    assert summary["state"] == "first_overload"
-    assert summary["metrics_state"] == "first_overload"
+    # The P95 conservative headline is reported.
+    assert summary["p95_max_loading_percent"] > 0.0, summary
 
-    # The CIM constraint set built at the binding state is non-empty (D-11).
-    assert summary["constraint_set_rows"] > 0, summary
+    # The ~6-home (25/0.4 kV) feeder assertion passed against the regenerated cache.
+    feeder_assertion = summary["feeder_assertion"]
+    assert feeder_assertion["feeder_voltage_class"] == "25/0.4 kV"
+    assert abs(int(feeder_assertion["downstream_home_count"]) - int(TARGET_HOMES)) <= 3
 
-    # firm_ev_count is the UNCHANGED headline scalar, strictly below the metrics
-    # ev_count (firm baseline is non-congested by construction).
-    assert summary["firm_ev_count"] > 0
-    assert summary["firm_ev_count"] < summary["ev_count_at_metrics"]
+    # The firm_hosting.json carries the firm + p_cong vector + the feeder assertion.
+    firm_json = json.loads((tmp_path / "firm_hosting.json").read_text())
+    assert firm_json["firm_ev_count"] == summary["firm_ev_count"]
+    assert len(firm_json["p_cong"]) == len(firm_json["penetration_sweep"])
+    assert firm_json["p_cong_at_firm"] <= float(FIRM_PCONG_TOLERANCE) + 1e-9
 
-    # The metrics JSON carries exactly the five CONG-02 metric names + the labels.
+    # The metrics JSON carries the five CONG-02 metric names at the P95 state.
     metrics_json = json.loads((tmp_path / "congestion_metrics.json").read_text())
     for name in (
         "max_line_loading_percent",
@@ -436,11 +438,9 @@ def test_derive_congestion_binding_state_metrics_nonzero(tmp_path: Path) -> None
         "peak_overload_kw",
     ):
         assert name in metrics_json, metrics_json
-    assert metrics_json["state"] == "first_overload"
+    assert metrics_json["state"] == "p95_firm"
 
-    # The distinct binding-state parquet exists and its max loading exceeds the firm
-    # baseline's max (binding state is more loaded than the firm baseline).
-    binding = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_first_overload.parquet")
+    # Both loading parquets exist with matching shapes.
+    p95 = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_p95.parquet")
     firm = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_firm.parquet")
-    assert binding.shape == firm.shape
-    assert binding.values.max() > firm.values.max()
+    assert p95.shape == firm.shape

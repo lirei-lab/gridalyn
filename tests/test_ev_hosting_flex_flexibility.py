@@ -473,11 +473,11 @@ def test_flexible_ev_count_monotonicity_guard_raises() -> None:
         )
 
 
-# ─── End-to-end derive_flexibility stage (10-02, FLEX-01/02/03/04) ───────────
+# ─── End-to-end derive_flexibility: BOTH curves (10.1, RECAL-07/08, D-10) ─────
 # Runs the real stage-5 derive_flexibility against the regenerated project cache +
-# stage-3 profiles + the stage-4 firm_hosting.json, asserting the headline +
-# capped flexible loading <= the limit + a monotonic trade curve. Skipped (the
-# project cache/profiles are gitignored) when the upstream stages have not run.
+# stage-3 TMY/stochastic profiles + the stage-4 firm_hosting.json, asserting BOTH
+# flexibility curves (curtailment + in-window deferral) with per-mechanism
+# headlines, the deferral P95 gate, and the firm <= curtail <= defer ordering.
 
 import json  # noqa: E402
 import shutil  # noqa: E402
@@ -489,6 +489,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     LINE_LOADING_LIMIT_PERCENT,
     PROJECT_CACHE_DIR,
     PROJECT_OUTPUTS_DIR,
+    TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95,
 )
 from projects.ev_hosting_flex.scripts.pipeline.apply_flexibility_contracts import (  # noqa: E402
     derive_flexibility,
@@ -502,7 +503,11 @@ _REQUIRED_CACHE = [
     "feeder_selection.json",
     "node_building_count.json",
 ]
-_REQUIRED_PROFILES = ["base_load_8760.parquet", "ev_load_unit.parquet"]
+_REQUIRED_PROFILES = [
+    "base_load_8760.parquet",
+    "ev_load_unit.parquet",
+    "ev_stack_K.npy",
+]
 _REQUIRED_JSON = ["firm_hosting.json"]
 
 
@@ -523,18 +528,17 @@ def _project_cache_ready() -> bool:
         "and compute_congestion.py first"
     ),
 )
-def test_derive_flexibility_headline_and_capped_loading(tmp_path: Path) -> None:
-    """End-to-end: the headline + capped flexible loading <= limit + monotone curve.
+def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
+    """End-to-end: BOTH curves with per-mechanism headlines + the deferral P95 gate.
 
     Runs derive_flexibility against the regenerated project cache + stage-3
-    profiles + stage-4 firm_hosting.json into a tmp json_dir (seeded with a copy
-    of the real firm_hosting.json, the headline denominator) and asserts: the
-    summary carries hosting_expansion_percent and flexible_ev_count >
-    firm_ev_count (strict expansion, hosting_expansion_percent > 0); the capped
-    line_loading_flex.parquet max loading <= the limit
-    (a feasible flexible state); flexible_hosting.json carries the headline keys +
-    a trade-curve list; and the trade-curve curtailed energy is monotonic
-    non-decreasing in ev_count.
+    TMY/stochastic profiles + stage-4 firm_hosting.json into a tmp json_dir (seeded
+    with a copy of the real firm_hosting.json, the headline denominator) and
+    asserts: BOTH a curtailment and a deferral block, each with a distinct
+    flexible_ev_count + hosting_expansion_percent; the deferral curve's irreducible-
+    lost-fraction P95 < 1%; the firm <= curtail-flexible <= defer-flexible ordering;
+    the capped curtailment loading <= the limit; and the two-curve trade-curve
+    parquet.
     """
     # derive_flexibility reads firm_hosting.json from json_dir; seed the tmp dir
     # with the real stage-4 output so the run is hermetic w.r.t. its writes.
@@ -545,46 +549,51 @@ def test_derive_flexibility_headline_and_capped_loading(tmp_path: Path) -> None:
     derived = derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
     summary = derived["summary"]
 
-    assert "hosting_expansion_percent" in summary, summary
-    # Strict expansion: the recalibrated re-baseline (10-03) must demonstrate a
-    # flexible hosting limit STRICTLY above firm with a real, non-zero headline —
-    # the phase's core thesis quantified (FLEX-04 / SC4), not flexible == firm.
-    assert summary["flexible_ev_count"] > summary["firm_ev_count"], summary
-    assert summary["hosting_expansion_percent"] > 0, summary
-    assert summary["firm_ev_count"] > 0, summary
-    # The headline equals (flexible - firm) / firm.
-    expected = round(
-        (summary["flexible_ev_count"] - summary["firm_ev_count"])
-        / summary["firm_ev_count"],
-        6,
-    )
-    assert summary["hosting_expansion_percent"] == expected, summary
+    firm_ev = summary["firm_ev_count"]
+    assert firm_ev > 0, summary
 
-    # The capped flexible-limit loading is <= the limit (feasible flexible state).
+    # BOTH curve blocks, each with a distinct per-mechanism headline (D-10).
+    curt = summary["curtailment"]
+    defer = summary["deferral"]
+    assert curt["mechanism"] == "curtailment"
+    assert defer["mechanism"] == "deferral"
+    for block in (curt, defer):
+        assert "flexible_ev_count" in block
+        assert "hosting_expansion_percent" in block
+        # The per-mechanism headline equals (flexible - firm) / firm.
+        expected = round((block["flexible_ev_count"] - firm_ev) / firm_ev, 6)
+        assert block["hosting_expansion_percent"] == expected, block
+
+    # The deferral curve's irreducible-lost-fraction P95 is strictly < 1% (D-12).
+    assert defer["irreducible_lost_fraction_p95_at_flexible"] < float(
+        TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95
+    ), defer
+
+    # The trade-curve ordering holds: firm <= curtail-flexible <= defer-flexible.
+    assert firm_ev <= curt["flexible_ev_count"] <= defer["flexible_ev_count"], summary
+    assert summary["trade_curve_ordering"]["ordering_holds"] is True
+
+    # The capped curtailment loading is <= the limit (a feasible flexible state).
     loading = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_flex.parquet")
     assert (
         loading.values.max() <= float(LINE_LOADING_LIMIT_PERCENT) + 1e-6
     ), loading.values.max()
 
-    # flexible_hosting.json carries the headline keys + a trade-curve list.
+    # flexible_hosting.json carries both curve blocks.
     flexible_json = json.loads((tmp_path / "flexible_hosting.json").read_text())
-    for key in (
-        "flexible_ev_count",
-        "firm_ev_count",
-        "hosting_expansion_percent",
-        "curtailed_energy_fraction_at_flexible",
-        "trade_curve",
-    ):
-        assert key in flexible_json, flexible_json
-    assert isinstance(flexible_json["trade_curve"], list)
-    assert flexible_json["trade_curve"], flexible_json
+    assert "curtailment" in flexible_json
+    assert "deferral" in flexible_json
+    assert (
+        flexible_json["curtailment"]["flexible_ev_count"] == curt["flexible_ev_count"]
+    )
+    assert flexible_json["deferral"]["flexible_ev_count"] == defer["flexible_ev_count"]
 
-    # The trade-curve curtailed energy is monotonic non-decreasing in ev_count.
-    curve = sorted(flexible_json["trade_curve"], key=lambda r: r["ev_count"])
-    curtailed = [r["curtailed_energy_mwh"] for r in curve]
-    assert curtailed == sorted(curtailed), curtailed
-
-    # contract_activations.parquet is the tidy trade-curve series.
+    # contract_activations.parquet is the tidy two-curve trade-curve series, with
+    # both mechanisms' P95 lost fractions monotonic non-decreasing in ev_count.
     activations = pd.read_parquet(_PROJECT_DATA_DIR / "contract_activations.parquet")
     assert "ev_count" in activations.columns
-    assert "curtailed_energy_mwh" in activations.columns
+    assert "curtailed_lost_fraction_p95" in activations.columns
+    assert "irreducible_lost_fraction_p95" in activations.columns
+    curve = activations.sort_values("penetration")
+    curt_fracs = list(curve["curtailed_lost_fraction_p95"])
+    assert curt_fracs == sorted(curt_fracs), curt_fracs

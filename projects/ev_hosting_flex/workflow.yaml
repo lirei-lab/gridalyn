@@ -60,10 +60,12 @@ spec:
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/compute_congestion.py
         - projects/ev_hosting_flex/scripts/_congestion.py
+        - projects/ev_hosting_flex/scripts/_stochastic.py
         - projects/ev_hosting_flex/scripts/_profiles.py
         - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_load_8760.parquet
         - projects/ev_hosting_flex/outputs/data/ev_load_unit.parquet
+        - projects/ev_hosting_flex/outputs/data/ev_stack_K.npy
         - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
@@ -71,7 +73,7 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/grid_cache_meta.json
       outputs:
         - projects/ev_hosting_flex/outputs/data/line_loading_firm.parquet
-        - projects/ev_hosting_flex/outputs/data/line_loading_first_overload.parquet
+        - projects/ev_hosting_flex/outputs/data/line_loading_p95.parquet
         - projects/ev_hosting_flex/outputs/json/congestion_metrics.json
         - projects/ev_hosting_flex/outputs/json/firm_hosting.json
         - projects/ev_hosting_flex/outputs/reports/congestion_report.json
@@ -84,10 +86,12 @@ spec:
         - projects/ev_hosting_flex/scripts/pipeline/apply_flexibility_contracts.py
         - projects/ev_hosting_flex/scripts/_flexibility.py
         - projects/ev_hosting_flex/scripts/_congestion.py
+        - projects/ev_hosting_flex/scripts/_stochastic.py
         - projects/ev_hosting_flex/scripts/_profiles.py
         - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_load_8760.parquet
         - projects/ev_hosting_flex/outputs/data/ev_load_unit.parquet
+        - projects/ev_hosting_flex/outputs/data/ev_stack_K.npy
         - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
