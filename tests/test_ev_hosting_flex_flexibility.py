@@ -397,8 +397,9 @@ def test_derive_flexibility_headline_and_capped_loading(tmp_path: Path) -> None:
     Runs derive_flexibility against the regenerated project cache + stage-3
     profiles + stage-4 firm_hosting.json into a tmp json_dir (seeded with a copy
     of the real firm_hosting.json, the headline denominator) and asserts: the
-    summary carries hosting_expansion_percent and flexible_ev_count >=
-    firm_ev_count; the capped line_loading_flex.parquet max loading <= the limit
+    summary carries hosting_expansion_percent and flexible_ev_count >
+    firm_ev_count (strict expansion, hosting_expansion_percent > 0); the capped
+    line_loading_flex.parquet max loading <= the limit
     (a feasible flexible state); flexible_hosting.json carries the headline keys +
     a trade-curve list; and the trade-curve curtailed energy is monotonic
     non-decreasing in ev_count.
@@ -413,7 +414,11 @@ def test_derive_flexibility_headline_and_capped_loading(tmp_path: Path) -> None:
     summary = derived["summary"]
 
     assert "hosting_expansion_percent" in summary, summary
-    assert summary["flexible_ev_count"] >= summary["firm_ev_count"], summary
+    # Strict expansion: the recalibrated re-baseline (10-03) must demonstrate a
+    # flexible hosting limit STRICTLY above firm with a real, non-zero headline —
+    # the phase's core thesis quantified (FLEX-04 / SC4), not flexible == firm.
+    assert summary["flexible_ev_count"] > summary["firm_ev_count"], summary
+    assert summary["hosting_expansion_percent"] > 0, summary
     assert summary["firm_ev_count"] > 0, summary
     # The headline equals (flexible - firm) / firm.
     expected = round(
