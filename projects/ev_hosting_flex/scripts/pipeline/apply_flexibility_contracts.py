@@ -244,6 +244,20 @@ def derive_flexibility(
     flexible_ev = int(result["flexible_ev_count"])
     trade_curve = result["trade_curve"]
 
+    # WR-01: the firm count is a zero-curtailment feasible passing point, so the
+    # flexible sweep must NEVER land below it. Guard BEFORE the headline division so
+    # a degenerate flexible<firm leg fails loudly + located instead of emitting a
+    # silent 0%/negative "hosting contraction" headline.
+    if flexible_ev < firm_ev:
+        raise ValueError(
+            "ev_hosting_flex stage 5: flexible_ev_count="
+            f"{flexible_ev} is below firm_ev_count={firm_ev}; the firm count is a "
+            "zero-curtailment feasible point and MUST always pass the flexible "
+            "sweep. Remediation: a feasibility/tolerance-gate or cap bug dropped a "
+            "point that should pass — re-check the EV_SWEEP grid (config.py) and the "
+            "TOLERANCE_* config; do NOT relax the tolerance or change the kernel math."
+        )
+
     # The FLEX-04 headline: (flexible - firm) / firm, rounded to the reproducibility
     # decimals. firm_ev > 0 guaranteed by the guard above.
     hosting_expansion_percent = round((flexible_ev - firm_ev) / firm_ev, ROUND_DECIMALS)
@@ -383,8 +397,19 @@ def run_stage(
     artifact_paths = derived["artifact_paths"]  # type: ignore[assignment]
     summary = derived["summary"]  # type: ignore[assignment]
 
+    # WR-02: govern the headline's load-bearing upstream provenance so the Phase-12
+    # regression baseline can detect a silently-shifted headline. file_reference
+    # records each input's bytes + sha256: the firm denominator (D-11) and the two
+    # stage-3 annual profiles that wholly determine the swept result.
+    inputs = [
+        script.file_reference(json_dir / "firm_hosting.json"),
+        script.file_reference(effective_data_dir / "base_load_8760.parquet"),
+        script.file_reference(effective_data_dir / "ev_load_unit.parquet"),
+    ]
+
     return script.write_report(
         "flexibility_contracts_report",
+        inputs=inputs,
         artifacts=[script.file_reference(p) for p in artifact_paths],
         summary=summary,
         validation={"valid": True, "errors": [], "warnings": []},
