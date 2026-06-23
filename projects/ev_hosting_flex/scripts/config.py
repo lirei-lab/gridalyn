@@ -56,11 +56,19 @@ max-downstream-load selection with a ``(-load_kw, idx)`` tie-break."""
 # contract for the deterministic 8760h winter-peaked base building load and the
 # evening-window EV charging unit profile (D-03/D-04/D-05/D-07/D-08, Open-Q3).
 
-WINTER_PEAK_FACTOR = 1.6
+WINTER_PEAK_FACTOR = 1.2
 """Seasonal winter-peak multiplier on the base envelope (D-03). Cold-climate
 Trois-Rivieres electric-heating winters drive the heaviest residential load; the
 envelope peaks here in Jan/Dec and troughs at ``SUMMER_TROUGH_FACTOR`` in
-summer."""
+summer.
+
+Recalibrated 10-03 per CALIBRATION.md "Recommended values": per-dwelling winter
+peak 10-15 kW. At 1.2 the diversified per-home winter peak
+(10 kW nameplate x ``annual_peak_base_factor()`` ~= 1.323) lands at ~13.2 kW,
+mid-band (the prior 1.6 yielded ~17.6 kW, the verified high-end over-statement).
+This factor ALSO re-sizes the feeder transformer + interior lines via
+``annual_peak_base_factor()`` -> the firm denominator, so the topology cache must
+be regenerated for the new value to take effect."""
 
 SUMMER_TROUGH_FACTOR = 0.7
 """Seasonal summer floor of the base envelope (D-03). The seasonal multiplier
@@ -87,22 +95,44 @@ residential occupancy load."""
 
 EV_UNIT_KW = 7.2
 """Per-EV charging power in kW (D-05). A typical residential 240 V / 32 A AC
-Level-2 charger draws ~7.2 kW at full power."""
+Level-2 charger draws ~7.2 kW at full power. Kept at the L2 nameplate per
+CALIBRATION.md (the coincident draw is set via ``DIVERSITY_FACTOR``, not by
+lowering the nameplate)."""
 
-DIVERSITY_FACTOR = 0.6
+DIVERSITY_FACTOR = 0.35
 """Simultaneous-draw fraction at the evening peak (D-05, Pitfall 5). Not all EVs
-charge at once; 0.6 is the coincident fraction applied to the per-EV unit draw.
-Deliberately NOT 1.0 (over-pessimistic) and NOT negligible."""
+charge at once; this is the coincident fraction applied to the per-EV unit draw.
 
-CHARGING_WINDOW = (17, 22)
+Recalibrated 10-03 per CALIBRATION.md "Recommended values": EV coincident power
+``EV_UNIT_KW x DIVERSITY_FACTOR`` toward ~2-3 kW. At 0.35 the coincident draw is
+7.2 x 0.35 = 2.52 kW, mid-band (the prior 0.6 yielded 4.32 kW, the verified
+high-end). Canadian diversified is ~1.4 kW on large feeders, raised here for a
+small/cold 26-dwelling feeder. Deliberately NOT 1.0 (over-pessimistic) and NOT
+negligible."""
+
+CHARGING_WINDOW = (17, 20)
 """``(start_hour, end_hour)`` evening EV charging window (D-04), end-exclusive.
-Chosen to overlap the evening winter heating peak in ``DAILY_PATTERN`` so EV
-coincidence binds the firm hosting limit."""
+Chosen to overlap the evening winter heating peak in ``DAILY_PATTERN`` (the
+17:00-19:00 peak) so EV coincidence binds the firm hosting limit.
 
-EV_SWEEP = (0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200)
-"""Ascending total-feeder EV counts to sweep (D-07/D-08), integer step 20 from 0
-up past the expected firm crossing for a ~260 kW / 27-bus feeder. The swept
-variable is the TOTAL EV count on the feeder (the headline units)."""
+Recalibrated 10-03 per CALIBRATION.md "Recommended values": EV daily energy
+6-13 kWh (~2 h active, not a flat 5 h block). The 3 active hours (17,18,19) at
+2.52 kW coincident give 7.56 kWh/EV/day, mid-band (the prior (17,22) flat 5 h
+yielded 21.6 kWh, ~2x the verified Canadian session energy). The flat in-window
+shape stays seasonless (Charge-the-North validated)."""
+
+EV_SWEEP = (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34,
+            36, 38, 40, 42, 44, 46, 48, 50, 52)
+"""Ascending total-feeder EV counts to sweep (D-07/D-08), integer step 2 from 0
+to 52. The swept variable is the TOTAL EV count on the feeder (the headline
+units).
+
+Recalibrated 10-03 per CALIBRATION.md "Recommended values": cap to a plausible
+adoption (<= ~2 EV/dwelling ~= 52 on 26 dwellings) and refine the step near the
+firm-flexible crossing. Step-2 finely resolves the trade curve and brackets the
+crossing so a feasible swept point strictly above firm (and below the 1%
+curtailed-energy tolerance) is reachable; the prior step-20 grid jumped firm(20)
+straight to first-overload(40) and could land no passing point between them."""
 
 CALENDAR_HOURS = 8760
 """Non-leap hour-of-year count (Open-Q3). 365 days x 24 h; the pinned time index
