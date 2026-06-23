@@ -5,21 +5,31 @@ JSON sidecars + the stage-3 annual profile parquet (GUARD-02 — never the pickl
 net), runs the vectorized radial downstream-sum congestion proxy over the
 SELECTED feeder subtree across all 8760h (no per-hour AC solve, D-10), sweeps to
 an integer ``firm_ev_count`` with a single pinned strict-``>`` threshold (D-09),
-and emits the three named artifacts plus a governed report:
+and emits the named artifacts plus a governed report:
 
-* ``data/line_loading_firm.parquet`` — ``(n_elements, 8760)`` loading% at the firm
-  count (float64, rounded to ROUND_DECIMALS);
+* ``data/line_loading_firm.parquet`` — ``(n_elements, 8760)`` loading% at the FIRM
+  count (float64, rounded to ROUND_DECIMALS) — the firm BASELINE (non-congested by
+  construction), kept for the Phase-10/12 firm reference;
+* ``data/line_loading_first_overload.parquet`` — ``(n_elements, 8760)`` loading% at
+  the BINDING ``first_overload_ev_count`` state (float64, rounded), distinctly named
+  so it is never conflated with the firm baseline;
 * ``json/congestion_metrics.json`` — exactly the five project-local CONG-02 metrics
-  (computed from the loading array, NOT ``summarize_network_constraints``, D-11);
+  computed at the BINDING (first-overload) state (NOT at the firm count, where they
+  are vacuous by construction), plus explicit ``state`` / ``ev_count_at_metrics``
+  labels (computed from the loading array, NOT ``summarize_network_constraints``, D-11);
 * ``json/firm_hosting.json`` — ``firm_ev_count``, ``first_overload_ev_count``, the
-  swept grid, the threshold convention, and the pinned feeder-subtree scope;
+  swept grid, the threshold convention, the pinned feeder-subtree scope, and a
+  ``metrics_state`` / ``metrics_ev_count`` cross-reference recording WHERE the
+  metrics were taken (no semantic change to ``firm_ev_count``);
 * ``reports/congestion_report.json`` — canonical platform report via
   ``script.write_report`` (GOV-02; never hand-written report JSON).
 
-The CIM-typed congestion constraint *set* is built by reusing
-``gridalyn.operations.build_network_constraint_set`` over the firm-count overload
-element-hours (D-11); its row count is recorded alongside the metrics, but the
-five HEADLINE metrics are computed project-local in ``_congestion.py``.
+The five HEADLINE metrics AND the CIM-typed congestion constraint *set* (reusing
+``gridalyn.operations.build_network_constraint_set``, D-11) are computed at the
+BINDING ``first_overload_ev_count`` state — the state where ``is_congested`` is
+actually true — so the four binding metrics + the constraint set are meaningful for
+any correct firm count. ``firm_ev_count`` stays the unchanged headline scalar
+(D-08/D-09); ``line_loading_firm.parquet`` keeps its firm-baseline semantics.
 
 Pitfall 1 (T-09-05): before the proxy, assert ``grid_cache_meta.json`` shows
 ``lines.sizing.mode == "load_aware"`` and the runtime feeder key is present in
@@ -170,13 +180,15 @@ def _read_profile(parquet_path: Path, bus_ids: list[int]) -> np.ndarray:
 def derive_congestion(
     cache_dir: Path, data_dir: Path, json_dir: Path
 ) -> dict[str, object]:
-    """Derive + persist the firm-count loading, the five metrics, and the sweep.
+    """Derive + persist the firm baseline, the binding-state metrics, and the sweep.
 
     Reads the cache sidecars + stage-3 profiles (pandapower-free), validates the
     load-aware cache + runtime feeder key (Pitfall 1), builds the feeder-subtree
-    proxy, sweeps to ``firm_ev_count``, recomputes loading at the firm count,
-    computes the five CONG-02 metrics, reuses ``build_network_constraint_set`` for
-    the CIM constraint set, and writes the parquet + two JSON artifacts.
+    proxy, sweeps to ``firm_ev_count``, recomputes loading at BOTH the firm count
+    (the firm baseline) and the binding ``first_overload_ev_count`` state, computes
+    the five CONG-02 metrics + reuses ``build_network_constraint_set`` AT THE BINDING
+    STATE (so they are non-vacuous for any correct firm count), and writes the two
+    loading parquets + two JSON artifacts.
 
     Args:
         cache_dir: Directory holding the stage-2 cache sidecars.
@@ -258,19 +270,43 @@ def derive_congestion(
             "config.py."
         )
 
-    # Recompute the loading at the firm count for the artifacts + metrics.
-    per_bus = alloc_fn(int(sweep["firm_ev_count"]))
-    demand = base + ev_unit * per_bus[:, None]
-    loading_firm, elem_demand_firm = proxy_loading(indicator, demand, elem_kw)
+    # ── Firm BASELINE loading (kept for Phase-10/12; non-congested by design) ──
+    # Recompute loading at the firm count — this is the firm baseline, NOT where the
+    # metrics are taken. line_loading_firm.parquet keeps these semantics unchanged.
+    per_bus_firm = alloc_fn(int(sweep["firm_ev_count"]))
+    demand_firm = base + ev_unit * per_bus_firm[:, None]
+    loading_firm, _elem_demand_firm = proxy_loading(indicator, demand_firm, elem_kw)
 
-    metrics = congestion_metrics(
-        loading_firm, elem_demand_firm, elem_kw, float(LINE_LOADING_LIMIT_PERCENT)
+    # ── BINDING (first-overload) state — where the metrics + constraint set live ──
+    # firm_ev_count is by construction the last ZERO-overload count, so
+    # is_congested(loading_firm) is all-False and the four binding metrics + the CIM
+    # set would be vacuous (the CR-01 defect). Compute them at first_overload_ev_count
+    # (the binding state) instead. report_ct falls back to max(EV_SWEEP) only if the
+    # sweep saw no overload — still a defined, non-firm state.
+    report_ct = sweep["first_overload_ev_count"]
+    if report_ct is None:
+        report_ct = max(EV_SWEEP)
+    report_ct = int(report_ct)
+
+    per_bus_overload = alloc_fn(report_ct)
+    demand_overload = base + ev_unit * per_bus_overload[:, None]
+    loading_overload, elem_demand_overload = proxy_loading(
+        indicator, demand_overload, elem_kw
     )
 
-    # Build the CIM-typed constraint SET from the firm-count overload element-hours
-    # (D-11). The five headline metrics above come from congestion_metrics, NOT
-    # summarize_network_constraints.
-    congested = is_congested(loading_firm)
+    # The five CONG-02 metrics at the BINDING state.
+    metrics = congestion_metrics(
+        loading_overload,
+        elem_demand_overload,
+        elem_kw,
+        float(LINE_LOADING_LIMIT_PERCENT),
+    )
+
+    # Build the CIM-typed constraint SET from the BINDING-state overload element-hours
+    # (D-11). Round the row floats to ROUND_DECIMALS so they agree with the rounded
+    # binding parquet (WR-04). scenario_id="first_overload" so the CIM set is not
+    # mislabelled as the firm baseline.
+    congested = is_congested(loading_overload)
     rows: list[dict[str, object]] = []
     for ei in range(len(elements)):
         for h in np.nonzero(congested[ei])[0]:
@@ -278,29 +314,51 @@ def derive_congestion(
                 {
                     "timestep": int(h),
                     "constraint_id": elements[ei],
-                    "required_kw": float(elem_demand_firm[ei, h] - elem_kw[ei]),
+                    "required_kw": round(
+                        float(elem_demand_overload[ei, h] - elem_kw[ei]),
+                        ROUND_DECIMALS,
+                    ),
                     "limit_percent": float(LINE_LOADING_LIMIT_PERCENT),
-                    "loading_percent": float(loading_firm[ei, h]),
-                    "overload_pctpt": float(
-                        loading_firm[ei, h] - LINE_LOADING_LIMIT_PERCENT
+                    "loading_percent": round(
+                        float(loading_overload[ei, h]), ROUND_DECIMALS
+                    ),
+                    "overload_pctpt": round(
+                        float(loading_overload[ei, h] - LINE_LOADING_LIMIT_PERCENT),
+                        ROUND_DECIMALS,
                     ),
                 }
             )
     constraint_set = build_network_constraint_set(
-        pd.DataFrame(rows), scenario_id="firm_baseline"
+        pd.DataFrame(rows), scenario_id="first_overload"
     )
 
     # Round before write so float noise < 1e-6 never reaches the comparator (D-12).
-    loading_rounded = np.round(loading_firm, ROUND_DECIMALS).astype("float64")
+    loading_firm_rounded = np.round(loading_firm, ROUND_DECIMALS).astype("float64")
+    loading_overload_rounded = np.round(loading_overload, ROUND_DECIMALS).astype(
+        "float64"
+    )
 
     data_dir.mkdir(parents=True, exist_ok=True)
-    columns = [f"h{h}" for h in range(loading_rounded.shape[1])]
+    columns = [f"h{h}" for h in range(loading_firm_rounded.shape[1])]
+    # Firm baseline (unchanged semantics for Phase 10/12).
     loading_path = data_dir / "line_loading_firm.parquet"
-    pd.DataFrame(loading_rounded, index=elements, columns=columns).astype(
+    pd.DataFrame(loading_firm_rounded, index=elements, columns=columns).astype(
         "float64"
     ).to_parquet(loading_path)
+    # Binding (first-overload) state — distinctly named so it is never conflated.
+    binding_path = data_dir / "line_loading_first_overload.parquet"
+    pd.DataFrame(loading_overload_rounded, index=elements, columns=columns).astype(
+        "float64"
+    ).to_parquet(binding_path)
 
-    metrics_path = _write_json(json_dir / "congestion_metrics.json", metrics)
+    # Metrics carry the five CONG-02 keys PLUS explicit state labels (the five metric
+    # NAMES are unchanged; the labels sit alongside them).
+    metrics_payload = {
+        **metrics,
+        "state": "first_overload",
+        "ev_count_at_metrics": report_ct,
+    }
+    metrics_path = _write_json(json_dir / "congestion_metrics.json", metrics_payload)
     firm_payload = {
         "firm_ev_count": int(sweep["firm_ev_count"]),
         "first_overload_ev_count": sweep["first_overload_ev_count"],
@@ -311,21 +369,33 @@ def derive_congestion(
         "n_feeder_bus": len(bus_ids),
         "n_elements": len(elements),
         "constraint_set_rows": int(len(constraint_set)),
+        # Cross-reference recording WHERE the metrics were taken (no semantic change
+        # to firm_ev_count).
+        "metrics_state": "first_overload",
+        "metrics_ev_count": report_ct,
     }
     firm_path = _write_json(json_dir / "firm_hosting.json", firm_payload)
 
     return {
-        "artifact_paths": [loading_path, metrics_path, firm_path],
+        "artifact_paths": [loading_path, binding_path, metrics_path, firm_path],
         "summary": {
             **metrics,
+            "state": "first_overload",
+            "ev_count_at_metrics": report_ct,
             "firm_ev_count": int(sweep["firm_ev_count"]),
             "first_overload_ev_count": sweep["first_overload_ev_count"],
+            "metrics_state": "first_overload",
+            "metrics_ev_count": report_ct,
             "feeder_key": feeder_key,
             "scope": "feeder_subtree",
             "n_feeder_bus": len(bus_ids),
             "n_elements": len(elements),
             "constraint_set_rows": int(len(constraint_set)),
-            "loading_content_sha256": _content_sha256(loading_rounded),
+            # Byte-stability tripwire over BOTH rounded loading arrays.
+            "loading_content_sha256": _content_sha256(loading_firm_rounded),
+            "binding_loading_content_sha256": _content_sha256(
+                loading_overload_rounded
+            ),
         },
     }
 

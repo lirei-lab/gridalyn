@@ -68,6 +68,7 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/grid_cache_meta.json
       outputs:
         - projects/ev_hosting_flex/outputs/data/line_loading_firm.parquet
+        - projects/ev_hosting_flex/outputs/data/line_loading_first_overload.parquet
         - projects/ev_hosting_flex/outputs/json/congestion_metrics.json
         - projects/ev_hosting_flex/outputs/json/firm_hosting.json
         - projects/ev_hosting_flex/outputs/reports/congestion_report.json

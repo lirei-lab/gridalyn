@@ -37,21 +37,27 @@ from projects.ev_hosting_flex.scripts.config import (
 )
 
 
-def is_congested(loading_pct: np.ndarray) -> np.ndarray:
+def is_congested(
+    loading_pct: np.ndarray,
+    limit: float = float(LINE_LOADING_LIMIT_PERCENT),
+) -> np.ndarray:
     """Return the boolean congestion mask under the strict-``>`` convention.
 
-    The SINGLE source of truth for the ``>`` vs ``>=`` threshold (D-09): an
-    element-hour is congested iff its loading% strictly EXCEEDS
-    ``LINE_LOADING_LIMIT_PERCENT``. A value sitting exactly at the limit (e.g.
-    100.0) is NOT congested. No epsilon.
+    The SINGLE source of truth for the ``>`` vs ``>=`` threshold (D-09, WR-03): an
+    element-hour is congested iff its loading% strictly EXCEEDS ``limit`` (defaulting
+    to ``LINE_LOADING_LIMIT_PERCENT``). A value sitting exactly at the limit (e.g.
+    100.0) is NOT congested. No epsilon. ``congestion_metrics`` and ``firm_ev_count``
+    route their threshold comparison through THIS helper so the convention lives in
+    exactly one place.
 
     Args:
         loading_pct: Float64 loading-percent array of any shape.
+        limit: The loading-percent congestion limit (strict ``>``).
 
     Returns:
         A boolean ``numpy`` array, same shape as ``loading_pct``.
     """
-    return loading_pct > float(LINE_LOADING_LIMIT_PERCENT)
+    return loading_pct > float(limit)
 
 
 def feeder_elements(
@@ -192,7 +198,7 @@ def congestion_metrics(
             "transformer + interior lines from downstream_bus_map.json."
         )
     elem_kw = np.asarray(elem_kw, dtype=DTYPE)
-    congested = loading_pct > limit
+    congested = is_congested(loading_pct, limit)
     overload_kw = np.where(congested, elem_demand - elem_kw[:, None], 0.0)
     metrics: dict[str, Any] = {
         "max_line_loading_percent": float(round(float(loading_pct.max()), ROUND_DECIMALS)),
@@ -245,7 +251,7 @@ def firm_ev_count(
         per_bus_ev = np.asarray(alloc_fn(int(total_ev)), dtype=DTYPE)
         demand = base + ev_unit * per_bus_ev[:, None]
         loading, _ = proxy_loading(indicator, demand, elem_kw)
-        if is_congested(loading).any():
+        if is_congested(loading, limit).any():
             first_overload = int(total_ev)
             break
         firm = int(total_ev)
