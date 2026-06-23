@@ -57,7 +57,14 @@ max-downstream-load selection with a ``(-load_kw, idx)`` tie-break."""
 # evening-window EV charging unit profile (D-03/D-04/D-05/D-07/D-08, Open-Q3).
 
 WINTER_PEAK_FACTOR = 1.2
-"""Seasonal winter-peak multiplier on the base envelope (D-03). Cold-climate
+"""DEPRECATED (D-14): superseded by the TMY heating-degree base (see the
+Phase-10.1 appended block: ``T_BALANCE`` / ``R_THERM`` / ``BG_KW`` +
+``TMY_INPUT_PATH``). Value left unedited (Pitfall 6) — no longer the base-load
+driver; retained only so the legacy ``_profiles`` winter envelope and the
+``annual_peak_base_factor`` transformer/line subtree sizing path stay importable
+and byte-identical until Plan 03/04 fully retires them.
+
+Seasonal winter-peak multiplier on the base envelope (D-03). Cold-climate
 Trois-Rivieres electric-heating winters drive the heaviest residential load; the
 envelope peaks here in Jan/Dec and troughs at ``SUMMER_TROUGH_FACTOR`` in
 summer.
@@ -71,7 +78,10 @@ This factor ALSO re-sizes the feeder transformer + interior lines via
 be regenerated for the new value to take effect."""
 
 SUMMER_TROUGH_FACTOR = 0.7
-"""Seasonal summer floor of the base envelope (D-03). The seasonal multiplier
+"""DEPRECATED (D-14): superseded by the TMY heating-degree base. Value left
+unedited (Pitfall 6).
+
+Seasonal summer floor of the base envelope (D-03). The seasonal multiplier
 interpolates between this trough (Jul) and ``WINTER_PEAK_FACTOR`` (Jan/Dec) so
 winter > summer at every hour-of-day."""
 
@@ -81,7 +91,10 @@ DAILY_PATTERN = (
     0.65, 0.64, 0.65, 0.70, 0.82, 1.00,  # 12:00-17:00 building toward peak
     1.05, 1.00, 0.92, 0.80, 0.68, 0.60,  # 18:00-23:00 evening heating peak
 )
-"""24-hour-of-day shape coefficients (D-03), index = ``hour_of_year % 24``. The
+"""DEPRECATED (D-14): superseded by the TMY heating-degree base. Value left
+unedited (Pitfall 6).
+
+24-hour-of-day shape coefficients (D-03), index = ``hour_of_year % 24``. The
 evening heating peak (~17:00-21:00) coincides with the EV ``CHARGING_WINDOW`` so
 EV coincidence stresses the same hours as the base peak (the firm-limit driver).
 """
@@ -89,7 +102,10 @@ EV coincidence stresses the same hours as the base peak (the firm-limit driver).
 WEEKLY_PATTERN = (
     1.00, 0.99, 0.99, 0.99, 1.00, 1.04, 1.05,
 )
-"""7-day-of-week shape coefficients (D-03), Mon=0 .. Sun=6, indexed by weekday
+"""DEPRECATED (D-14): superseded by the TMY heating-degree base. Value left
+unedited (Pitfall 6).
+
+7-day-of-week shape coefficients (D-03), Mon=0 .. Sun=6, indexed by weekday
 derived from ``CALENDAR_START_WEEKDAY``. Weekends carry slightly higher
 residential occupancy load."""
 
@@ -185,3 +201,168 @@ TOLERANCE_PRIMARY = "curtailed_energy_fraction"
 """Active acceptability-criterion selector (D-06): the only accepted values are
 ``"curtailed_energy_fraction"`` (the default primary strict-``<`` gate) and
 ``"activation_hours"`` (the secondary ``<=`` gate)."""
+
+# ─── Phase-10.1 (RECAL-01/02/09): HQ-transformer + TMY + stochastic-EV block ──
+# APPENDED below the locked constants (do NOT edit any constant above). This is
+# the unit-of-congestion + input + stochastic-model spine every Phase-10.1 plan
+# consumes (D-01..D-12). It re-points the study from the 26-dwelling aggregated
+# subtree to a small HQ residential LV transformer, drives the base from the
+# committed Trois-Rivieres TMY (heating-degree model), and pins the calibrated
+# stochastic-EV generative knobs (charger mix, lognormal session energy, evening
+# arrivals, plug-in probability). The four deterministic-base constants above are
+# now deprecated per D-14 (banner in each docstring); values retained byte-unchanged.
+
+TMY_INPUT_PATH = PROJECT_ROOT / "inputs" / "tmy_trois_rivieres.csv"
+"""Committed project-local TMY (D-09). PVGIS SARAH-3 Trois-Rivieres copy of the
+verified ``flexibility_cls`` TMY, given independent provenance for a
+self-contained governed study. Network-free: the heating-degree base reads
+``temp_air`` from THIS file — never ``download_tmy()`` / weather source
+``"auto"`` (REPRO guard inherited)."""
+
+# ─── HQ residential LV-transformer sizing (D-01/D-03/D-04) ───────────────
+
+TRANSFORMER_KVA = 75.0
+"""Modeled nameplate rating (kVA) of the small HQ residential LV transformer that
+is now the unit of congestion (D-01).
+
+DEVIATION (checkpoint resolution, 10.1-01): the plan's original must_have framed
+this unit as "~50 kVA". The Task-1 twin-inventory probe (``--force-rebuild``)
+proved the regenerated twin has NO ~50 kVA MV/LV transformer — every (25/0.4 kV)
+unit is a uniform physical 0.21 MVA (210 kVA) nameplate, and the closest-to-6
+downstream-home unit is ``trafo_idx=62`` with 7 homes. Per the user's decision we
+do NOT pin 50 kVA and do NOT block; instead we model a slightly larger,
+appropriate HQ residential rating and pick the smallest standard size in
+{75, 100} kVA that makes the transformer a *meaningful* unit of congestion.
+
+Evidence-based pick = 75 kVA (PF=0.95 → 71.25 kW usable; UTIL=0.8 → 57 kW
+winter-peak target). For the selected ``trafo_idx=62`` (7 homes) at
+``ADMD_KW=6.5``: diversified base/no-EV peak ≈ 7 × 6.5 = 45.5 kW.
+  (a) Not congested at K=0 / zero EVs: 45.5 / 71.25 ≈ 64% loading — comfortably
+      below the 100% thermal limit (and near the 80% UTIL design target).
+  (b) Congests INSIDE the ``PENETRATION_SWEEP``: EV coincident draw ≈ 2.5 kW/EV
+      (CALIBRATION.md §3/§5: ~1.4–2.0 kW on large feeders, higher small/cold). At
+      ~1 EV/home (7 EVs): 45.5 + 7 × 2.5 ≈ 63 kW → 63 / 71.25 ≈ 88%, crossing the
+      congestion threshold around the manuscript's ~1 EV/home headline.
+100 kVA was rejected: at 7 EVs it sits at 63 / 95 ≈ 66% and only reaches the
+limit near ~2 EV/home (the top of the sweep), making the transformer a far less
+meaningful unit of congestion. This rating is DECOUPLED from the twin's physical
+210 kVA nameplate (D-02): congestion keys off this modeled rating + downstream
+demand, NOT ``net.trafo.sn_mva``; the twin / topology cache / net stay physically
+intact."""
+
+ADMD_KW = 6.5
+"""After-diversity max demand per all-electric home (kW), small group (D-04).
+
+CALIBRATION.md derivation: per-dwelling installed ~13 kW baseboard nameplate ×
+instantaneous thermostat diversity ≈ 0.5 → ~6.5 kW after-diversity coincident for
+a small group of all-electric homes (CALIBRATION.md §1/§2; band 10–15 kW
+nameplate). Cross-checked against the design-cold heating-degree path below:
+``(T_BALANCE − (−25)) / R_THERM + BG_KW ≈ (18 − (−25)) / 8.1 + 1.2 ≈ 5.3 + 1.2 ≈
+6.5 kW/home`` — the two derivations agree. Reconciled to the manuscript's
+6.5 kW/home anchor (D-04)."""
+
+UTIL = 0.8
+"""Winter-peak base utilization target on ``TRANSFORMER_KVA`` (manuscript KNOB,
+mirrors ``TRANSFORMER_UTILIZATION_MARGIN``). The diversified winter base loads the
+modeled transformer to ~80% of its usable kW at the cold-evening peak, reserving
+CLPU headroom (CALIBRATION.md §4: 0.8 is the defensible HQ value)."""
+
+TARGET_HOMES = 6
+"""Manuscript-intent target downstream-home count for feeder re-pointing (D-03).
+
+``select_feeder`` ranks the MV/LV (25/0.4 kV) transformers by
+``abs(downstream_home_count − TARGET_HOMES)`` ascending and picks the closest
+(Option C, robust to twin regeneration). In the current twin the closest unit is
+``trafo_idx=62`` with 7 homes (none reaches exactly 6; candidates: idx 62 → 7,
+idx 43/46/188 → 8). The modeled ``_homes = round(UTIL·TRANSFORMER_KVA·PF/ADMD)``
+relationship from the standalone manuscript MC is DECOUPLED here: the physical
+downstream home count (7) comes from the twin, not the formula (which at 75 kVA
+would yield ~9). Congestion is computed on the twin's real 7-home subtree."""
+
+# ─── Stochastic-EV generative model (D-05, manuscript-calibrated) ────────
+
+CHARGER_MIX = {7.2: 0.75, 9.6: 0.20, 11.5: 0.05}
+"""Quebec residential charger-power mix (kW → share), manuscript-calibrated:
+7.2 kW L2 dominant, 9.6 kW minority, 11.5 kW a small stress fraction. Shares sum
+to 1.0; sampled per EV in the stochastic generative model (Plan 02)."""
+
+EV_KWH_MEDIAN = 8.0
+"""Lognormal median daily EV charging energy (kWh) (manuscript KNOB). Mid of the
+CALIBRATION.md §5 Canadian 6–13 kWh/session band."""
+
+EV_KWH_SIGMA = 0.5
+"""Lognormal sigma (log-space) of daily EV charging energy (manuscript KNOB)."""
+
+EV_KWH_MIN = 1.0
+"""Floor (kWh) clipping the sampled daily EV charging energy (manuscript KNOB)."""
+
+PLUGIN_PROB = 0.65
+"""Probability an EV charges on a given evening (manuscript KNOB). CALIBRATION.md
+§5: EVs are plugged ~11 h but drawing only ~2 h, and not every evening."""
+
+ARRIVAL_MEAN_H = 18.0
+"""Mean evening EV arrival hour (manuscript KNOB). CALIBRATION.md §5: residential
+charging peaks 15:00–24:00 ("EV duck curve"), overlapping the heating peak."""
+
+ARRIVAL_STD_H = 1.5
+"""Std-dev (hours) of the Gaussian EV arrival time (manuscript KNOB)."""
+
+ARRIVAL_CLIP = (16.0, 22.0)
+"""``(min, max)`` clip on the sampled EV arrival hour (manuscript KNOB)."""
+
+# ─── TMY heating-degree base (D-08, manuscript-calibrated) ───────────────
+
+T_BALANCE = 18.0
+"""Heating balance point (degC) of the heating-degree base model (D-08). Per-home
+heating load = ``max(0, T_BALANCE − T_out) / R_THERM`` (+ background). Manuscript
+anchor, reconciled to CALIBRATION.md §2."""
+
+R_THERM = 8.1
+"""Per-home thermal envelope resistance (degC/kW) (D-08). Design-cold check:
+``(18 − (−25)) / 8.1 ≈ 5.3 kW`` heating + ``BG_KW`` ≈ 6.5 kW/home, matching
+``ADMD_KW`` and CALIBRATION.md §2 (~6 kW heat at −25 degC + ~1.5 kW background)."""
+
+BG_KW = 1.2
+"""Per-home non-heating background load (kW), occupancy-shaped (D-08). Manuscript
+anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
+
+PLUGIN_WINDOW = (18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7)
+"""Hours an EV is physically present and may host deferred energy (D-11). The
+wrap-midnight ~18:00 arrival → ~07:00 departure plug-in window (~11 h plugged vs
+~2 h charging, CALIBRATION.md §5). Deferral (valley-fill) may only re-place EV
+energy in hours inside this set — NOT a fixed off-peak ``[22..6]`` block (which
+ignores early departures, D-11)."""
+
+# ─── Monte-Carlo + penetration sweep (D-05/D-07, discretion) ─────────────
+
+K = 1000
+"""Monte-Carlo realizations per penetration point (D-05, Claude's discretion;
+manuscript used 1500–2000). Default 1000 — the smallest K targeted to keep P95
+stable to the Phase-12 1e-6 baseline while staying fast over 8760 h. Part of the
+reproducibility contract with ``SEED`` (D-13); revisit in Plan 02 if P95 drifts."""
+
+PENETRATION_SWEEP = (
+    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+    1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0,
+)
+"""EV-per-home penetration grid (0 → 2.0) swept on the small LV transformer
+(D-07, discretion). Supersedes the Phase-9 integer ``EV_SWEEP`` (a total-feeder
+count on 26 dwellings). The headline is also expressed as an EV count
+(``round(penetration × downstream_home_count)``). Step 0.1 finely brackets the
+firm/flexible crossing near the manuscript's ~1 EV/home congestion onset."""
+
+# ─── Re-calibrated firm / flexible acceptability gates (D-06/D-12) ───────
+
+FIRM_PCONG_TOLERANCE = 0.10
+"""Firm-leg congestion-probability tolerance (D-06). ``firm`` = the largest
+adoption whose ``P(congestion) ≤ 10%`` (probability of ANY hour exceeding the
+LV-transformer rating over the K realizations). Replaces the Phase-9 CONG-03
+"zero overloads at any hour" definition, which collapses to ~0 under the
+cold-evening tail. Mirrors the existing ``TOLERANCE_*`` style."""
+
+TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95 = 0.01
+"""Flexible-leg (deferral) acceptability gate (D-12, FLEX-03 successor). The
+irreducible-lost-energy fraction — energy that fits in NEITHER the congested hour
+NOR any in-window valley (the ``remaining`` after valley-fill deferral) divided by
+annual EV demand — must be strict-``<`` 1% at P95 for a swept point to pass. The
+curtailment curve keeps its own ``TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX``."""
