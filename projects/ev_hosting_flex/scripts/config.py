@@ -113,3 +113,23 @@ CALENDAR_START_WEEKDAY = 0
 season->hour mapping is deterministic: day-of-year = ``hour_of_year // 24``,
 weekday = ``(day_of_year + CALENDAR_START_WEEKDAY) % 7``; winter (Jan/Dec) sits
 at the low/high day-of-year ends, summer (Jul) near day 180."""
+
+# ─── 09-03 (GAP 1): project-local feeder-transformer sizing margin ──────
+# APPENDED below the locked Phase-9 envelope contract (do NOT edit any constant
+# above). Closes GAP 1 / CONG-03: the deterministically-selected feeder
+# transformer is project-locally load-aware sized to its annual winter-peak
+# downstream base demand, instead of the fixed 0.21 MVA SDK std_type.
+
+TRANSFORMER_UTILIZATION_MARGIN = 0.8
+"""Headroom margin the selected feeder transformer is load-aware sized to (09-03).
+
+Mirrors the line-sizing precedent in
+``gridalyn/simulation/simulators/powerflow/line_sizing_select.py`` (required
+rating = design load / ``utilization_margin`` reserves headroom at margin 0.8).
+The D-08 calibration target follows directly: with the feeder transformer sized
+to ``peak_downstream_base_kW / 0.8``, the binding feeder element sits at or below
+~80% loading at 0 EVs, so ``firm_ev_count`` is a positive, non-degenerate
+denominator before Phase 10 builds the flexible leg. ONLY the selected feeder
+transformer is resized (project-local in ``_topology.py`` /
+``prepare_topology_cache.py``); the SDK transformer builder and the shared
+``configs/grid/config.json`` stay byte-identical (LINESIZE-01)."""
