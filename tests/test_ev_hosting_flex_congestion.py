@@ -22,6 +22,7 @@ from projects.ev_hosting_flex.scripts._congestion import (
     downstream_indicator,
     feeder_elements,
     firm_ev_count,
+    firm_pcong_count,
     is_congested,
     proxy_loading,
 )
@@ -34,8 +35,8 @@ _ELEM_KW = np.array([100.0, 50.0, 200.0], dtype="float64")
 # elem_demand[ei, h] in kW.
 _ELEM_DEMAND = np.array(
     [
-        [100.0, 110.0, 90.0, 120.0],   # loading 100,110, 90,120 -> congested h1,h3
-        [40.0, 55.0, 60.0, 30.0],      # loading  80,110,120, 60 -> congested h1,h2
+        [100.0, 110.0, 90.0, 120.0],  # loading 100,110, 90,120 -> congested h1,h3
+        [40.0, 55.0, 60.0, 30.0],  # loading  80,110,120, 60 -> congested h1,h2
         [180.0, 200.0, 150.0, 210.0],  # loading  90,100, 75,105 -> congested h3 only
     ],
     dtype="float64",
@@ -73,10 +74,10 @@ def test_congestion_metrics_hand_computed() -> None:
         "peak_overload_kw",
     }
     assert metrics["max_line_loading_percent"] == 120.0
-    assert metrics["n_congested_lines"] == 3        # all three elements ever congested
-    assert metrics["congested_line_hours"] == 5     # 2 + 2 + 1 events
+    assert metrics["n_congested_lines"] == 3  # all three elements ever congested
+    assert metrics["congested_line_hours"] == 5  # 2 + 2 + 1 events
     assert metrics["congested_hours_per_year"] == 3  # hours {1, 2, 3}
-    assert metrics["peak_overload_kw"] == 20.0      # elem0 h3: 120 - 100
+    assert metrics["peak_overload_kw"] == 20.0  # elem0 h3: 120 - 100
     # Plain Python int/float for the regression numeric branch.
     assert isinstance(metrics["n_congested_lines"], int)
     assert isinstance(metrics["max_line_loading_percent"], float)
@@ -99,19 +100,17 @@ def test_proxy_loading_matches_manual_matmul() -> None:
     assert str(elem_demand.dtype) == "float64"
     # elem0 demand = bus0+bus1 = [15,25,35]; elem1 = bus1 = [5,5,5]
     np.testing.assert_allclose(elem_demand, [[15.0, 25.0, 35.0], [5.0, 5.0, 5.0]])
-    np.testing.assert_allclose(
-        loading, [[30.0, 50.0, 70.0], [50.0, 50.0, 50.0]]
-    )
+    np.testing.assert_allclose(loading, [[30.0, 50.0, 70.0], [50.0, 50.0, 50.0]])
 
 
 def test_feeder_elements_subtree_scope() -> None:
     """feeder_elements returns the transformer + interior lines, sorted (D-A2)."""
     downstream = {
-        "transformer:7": [3, 1, 2],     # feeder subtree buses
-        "line:5": [1, 2],               # interior (subset of feeder buses)
-        "line:2": [2],                  # interior
-        "line:9": [1, 2, 99],           # NOT a subset -> excluded
-        "transformer:1": [50, 60],      # other feeder -> excluded
+        "transformer:7": [3, 1, 2],  # feeder subtree buses
+        "line:5": [1, 2],  # interior (subset of feeder buses)
+        "line:2": [2],  # interior
+        "line:9": [1, 2, 99],  # NOT a subset -> excluded
+        "transformer:1": [50, 60],  # other feeder -> excluded
     }
     elements, feeder_buses = feeder_elements(downstream, "transformer:7")
     assert feeder_buses == [1, 2, 3]
@@ -185,6 +184,153 @@ def test_firm_ev_count_no_overload_returns_last() -> None:
     )
     assert result["firm_ev_count"] == 20
     assert result["first_overload_ev_count"] is None
+
+
+# ─── firm_pcong_count: P(cong) <= 10% over K (D-06), via the kept proxy ───────
+# Hand-built single-element / single-bus fixture so P(cong) at each penetration is
+# an exactly-countable k/K, and the firm crossing is a hand-computed linear interp.
+#
+# One element (kW=100) over one bus. base = 80 (flat). alloc_fn returns the
+# penetration verbatim as the single-bus EV count. ev_stack[k] is a per-realization
+# 1-kW-per-EV unit shape, but with exactly ``k`` of the K realizations carrying a
+# +EPS spike that tips an at-limit hour OVER the limit, so the count of congesting
+# realizations at a given penetration is controllable.
+
+_FP_LIMIT = 100.0
+_FP_INDICATOR = np.array([[1.0]], dtype="float64")
+_FP_ELEM_KW = np.array([100.0], dtype="float64")
+_FP_BASE = np.full((1, 4), 80.0, dtype="float64")
+
+
+def _fp_alloc(pen: float) -> np.ndarray:
+    """Return the single-bus EV allocation = penetration verbatim."""
+    return np.array([float(pen)], dtype="float64")
+
+
+def _fp_ev_stack(k: int, congest_count: int) -> np.ndarray:
+    """Build a (k, 1, 4) EV unit stack where ``congest_count`` realizations spike.
+
+    Every realization carries a flat 1 kW/EV unit demand. The first
+    ``congest_count`` realizations additionally carry a +1e-3 kW spike at hour 0 so
+    that, once the demand reaches exactly the limit, those (and only those)
+    realizations strictly exceed it (strict-> reuse). The remaining realizations sit
+    at-or-below the limit at the same penetration.
+    """
+    stack = np.ones((k, 1, 4), dtype="float64")
+    for kk in range(congest_count):
+        stack[kk, 0, 0] += 1e-3
+    return stack
+
+
+def test_firm_pcong_count_p_cong_equals_k_over_K() -> None:
+    """P(cong) at a penetration equals the k/K of realizations that congest.
+
+    base = 80; at penetration p the unit demand is p kW/bus so loading = 80 + p
+    percent. At p = 20 the base reaches exactly the limit (loading 100.0 — NOT
+    congested, strict >); the ``congest_count`` spiked realizations tip hour 0 to
+    100.001 (congested). With K=10 and congest_count=3, P(cong)=0.3 at p=20.
+    """
+    K = 10
+    ev_stack = _fp_ev_stack(K, congest_count=3)
+    result = firm_pcong_count(
+        _FP_BASE,
+        ev_stack,
+        _fp_alloc,
+        _FP_INDICATOR,
+        _FP_ELEM_KW,
+        penetration_sweep=(0.0, 20.0),
+        tolerance=0.10,
+        limit=_FP_LIMIT,
+    )
+    # p_cong vector: at p=0 loading 80 (no congestion); at p=20 loading 100 +
+    # spike on 3/10 realizations -> P(cong) = 0.3.
+    pc = dict(zip(result["penetration_sweep"], result["p_cong"]))
+    assert pc[0.0] == 0.0
+    assert pc[20.0] == 0.3
+
+
+def test_firm_pcong_count_linear_interp_crossing() -> None:
+    """firm crosses where P(cong) rises through the tolerance via linear interp.
+
+    Two sweep points p=10 (P=0.0) and p=20 (P=0.5); tolerance 0.10. The crossing
+    is x0 + (tol - y0)*(x1 - x0)/(y1 - y0) = 10 + (0.10 - 0.0)*(20-10)/(0.5-0.0)
+    = 10 + 0.10*10/0.5 = 10 + 2.0 = 12.0.
+    """
+    K = 10
+    # At p=10 loading 90 -> never congested. At p=20 loading 100 + spike on 5/10.
+    ev_stack = _fp_ev_stack(K, congest_count=5)
+    result = firm_pcong_count(
+        _FP_BASE,
+        ev_stack,
+        _fp_alloc,
+        _FP_INDICATOR,
+        _FP_ELEM_KW,
+        penetration_sweep=(10.0, 20.0),
+        tolerance=0.10,
+        limit=_FP_LIMIT,
+    )
+    assert result["p_cong"] == [0.0, 0.5]
+    np.testing.assert_allclose(result["firm_penetration"], 12.0)
+    assert result["p_cong_at_firm"] <= 0.10 + 1e-12
+    assert result["threshold_convention"] == "strict_gt_limit"
+
+
+def test_firm_pcong_count_at_limit_not_congested() -> None:
+    """A loading of EXACTLY the limit is NOT congested in the firm reduction.
+
+    With congest_count=0 (no realization spikes), at p=20 every realization sits at
+    exactly 100.0 loading -> strict-> means P(cong) = 0.0, so firm spans the whole
+    sweep (all <= tolerance -> firm is the last penetration).
+    """
+    K = 8
+    ev_stack = _fp_ev_stack(K, congest_count=0)
+    result = firm_pcong_count(
+        _FP_BASE,
+        ev_stack,
+        _fp_alloc,
+        _FP_INDICATOR,
+        _FP_ELEM_KW,
+        penetration_sweep=(0.0, 10.0, 20.0),
+        tolerance=0.10,
+        limit=_FP_LIMIT,
+    )
+    assert result["p_cong"] == [0.0, 0.0, 0.0]
+    # All P(cong) <= tolerance -> firm = the largest swept penetration.
+    np.testing.assert_allclose(result["firm_penetration"], 20.0)
+
+
+def test_firm_pcong_count_reuses_is_congested_no_second_epsilon() -> None:
+    """firm_pcong_count adds NO bare ``> limit`` threshold of its own (T-10.1-07).
+
+    Reads the kernel source and asserts the function body calls ``is_congested(``
+    and contains no bare ``> limit`` / ``>= limit`` comparison (the single-epsilon
+    invariant — every threshold decision routes through the kept helper).
+    """
+    import inspect
+
+    src = inspect.getsource(firm_pcong_count)
+    assert "is_congested(" in src
+    assert "> limit" not in src
+    assert ">= limit" not in src
+    assert "> float(limit)" not in src
+
+
+def test_firm_pcong_count_first_point_above_tol_returns_zero() -> None:
+    """If the very first swept penetration already exceeds the tolerance, firm = 0."""
+    K = 10
+    ev_stack = _fp_ev_stack(K, congest_count=5)  # P(cong)=0.5 at p=20
+    result = firm_pcong_count(
+        _FP_BASE,
+        ev_stack,
+        _fp_alloc,
+        _FP_INDICATOR,
+        _FP_ELEM_KW,
+        penetration_sweep=(20.0, 30.0),  # first point already 0.5 > 0.10
+        tolerance=0.10,
+        limit=_FP_LIMIT,
+    )
+    assert result["p_cong"][0] == 0.5
+    assert result["firm_penetration"] == 0.0
 
 
 def test_congestion_metrics_rejects_empty_elements() -> None:
@@ -294,9 +440,7 @@ def test_derive_congestion_binding_state_metrics_nonzero(tmp_path: Path) -> None
 
     # The distinct binding-state parquet exists and its max loading exceeds the firm
     # baseline's max (binding state is more loaded than the firm baseline).
-    binding = pd.read_parquet(
-        _PROJECT_DATA_DIR / "line_loading_first_overload.parquet"
-    )
+    binding = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_first_overload.parquet")
     firm = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_firm.parquet")
     assert binding.shape == firm.shape
     assert binding.values.max() > firm.values.max()

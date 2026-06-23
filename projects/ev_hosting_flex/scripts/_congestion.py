@@ -261,3 +261,132 @@ def firm_ev_count(
         "ev_sweep": [int(n) for n in ev_sweep],
         "threshold_convention": "strict_gt_limit",
     }
+
+
+def _hosting_at_tol(sweep: np.ndarray, p_cong: np.ndarray, tolerance: float) -> float:
+    """Return the largest penetration with ``P(cong) <= tolerance`` (linear interp).
+
+    Ported from the manuscript ``_hosting_at_tol`` / ``_cross`` (the firm crossing
+    refinement, D-06). The sweep and ``p_cong`` are paired ascending vectors. If
+    every swept ``P(cong)`` is within tolerance the whole sweep is firm (return the
+    last penetration); if the very first point already exceeds it firm is ``0.0``;
+    otherwise the crossing is linearly interpolated between the last in-tolerance
+    point and the first out-of-tolerance point.
+
+    Args:
+        sweep: Ascending penetration grid, shape ``(n_p,)`` float64.
+        p_cong: Per-penetration congestion probability, shape ``(n_p,)`` float64.
+        tolerance: The ``P(cong)`` tolerance (e.g. ``FIRM_PCONG_TOLERANCE``).
+
+    Returns:
+        The firm penetration as a float (may be fractional / between sweep points).
+    """
+    ok = p_cong <= float(tolerance)
+    if bool(ok.all()):
+        return float(sweep[-1])
+    i = int(np.argmax(~ok))  # first out-of-tolerance index
+    if i == 0:
+        return 0.0
+    x0, x1 = float(sweep[i - 1]), float(sweep[i])
+    y0, y1 = float(p_cong[i - 1]), float(p_cong[i])
+    if y1 == y0:  # degenerate (Pitfall 5): no rise to interpolate across.
+        return x0
+    return x0 + (float(tolerance) - y0) * (x1 - x0) / (y1 - y0)
+
+
+def firm_pcong_count(
+    base: np.ndarray,
+    ev_stack: np.ndarray,
+    alloc_fn: Callable[[float], np.ndarray],
+    indicator: np.ndarray,
+    elem_kw: np.ndarray,
+    penetration_sweep: Sequence[float],
+    tolerance: float,
+    limit: float = float(LINE_LOADING_LIMIT_PERCENT),
+) -> dict[str, Any]:
+    """Sweep penetration and return the firm ``P(cong) <= tolerance`` crossing (D-06).
+
+    The re-calibrated firm gate: for each swept penetration ``p`` the per-bus EV
+    allocation ``alloc_fn(p)`` scales each Monte-Carlo realization's EV unit demand;
+    over the ``K`` realizations in ``ev_stack`` the per-realization inner engine
+    REUSES the kept proxy — ``proxy_loading`` then ``is_congested(...).any()`` — and
+    accumulates ``hits`` (the count of realizations with any congested element-hour).
+    ``P(cong) = hits / K``. Firm = the largest ``p`` with ``P(cong) <= tolerance``,
+    refined by the manuscript linear-interp crossing (``_hosting_at_tol``).
+
+    There is NO second epsilon: every threshold decision routes through
+    ``is_congested`` (strict ``>``, D-09 / T-10.1-07). A realization whose worst
+    loading sits exactly at the limit (100.0) does NOT count as congested.
+
+    Args:
+        base: ``(n_bus, n_hour)`` float64 base demand in kW (the TMY base).
+        ev_stack: ``(K, n_bus, n_hour)`` float64 stochastic EV K-realization unit
+            stack (from ``_stochastic.ev_realizations``); ``ev_stack[k]`` is one
+            realization's per-bus EV unit shape (per EV-per-home).
+        alloc_fn: ``penetration -> (n_bus,)`` float64 per-bus EV allocation; the
+            realization unit shape is scaled by ``alloc_fn(p)[:, None]``.
+        indicator: ``(n_elem, n_bus)`` float64 downstream matrix.
+        elem_kw: ``(n_elem,)`` float64 per-element kW rating (all > 0).
+        penetration_sweep: Ascending EV-per-home penetration grid.
+        tolerance: The firm ``P(cong)`` tolerance (``FIRM_PCONG_TOLERANCE``).
+        limit: The loading-percent congestion limit (strict ``>``).
+
+    Returns:
+        ``{firm_penetration, firm_ev_count, p_cong, p_cong_at_firm,
+        penetration_sweep, downstream_home_count, threshold_convention}`` where
+        ``firm_penetration`` is the (possibly fractional) EV/home crossing and
+        ``firm_ev_count`` is ``round(firm_penetration * downstream_home_count)``.
+
+    Raises:
+        ValueError: If ``ev_stack`` is not a 3-D ``(K, n_bus, n_hour)`` array.
+    """
+    base = np.asarray(base, dtype=DTYPE)
+    ev_stack = np.asarray(ev_stack, dtype=DTYPE)
+    if ev_stack.ndim != 3:
+        raise ValueError(
+            "firm_pcong_count received an ev_stack with ndim="
+            f"{ev_stack.ndim} (shape {ev_stack.shape}); it must be a 3-D "
+            "(K, n_bus, n_hour) Monte-Carlo realization stack. Remediation: pass "
+            "the stack from _stochastic.ev_realizations(rng, K, n_ev=..., "
+            "n_bus=n_bus)."
+        )
+    k_realizations = int(ev_stack.shape[0])
+    n_bus = int(base.shape[0])
+    sweep = np.asarray([float(p) for p in penetration_sweep], dtype=DTYPE)
+
+    p_cong = np.zeros(sweep.shape[0], dtype=DTYPE)
+    for pi, pen in enumerate(sweep):
+        per_bus_ev = np.asarray(alloc_fn(float(pen)), dtype=DTYPE)
+        hits = 0
+        for kk in range(k_realizations):
+            demand = base + ev_stack[kk] * per_bus_ev[:, None]
+            loading, _ = proxy_loading(indicator, demand, elem_kw)
+            # REUSE the kept strict-> helper — no second epsilon (T-10.1-07).
+            if is_congested(loading, limit).any():
+                hits += 1
+        p_cong[pi] = hits / k_realizations if k_realizations > 0 else 0.0
+
+    firm_penetration = _hosting_at_tol(sweep, p_cong, tolerance)
+    # P(cong) AT the firm crossing: by construction <= tolerance (the in-tolerance
+    # side of the bracket); report the bracketing point's probability.
+    ok = p_cong <= float(tolerance)
+    if bool(ok.all()):
+        p_cong_at_firm = float(p_cong[-1]) if p_cong.size else 0.0
+    else:
+        i = int(np.argmax(~ok))
+        p_cong_at_firm = float(p_cong[i - 1]) if i > 0 else float(p_cong[0])
+
+    # The headline EV count is a CONSEQUENCE of the selected feeder's downstream
+    # home count (discretion): EV/home penetration x homes. n_bus is the per-bus
+    # axis width — the feeder's home-bearing bus count is the home denominator.
+    downstream_home_count = n_bus
+    firm_ev = int(round(firm_penetration * downstream_home_count))
+    return {
+        "firm_penetration": float(firm_penetration),
+        "firm_ev_count": firm_ev,
+        "p_cong": [float(v) for v in p_cong],
+        "p_cong_at_firm": float(p_cong_at_firm),
+        "penetration_sweep": [float(p) for p in sweep],
+        "downstream_home_count": downstream_home_count,
+        "threshold_convention": "strict_gt_limit",
+    }
