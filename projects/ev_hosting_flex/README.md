@@ -173,6 +173,49 @@ EV count with **zero** overloads on any line or the head transformer at any of t
 denominator; the **flexible** limit (Phase 10) is its numerator. pandapower AC power
 flow (Phase 11) validates the proxy at the worst peak hours.
 
+## Network sizing basis (diversity reconciliation)
+
+The twin is sized in **two layers that use different diversity assumptions**, and the
+feeder is deliberately re-sized so it operates cleanly **before** any EV connects — so
+the EVs, not the base load, are what cause congestion.
+
+1. **Topology layer (SDK generator).** The synthetic network is built with
+   `diversity_factor_lv = 5`, so each building's coincident contribution is
+   `max_load_per_building / 5 = 50 / 5 = 10 kW`. This 10 kW/home coincident demand
+   (≈32.35 MW twin-wide) drives the transformer **count** and the initial load-aware
+   line `max_i_ka` selection.
+
+2. **Profile layer (this study, Phase 9).** The deterministic 8760h base load
+   (`_profiles.py`) is **fully coincident** — every building follows the same
+   `nameplate × winter × daily × weekly` envelope, so they all peak in the same winter
+   evening hour. That peak reaches **≈1.764 × nameplate** (`WINTER_PEAK_FACTOR` plus the
+   daily/weekly pattern), i.e. **17.64 kW/home**, not the 10 kW the topology assumed.
+
+These two layers disagree by the **annual peak factor ≈ 1.764**, which left the
+selected feeder overloaded at **zero EVs** (the head transformer `transformer:78` was
+199.5 kW vs a 458.6 kW winter base peak → 229.9 %; interior lines such as `line:1454`
+were at 199 %). That made `firm_ev_count = 0` — a degenerate headline denominator.
+
+The fix (stage 2, project-local, `_topology.size_feeder_subtree_kw`) re-sizes **all 27
+elements of the selected feeder subtree** — the head transformer **and** the interior
+lines — to the annual winter-peak downstream demand divided by the
+`TRANSFORMER_UTILIZATION_MARGIN` (0.8):
+
+```text
+rating_kw = downstream_nameplate_kw × annual_peak_factor(≈1.764) / 0.8
+# head transformer:78  199.5 kW  →  574 kW
+```
+
+After the resize, at **0 EVs the worst element sits at ≈79.9 %** (the ~80 % target,
+recorded in `feeder_selection.json → feeder_transformer_sizing`), so the base feeder is
+healthy and congestion is **EV-driven**: `firm_ev_count = 20`, first overload at 40 EVs.
+
+> **Known limitation (D-01 / FUT-04).** The profile is fully coincident
+> (`diversity = 1`), which is **pessimistic** for all-electric Québec feeders (real LV
+> winter diversity ≈ 1.5–2.5 — thermostat cycling, DHW, occupancy). The hosting
+> headline is therefore conservative. Stochastic per-home diversity is deferred to a
+> future milestone (FUT-04).
+
 ## Configuration
 
 The tunable knobs are centralized in `projects/ev_hosting_flex/scripts/config.py`
