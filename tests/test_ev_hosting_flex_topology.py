@@ -19,11 +19,18 @@ import pandas as pd
 import pytest
 
 from projects.ev_hosting_flex.scripts._topology import (
+    annual_peak_base_factor,
     assert_radial_no_generation,
     build_downstream_map,
     line_rating_kw,
     select_feeder,
+    size_feeder_transformer_kw,
     trafo_rating_kw,
+)
+from projects.ev_hosting_flex.scripts.config import (
+    DAILY_PATTERN,
+    WEEKLY_PATTERN,
+    WINTER_PEAK_FACTOR,
 )
 
 
@@ -231,6 +238,49 @@ def test_select_feeder_config_override() -> None:
     dmap = build_downstream_map(net)
     # Explicit feeder_id override returns that index verbatim.
     assert select_feeder(net, dmap, {"feeder_id": 1}) == 1
+
+
+# ─── 09-03: project-local feeder-transformer load-aware sizing ──────────
+#
+# GAP 1 (truth #8 / CONG-03): the selected feeder transformer must be sized to
+# its annual winter-peak downstream base demand at the 0.8 utilization margin so
+# that at 0 EVs the binding feeder element sits at or below ~80% loading.
+
+
+def test_size_feeder_transformer_kw_hand_computed() -> None:
+    """Hand-computed sizing arithmetic + the 0-EV <= 80% calibration target."""
+    # (100 * 2.0) / 0.8 = 250.0 exactly (already integral; no round-up effect).
+    assert (
+        size_feeder_transformer_kw(100.0, peak_factor=2.0, utilization_margin=0.8)
+        == 250.0
+    )
+    # For the real envelope multiplier and a 260 kW nameplate sum, the resized
+    # rating divided into the annual winter-peak demand is <= the 80% margin.
+    factor = annual_peak_base_factor()
+    kw = size_feeder_transformer_kw(
+        260.0, peak_factor=factor, utilization_margin=0.8
+    )
+    assert 260.0 * factor / kw * 100.0 <= 80.0 + 1e-9
+
+
+def test_annual_peak_base_factor_matches_envelope() -> None:
+    """The annual-peak multiplier reuses the unchanged envelope and is deterministic."""
+    factor = annual_peak_base_factor()
+    upper = WINTER_PEAK_FACTOR * max(DAILY_PATTERN) * max(WEEKLY_PATTERN) + 1e-9
+    assert 1.0 < factor <= upper
+    # Determinism: two calls return the identical float.
+    assert annual_peak_base_factor() == factor
+
+
+def test_size_feeder_transformer_kw_rejects_bad_input() -> None:
+    """A non-positive nameplate and a margin > 1 each raise a remediating ValueError."""
+    with pytest.raises(ValueError) as excinfo:
+        size_feeder_transformer_kw(0.0, peak_factor=1.5, utilization_margin=0.8)
+    assert "remediation" in str(excinfo.value).lower()
+
+    with pytest.raises(ValueError) as excinfo:
+        size_feeder_transformer_kw(100.0, peak_factor=1.5, utilization_margin=1.5)
+    assert "remediation" in str(excinfo.value).lower()
 
 
 # ─── 08.1-02: load-aware adoption regression ────────────────────────────
