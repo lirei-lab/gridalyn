@@ -44,6 +44,7 @@ from projects.ev_hosting_flex.scripts._congestion import is_congested, proxy_loa
 from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     LINE_LOADING_LIMIT_PERCENT,
+    PLUGIN_WINDOW,
     ROUND_DECIMALS,
     TOLERANCE_ACTIVATION_HOURS_MAX,
     TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX,
@@ -150,6 +151,120 @@ def flex_curtailment(
         "curtailed": curtailed,
         "feasible": feasible,
         "residual_overload_kw": residual_overload_kw,
+    }
+
+
+def flex_deferral(
+    ev: np.ndarray,
+    base: np.ndarray,
+    rating: float,
+    *,
+    plugin_window: Sequence[int] = PLUGIN_WINDOW,
+    limit: float = float(LINE_LOADING_LIMIT_PERCENT),
+    annual_ev_demand: float | None = None,
+) -> dict[str, Any]:
+    """Valley-fill over-cap EV energy into the EV's in-window plug-in hours (D-11).
+
+    The genuinely-new deferral mechanism beside the kept ``flex_curtailment``. It is
+    NEITHER manuscript variant: NOT the fixed off-peak ``[22..6]`` refill (which
+    ignores early departures), NOT the whole-day ``np.argsort`` valley-fill (which
+    overstates by assuming all-day availability). Energy is re-placed ONLY into hours
+    inside the EV's plug-in window — ``plugin_window`` wraps midnight
+    (``[18..23] ∪ [0..7]`` per day) — so nothing is ever placed after an early
+    departure or in a daytime out-of-window hour.
+
+    Mechanism (per the manuscript ``_relief`` first half, then an in-window refill):
+
+    1. The headroom at each hour is ``max(0, rating - base[h])``; the EV draw placed
+       at its own hour is ``placed[h] = min(ev[h], headroom[h])``; the over-cap
+       excess ``remaining = Σ (ev - placed)``.
+    2. ``remaining`` is refilled into the in-window hours sorted lowest-base-first,
+       each taking ``min(remaining, max(0, rating - base[h] - placed[h]))`` of spare
+       headroom until ``remaining <= 1e-12`` or the window is exhausted.
+    3. The unfittable ``remaining`` is the IRREDUCIBLE lost energy (D-12);
+       ``irreducible_lost_fraction = remaining / annual_ev_demand``.
+
+    The over-cap determination routes through the kept ``is_congested`` (strict
+    ``>``, no second epsilon, T-10.1-07): an hour whose loading sits exactly at the
+    limit is NOT over-cap.
+
+    Args:
+        ev: ``(n_hour,)`` float64 per-hour EV draw in kW (hour-of-day or annual).
+        base: ``(n_hour,)`` float64 per-hour non-EV base demand in kW.
+        rating: The element kW rating (the deferral headroom denominator, > 0).
+        plugin_window: Hours (0..23) the EV is plugged in and may host deferred
+            energy; membership is taken modulo 24 so it applies per day.
+        limit: The loading-percent congestion limit (strict ``>``, routed through
+            ``is_congested``).
+        annual_ev_demand: The ``irreducible_lost_fraction`` denominator; defaults to
+            ``ev.sum()`` when ``None``.
+
+    Returns:
+        ``{placed, remaining, irreducible_lost_fraction, headroom_kw,
+        inwindow_hours, threshold_convention}`` where ``placed`` is the
+        ``(n_hour,)`` post-deferral hourly EV draw, ``remaining`` is the irreducible
+        unfittable energy in kWh, and ``inwindow_hours`` is the resolved in-window
+        hour set.
+
+    Raises:
+        ValueError: If ``rating`` is non-positive or ``ev``/``base`` shapes differ.
+    """
+    ev = np.asarray(ev, dtype=DTYPE)
+    base = np.asarray(base, dtype=DTYPE)
+    if float(rating) <= 0.0:
+        raise ValueError(
+            "flex_deferral received a non-positive rating "
+            f"({float(rating)}); the deferral headroom (rating - base) would be "
+            "ill-defined. Remediation: pass the feeder element's positive kW rating "
+            "from line_transformer_ratings_kw.json."
+        )
+    if ev.shape != base.shape:
+        raise ValueError(
+            "flex_deferral received mismatched ev/base shapes "
+            f"(ev={ev.shape}, base={base.shape}); they must align hour-for-hour. "
+            "Remediation: pass per-hour ev and base vectors of identical length."
+        )
+
+    n_hour = ev.shape[0]
+    # The over-cap mask routes through the kept strict-> helper (no second epsilon).
+    # loading% = (base + ev) / rating * 100; is_congested flags the strictly-over
+    # hours so a value exactly at the limit is NOT treated as over-cap (T-10.1-07).
+    loading = (base + ev) / float(rating) * 100.0
+    over_cap = is_congested(loading, limit)
+
+    headroom = np.maximum(0.0, float(rating) - base)
+    placed = np.minimum(ev, headroom).astype(DTYPE)
+    # Over-cap excess is only the portion at hours that strictly exceed the limit;
+    # at non-over-cap hours ev already fits under headroom (placed == ev there).
+    excess = np.where(over_cap, ev - placed, 0.0)
+    remaining = float(excess.sum())
+
+    # In-window hour set (wraps midnight): membership taken modulo 24 so the
+    # plug-in window applies to every day of a multi-day vector (D-11).
+    window = {int(h) % 24 for h in plugin_window}
+    inwindow_hours = [h for h in range(n_hour) if (h % 24) in window]
+    # Refill lowest-base-first (valley-fill) into in-window spare headroom only.
+    for h in sorted(inwindow_hours, key=lambda hh: float(base[hh])):
+        if remaining <= 1e-12:
+            break
+        spare = max(0.0, float(rating) - float(base[h]) - float(placed[h]))
+        take = min(remaining, spare)
+        placed[h] += take
+        remaining -= take
+
+    denom = float(ev.sum()) if annual_ev_demand is None else float(annual_ev_demand)
+    if denom <= 0.0:
+        irreducible_lost_fraction = 0.0
+    else:
+        irreducible_lost_fraction = remaining / denom
+
+    return {
+        "placed": placed.astype(DTYPE),
+        "remaining": float(max(0.0, remaining)),
+        "irreducible_lost_fraction": float(irreducible_lost_fraction),
+        "headroom_kw": headroom.astype(DTYPE),
+        "inwindow_hours": inwindow_hours,
+        "threshold_convention": "strict_gt_limit",
     }
 
 

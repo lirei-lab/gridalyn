@@ -18,9 +18,11 @@ import pytest
 
 from projects.ev_hosting_flex.scripts._flexibility import (
     flex_curtailment,
+    flex_deferral,
     flex_metrics,
     flexible_ev_count,
 )
+from projects.ev_hosting_flex.scripts.config import PLUGIN_WINDOW
 
 _LIMIT = 100.0
 
@@ -235,6 +237,136 @@ def test_flex_metrics_reconciliation_tolerates_per_node_rounding() -> None:
     assert drift > 10.0**-6
     # ...yet bounded by the per-node rounding budget (half a ULP per node).
     assert drift <= (n_bus * 0.5 + 0.5) * 10.0**-6
+
+
+# ─── flex_deferral: in-window valley-fill (D-11) + irreducible-lost (D-12) ───
+# Hand-built 24-hour-of-day fixtures. PLUGIN_WINDOW wraps midnight ([18..23] ∪
+# [0..7]); midday hour 12 is OUT of window. rating is the element kW; base is the
+# per-hour-of-day non-EV demand; ev is the per-hour-of-day EV draw.
+
+
+def test_flex_deferral_inwindow_only_not_after_departure() -> None:
+    """Over-cap energy is re-placed ONLY into in-window hours (D-11).
+
+    rating=100. base=90 flat (headroom 10/hour). One congested EV spike of 50 kWh
+    at hour 18 (arrival): placed=min(50,10)=10, excess=40 to defer. The in-window
+    hours [18..23,0..7] each have 10 kW spare headroom; out-of-window hours (e.g.
+    12) have 10 kW too but MUST NOT receive any energy. Assert hour 12 placed == 0
+    and that energy only lands in PLUGIN_WINDOW hours.
+    """
+    rating = 100.0
+    base = np.full(24, 90.0, dtype="float64")
+    ev = np.zeros(24, dtype="float64")
+    ev[18] = 50.0
+    out = flex_deferral(ev, base, rating, plugin_window=PLUGIN_WINDOW, limit=_LIMIT)
+    placed = np.asarray(out["placed"], dtype="float64")
+
+    # Out-of-window hour 12 (and any hour not in PLUGIN_WINDOW) receives nothing.
+    out_of_window = [h for h in range(24) if h not in set(PLUGIN_WINDOW)]
+    for h in out_of_window:
+        assert placed[h] == 0.0, f"hour {h} (out of window) got {placed[h]}"
+    # All placed energy lands in in-window hours only.
+    assert placed[12] == 0.0
+    # Total placed equals the energy that fit (50 here; window has ample headroom).
+    np.testing.assert_allclose(placed.sum(), 50.0)
+    assert out["remaining"] == 0.0
+
+
+def test_flex_deferral_all_fits_inwindow_zero_remaining() -> None:
+    """When all over-cap energy fits in-window, remaining == fraction == 0 (D-12)."""
+    rating = 100.0
+    base = np.full(24, 80.0, dtype="float64")  # 20 kW headroom/hour
+    ev = np.zeros(24, dtype="float64")
+    ev[19] = 30.0  # placed=min(30,20)=20 at h19, 10 excess deferred into window
+    annual_ev = float(ev.sum())
+    out = flex_deferral(
+        ev,
+        base,
+        rating,
+        plugin_window=PLUGIN_WINDOW,
+        limit=_LIMIT,
+        annual_ev_demand=annual_ev,
+    )
+    assert out["remaining"] == 0.0
+    assert out["irreducible_lost_fraction"] == 0.0
+    np.testing.assert_allclose(np.asarray(out["placed"]).sum(), 30.0)
+
+
+def test_flex_deferral_saturated_window_positive_remaining() -> None:
+    """A saturated in-window valley leaves a hand-computed positive remainder (D-12).
+
+    rating=100. The 14 in-window hours each have only 1 kW spare headroom
+    (base=99), and the congested hour 18 also offers 1 kW (placed=min(ev,1)). A
+    100 kWh spike at hour 18: placed=1 at h18; excess=99 to defer; the 13 OTHER
+    in-window hours absorb 1 kWh each = 13; remaining = 99 - 13 = 86 kWh
+    irreducible. (hour 18 already counted in placed.) Out-of-window hours give no
+    relief. fraction = 86 / 100.
+    """
+    rating = 100.0
+    base = np.full(24, 99.0, dtype="float64")  # 1 kW headroom/hour everywhere
+    ev = np.zeros(24, dtype="float64")
+    ev[18] = 100.0
+    out = flex_deferral(
+        ev,
+        base,
+        rating,
+        plugin_window=PLUGIN_WINDOW,
+        limit=_LIMIT,
+        annual_ev_demand=100.0,
+    )
+    # 14 in-window hours x 1 kW = 14 kWh placeable; remaining = 100 - 14 = 86.
+    np.testing.assert_allclose(out["remaining"], 86.0)
+    np.testing.assert_allclose(out["irreducible_lost_fraction"], 0.86)
+
+
+def test_flex_deferral_lowest_base_first() -> None:
+    """Deferred energy fills the lowest-base in-window hour first (valley-fill).
+
+    rating=100. In-window hours all base=95 (5 kW headroom) EXCEPT hour 2 at
+    base=90 (10 kW headroom). hour 18 spike 20 kWh: placed=min(20,5)=5 at h18,
+    excess=15. Lowest-base in-window hour is hour 2 (base 90) -> it absorbs its
+    full 10 kW first, then the next-lowest hours take 5 each. Assert hour 2 placed
+    == 10 (filled to its headroom before higher-base hours).
+    """
+    rating = 100.0
+    base = np.full(24, 95.0, dtype="float64")
+    base[2] = 90.0  # the deepest in-window valley
+    ev = np.zeros(24, dtype="float64")
+    ev[18] = 20.0
+    out = flex_deferral(ev, base, rating, plugin_window=PLUGIN_WINDOW, limit=_LIMIT)
+    placed = np.asarray(out["placed"], dtype="float64")
+    # hour 2 is the lowest base in-window -> filled to its full 10 kW headroom.
+    np.testing.assert_allclose(placed[2], 10.0)
+
+
+def test_flex_deferral_reuses_is_congested_no_second_epsilon() -> None:
+    """flex_deferral adds NO bare ``> limit`` threshold of its own (T-10.1-07).
+
+    Reads the kernel source: it must call ``is_congested(`` and contain no bare
+    ``> limit`` / ``>= limit`` / ``> float(limit)`` comparison (single-epsilon
+    invariant — every congestion decision routes through the kept helper).
+    """
+    import inspect
+
+    src = inspect.getsource(flex_deferral)
+    assert "is_congested(" in src
+    assert "> limit" not in src
+    assert ">= limit" not in src
+    assert "> float(limit)" not in src
+
+
+def test_flex_deferral_at_limit_not_congested() -> None:
+    """An hour at EXACTLY the limit is not over-cap (strict >, no deferral needed).
+
+    rating=100, base=100 flat (loading exactly 100.0 -> NOT congested), ev=0. No
+    over-cap energy -> nothing deferred, remaining 0.
+    """
+    rating = 100.0
+    base = np.full(24, 100.0, dtype="float64")  # exactly at limit, strict-> -> ok
+    ev = np.zeros(24, dtype="float64")
+    out = flex_deferral(ev, base, rating, plugin_window=PLUGIN_WINDOW, limit=_LIMIT)
+    assert out["remaining"] == 0.0
+    np.testing.assert_allclose(np.asarray(out["placed"]).sum(), 0.0)
 
 
 # ─── flexible_ev_count: sweep, tolerance boundary, monotonicity ─────────────
