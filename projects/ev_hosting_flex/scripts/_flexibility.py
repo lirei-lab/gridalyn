@@ -154,6 +154,50 @@ def flex_curtailment(
     }
 
 
+def _overnight_session_ids(n_hour: int, window: set[int], start_hod: int) -> np.ndarray:
+    """Return a per-hour overnight-plug-in-session id (or -1 for out-of-window).
+
+    The physically-correct deferral unit is the CONTIGUOUS overnight session
+    18:00(day D) → 07:00(day D+1) — NOT a calendar day split at midnight (CR-02).
+    Each in-window hour is keyed to the session anchored on the calendar day whose
+    18:00 lead edge opens it: an evening hour (clock 18..23) anchors on its OWN
+    day; a morning hour (clock 0..17, in practice 0..7 for the wrap-midnight
+    ``PLUGIN_WINDOW``) anchors on the PREVIOUS day's 18:00 session. Excess from a
+    congested hour may only refill spare in-window headroom carrying the SAME id.
+
+    The annual array index ``i`` carries clock hour ``(start_hod + i) % 24`` (the
+    TMY canonical clock after CR-01). For a lone 24 h call the whole vector is one
+    session (the documented per-day contract the unit fixtures encode): all
+    in-window hours get id 0.
+
+    Args:
+        n_hour: Length of the ev/base vector.
+        window: The resolved plug-in-window hour-of-day set (membership mod 24).
+        start_hod: The TMY's first-row clock hour-of-day (0 for midnight-based
+            fixtures).
+
+    Returns:
+        An ``(n_hour,)`` int array: the overnight-session id of each in-window hour,
+        ``-1`` for out-of-window hours. Ids are contiguous from the leading session.
+    """
+    idx = np.arange(n_hour)
+    clock = (int(start_hod) + idx) % 24
+    in_window = np.array([int(c) in window for c in clock])
+    if n_hour <= 24:
+        # A lone day is a single overnight session (per-day contract): every
+        # in-window hour shares id 0; out-of-window hours are -1.
+        return np.where(in_window, 0, -1)
+    # Absolute hour / day so the wrap-midnight session groups day-D evening with
+    # day-(D+1) morning. Evening hours (clock >= 18) anchor on their own absolute
+    # day; morning hours (clock < 18) anchor on the previous absolute day.
+    abs_hour = int(start_hod) + idx
+    abs_day = abs_hour // 24
+    anchor_day = np.where(clock >= 18, abs_day, abs_day - 1)
+    # Re-base anchor_day to a 0-based contiguous session id over the present hours.
+    session = anchor_day - int(anchor_day.min())
+    return np.where(in_window, session, -1)
+
+
 def flex_deferral(
     ev: np.ndarray,
     base: np.ndarray,
@@ -162,6 +206,7 @@ def flex_deferral(
     plugin_window: Sequence[int] = PLUGIN_WINDOW,
     limit: float = float(LINE_LOADING_LIMIT_PERCENT),
     annual_ev_demand: float | None = None,
+    start_hod: int = 0,
 ) -> dict[str, Any]:
     """Valley-fill over-cap EV energy into the EV's in-window plug-in hours (D-11).
 
@@ -173,16 +218,26 @@ def flex_deferral(
     (``[18..23] ∪ [0..7]`` per day) — so nothing is ever placed after an early
     departure or in a daytime out-of-window hour.
 
-    Mechanism (per the manuscript ``_relief`` first half, then an in-window refill):
+    Per-session confinement (CR-02): deferred energy may only be re-placed into the
+    in-window hours of the SAME CONTIGUOUS OVERNIGHT plug-in session it originated
+    from — 18:00(day D) → 07:00(day D+1), the physical plug-in unit — never pooled
+    across the whole multi-day vector. A December cold-evening's excess can NOT
+    valley-fill into a July night. Excess that cannot fit its own session's spare
+    in-window headroom is irreducible-lost for that session; the reported
+    ``remaining`` is the sum over sessions. A lone 24 h vector is a single session
+    (the per-day unit-test contract).
+
+    Mechanism (per the manuscript ``_relief`` first half, then a PER-SESSION refill):
 
     1. The headroom at each hour is ``max(0, rating - base[h])``; the EV draw placed
        at its own hour is ``placed[h] = min(ev[h], headroom[h])``; the over-cap
-       excess ``remaining = Σ (ev - placed)``.
-    2. ``remaining`` is refilled into the in-window hours sorted lowest-base-first,
-       each taking ``min(remaining, max(0, rating - base[h] - placed[h]))`` of spare
-       headroom until ``remaining <= 1e-12`` or the window is exhausted.
-    3. The unfittable ``remaining`` is the IRREDUCIBLE lost energy (D-12);
-       ``irreducible_lost_fraction = remaining / annual_ev_demand``.
+       excess per session is ``Σ_session (ev - placed)`` at the congested hours.
+    2. Each session's excess is refilled into THAT session's in-window hours sorted
+       lowest-base-first, each taking ``min(remaining, max(0, rating - base[h] -
+       placed[h]))`` of spare headroom until the session's excess is exhausted or
+       the session window is full.
+    3. The unfittable per-session excess summed over sessions is the IRREDUCIBLE
+       lost energy (D-12); ``irreducible_lost_fraction = remaining / annual_ev``.
 
     The over-cap determination routes through the kept ``is_congested`` (strict
     ``>``, no second epsilon, T-10.1-07): an hour whose loading sits exactly at the
@@ -198,6 +253,8 @@ def flex_deferral(
             ``is_congested``).
         annual_ev_demand: The ``irreducible_lost_fraction`` denominator; defaults to
             ``ev.sum()`` when ``None``.
+        start_hod: The annual array's clock hour-of-day at index 0 (``tmy_start_hod()``
+            after CR-01); used to segment overnight sessions. Default 0 (midnight).
 
     Returns:
         ``{placed, remaining, irreducible_lost_fraction, headroom_kw,
@@ -237,20 +294,34 @@ def flex_deferral(
     # Over-cap excess is only the portion at hours that strictly exceed the limit;
     # at non-over-cap hours ev already fits under headroom (placed == ev there).
     excess = np.where(over_cap, ev - placed, 0.0)
-    remaining = float(excess.sum())
 
     # In-window hour set (wraps midnight): membership taken modulo 24 so the
     # plug-in window applies to every day of a multi-day vector (D-11).
     window = {int(h) % 24 for h in plugin_window}
     inwindow_hours = [h for h in range(n_hour) if (h % 24) in window]
-    # Refill lowest-base-first (valley-fill) into in-window spare headroom only.
-    for h in sorted(inwindow_hours, key=lambda hh: float(base[hh])):
-        if remaining <= 1e-12:
-            break
-        spare = max(0.0, float(rating) - float(base[h]) - float(placed[h]))
-        take = min(remaining, spare)
-        placed[h] += take
-        remaining -= take
+
+    # CR-02: segment into contiguous overnight plug-in sessions and valley-fill
+    # WITHIN each session only — a congested hour's excess can refill only spare
+    # in-window headroom of its OWN session (never the whole year).
+    session_ids = _overnight_session_ids(n_hour, window, int(start_hod))
+    remaining_total = 0.0
+    for sid in sorted({int(s) for s in session_ids if s >= 0}):
+        members = np.where(session_ids == sid)[0]
+        session_excess = float(excess[members].sum())
+        if session_excess <= 1e-12:
+            continue
+        # Refill lowest-base-first (valley-fill) into THIS session's spare headroom.
+        for h in sorted(members, key=lambda hh: float(base[hh])):
+            if session_excess <= 1e-12:
+                break
+            spare = max(0.0, float(rating) - float(base[h]) - float(placed[h]))
+            take = min(session_excess, spare)
+            placed[h] += take
+            session_excess -= take
+        remaining_total += max(0.0, session_excess)
+    # Out-of-window excess (no session can host it) is fully irreducible-lost.
+    remaining_total += float(excess[session_ids < 0].sum())
+    remaining = remaining_total
 
     denom = float(ev.sum()) if annual_ev_demand is None else float(annual_ev_demand)
     if denom <= 0.0:

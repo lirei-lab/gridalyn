@@ -71,7 +71,10 @@ from projects.ev_hosting_flex.scripts._flexibility import (  # noqa: E402
 from projects.ev_hosting_flex.scripts._profiles import (  # noqa: E402
     allocate_ev_per_bus,
 )
-from projects.ev_hosting_flex.scripts._stochastic import mc_p95  # noqa: E402
+from projects.ev_hosting_flex.scripts._stochastic import (  # noqa: E402
+    mc_p95,
+    tmy_start_hod,
+)
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
     LINE_LOADING_LIMIT_PERCENT,
@@ -177,6 +180,7 @@ def _two_curve_sweep(
     alloc_fn,
     downstream_home_count: int,
     limit: float,
+    start_hod: int = 0,
 ) -> list[dict[str, object]]:
     """Sweep penetration and return BOTH curves' per-penetration P95 trade curve.
 
@@ -241,6 +245,7 @@ def _two_curve_sweep(
                 feeder_kw,
                 plugin_window=PLUGIN_WINDOW,
                 limit=limit,
+                start_hod=start_hod,
             )
             defer_fractions[kk] = float(out["irreducible_lost_fraction"])
 
@@ -391,6 +396,9 @@ def derive_flexibility(
     # ── BOTH curves over the K-axis at P95 (the manuscript _relief two-mechanism ──
     # reduction): curtailment-lost (over-cap excess) AND deferral-lost (irreducible
     # remainder after in-window valley-fill), each reduced over K at P95 (D-07/D-10).
+    # CR-02: the deferral valley-fill is confined to each overnight plug-in session;
+    # segmenting needs the annual clock phase the EV stack/base were aligned to.
+    start_hod = tmy_start_hod()
     trade_curve = _two_curve_sweep(
         base,
         ev_stack,
@@ -400,6 +408,7 @@ def derive_flexibility(
         alloc_fn,
         downstream_home_count,
         float(LINE_LOADING_LIMIT_PERCENT),
+        start_hod,
     )
     # Curtailment-flexible: largest EV count with P95 curtailed-lost fraction < the
     # curtailed-energy tolerance (the conservative shed-to-limit bound).
