@@ -107,6 +107,12 @@ def weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
 def base_load_8760(nameplate_kw: np.ndarray) -> np.ndarray:
     """Return the deterministic per-bus annual base building load in kW.
 
+    DEPRECATED (D-14): superseded by ``_stochastic.tmy_base`` — the base is now
+    TMY temperature-driven (heating-degree model over the committed
+    Trois-Rivieres TMY), not this weather-free parametric winter envelope. Body
+    left intact / diffable (Pitfall 6); imports are removed only when the
+    deterministic stage path is retired (Plan 03/04).
+
     ``(n_bus, CALENDAR_HOURS)`` float64 =
     ``nameplate_kw[:, None] * winter(hours) * daily(hours) * weekly(hours)``.
     Winter-evening-peaked, no RNG, bit-identical across reruns (D-01/D-02/D-12).
@@ -127,6 +133,13 @@ def base_load_8760(nameplate_kw: np.ndarray) -> np.ndarray:
 
 def ev_unit_profile() -> np.ndarray:
     """Return the deterministic per-EV evening-window annual unit draw in kW.
+
+    DEPRECATED (D-14): superseded by ``_stochastic.ev_realizations`` — the EV
+    layer is now a calibrated stochastic K-realization sampler (charger mix,
+    lognormal session energy, evening arrivals, plug-in probability), not this
+    flat deterministic evening-window unit profile. Body left intact / diffable
+    (Pitfall 6); imports are removed only when the deterministic stage path is
+    retired (Plan 03/04).
 
     A fixed 24h window shape (flat inside ``CHARGING_WINDOW``, zero outside) tiled
     across 365 days and scaled by ``EV_UNIT_KW * DIVERSITY_FACTOR``. Flat/
