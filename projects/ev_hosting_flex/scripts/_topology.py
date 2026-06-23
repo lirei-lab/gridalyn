@@ -31,12 +31,18 @@ Numeric anchors verified against the real cached net (RESEARCH.md Code Examples
 
 from __future__ import annotations
 
+import math
 from typing import Any, Mapping
 
 import networkx as nx
 import numpy as np
 
-from projects.ev_hosting_flex.scripts.config import FEEDER_ID, POWER_FACTOR
+from projects.ev_hosting_flex.scripts.config import (
+    CALENDAR_HOURS,
+    FEEDER_ID,
+    POWER_FACTOR,
+    TRANSFORMER_UTILIZATION_MARGIN,
+)
 
 # MV/LV distribution-transformer voltage signature (kV) used for feeder ranking.
 _MV_LV_VOLTAGE = (25.0, 0.4)
@@ -75,6 +81,133 @@ def trafo_rating_kw(net: Any, pf: float = POWER_FACTOR) -> np.ndarray:
     """
     sn_mva = net.trafo["sn_mva"].to_numpy(dtype="float64")
     return sn_mva * 1000.0 * float(pf)
+
+
+def annual_peak_base_factor() -> float:
+    """Return the annual winter-peak base-envelope multiplier (float64).
+
+    The maximum over the 8760h of ``winter(h) * daily(h) * weekly(h)`` — the
+    multiplier that turns a per-bus nameplate sum into the annual winter-peak
+    downstream base demand. Reuses the unchanged ``_profiles`` factor functions
+    so the envelope stays byte-identical (D-01); deterministic, no RNG.
+
+    The ``_profiles`` import is function-local to avoid any import cycle
+    (``_profiles`` and ``_topology`` both sit in the same package layer).
+
+    Returns:
+        The float64 maximum hour-of-year envelope multiplier (``> 1.0`` for the
+        pinned winter-peaked envelope, ~1.76).
+    """
+    from projects.ev_hosting_flex.scripts._profiles import (
+        daily_factor,
+        weekly_factor,
+        winter_factor,
+    )
+
+    hours = np.arange(CALENDAR_HOURS)
+    return float(
+        np.max(winter_factor(hours) * daily_factor(hours) * weekly_factor(hours))
+    )
+
+
+def size_feeder_transformer_kw(
+    downstream_nameplate_kw: float,
+    *,
+    peak_factor: float,
+    utilization_margin: float = TRANSFORMER_UTILIZATION_MARGIN,
+) -> float:
+    """Return the load-aware feeder-transformer kW rating, rounded UP.
+
+    ``rating = ceil((downstream_nameplate_kw * peak_factor) / utilization_margin)``
+    as float64. The annual winter-peak downstream base demand
+    (``downstream_nameplate_kw * peak_factor``) divided by ``utilization_margin``
+    reserves headroom so that at 0 EVs the binding feeder element sits at or below
+    the margin (~80%, the D-08 calibration target). Rounds UP to the next whole
+    kVA so the transformer is never undersized. Mirrors the line-sizing precedent
+    (``line_sizing_select.py``: required rating = design load / margin).
+
+    Args:
+        downstream_nameplate_kw: Per-bus nameplate-load sum of the feeder subtree
+            in kW (the static nameplate, NOT the annual peak; the peak is
+            ``downstream_nameplate_kw * peak_factor``). Must be ``> 0``.
+        peak_factor: The annual winter-peak envelope multiplier from
+            :func:`annual_peak_base_factor` (``> 0``).
+        utilization_margin: Headroom margin in ``(0, 1]`` (default
+            ``TRANSFORMER_UTILIZATION_MARGIN``); the sized loading target at peak.
+
+    Returns:
+        The float64 feeder-transformer kW rating (rounded up to whole kVA).
+
+    Raises:
+        ValueError: If ``downstream_nameplate_kw <= 0`` or ``utilization_margin``
+            is not in ``(0, 1]``.
+    """
+    if downstream_nameplate_kw <= 0.0:
+        raise ValueError(
+            "ev_hosting_flex feeder-transformer sizing received a non-positive "
+            f"downstream_nameplate_kw ({downstream_nameplate_kw}); the feeder "
+            "subtree must carry a positive nameplate load to be sized. "
+            "Remediation: verify the selected feeder transformer's downstream "
+            "buses carry load in node_nameplate_kw.json (re-run "
+            "prepare_topology_cache.py if the cache is stale)."
+        )
+    if not 0.0 < utilization_margin <= 1.0:
+        raise ValueError(
+            "ev_hosting_flex feeder-transformer sizing received "
+            f"utilization_margin={utilization_margin}, which is outside (0, 1]. "
+            "Remediation: set TRANSFORMER_UTILIZATION_MARGIN in config.py to a "
+            "headroom fraction in (0, 1] (the line precedent uses 0.8)."
+        )
+    required = (float(downstream_nameplate_kw) * float(peak_factor)) / float(
+        utilization_margin
+    )
+    return float(math.ceil(required))
+
+
+def size_feeder_subtree_kw(
+    element_keys: Mapping[str, frozenset[int]],
+    nameplate_kw_by_bus: Mapping[int, float],
+    *,
+    peak_factor: float,
+    utilization_margin: float = TRANSFORMER_UTILIZATION_MARGIN,
+) -> dict[str, float]:
+    """Load-aware size every feeder-subtree element to its annual winter peak.
+
+    For each element (the feeder transformer AND every interior line in the
+    feeder subtree), the downstream nameplate sum is taken over the element's
+    downstream buses and resized via :func:`size_feeder_transformer_kw`. Applying
+    the SAME annual-peak / 0.8-margin rule to the interior lines (not only the
+    transformer) is required because the binding feeder element at 0 EVs is an
+    interior line, not the head transformer — the SDK ``load_aware`` line sizing
+    has no concept of the project's winter-peak envelope (the same mismatch the
+    transformer resize addresses). Only elements present in ``element_keys`` are
+    sized; every other ``line:*`` / ``transformer:*`` rating is left untouched by
+    the caller.
+
+    Args:
+        element_keys: Mapping ``element_key -> downstream-bus frozenset`` for the
+            feeder-subtree elements to resize (transformer + interior lines).
+        nameplate_kw_by_bus: Per-bus nameplate kW (the static nameplate sum, NOT
+            the annual peak).
+        peak_factor: The annual winter-peak multiplier from
+            :func:`annual_peak_base_factor`.
+        utilization_margin: Headroom margin in ``(0, 1]``
+            (default ``TRANSFORMER_UTILIZATION_MARGIN``).
+
+    Returns:
+        Mapping ``element_key -> resized kW rating`` (float64, rounded up).
+    """
+    resized: dict[str, float] = {}
+    for key, downstream_buses in element_keys.items():
+        downstream_nameplate_kw = float(
+            sum(float(nameplate_kw_by_bus.get(int(b), 0.0)) for b in downstream_buses)
+        )
+        resized[key] = size_feeder_transformer_kw(
+            downstream_nameplate_kw,
+            peak_factor=peak_factor,
+            utilization_margin=utilization_margin,
+        )
+    return resized
 
 
 def _network_graph(net: Any) -> nx.Graph:
