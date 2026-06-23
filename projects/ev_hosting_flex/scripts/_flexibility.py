@@ -118,9 +118,11 @@ def flex_curtailment(
     f_raw = np.where(safe_ev, overload / np.where(safe_ev, elem_ev_demand, 1.0), 0.0)
     # Only congested element-hours shed.
     f_raw = np.where(congested, f_raw, 0.0)
-    # Infeasible: a congested element whose pre-clamp f_E exceeds 1 (zeroing all
-    # EV under it still cannot relieve it — base load alone overloads).
-    infeasible_mask = congested & (f_raw > 1.0)
+    # Infeasible: a congested element that cannot be relieved by shedding all EV
+    # under it — either its pre-clamp f_E exceeds 1, or it carries NO sheddable EV
+    # demand at all (``~safe_ev``), in which case base load alone overloads it and
+    # f_raw was forced to 0 by the divide-by-zero guard above.
+    infeasible_mask = congested & ((f_raw > 1.0) | ~safe_ev)
     f_clamped = np.clip(f_raw, 0.0, 1.0)
 
     # Node-level reduction: cap_fraction[node, hour] = max over elements above the

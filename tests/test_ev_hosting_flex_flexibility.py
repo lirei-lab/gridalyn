@@ -104,6 +104,26 @@ def test_flex_curtailment_infeasible_clamps_and_flags() -> None:
     np.testing.assert_allclose(out["residual_overload_kw"], 10.0)
 
 
+def test_flex_curtailment_congested_with_zero_ev_is_infeasible() -> None:
+    """A congested element with NO sheddable EV demand is infeasible (D-03/D-07).
+
+    Single element (kW=100) over one bus, base demand=130 (130% congested) with
+    ZERO ev. There is nothing to shed, so the overload cannot be relieved:
+    feasible must be False and residual must surface the ~30 kW that remains.
+    Regression for the ``safe_ev``-guard hole where f_raw is forced to 0 for
+    zero-EV elements, so ``congested & (f_raw > 1.0)`` never fired.
+    """
+    indicator = np.array([[1.0]], dtype="float64")
+    elem_kw = np.array([100.0], dtype="float64")
+    demand = np.array([[130.0]], dtype="float64")  # base only, no EV
+    ev = np.array([[0.0]], dtype="float64")
+    out = flex_curtailment(indicator, demand, ev, elem_kw, _LIMIT)
+
+    assert out["feasible"] is False
+    np.testing.assert_allclose(out["curtailed"], [[0.0]])  # nothing to shed
+    np.testing.assert_allclose(out["residual_overload_kw"], 30.0)
+
+
 def test_flex_curtailment_rejects_nonpositive_elem_kw() -> None:
     """A nonpositive elem_kw raises a located ValueError (mirror _congestion)."""
     indicator = np.array([[1.0]], dtype="float64")
