@@ -164,6 +164,52 @@ def size_feeder_transformer_kw(
     return float(math.ceil(required))
 
 
+def size_feeder_subtree_kw(
+    element_keys: Mapping[str, frozenset[int]],
+    nameplate_kw_by_bus: Mapping[int, float],
+    *,
+    peak_factor: float,
+    utilization_margin: float = TRANSFORMER_UTILIZATION_MARGIN,
+) -> dict[str, float]:
+    """Load-aware size every feeder-subtree element to its annual winter peak.
+
+    For each element (the feeder transformer AND every interior line in the
+    feeder subtree), the downstream nameplate sum is taken over the element's
+    downstream buses and resized via :func:`size_feeder_transformer_kw`. Applying
+    the SAME annual-peak / 0.8-margin rule to the interior lines (not only the
+    transformer) is required because the binding feeder element at 0 EVs is an
+    interior line, not the head transformer — the SDK ``load_aware`` line sizing
+    has no concept of the project's winter-peak envelope (the same mismatch the
+    transformer resize addresses). Only elements present in ``element_keys`` are
+    sized; every other ``line:*`` / ``transformer:*`` rating is left untouched by
+    the caller.
+
+    Args:
+        element_keys: Mapping ``element_key -> downstream-bus frozenset`` for the
+            feeder-subtree elements to resize (transformer + interior lines).
+        nameplate_kw_by_bus: Per-bus nameplate kW (the static nameplate sum, NOT
+            the annual peak).
+        peak_factor: The annual winter-peak multiplier from
+            :func:`annual_peak_base_factor`.
+        utilization_margin: Headroom margin in ``(0, 1]``
+            (default ``TRANSFORMER_UTILIZATION_MARGIN``).
+
+    Returns:
+        Mapping ``element_key -> resized kW rating`` (float64, rounded up).
+    """
+    resized: dict[str, float] = {}
+    for key, downstream_buses in element_keys.items():
+        downstream_nameplate_kw = float(
+            sum(float(nameplate_kw_by_bus.get(int(b), 0.0)) for b in downstream_buses)
+        )
+        resized[key] = size_feeder_transformer_kw(
+            downstream_nameplate_kw,
+            peak_factor=peak_factor,
+            utilization_margin=utilization_margin,
+        )
+    return resized
+
+
 def _network_graph(net: Any) -> nx.Graph:
     """Build the undirected line+transformer connectivity graph (integer buses)."""
     graph = nx.Graph()

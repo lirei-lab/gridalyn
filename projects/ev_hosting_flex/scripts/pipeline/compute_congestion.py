@@ -238,6 +238,26 @@ def derive_congestion(
         float(LINE_LOADING_LIMIT_PERCENT),
     )
 
+    # GAP 1 / CONG-03 (09-03): fail loudly on a degenerate firm denominator. The
+    # firm count must land strictly inside the sweep (0 < firm < max(EV_SWEEP)) so
+    # Phase 10's hosting_expansion_percent = (flexible - firm)/firm never divides
+    # by zero. firm==0 means the feeder is already overloaded at 0 EVs (the feeder
+    # transformer was not load-aware sized); firm==max means the sweep is too
+    # narrow to observe the crossing.
+    firm = int(sweep["firm_ev_count"])
+    if not 0 < firm < max(EV_SWEEP):
+        raise ValueError(
+            "ev_hosting_flex stage 4: degenerate firm_ev_count="
+            f"{firm} for feeder {feeder_key} "
+            f"(first_overload_ev_count={sweep['first_overload_ev_count']}, "
+            f"EV_SWEEP max={max(EV_SWEEP)}); it must satisfy "
+            "0 < firm_ev_count < max(EV_SWEEP) to be a usable Phase-10 "
+            "denominator. Remediation: re-run prepare_topology_cache.py (the "
+            "feeder transformer must be load-aware sized to its annual "
+            "winter-peak downstream demand per plan 09-03) or widen EV_SWEEP in "
+            "config.py."
+        )
+
     # Recompute the loading at the firm count for the artifacts + metrics.
     per_bus = alloc_fn(int(sweep["firm_ev_count"]))
     demand = base + ev_unit * per_bus[:, None]

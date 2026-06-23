@@ -283,6 +283,88 @@ def test_size_feeder_transformer_kw_rejects_bad_input() -> None:
     assert "remediation" in str(excinfo.value).lower()
 
 
+def test_size_feeder_subtree_kw_resizes_every_element() -> None:
+    """The whole feeder subtree (transformer + interior lines) is annual-peak sized.
+
+    Hand-computed: head transformer covers buses {1,2}, an interior line covers
+    {2}. With peak_factor=2.0 and margin=0.8, the transformer sizes to
+    ceil((10+20)*2/0.8)=75 and the line to ceil(20*2/0.8)=50. Sizing the interior
+    lines (not only the head transformer) is what makes the binding 0-EV element
+    sit <= the margin (the GAP-1 root cause: an interior line binds first).
+    """
+    from projects.ev_hosting_flex.scripts._topology import size_feeder_subtree_kw
+
+    element_keys = {
+        "transformer:0": frozenset({1, 2}),
+        "line:0": frozenset({2}),
+    }
+    nameplate = {1: 10.0, 2: 20.0}
+    resized = size_feeder_subtree_kw(
+        element_keys, nameplate, peak_factor=2.0, utilization_margin=0.8
+    )
+    assert resized == {"transformer:0": 75.0, "line:0": 50.0}
+
+
+def test_firm_ev_count_positive_after_resize() -> None:
+    """A subtree-resized feeder yields a positive, in-grid firm_ev_count.
+
+    Synthetic fixture (cache-independent so it runs in CI without the gitignored
+    runtime cache): a single feeder transformer + one interior line over 2 buses,
+    each annual-peak sized to its downstream nameplate at margin 0.8 via
+    ``size_feeder_subtree_kw``. With a small EV sweep the firm count lands strictly
+    inside the grid with headroom below the first overload — proving the resize
+    removes the 0-EV degeneracy (GAP 1 / CONG-03).
+    """
+    import numpy as np
+
+    from projects.ev_hosting_flex.scripts._congestion import firm_ev_count
+    from projects.ev_hosting_flex.scripts._topology import size_feeder_subtree_kw
+
+    bus_ids = [1, 2]
+    # Flat 1-hour profile: base nameplate per bus; one extra "EV unit" kW per EV.
+    base_nameplate = {1: 100.0, 2: 100.0}  # kW per bus
+    peak_factor = 1.5
+    element_keys = {
+        "transformer:0": frozenset({1, 2}),
+        "line:0": frozenset({2}),
+    }
+    resized = size_feeder_subtree_kw(
+        element_keys, base_nameplate, peak_factor=peak_factor, utilization_margin=0.8
+    )
+    elements = ["transformer:0", "line:0"]
+    elem_kw = np.array([resized[e] for e in elements], dtype="float64")
+    # indicator: transformer covers both buses, line covers bus 2 only.
+    indicator = np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float64")
+    # base demand at the annual peak (1 hour): nameplate * peak_factor.
+    base = np.array(
+        [[base_nameplate[b] * peak_factor] for b in bus_ids], dtype="float64"
+    )
+    ev_unit = np.array([[5.0], [5.0]], dtype="float64")  # 5 kW per EV on each bus
+
+    def alloc_fn(total_ev: int) -> np.ndarray:
+        # Split EVs evenly across the two buses (deterministic).
+        per = np.zeros(len(bus_ids), dtype="float64")
+        for i in range(total_ev):
+            per[i % len(bus_ids)] += 1.0
+        return per
+
+    sweep = firm_ev_count(
+        (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20),
+        base,
+        ev_unit,
+        alloc_fn,
+        indicator,
+        elem_kw,
+        100.0,
+    )
+    firm = int(sweep["firm_ev_count"])
+    assert 0 < firm < 20, sweep
+    assert (
+        sweep["first_overload_ev_count"] is not None
+        and sweep["first_overload_ev_count"] > firm
+    ), sweep
+
+
 # ─── 08.1-02: load-aware adoption regression ────────────────────────────
 #
 # ev_hosting_flex opts into ``lines.sizing.mode = "load_aware"`` via its OWN
