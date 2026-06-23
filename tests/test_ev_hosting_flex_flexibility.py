@@ -290,3 +290,115 @@ def test_flexible_ev_count_monotonicity_guard_raises() -> None:
         flexible_ev_count(
             (40, 80), base, ev_unit, bad_alloc, indicator, elem_kw, _LIMIT
         )
+
+
+# ─── End-to-end derive_flexibility stage (10-02, FLEX-01/02/03/04) ───────────
+# Runs the real stage-5 derive_flexibility against the regenerated project cache +
+# stage-3 profiles + the stage-4 firm_hosting.json, asserting the headline +
+# capped flexible loading <= the limit + a monotonic trade curve. Skipped (the
+# project cache/profiles are gitignored) when the upstream stages have not run.
+
+import json  # noqa: E402
+import shutil  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+import pandas as pd  # noqa: E402
+
+from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    LINE_LOADING_LIMIT_PERCENT,
+    PROJECT_CACHE_DIR,
+    PROJECT_OUTPUTS_DIR,
+)
+from projects.ev_hosting_flex.scripts.pipeline.apply_flexibility_contracts import (  # noqa: E402
+    derive_flexibility,
+)
+
+_PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
+_PROJECT_JSON_DIR = PROJECT_OUTPUTS_DIR / "json"
+_REQUIRED_CACHE = [
+    "line_transformer_ratings_kw.json",
+    "downstream_bus_map.json",
+    "feeder_selection.json",
+    "node_building_count.json",
+]
+_REQUIRED_PROFILES = ["base_load_8760.parquet", "ev_load_unit.parquet"]
+_REQUIRED_JSON = ["firm_hosting.json"]
+
+
+def _project_cache_ready() -> bool:
+    """True iff the stage-2/3 cache + profiles + stage-4 firm_hosting are present."""
+    if not all((PROJECT_CACHE_DIR / name).is_file() for name in _REQUIRED_CACHE):
+        return False
+    if not all((_PROJECT_DATA_DIR / name).is_file() for name in _REQUIRED_PROFILES):
+        return False
+    return all((_PROJECT_JSON_DIR / name).is_file() for name in _REQUIRED_JSON)
+
+
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex stage-2/3 cache + profiles + stage-4 firm_hosting.json "
+        "not present; run prepare_topology_cache.py, generate_annual_profiles.py, "
+        "and compute_congestion.py first"
+    ),
+)
+def test_derive_flexibility_headline_and_capped_loading(tmp_path: Path) -> None:
+    """End-to-end: the headline + capped flexible loading <= limit + monotone curve.
+
+    Runs derive_flexibility against the regenerated project cache + stage-3
+    profiles + stage-4 firm_hosting.json into a tmp json_dir (seeded with a copy
+    of the real firm_hosting.json, the headline denominator) and asserts: the
+    summary carries hosting_expansion_percent and flexible_ev_count >=
+    firm_ev_count; the capped line_loading_flex.parquet max loading <= the limit
+    (a feasible flexible state); flexible_hosting.json carries the headline keys +
+    a trade-curve list; and the trade-curve curtailed energy is monotonic
+    non-decreasing in ev_count.
+    """
+    # derive_flexibility reads firm_hosting.json from json_dir; seed the tmp dir
+    # with the real stage-4 output so the run is hermetic w.r.t. its writes.
+    shutil.copy2(
+        _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
+    )
+
+    derived = derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
+    summary = derived["summary"]
+
+    assert "hosting_expansion_percent" in summary, summary
+    assert summary["flexible_ev_count"] >= summary["firm_ev_count"], summary
+    assert summary["firm_ev_count"] > 0, summary
+    # The headline equals (flexible - firm) / firm.
+    expected = round(
+        (summary["flexible_ev_count"] - summary["firm_ev_count"])
+        / summary["firm_ev_count"],
+        6,
+    )
+    assert summary["hosting_expansion_percent"] == expected, summary
+
+    # The capped flexible-limit loading is <= the limit (feasible flexible state).
+    loading = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_flex.parquet")
+    assert (
+        loading.values.max() <= float(LINE_LOADING_LIMIT_PERCENT) + 1e-6
+    ), loading.values.max()
+
+    # flexible_hosting.json carries the headline keys + a trade-curve list.
+    flexible_json = json.loads((tmp_path / "flexible_hosting.json").read_text())
+    for key in (
+        "flexible_ev_count",
+        "firm_ev_count",
+        "hosting_expansion_percent",
+        "curtailed_energy_fraction_at_flexible",
+        "trade_curve",
+    ):
+        assert key in flexible_json, flexible_json
+    assert isinstance(flexible_json["trade_curve"], list)
+    assert flexible_json["trade_curve"], flexible_json
+
+    # The trade-curve curtailed energy is monotonic non-decreasing in ev_count.
+    curve = sorted(flexible_json["trade_curve"], key=lambda r: r["ev_count"])
+    curtailed = [r["curtailed_energy_mwh"] for r in curve]
+    assert curtailed == sorted(curtailed), curtailed
+
+    # contract_activations.parquet is the tidy trade-curve series.
+    activations = pd.read_parquet(_PROJECT_DATA_DIR / "contract_activations.parquet")
+    assert "ev_count" in activations.columns
+    assert "curtailed_energy_mwh" in activations.columns
