@@ -57,6 +57,7 @@ sys.path.insert(0, str(ROOT))
 from projects.ev_hosting_flex.scripts._stochastic import (  # noqa: E402
     ev_realizations,
     tmy_base,
+    tmy_start_hod,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
@@ -192,8 +193,16 @@ def derive_annual_profiles(cache_dir: Path, data_dir: Path) -> dict[str, object]
     # tiled across the year. n_bus=1: every bus carries the same per-EV unit shape,
     # so we persist the (K, 8760) realization stack and broadcast over buses at
     # consume time (avoids a (K, n_bus, 8760) artifact that is n_bus-fold larger).
+    # CR-01: phase the midnight-based stochastic EV daily shape to the TMY's own
+    # clock (derived from the committed timestamps, never hardcoded) so the saved
+    # ev_stack_K.npy is already clock-aligned with base_load_8760 — the downstream
+    # stages then combine base + ev_stack correctly by raw index, putting the EV
+    # evening peak on the TMY cold-evening base (the study's coincidence premise).
+    start_hod = tmy_start_hod()
     rng = np.random.default_rng(SEED)
-    ev_stack_3d = ev_realizations(rng, int(K), n_ev=1, n_bus=1)  # (K, 1, 8760)
+    ev_stack_3d = ev_realizations(
+        rng, int(K), n_ev=1, n_bus=1, start_hod=start_hod
+    )  # (K, 1, 8760)
     ev_stack = np.round(ev_stack_3d[:, 0, :], ROUND_DECIMALS).astype(
         "float64"
     )  # (K,8760)

@@ -30,7 +30,11 @@ import numpy as np
 import pandas as pd
 
 from projects.ev_hosting_flex.scripts._flexibility import flex_deferral
-from projects.ev_hosting_flex.scripts._stochastic import ev_realizations, tmy_base
+from projects.ev_hosting_flex.scripts._stochastic import (
+    ev_realizations,
+    tmy_base,
+    tmy_start_hod,
+)
 from projects.ev_hosting_flex.scripts.config import (
     PLUGIN_WINDOW,
     SEED,
@@ -62,14 +66,13 @@ def test_cr01_base_and_ev_stack_share_clock_phase() -> None:
     persisted stack equals that shape rolled to the TMY's start phase.
     """
     start_hod = _committed_tmy_start_hod()
+    # The pipeline phases the EV stack to the TMY clock (tmy_start_hod); the helper
+    # must derive the same value from the committed timestamps.
+    assert tmy_start_hod() == start_hod
 
-    # The midnight-based per-EV daily shape from the pinned seed (reference draws).
-    # We rebuild it by sampling a single-day stack with the matching first draws is
-    # not exposed, so instead we infer phase from the stack's own periodicity: the
-    # EV stack must be 24-periodic and, when summed with the TMY base by raw index,
-    # its evening peak must land on the TMY evening (cold) base.
+    # The EV stack built the way the live stage builds it: phased to the TMY clock.
     rng = np.random.default_rng(SEED)
-    ev = ev_realizations(rng, 200, n_ev=1, n_bus=1)[:, 0, :]  # (200, 8760)
+    ev = ev_realizations(rng, 200, n_ev=1, n_bus=1, start_hod=start_hod)[:, 0, :]
     ev_mean = ev.mean(axis=0)
 
     # Build the TMY base and its per-index clock hour-of-day.
@@ -126,9 +129,12 @@ def test_cr01_summed_demand_peak_lands_in_evening() -> None:
 
     base = tmy_base(np.array([1.0], dtype="float64"), df=df)[0]  # (8760,)
 
-    # The EV stack from the pinned seed (evening-arrival peak by construction).
+    # The EV stack from the pinned seed (evening-arrival peak by construction),
+    # phased to the SAME TMY start hour the base uses (the live consume-time path).
     rng = np.random.default_rng(SEED)
-    ev = ev_realizations(rng, 100, n_ev=4, n_bus=1)[:, 0, :].mean(axis=0)  # (8760,)
+    ev = ev_realizations(rng, 100, n_ev=4, n_bus=1, start_hod=start_hod)[:, 0, :].mean(
+        axis=0
+    )
 
     # The live combination: summed by RAW column index (compute_congestion path).
     demand = base + ev

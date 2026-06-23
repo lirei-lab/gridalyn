@@ -130,9 +130,49 @@ def tmy_base(
     # tz-proof local hour-of-day: slice "YYYY-MM-DD HH:MM:SS-05:00"[11:13].
     hod = df["timestamp"].astype(str).str.slice(11, 13).astype(int).to_numpy()
     heat = np.maximum(0.0, T_BALANCE - temp) / R_THERM
+    # tmy_base correctly keys the occupancy bump off the REAL hour-of-day at each
+    # annual position (``_occ(hod)``), so the base's own clock phase is intact: the
+    # array index ``i`` carries clock hour ``hod[i] = (hod[0] + i) % 24``. The EV
+    # stack must be phased to THIS clock at consume time (see tmy_start_hod /
+    # ev_realizations ``start_hod``) so they sum coincidently (CR-01).
     per_home = (BG_KW * _occ(hod) + heat).astype(DTYPE)
     share = np.asarray(nameplate_share, dtype=DTYPE)
     return share[:, None] * per_home[None, :]
+
+
+def tmy_start_hod(*, df: pd.DataFrame | None = None) -> int:
+    """Return the committed TMY's first-row clock hour-of-day (the canonical phase).
+
+    The TMY annual series is the canonical clock for the whole pipeline: it carries
+    real timestamps, so its array index ``i`` maps to clock hour-of-day
+    ``(start_hod + i) % 24`` where ``start_hod`` is THIS first-row hour (the
+    committed Trois-Rivieres file starts at ``1989-12-31 19:00`` → 19). The
+    midnight-based stochastic EV daily shape must be phased to this value before it
+    is tiled and summed with the base by raw index, so the EV evening charging peak
+    coincides with the TMY cold-evening base (CR-01). Derived FROM THE TIMESTAMPS —
+    never hardcoded — so it tracks any future TMY re-copy.
+
+    Args:
+        df: Optional pre-loaded TMY frame; when ``None`` the committed
+            ``TMY_INPUT_PATH`` CSV is read.
+
+    Returns:
+        The integer first-row hour-of-day in ``[0, 23]``.
+
+    Raises:
+        ValueError: If the TMY is missing the ``timestamp`` column.
+    """
+    if df is None:
+        df = pd.read_csv(TMY_INPUT_PATH)
+    if "timestamp" not in df.columns:
+        raise ValueError(
+            "tmy_start_hod received a TMY frame missing the required 'timestamp' "
+            f"column (have {list(df.columns)}); cannot derive the EV phase. "
+            f"Remediation: re-copy the committed TMY at {TMY_INPUT_PATH} with a "
+            "'timestamp' column (PVGIS SARAH-3 schema)."
+        )
+    first = str(df["timestamp"].iloc[0])
+    return int(first[11:13])
 
 
 def _session(charger: float, start: float, energy: float) -> np.ndarray:
@@ -197,16 +237,30 @@ def ev_realizations(
     *,
     n_ev: int,
     n_bus: int = 1,
+    start_hod: int = 0,
 ) -> np.ndarray:
     """Return a byte-stable stochastic EV K-realization stack in kW.
 
     Builds ``k`` independent Monte-Carlo realizations from a SINGLE seeded
     ``rng`` drawn in the pinned per-EV order (see ``_ev_day``); each realization
-    is the daily evening EV shape tiled across all 365 days, then broadcast to a
-    per-bus ``(n_bus,)`` axis (the stage scales it by the largest-remainder
-    ``allocate_ev_per_bus`` allocation downstream, so each bus carries the same
-    per-EV-unit shape here). Two calls with identical inputs and seeds produce
-    byte-identical stacks (same ``content_sha256``) — the D-05/D-13 contract.
+    is the daily evening EV shape PHASE-ALIGNED to the TMY clock then tiled across
+    all 365 days, then broadcast to a per-bus ``(n_bus,)`` axis (the stage scales
+    it by the largest-remainder ``allocate_ev_per_bus`` allocation downstream, so
+    each bus carries the same per-EV-unit shape here). Two calls with identical
+    inputs and seeds produce byte-identical stacks (same ``content_sha256``) — the
+    D-05/D-13 contract.
+
+    CR-01 phase alignment: ``_ev_day`` builds a MIDNIGHT-based 24 h shape (``day[h]``
+    is clock hour ``h``). The TMY base array index ``i`` carries clock hour
+    ``(start_hod + i) % 24`` (the canonical clock, carried by the committed
+    timestamps). To make the EV draw at annual index ``i`` correspond to the SAME
+    clock hour as ``base[i]`` — so the EV evening charging peak coincides with the
+    TMY cold-evening base — the daily shape is rolled by ``-start_hod`` BEFORE
+    tiling: ``np.tile(np.roll(day, -start_hod), n_days)[i] == day[(i + start_hod)
+    % 24] == day[clock_hour(i)]``. The phase shift is applied AFTER all draws, so
+    the pinned RNG draw ORDER (and thus byte-stability) is untouched — only the
+    placement phase of the already-drawn daily shape changes. ``start_hod=0``
+    (the default) is the legacy midnight phase, so unit fixtures are unaffected.
 
     Args:
         rng: A seeded ``np.random.Generator`` (e.g.
@@ -214,15 +268,20 @@ def ev_realizations(
         k: Number of Monte-Carlo realizations (the K axis, fixed for repro).
         n_ev: EV count sampled per realization.
         n_bus: Per-bus axis width to broadcast the EV-unit shape across.
+        start_hod: The TMY's first-row clock hour-of-day (``tmy_start_hod()``) the
+            midnight-based daily shape is phased to. Default 0 (legacy midnight).
 
     Returns:
         A ``(k, n_bus, CALENDAR_HOURS)`` float64 EV-draw stack.
     """
     n_days = CALENDAR_HOURS // 24
+    phase = int(start_hod) % 24
     stack = np.zeros((k, n_bus, CALENDAR_HOURS), dtype=DTYPE)
     for kk in range(k):
         day = _ev_day(rng, n_ev)  # (24,) drawn in the pinned order
-        annual = np.tile(day, n_days)  # (8760,)
+        # Phase the already-drawn shape to the TMY clock (CR-01); draws unchanged.
+        day_phased = np.roll(day, -phase)  # day_phased[i%24] == day[(i+phase)%24]
+        annual = np.tile(day_phased, n_days)  # (8760,)
         stack[kk, :, :] = annual[None, :]
     return stack
 
