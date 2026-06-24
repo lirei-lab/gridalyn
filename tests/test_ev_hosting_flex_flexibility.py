@@ -597,3 +597,71 @@ def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
     curve = activations.sort_values("penetration")
     curt_fracs = list(curve["curtailed_lost_fraction_p95"])
     assert curt_fracs == sorted(curt_fracs), curt_fracs
+
+
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex stage-2/3 cache + profiles + stage-4 firm_hosting.json "
+        "not present; run prepare_topology_cache.py, generate_annual_profiles.py, "
+        "and compute_congestion.py first"
+    ),
+)
+def test_deferral_curve_persisted_fresh_and_consistent(tmp_path: Path) -> None:
+    """``deferral_curve.parquet`` is written fresh and agrees with the headline.
+
+    Regression guard for the artifact-integrity defect where stage 5 computed the
+    corrected per-penetration deferral trade-curve in memory but NEVER wrote it,
+    leaving a STALE ORPHAN ``deferral_curve.parquet`` on disk (the buggy
+    0-loss / feasible-to-14-EVs global-pooling curve) inconsistent with the
+    corrected deferral headline (5 EVs). The fix persists the curve and registers
+    it in the report; this test asserts:
+
+      * the parquet EXISTS and is FRESH (re-written by THIS run, mtime advances);
+      * it carries the five-column deferral schema with the ``deferral_feasible``
+        gate == ``irreducible_lost_fraction_p95 < tolerance``;
+      * its deferral-flexible point (largest ev_count whose P95 irreducible-lost
+        fraction < tolerance) EQUALS ``flexible_hosting.json``'s
+        ``deferral.flexible_ev_count`` (the consistency guard);
+      * the curve shows the cliff (NOT 0.0 everywhere).
+    """
+    shutil.copy2(
+        _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
+    )
+    curve_path = _PROJECT_DATA_DIR / "deferral_curve.parquet"
+    before = curve_path.stat().st_mtime if curve_path.is_file() else -1.0
+
+    derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
+
+    # Persisted + freshly re-written by THIS run (would have caught the orphan).
+    assert curve_path.is_file(), curve_path
+    assert curve_path.stat().st_mtime > before, "deferral_curve.parquet went stale"
+
+    curve = pd.read_parquet(curve_path)
+    expected_cols = {
+        "penetration",
+        "ev_count",
+        "curtailed_lost_fraction_p95",
+        "irreducible_lost_fraction_p95",
+        "deferral_feasible",
+    }
+    assert expected_cols <= set(curve.columns), curve.columns
+
+    tol = float(TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95)
+    # The persisted gate column equals the strict-< tolerance gate exactly.
+    recomputed = curve["irreducible_lost_fraction_p95"] < tol
+    assert (curve["deferral_feasible"].astype(bool) == recomputed).all(), curve
+
+    # The curve is NOT degenerate-0 everywhere: a real cliff exists.
+    assert float(curve["irreducible_lost_fraction_p95"].max()) > 0.0, curve
+
+    # Consistency guard: the persisted curve's deferral-flexible point (largest
+    # passing ev_count) == the headline deferral.flexible_ev_count.
+    passing = curve.loc[curve["deferral_feasible"].astype(bool), "ev_count"]
+    persisted_flexible = int(passing.max()) if len(passing) else 0
+
+    headline = json.loads((tmp_path / "flexible_hosting.json").read_text())
+    assert persisted_flexible == int(headline["deferral"]["flexible_ev_count"]), (
+        persisted_flexible,
+        headline["deferral"]["flexible_ev_count"],
+    )

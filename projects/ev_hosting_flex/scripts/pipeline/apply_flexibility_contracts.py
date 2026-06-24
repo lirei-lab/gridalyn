@@ -30,7 +30,9 @@ Artifacts:
   the curtailment-flexible state (every feeder element ≤ the limit, FLEX-01);
 * ``data/contract_activations.parquet`` — the tidy curtailment trade-curve series;
 * ``data/deferral_curve.parquet`` — the per-penetration deferral trade-curve
-  (penetration, ev_count, irreducible_lost_fraction_p95, feasible);
+  (penetration, ev_count, curtailed_lost_fraction_p95,
+  irreducible_lost_fraction_p95, deferral_feasible), where ``deferral_feasible``
+  is ``irreducible_lost_fraction_p95 < TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95``;
 * ``json/flexible_hosting.json`` — BOTH curve blocks + the read firm denominator;
 * ``reports/flexibility_contracts_report.json`` — canonical platform report.
 
@@ -492,6 +494,36 @@ def derive_flexibility(
         ],
     ).to_parquet(activations_path)
 
+    # The per-penetration DEFERRAL trade-curve (the same corrected ``_two_curve_sweep``
+    # result, gated for the deferral mechanism). Persisting it keeps the on-disk
+    # artifact consistent with the deferral headline in ``flexible_hosting.json``
+    # (its ``deferral_feasible`` == the < tolerance gate ``_curve_flexible`` keys on),
+    # so the shipped curve reproduces the cliff — NOT a stale 0-loss orphan.
+    deferral_curve_path = data_dir / "deferral_curve.parquet"
+    deferral_tol = float(TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95)
+    deferral_rows = [
+        {
+            "penetration": row["penetration"],
+            "ev_count": row["ev_count"],
+            "curtailed_lost_fraction_p95": row["curtailed_lost_fraction_p95"],
+            "irreducible_lost_fraction_p95": row["irreducible_lost_fraction_p95"],
+            "deferral_feasible": bool(
+                float(row["irreducible_lost_fraction_p95"]) < deferral_tol
+            ),
+        }
+        for row in trade_curve
+    ]
+    pd.DataFrame(
+        deferral_rows,
+        columns=[
+            "penetration",
+            "ev_count",
+            "curtailed_lost_fraction_p95",
+            "irreducible_lost_fraction_p95",
+            "deferral_feasible",
+        ],
+    ).to_parquet(deferral_curve_path)
+
     curtailment_block = {
         "mechanism": "curtailment",
         "flexible_ev_count": curtail_flexible_ev,
@@ -551,6 +583,7 @@ def derive_flexibility(
         "artifact_paths": [
             loading_path,
             activations_path,
+            deferral_curve_path,
             flexible_path,
         ],
         "summary": {
