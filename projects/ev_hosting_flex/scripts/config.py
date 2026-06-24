@@ -366,3 +366,75 @@ irreducible-lost-energy fraction — energy that fits in NEITHER the congested h
 NOR any in-window valley (the ``remaining`` after valley-fill deferral) divided by
 annual EV demand — must be strict-``<`` 1% at P95 for a swept point to pass. The
 curtailment curve keeps its own ``TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX``."""
+
+# ─── Phase-10.2 (TWOSTAGE-01..07, D-01..D-10): two-stage stochastic program ──
+# APPEND-ONLY block below the locked Phase-10.1 constants (everything above —
+# through ``TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` — is byte-frozen, mirrors
+# RECAL-09). These pin the two-stage chance-constrained EV-curtailment program:
+# day-ahead reservation of a reliability quantile (``r_t = Q_{1−ε}[required_t]``)
+# + real-time activation recourse (``a_t = min(r_t, required_t)``) over scenarios
+# carrying day-ahead temperature-forecast error + the Phase-10.1 stochastic EV
+# model. The closed-form policy is the byte-stable reproducibility ORACLE the
+# gated cvxpy solve (D-08) must match to ≤1e-6. Reuses the locked ``SEED``,
+# ``DTYPE``, ``ROUND_DECIMALS``, ``TRANSFORMER_KVA``, ``POWER_FACTOR``,
+# ``T_BALANCE``, ``R_THERM``, ``BG_KW``, the charger/arrival knobs,
+# ``TMY_INPUT_PATH`` and ``CALENDAR_HOURS`` (do NOT redefine them).
+
+EPS_HEADLINE = 0.05
+"""Fixed per-hour reliability operating point for the citable hosting headline
+(D-04/D-07). The optimal ``flexible_ev_count`` / ``hosting_expansion_percent`` are
+re-derived under the two-stage scheme at ``1 − EPS_HEADLINE = 95%`` per-hour
+reliability — a single fixed ε is required for a citable number (chosen over a
+frontier-only result)."""
+
+EPS_FRONTIER = (0.5, 0.4, 0.3, 0.2, 0.15, 0.10, 0.05, 0.02, 0.01)
+"""Cost-vs-reliability sensitivity sweep (D-04). The supporting ε-grid traced for
+the frontier; reliability ``1 − ε`` rises monotonically as ε falls. Reported as
+sensitivity evidence around the ``EPS_HEADLINE`` operating point."""
+
+EPS_SHOW = 0.10
+"""Reserve-vs-activation cold-day panel epsilon (D-07). The mechanism-evidence
+panel (day-ahead ``r_t`` vs real-time ``E[a_t]``) is drawn at this ε — the
+prototype's ``EPS_SHOW`` (``twostage_prototype.py`` L42), where activation ≈ ¼ of
+the reserved peak illustrates "reserve the tail, activate only what is needed"."""
+
+SIGMA_DAILY = 2.0
+"""Day-ahead temperature-forecast per-day offset std in °C (D-03). One ``N(0,
+SIGMA_DAILY)`` draw per scenario perturbs the whole cold TMY day uniformly — the
+unknown-day-ahead weather component that makes the scheme genuinely
+two-stage-under-uncertainty. Prototype ``TEMP_FCAST_OFFSET_STD``."""
+
+SIGMA_HOURLY = 0.8
+"""Per-hour temperature-forecast noise std in °C (D-03). A 24-vector ``N(0,
+SIGMA_HOURLY)`` draw per scenario adds hourly weather noise on top of the daily
+offset. Prototype ``TEMP_FCAST_HOURLY_STD``."""
+
+N_SCENARIOS = 4000
+"""Monte-Carlo scenario count for the per-hour quantile estimates (D-10). Large
+enough for stable tail quantiles at the tightest ε=0.01. Reconciles the divergent
+prototype seeds/counts (``twostage_prototype.py`` N=4000 / ``breakeven_nonwires``
+N=1000) to a single reproducibility contract on ``SEED=42``."""
+
+C_RESERVE = 0.5
+"""ILLUSTRATIVE labelled reservation price per kW·h reserved day-ahead (D-06).
+The optimal policy (``r* = Q_{1−ε}``, ``a* = min``) is PRICE-INDEPENDENT as long
+as ``C_ACTIVATE > 0`` — this price only SCALES the separately-reported, clearly
+illustrative cost frontier, it does not move the hosting headline or the
+reliability guarantee. Prototype ``C_R``. The break-even phase's different prices
+(``breakeven_nonwires.py``) are NOT used here (RESEARCH A5)."""
+
+C_ACTIVATE = 2.0
+"""ILLUSTRATIVE labelled activation price per kW·h activated in real time (D-06).
+As with ``C_RESERVE``, illustrative-only: the optimum is price-independent for any
+``C_ACTIVATE > 0`` and this merely scales the reported frontier. Prototype
+``C_A``. Real economic crossing vs reinforcement CAPEX is deferred to the
+break-even phase (D-01) with its own prices."""
+
+TWOSTAGE_SOLVER = "CLARABEL"
+"""Single pinned deterministic cvxpy solver for the gated two-stage solve (D-08).
+CLARABEL is the project default (``der_voltage.py``) and is present in this env
+(``cvxpy.installed_solvers() == ['CLARABEL','HIGHS','OSQP','SCIPY','SCS']``).
+ECOS is DROPPED — D-08's "ECOS fallback" wording is refined (RESEARCH Open-Q1 /
+Pitfall 5) because ECOS is NOT installed here; the closed-form oracle is the sole
+fallback (D-08c). The cvxpy solve must reproduce the oracle to ≤1e-6 or the stage
+falls back to the oracle and records the divergence."""
