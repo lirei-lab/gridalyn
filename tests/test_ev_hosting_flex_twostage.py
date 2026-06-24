@@ -85,9 +85,7 @@ def test_perhour_reliability() -> None:
     a = np.minimum(out["r"][None, :], req)
     residual = req - a
     assert out["rel_hour"] == pytest.approx(1.0 - (residual > 1e-6).mean())
-    assert out["rel_day"] == pytest.approx(
-        1.0 - (residual.max(axis=1) > 1e-6).mean()
-    )
+    assert out["rel_day"] == pytest.approx(1.0 - (residual.max(axis=1) > 1e-6).mean())
     # chance constraint: per-hour reliability >= 1 - eps (TWOSTAGE-02)
     assert out["rel_hour"] >= 1.0 - eps - 1e-9
 
@@ -210,3 +208,164 @@ def test_config_locked_unchanged() -> None:
     assert TRANSFORMER_KVA == 75.0
     assert POWER_FACTOR == 0.95
     assert K == 1000
+
+
+# ─── Stage integration tests: solve_twostage_program (Wave 2, 10.2-02) ──────
+# These drive the new pipeline stage between apply_flexibility_contracts and
+# validate_powerflow. The byte-stable + frontier-monotone tests use small
+# synthetic fixtures (no cube, no gitignored cache); the supersession-note test
+# drives the full stage against the regenerated project cache and skips cleanly
+# when the cache is absent (the MEMORY note: the ev_hosting_flex cache is
+# gitignored — regenerate before trusting cache-dependent tests).
+
+import os  # noqa: E402
+import shutil  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from projects.ev_hosting_flex.scripts._twostage import (  # noqa: E402
+    annual_twostage_headline,
+)
+from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    EPS_HEADLINE,
+    PROJECT_OUTPUTS_DIR,
+    PROJECT_ROOT,
+)
+from projects.ev_hosting_flex.scripts.pipeline.solve_twostage_program import (  # noqa: E402
+    _content_sha256,
+    derive_twostage,
+    run_stage,
+)
+
+_PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
+_PROJECT_JSON_DIR = PROJECT_OUTPUTS_DIR / "json"
+_PROJECT_CACHE_DIR = PROJECT_OUTPUTS_DIR / "cache"
+_STAGE_REQUIRED = [
+    _PROJECT_JSON_DIR / "firm_hosting.json",
+    _PROJECT_DATA_DIR / "base_load_8760.parquet",
+    _PROJECT_DATA_DIR / "ev_stack_K.npy",
+]
+
+
+def _stage_cache_ready() -> bool:
+    """True iff the stage-3 profiles + stage-4 firm_hosting.json are present."""
+    return all(p.is_file() for p in _STAGE_REQUIRED)
+
+
+def _synth_headline_inputs() -> dict:
+    """A tiny (n_bus=2, 8760) base + (K=8, 8760) EV fixture for the annual harness.
+
+    Sized so no (365, K, 24) cube is ever materialized — the per-day streaming
+    harness consumes it one day at a time.
+    """
+    rng = np.random.default_rng(SEED)
+    n_bus, hours, k = 2, 8760, 8
+    base = rng.uniform(5.0, 30.0, size=(n_bus, hours)).astype("float64")
+    ev_stack = rng.uniform(0.0, 2.0, size=(k, hours)).astype("float64")
+    feeder_indicator = np.ones(n_bus, dtype="float64")
+    return {
+        "base": base,
+        "ev_stack": ev_stack,
+        "feeder_indicator": feeder_indicator,
+        "feeder_kw": 40.0,
+    }
+
+
+def test_annual_headline_byte_stable() -> None:
+    """The annual two-stage headline is byte-stable across two runs (TWOSTAGE-04)."""
+    fx = _synth_headline_inputs()
+    firm_ev_count, flexible_ev_count = 3, 6
+
+    def _headline() -> dict:
+        return annual_twostage_headline(
+            fx["base"],
+            fx["ev_stack"] * float(flexible_ev_count),
+            fx["feeder_indicator"],
+            fx["feeder_kw"],
+            eps=EPS_HEADLINE,
+            downstream_home_count=7,
+            firm_ev_count=firm_ev_count,
+            flexible_ev_count=flexible_ev_count,
+        )
+
+    a = _headline()
+    b = _headline()
+    arr_a = np.array(
+        [
+            a["hosting_expansion_percent"],
+            a["annual_activated_kwh"],
+            a["seasonal_peak_kw"],
+        ],
+        dtype="float64",
+    )
+    arr_b = np.array(
+        [
+            b["hosting_expansion_percent"],
+            b["annual_activated_kwh"],
+            b["seasonal_peak_kw"],
+        ],
+        dtype="float64",
+    )
+    assert _content_sha256(arr_a) == _content_sha256(arr_b)
+    # the hosting headline contract: (flexible - firm) / firm, flexible >= firm.
+    assert a["flexible_ev_count"] >= a["firm_ev_count"]
+    assert a["hosting_expansion_percent"] == pytest.approx(
+        (flexible_ev_count - firm_ev_count) / firm_ev_count
+    )
+
+
+def test_eps_frontier_monotone_in_stage() -> None:
+    """Frontier reliability is monotone in eps + panel schema is the tidy set."""
+    df = _toy_tmy()
+    req = compose_scenarios(
+        np.random.default_rng(SEED), n_ev=11, n_homes=7, feeder_kw=71.25, df=df
+    )
+    rows = eps_frontier(req, EPS_FRONTIER)
+    # EPS_FRONTIER descends -> reliability_hour non-decreasing as eps falls.
+    rels = [row["reliability_hour"] for row in rows]
+    assert all(rels[i] <= rels[i + 1] + 1e-9 for i in range(len(rels) - 1))
+    panel = coldday_panel(req)
+    # the cold-day panel parquet schema columns (TWOSTAGE-05).
+    assert set(panel) == {"hour", "r_s", "a_mean", "req_p50", "req_p90"}
+
+
+@pytest.mark.skipif(
+    not _stage_cache_ready(),
+    reason=(
+        "ev_hosting_flex stage-3 profiles + stage-4 firm_hosting.json not present; "
+        "run generate_annual_profiles.py and compute_congestion.py first"
+    ),
+)
+def test_report_supersession_note(tmp_path: Path) -> None:
+    """The stage report carries the D-02 supersession note + cvxpy status (TWOSTAGE-06).
+
+    Drives derive_twostage against the regenerated project cache (skipping
+    cleanly when the gitignored cache is absent) and asserts the summary carries
+    the cvxpy drift/fallback status, then drives run_stage to assert the
+    supersession warning string is in validation.warnings.
+    """
+    pytest.importorskip("cvxpy")
+    # Seed a tmp json_dir with the real firm_hosting.json so derive is hermetic.
+    shutil.copy2(
+        _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
+    )
+    derived = derive_twostage(_PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
+    summary = derived["summary"]
+    # cvxpy<->oracle drift/status surfaced in the summary (TWOSTAGE-06, D-08c).
+    assert "cvxpy_oracle_drift" in summary
+    assert "cvxpy_fellback" in summary
+    assert summary["flexible_ev_count"] >= summary["firm_ev_count"]
+    # the supersession note (D-02) mentions the optimal headline replacing curves.
+    note = derived["supersession_note"]
+    assert "Supersession" in note and "OPTIMAL" in note
+    assert "REPLACES" in note and "descriptive" in note
+
+    # run_stage routes the note into validation.warnings via write_report.
+    # project_script() discovers project.yaml from cwd; run from the project root.
+    cwd = os.getcwd()
+    try:
+        os.chdir(PROJECT_ROOT)
+        report = run_stage(data_dir=_PROJECT_DATA_DIR)
+    finally:
+        os.chdir(cwd)
+    warnings = report["validation"]["warnings"]
+    assert any("Supersession" in w and "REPLACES" in w for w in warnings)
