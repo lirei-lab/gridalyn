@@ -103,9 +103,31 @@ spec:
         - projects/ev_hosting_flex/outputs/json/flexible_hosting.json
         - projects/ev_hosting_flex/outputs/reports/flexibility_contracts_report.json
 
-    # ── Stage 6: pandapower AC peak-hour validation (stubbed — Phase 11) ─
+    # ── Stage 6: two-stage stochastic program — optimal hosting headline (live, TWOSTAGE-04/05/06/07) ─
+    - id: solve_twostage_program
+      needs: [apply_flexibility_contracts]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
+        - projects/ev_hosting_flex/scripts/_twostage.py
+        - projects/ev_hosting_flex/scripts/_stochastic.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
+        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
+        - projects/ev_hosting_flex/outputs/data/base_load_8760.parquet
+        - projects/ev_hosting_flex/outputs/data/ev_stack_K.npy
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/optimal_hosting.json
+        - projects/ev_hosting_flex/outputs/data/twostage_frontier.parquet
+        - projects/ev_hosting_flex/outputs/data/reserve_activation_coldday.parquet
+        - projects/ev_hosting_flex/outputs/reports/twostage_program_report.json
+
+    # ── Stage 7: pandapower AC peak-hour validation (stubbed — Phase 11) ─
     - id: validate_powerflow
-      needs: [compute_congestion]
+      needs: [compute_congestion, solve_twostage_program]
       command: echo "STUB validate_powerflow — implemented in Phase 11"
 
     # ── Stage 7: canonical reports + baseline (stubbed — Phase 12) ───────
