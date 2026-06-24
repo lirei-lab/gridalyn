@@ -198,10 +198,12 @@ def test_cvxpy_matches_oracle() -> None:
 def test_config_locked_unchanged() -> None:
     """The locked 10.1 constants import byte-unchanged (TWOSTAGE-07)."""
     from projects.ev_hosting_flex.scripts.config import (
-        K,
         POWER_FACTOR,
-        SEED as cfg_seed,
+    )
+    from projects.ev_hosting_flex.scripts.config import SEED as cfg_seed
+    from projects.ev_hosting_flex.scripts.config import (
         TRANSFORMER_KVA,
+        K,
     )
 
     assert cfg_seed == 42
