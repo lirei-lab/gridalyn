@@ -26,6 +26,7 @@ from projects.ev_hosting_flex.scripts._stochastic import (
     ev_realizations,
     mc_p95,
     tmy_base,
+    tmy_start_hod,
 )
 from projects.ev_hosting_flex.scripts.config import (
     ADMD_KW,
@@ -115,11 +116,27 @@ def test_tmy_base_short_rows_raises_located_error() -> None:
 
 # ──────────────────── stochastic EV sampler + mc_p95 (Task 2) ─────────────
 
-# Golden digest recorded for the small-K configuration below. Any change to the
-# pinned RNG draw order (random -> choice -> lognormal -> normal) or the K stack
-# canonicalization trips this literal (Pitfall 2 / D-13). Recompute deliberately
-# (and document the re-baseline) if the draw order is intentionally changed.
+# Golden digest recorded for the small-K configuration below, at the LEGACY
+# midnight phase (``start_hod=0``). Any change to the pinned RNG draw order
+# (random -> choice -> lognormal -> normal) or the K stack canonicalization trips
+# this literal (Pitfall 2 / D-13). This digest is PHASE-INDEPENDENT: the CR-01 fix
+# only rolls the already-drawn daily shape, so the default-phase draws are byte-
+# unchanged and this golden is intentionally LEFT as-is (the draw-order tripwire).
+# Recompute deliberately (and document the re-baseline) if the draw order is ever
+# intentionally changed.
 _GOLDEN_EV_SHA256 = "be7963476d1271b3cf3acf835ea5b60f1d83a856cbcdf3117e24d9cb205dd31e"
+
+# CR-01 deliberate re-baseline tripwire: the SAME small-K stack but PHASED to the
+# committed TMY clock (``start_hod=tmy_start_hod()`` == 19), i.e. the live consume-
+# time placement. This digest CHANGED deliberately when CR-01 phase-aligned the EV
+# stack to the TMY cold-evening base (the EV-evening / cold-evening coincidence the
+# study premises). It is recorded so any future regression in the phase roll — or a
+# silent reversion to the ~19 h misaligned sum — trips CI. (Pinned to the local
+# value of ``tmy_start_hod()``; if the committed TMY's start hour ever changes, the
+# phase and this digest must be re-recorded together, with rationale.)
+_GOLDEN_EV_SHA256_PHASED_TMY = (
+    "c9878731b2b9da4dcfdf27bbe787670aa5f6f738bc1b5debaf01d5b12344f096"
+)
 
 
 def _content_sha256(arr: np.ndarray) -> str:
@@ -147,6 +164,23 @@ def test_ev_realizations_golden_digest() -> None:
     """The small-K EV stack matches the recorded golden sha256 (Pitfall 2)."""
     stack = ev_realizations(np.random.default_rng(SEED), 8, n_ev=2, n_bus=2)
     assert _content_sha256(stack) == _GOLDEN_EV_SHA256
+
+
+def test_ev_realizations_phased_golden_digest_cr01() -> None:
+    """The TMY-phased small-K stack matches the CR-01 re-baseline golden sha256.
+
+    Pins the live consume-time placement: the EV stack rolled to the committed
+    TMY's start hour-of-day (``tmy_start_hod()`` == 19) so the EV evening peak
+    coincides with the TMY cold-evening base. This golden CHANGED deliberately with
+    the CR-01 fix (the prior code summed base + EV ~19 h out of phase); recording it
+    trips CI on any regression of the phase alignment.
+    """
+    start_hod = tmy_start_hod()
+    assert start_hod == 19, "committed TMY start hour-of-day changed; re-record"
+    stack = ev_realizations(
+        np.random.default_rng(SEED), 8, n_ev=2, n_bus=2, start_hod=start_hod
+    )
+    assert _content_sha256(stack) == _GOLDEN_EV_SHA256_PHASED_TMY
 
 
 def test_ev_realizations_plugin_first_draw_skips_some_evs() -> None:
