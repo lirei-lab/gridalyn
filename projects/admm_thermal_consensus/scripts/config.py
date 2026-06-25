@@ -43,6 +43,19 @@ VOLTAGE_LOWER_PU = 0.95
 LINE_LOADING_LIMIT_PCT = 100.0
 TARGET_UNCOORD_LINE_LOADING_PCT = 115.0  # calibrate trunk ampacity to this at the uncoordinated peak
 
+# ── Forecast-uncertainty Monte Carlo ───────────────────────────────
+# For each non-responsive fraction we draw UQ_N_DRAWS random failing
+# subsets and perturb their imputed heating by Gaussian forecast residuals
+# (std = the imputer's CV RMSE). Worst-of-day voltage/line-loading is a
+# monotone function of the daily aggregate peak, so it is read from a
+# precomputed peak-MW -> (vmin, loading) curve instead of re-solving the
+# full day per draw.
+UQ_N_DRAWS = 200
+UQ_PEAK_GRID_N = 41
+UQ_PEAK_RANGE_MW = (3.4, 5.4)
+UQ_BAND_LOW_PCT = 5.0
+UQ_BAND_HIGH_PCT = 95.0
+
 # ── TOU price (CAD/kWh) by hour, deterministic ─────────────────────
 def tou_price_per_hour() -> list[float]:
     """Return a 24-length CAD/kWh time-of-use price vector."""

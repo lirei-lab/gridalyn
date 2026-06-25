@@ -63,3 +63,17 @@ spec:
       command: uv run python projects/admm_thermal_consensus/scripts/pipeline/make_figures.py
       outputs:
         - projects/admm_thermal_consensus/outputs/figures
+    - id: uncertainty_sweep
+      needs: [run_admm, build_network]
+      command: uv run python projects/admm_thermal_consensus/scripts/pipeline/uncertainty_sweep.py
+      outputs:
+        - projects/admm_thermal_consensus/outputs/data/uncertainty_summary.parquet
+        - projects/admm_thermal_consensus/outputs/data/uncertainty_draws.parquet
+        - projects/admm_thermal_consensus/outputs/json/uncertainty_results.json
+        - projects/admm_thermal_consensus/outputs/reports/uncertainty_report.json
+    - id: make_uncertainty_figure
+      needs: [uncertainty_sweep]
+      command: uv run python projects/admm_thermal_consensus/scripts/pipeline/make_uncertainty_figure.py
+      outputs:
+        - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.pdf
+        - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.png
