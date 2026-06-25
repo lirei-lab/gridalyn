@@ -12,7 +12,7 @@ keeps the first experience deliberately small:
 - one `project.yaml`;
 - one `workflow.yaml`;
 - one script;
-- one pandapower AC power-flow run;
+- one Gridalyn-managed AC power-flow run;
 - three CSV data tables;
 - one JSON report;
 - one figure;
@@ -43,7 +43,7 @@ projects/minimal_grid_project/outputs/manifests/project_run_manifest.json
 | Stage | Purpose |
 | --- | --- |
 | `prepare_workspace` | Creates the project output folders. |
-| `run_minimal_powerflow` | Builds a five-bus radial feeder, runs pandapower, exports tables, writes a report, and plots voltage. |
+| `run_minimal_powerflow` | Loads the five-bus feeder contract from `project.yaml`, runs the standard power-flow helper, exports tables, writes a report, and plots voltage. |
 
 ## What To Learn
 
@@ -61,7 +61,7 @@ network synthesis.
 
 | Goal | First file to edit |
 | --- | --- |
-| Change loads or topology | `scripts/run_minimal_powerflow.py` |
+| Change loads or topology | `project.yaml` |
 | Add another report | `project.yaml` and `workflow.yaml` |
 | Add operation records | `outputs/operations/` and a new workflow stage |
 | Promote reusable logic | Move it from `projects/minimal_grid_project/scripts/` into `gridalyn/` |

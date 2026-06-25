@@ -60,15 +60,20 @@ The workflow has three stages:
 
 ## Asset Modeling Strategy
 
-The project does not define its own energy-asset model. It uses the reusable SDK
-contracts in `gridalyn.assets`:
+The project owns its concrete feeder and prosumer parameters in `project.yaml`.
+The project-local `network_model.py` loads that declarative contract through
+`gridalyn.projects` helpers and passes the resulting SDK contracts into
+Gridalyn simulation builders.
+
+The reusable SDK contracts are:
 
 - `ProsumerAsset`;
 - `PVAsset`;
 - `BatteryAsset`;
 - `prosumer_assets_to_frame`.
 
-The project maps those asset contracts into a solver network through
+The feeder is built through `gridalyn.simulation.build_radial_pandapower_feeder`.
+Market dispatch maps the asset contracts into a solver network through
 `gridalyn.simulation.apply_pv_generation_to_pandapower` and
 `gridalyn.simulation.apply_battery_dispatch_to_pandapower`.
 

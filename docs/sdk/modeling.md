@@ -114,6 +114,10 @@ Use `prosumer_assets_to_frame` for stable project artifacts and
 `gridalyn.simulation.apply_pv_generation_to_pandapower` / `gridalyn.simulation.apply_battery_dispatch_to_pandapower`
 when mapping those assets into power-flow studies.
 
+Bundled demos keep concrete case values in `project.yaml` and load them through
+`gridalyn.projects` model-input helpers. The SDK owns the reusable contracts and
+builders; projects own their scenario parameters.
+
 ## Feeder and Voltage-Control Assets
 
 Small projects should not hand-build pandapower networks unless the point of the
@@ -157,6 +161,6 @@ der = VoltageControlDERSpec(
 net = build_voltage_control_feeder(feeder, der)
 ```
 
-The RL voltage-control demo uses these contracts so the project demonstrates
-Gridalyn's modeling layer instead of embedding all network and DER logic inside
-project-local scripts.
+The RL voltage-control demo declares its concrete feeder, DER, and profiles in
+`project.yaml`, then loads them into these contracts. That keeps project data
+declarative while avoiding project-specific Python specs inside the SDK.

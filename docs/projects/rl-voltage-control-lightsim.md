@@ -50,21 +50,24 @@ projects/rl_voltage_control_lightsim/outputs/manifests/project_run_manifest.json
 
 ## Gridalyn SDK Usage
 
-The project keeps only case parameters and output wiring locally. The network,
-DER contract, simulation environment, and tabular training loop come from
+The project keeps workflow wiring locally and declares its concrete feeder, DER
+contract, and deterministic 24-step load/PV profiles in `project.yaml`. The
+project wrapper loads that contract through `gridalyn.projects` model-input
+helpers.
+
+The reusable network, environment, and tabular training pieces come from
 Gridalyn:
 
 ```python
-from gridalyn.assets import (
-    BatteryAsset,
-    RadialFeederSpec,
-    VoltageControlDERSpec,
+from gridalyn.projects import (
+    load_radial_feeder_spec,
+    load_voltage_control_der_spec,
 )
 from gridalyn.simulation import (
     TabularVoltageControlConfig,
-    train_tabular_voltage_controller,
     VoltageControlEnvironment,
     build_voltage_control_feeder,
+    train_tabular_voltage_controller,
 )
 ```
 

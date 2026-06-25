@@ -75,6 +75,38 @@ For deterministic load/PV/EV operating cases, declare
 `run_standard_powerflow_scenario`. The project owns the scenario list; the SDK
 owns how the scenario mutates and validates the solver network.
 
+## Transformer Peak Validation
+
+Use `validate_transformer_peak_scenarios` when a study needs to compare
+scenario peak demand against both nameplate loading and a transformer thermal
+limit. The project provides scenario labels and peak-load values; Gridalyn owns
+the compact pandapower network, transformer type, loading calculation, voltage
+check, and congestion flags.
+
+```python
+from gridalyn.simulation import (
+    TransformerPeakValidationConfig,
+    validate_transformer_peak_scenarios,
+)
+
+result = validate_transformer_peak_scenarios(
+    scenarios={"S2_20pct": {"unmanaged_peak_mw": 12.4}},
+    config=TransformerPeakValidationConfig(
+        s_rated_mva=15.0,
+        s_rated_kva=15_000.0,
+        theta_max_c=110.0,
+        power_factor=0.95,
+        hv_voltage_kv=120.0,
+        mv_voltage_kv=25.0,
+    ),
+)
+assert result["scenarios"][0]["converged"]
+```
+
+Keep project scripts responsible for paths, local constants, and declared
+artifacts. Do not duplicate transformer-type registration or peak-loading loops
+inside demos.
+
 ## Voltage-Control Environment
 
 `VoltageControlEnvironment` packages a Gridalyn feeder specification, a

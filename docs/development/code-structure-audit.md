@@ -29,6 +29,8 @@ be avoided unless they represent a durable platform capability.
 - Projects such as `projects/flexibility_cls`,
   `projects/ieee_33_bus_demo`, and other demos now use project manifests and
   workflow contracts.
+- Publication-only figure generators are kept out of `projects/*/scripts` and
+  belong under manuscript workspaces, not governed demo workflows.
 - The historical `gridalyn/api.py` facade, dashboard-public exporters,
   database-manager shims, and project-owned compatibility routes have been
   removed instead of preserved as parallel APIs.
@@ -52,7 +54,6 @@ workflows, CLI arguments, or project manifests.
 | P0 | Keep the seven-package boundary stable. | Frequent package reshuffling makes the SDK hard to learn. | Add capabilities inside the canonical areas before creating new areas. |
 | P1 | Keep `gridalyn/` independent from `projects/`. | The SDK must be usable without bundled demo projects. | Enforced by `test_gridalyn_package_does_not_depend_on_projects`. |
 | P1 | Project-specific routes must be explicit. | Hidden defaults make demos look like platform requirements. | Pass paths through `project.yaml`, `workflow.yaml`, or CLI arguments. |
-| P1 | Manuscript-specific figure scripts still exist near project logic. | Public projects should not depend on private manuscript outputs. | Keep publication-only material outside the public project workflow. |
 | P2 | Some low-level helpers still expose study-era names in comments or print messages. | They do not break functionality, but they make the source harder to read before open source publication. | Rename messages and comments when touching the owning module; avoid compatibility shims. |
 
 ## Native Import Retirement Inventory
@@ -79,9 +80,7 @@ removed paths.
 
 The next cleanup should be incremental:
 
-1. Move publication-only figure generation behind a private or optional
-   manuscript workflow.
-2. Keep import-boundary checks current as new platform modules appear.
-3. Rename study-era comments and messages when touching the owning module.
-4. Keep examples small, documented, and independent from governed project
+1. Keep import-boundary checks current as new platform modules appear.
+2. Rename study-era comments and messages when touching the owning module.
+3. Keep examples small, documented, and independent from governed project
    execution.

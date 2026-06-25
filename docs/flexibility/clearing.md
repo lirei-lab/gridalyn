@@ -72,6 +72,20 @@ These names are currently materialized most completely by the
 `projects/flexibility_cls` workflow, but the contracts are general enough for
 prosumer battery markets and future transactive products.
 
+## SDK Surfaces
+
+The platform exposes reusable CLS and flexibility-operation helpers so governed
+projects do not need to reimplement market-study logic in local scripts:
+
+| Function | Module | Purpose |
+| --- | --- | --- |
+| `build_congestion_forecast` | `gridalyn.operations.flexibility` | Convert stochastic baseline and EV traces into thermal requirements, exceedance probabilities, and temporal bounds. |
+| `run_cls_capacity_allocation` | `gridalyn.operations.flexibility` | Run an EV-adoption sweep through the Soft/Hard CLS market engine and return summary metrics plus dispatch time series. |
+| `materialize_flexibility_operation_artifacts` | `gridalyn.operations.flexibility` | Promote clearing events and selections into constraints, offers, dispatch, settlement, KPI reports, operation runs, and dashboard catalogs. |
+
+Project scripts should call these functions with project-specific paths,
+scenario lists, and parameter values. Reusable product logic belongs in the SDK.
+
 ## CLS As One Specialized Product
 
 The Flexibility CLS workflow implements one market product:

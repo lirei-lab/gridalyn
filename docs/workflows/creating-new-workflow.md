@@ -63,20 +63,18 @@ For studies with stable expected numerical outputs, add a small regression
 baseline under:
 
 ```text
-projects/my_case/baselines/
+projects/my_case/baselines/results_baseline.json
 ```
 
-and expose a project-local verifier at:
-
-```text
-projects/my_case/scripts/verify_regression.py
-```
-
-Then the common CLI can run:
+The shared Gridalyn regression runner reads that baseline directly:
 
 ```bash
 uv run gridalyn project regression projects/my_case
 ```
+
+A project-local `scripts/verify_regression.py` wrapper is optional for manual
+entry points; it should call `gridalyn.projects.regression` rather than
+reimplementing metric comparison.
 
 ## 4. Declare the Workflow
 

@@ -103,16 +103,30 @@ clearing, dispatch, verification, and reporting should live in the SDK.
 
 Today Gridalyn has reusable building blocks for:
 
+- thermal screening of stochastic load and EV-adoption traces;
+- CLS scenario sweeps that produce market summaries and dispatch time series;
+- CLS market replay contexts for visualizations, diagnostics, and realized
+  scenario inspection without rebuilding market inputs in project scripts;
+- CLS output-consistency validation across JSON summaries, dispatch parquet,
+  temporal thermal bounds, and pandapower scenario reports;
+- transformer peak-loading validation that compares scenario demand against
+  static nameplate loading and a thermal winter-design limit;
 - provider registries and aggregator portfolios;
 - locational sensitivity and network-impact screening;
 - offer construction and locational clearing;
 - dispatch and settlement records;
 - network constraints and operational KPI reports;
-- project-owned operation run records and catalogs.
+- project-owned operation run records and operations catalogs;
+- synthetic topology-cache manifests and building-footprint validation reports.
 
 The larger `projects/flexibility_cls` workflow is one stress test of those
-contracts. It should be read as an example of a flexibility product, not as the
-definition of the operations layer.
+contracts. Its project scripts now mostly bind project paths and constants to
+native SDK utilities such as `build_congestion_forecast`,
+`run_cls_capacity_allocation`, `prepare_cls_market_replay_context`,
+`validate_cls_output_consistency`,
+`validate_transformer_peak_scenarios`, and
+`materialize_flexibility_operation_artifacts`; they should be read as
+orchestration wrappers, not as the definition of the operations layer.
 
 ## What To Read Next
 

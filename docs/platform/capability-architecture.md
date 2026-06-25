@@ -19,13 +19,13 @@ become the architecture.
 
 ```mermaid
 flowchart TB
-  foundation[Foundation and governance]
-  twin[Digital twin core]
-  assets[Asset and flexibility modeling]
-  simulation[Simulation and validation]
-  operations[Operations and markets]
-  projects[Projects, problems, experiments]
-  interfaces[Applications and interfaces]
+  foundation[Foundation And Governance]
+  twin[Digital Twin Core]
+  assets[Asset And Flexibility Modeling]
+  simulation[Simulation And Validation]
+  operations[Flexibility Market And Operations]
+  projects[Problems And Experiments]
+  interfaces[Applications And Interfaces]
 
   foundation --> twin
   twin --> assets
@@ -48,13 +48,13 @@ orchestrate any reusable capability through declared workflow stages.
 
 | Capability | Owns | Public surface |
 | --- | --- | --- |
-| Foundation and governance | IDs, units, lineage, manifests, reports, artifact policy. | `gridalyn.foundation` |
-| Digital twin core | Network snapshots, adapters, topology, scenarios, semantic graph. | `gridalyn.twin` |
-| Asset and flexibility modeling | Building, EV, DER, load, thermal, forecast, and flexibility models. | `gridalyn.assets` |
-| Simulation and validation | Synthetic-network builders, power flow, solver adapters, network-impact checks. | `gridalyn.simulation` |
-| Operations and markets | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, KPIs. | `gridalyn.operations` |
-| Projects, problems, experiments | Project contracts, workflow execution, regressions, sense checks. | `gridalyn.projects` |
-| Applications and interfaces | CLI, dashboard/catalog contracts, reports, visualization, future APIs. | `gridalyn.interfaces` |
+| Foundation And Governance | IDs, units, lineage, manifests, reports, artifact policy. | `gridalyn.foundation` |
+| Digital Twin Core | Network snapshots, adapters, topology, scenarios, semantic graph. | `gridalyn.twin` |
+| Asset And Flexibility Modeling | Building, EV, DER, load, thermal, forecast, and flexibility models. | `gridalyn.assets` |
+| Simulation And Validation | Synthetic-network builders, power flow, solver adapters, network-impact checks. | `gridalyn.simulation` |
+| Flexibility Market And Operations | Providers, aggregators, offers, constraints, clearing, dispatch, settlement, KPIs. | `gridalyn.operations` |
+| Problems And Experiments | Project contracts, workflow execution, regressions, sense checks. | `gridalyn.projects` |
+| Applications And Interfaces | CLI, dashboard/catalog contracts, reports, visualization, future APIs. | `gridalyn.interfaces` |
 
 ## Design Rule
 

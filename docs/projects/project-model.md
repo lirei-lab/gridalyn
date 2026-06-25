@@ -69,6 +69,18 @@ uv run gridalyn project init projects/my_minimal_case --template minimal
 | `outputs/operations/` | Dispatch instructions, operation runs, operational catalogs, and settlement-ready artifacts. |
 | `outputs/manifests/` | Run manifests and artifact inventories. |
 
+## Declarative Model Inputs
+
+Concrete demo parameters belong in `project.yaml`, not in SDK modules named
+after a demo. For compact synthetic studies, declare feeder, DER, prosumer, or
+profile values under `spec.inputs`, then load them through
+`gridalyn.projects` model-input helpers such as `load_radial_feeder_spec`,
+`load_prosumer_assets`, `load_der_dispatch_assets`, and
+`load_voltage_control_der_spec`.
+
+This keeps project data reproducible and inspectable while preserving the SDK
+as reusable contracts, validators, builders, simulators, and operations.
+
 ## Validation Ladder
 
 A healthy project should pass three increasingly strict checks:

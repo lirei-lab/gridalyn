@@ -65,7 +65,7 @@ Use it after regenerating project outputs. Examples of objective-level checks:
 | `prosumer_battery_market` | rolling horizon is consistent, peak import does not increase, voltage remains safe. |
 | `der_voltage_optimization` | solver is optimal, PV accounting balances, verified voltage limit is met. |
 | `rl_voltage_control_lightsim` | LightSim2Grid backend, reward improves, control reduces voltage deviation. |
-| `flexibility_cls` | five EV scenarios, dynamic limit explicit, Soft/Hard CLS energy present, settlement positive. |
+| `flexibility_cls` | five EV scenarios, dynamic limit explicit, Soft/Hard CLS energy present, settlement non-negative and positive when CLS is active. |
 
 ## Agent-Friendly Project Verification
 

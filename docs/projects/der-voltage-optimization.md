@@ -8,8 +8,8 @@ that combines convex optimization with physical power-flow verification.
 Gridalyn should support more than scenario replay. This project shows how a
 workflow can:
 
-- build a synthetic feeder from a Gridalyn feeder contract;
-- define DER dispatch assets through Gridalyn asset models;
+- declare the concrete DER feeder and assets in `project.yaml`;
+- load that contract through Gridalyn project model-input helpers;
 - derive a linearized voltage-sensitivity model through the SDK operation;
 - solve a voltage-constrained DER dispatch problem through Gridalyn operations;
 - verify the optimized setpoints with an AC pandapower power flow;
@@ -47,7 +47,7 @@ projects/der_voltage_optimization/outputs/manifests/project_run_manifest.json
 | Stage | Purpose |
 | --- | --- |
 | `prepare_workspace` | Creates output folders. |
-| `build_der_feeder` | Builds a 16-bus radial feeder from `RadialFeederSpec`, applies `DERDispatchAsset` PV setpoints through Gridalyn simulation helpers, and writes feeder/DER artifacts. |
+| `build_der_feeder` | Loads the 16-bus DER feeder contract from `project.yaml`, applies `DERDispatchAsset` PV setpoints through Gridalyn simulation helpers, and writes feeder/DER artifacts. |
 | `solve_voltage_optimization` | Calls the Gridalyn DER voltage-dispatch operation, persists sensitivity, dispatch, verification, report, and figure artifacts. |
 
 ## Optimization Model
