@@ -203,11 +203,21 @@ def test_tmy_base_addressable_per_bus_and_dtype() -> None:
 
 
 def test_tmy_base_per_home_peak_near_admd() -> None:
-    """The single-home TMY base peaks near ADMD_KW at the design-cold hour."""
+    """The single-home TMY base peaks in the CLPU-lifted [7.5, 9.5] kW band.
+
+    Re-based under cold-load pickup (260625-pwz): the steady design-cold heating
+    envelope is anchored to ADMD (~6.5 kW), but the coldest EVENING recovery hour is
+    multiplied by ``clpu_factor`` (up to CLPU_PEAK=1.40), lifting the annual per-home
+    peak to ~8.3 kW. The pre-CLPU band was ``ADMD_KW ± 1.5``; the CLPU port
+    deliberately lifts the cold-evening peak (the congestion-driving tail). The ADMD
+    anchor remains the off-peak / non-evening cold floor.
+    """
     share = np.array([1.0], dtype=np.float64)
     base = tmy_base(share)
-    # The design-cold per-home peak is anchored to ADMD (~6.5 kW); allow a band.
-    assert ADMD_KW - 1.5 <= float(base.max()) <= ADMD_KW + 1.5
+    peak = float(base.max())
+    # CLPU-lifted design-cold per-home peak band; ADMD (~6.5 kW) is the steady floor.
+    assert 7.5 <= peak <= 9.5, f"CLPU per-home peak {peak} outside [7.5, 9.5]"
+    assert peak >= ADMD_KW
 
 
 def test_ev_realizations_byte_stable_under_fixed_seed() -> None:
