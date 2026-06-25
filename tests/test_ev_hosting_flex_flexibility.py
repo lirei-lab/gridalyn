@@ -24,7 +24,6 @@ from projects.ev_hosting_flex.scripts._flexibility import (
     flexible_ev_count,
 )
 from projects.ev_hosting_flex.scripts.config import (
-    AVAILABILITY_SCENARIOS,
     PLUGIN_WINDOW,
     WORKPLACE_WINDOW,
 )
@@ -636,11 +635,13 @@ def test_flexible_ev_count_monotonicity_guard_raises() -> None:
         )
 
 
-# ─── End-to-end derive_flexibility: BOTH curves (10.1, RECAL-07/08, D-10) ─────
+# ─── End-to-end derive_flexibility: three-scenario power-limited leg (DAYTIME) ─
 # Runs the real stage-5 derive_flexibility against the regenerated project cache +
-# stage-3 TMY/stochastic profiles + the stage-4 firm_hosting.json, asserting BOTH
-# flexibility curves (curtailment + in-window deferral) with per-mechanism
-# headlines, the deferral P95 gate, and the firm <= curtail <= defer ordering.
+# stage-3 TMY/stochastic profiles + the stage-4 firm_hosting.json, asserting the THREE
+# power-limited availability scenarios (overnight / workplace HEADLINE / all_day) with
+# per-scenario headlines + the unserved-energy P95 gate, the curtailment-leg survival,
+# the SC4 monotonicity tripwire survival, the penetration cliff landing inside the
+# effective sweep, and the flexible-leg byte-stability (DAYTIME-04/05).
 
 import json  # noqa: E402
 import shutil  # noqa: E402
@@ -649,12 +650,14 @@ from pathlib import Path  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    EXTENDED_PENETRATION_SWEEP,
     LINE_LOADING_LIMIT_PERCENT,
     PROJECT_CACHE_DIR,
     PROJECT_OUTPUTS_DIR,
-    TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95,
+    TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95,
 )
 from projects.ev_hosting_flex.scripts.pipeline.apply_flexibility_contracts import (  # noqa: E402
+    _availability_sweep,
     derive_flexibility,
 )
 
@@ -683,6 +686,9 @@ def _project_cache_ready() -> bool:
     return all((_PROJECT_JSON_DIR / name).is_file() for name in _REQUIRED_JSON)
 
 
+# ─── Three-scenario power-limited integration + cliff + byte-stability (DAYTIME) ─
+
+
 @pytest.mark.skipif(
     not _project_cache_ready(),
     reason=(
@@ -691,20 +697,21 @@ def _project_cache_ready() -> bool:
         "and compute_congestion.py first"
     ),
 )
-def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
-    """End-to-end: BOTH curves with per-mechanism headlines + the deferral P95 gate.
+def test_three_scenario_pipeline(tmp_path: Path) -> None:
+    """End-to-end: the THREE power-limited availability scenarios + curtailment survival.
 
     Runs derive_flexibility against the regenerated project cache + stage-3
     TMY/stochastic profiles + stage-4 firm_hosting.json into a tmp json_dir (seeded
-    with a copy of the real firm_hosting.json, the headline denominator) and
-    asserts: BOTH a curtailment and a deferral block, each with a distinct
-    flexible_ev_count + hosting_expansion_percent; the deferral curve's irreducible-
-    lost-fraction P95 < 1%; the firm <= curtail-flexible <= defer-flexible ordering;
-    the capped curtailment loading <= the limit; and the two-curve trade-curve
-    parquet.
+    with a copy of the real firm_hosting.json, the headline denominator) and asserts:
+    exactly three scenario blocks (overnight / workplace / all_day), each with
+    flexible_ev_count + hosting_expansion_percent == round((flexible - firm)/firm, 6);
+    headline_scenario == "workplace"; each scenario's unserved_fraction_p95_at_flexible
+    < 1%; each flexible >= firm_ev (feasibility); the monotone ordering overnight <=
+    workplace <= all_day on flexible_ev_count (more availability never reduces hosting);
+    AND the curtailment leg SURVIVED the deferral->power-limited rewrite (a curtailment
+    block + the curtailment lost-fraction column on the availability curve + the
+    line_loading_flex.parquet capped-loading artifact <= the limit).
     """
-    # derive_flexibility reads firm_hosting.json from json_dir; seed the tmp dir
-    # with the real stage-4 output so the run is hermetic w.r.t. its writes.
     shutil.copy2(
         _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
     )
@@ -715,26 +722,35 @@ def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
     firm_ev = summary["firm_ev_count"]
     assert firm_ev > 0, summary
 
-    # BOTH curve blocks, each with a distinct per-mechanism headline (D-10).
-    curt = summary["curtailment"]
-    defer = summary["deferral"]
-    assert curt["mechanism"] == "curtailment"
-    assert defer["mechanism"] == "deferral"
-    for block in (curt, defer):
+    # Exactly the three availability scenarios, in the documented order.
+    scenarios = summary["scenarios"]
+    assert set(scenarios) == {"overnight", "workplace", "all_day"}, scenarios
+    assert summary["headline_scenario"] == "workplace"
+
+    tol = float(TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95)
+    for name, block in scenarios.items():
+        assert block["mechanism"] == "power_limited", block
         assert "flexible_ev_count" in block
         assert "hosting_expansion_percent" in block
-        # The per-mechanism headline equals (flexible - firm) / firm.
+        # The per-scenario headline equals (flexible - firm) / firm.
         expected = round((block["flexible_ev_count"] - firm_ev) / firm_ev, 6)
         assert block["hosting_expansion_percent"] == expected, block
+        # The unserved-energy fraction at the flexible point is strictly < 1% (D-04).
+        assert block["unserved_fraction_p95_at_flexible"] < tol, block
+        # Per-scenario firm feasibility floor.
+        assert block["flexible_ev_count"] >= firm_ev, block
 
-    # The deferral curve's irreducible-lost-fraction P95 is strictly < 1% (D-12).
-    assert defer["irreducible_lost_fraction_p95_at_flexible"] < float(
-        TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95
-    ), defer
+    # More availability never reduces hosting: overnight <= workplace <= all_day.
+    ov = scenarios["overnight"]["flexible_ev_count"]
+    wp = scenarios["workplace"]["flexible_ev_count"]
+    ad = scenarios["all_day"]["flexible_ev_count"]
+    assert ov <= wp <= ad, scenarios
+    assert summary["availability_ordering"]["ordering_holds"] is True
 
-    # The trade-curve ordering holds: firm <= curtail-flexible <= defer-flexible.
-    assert firm_ev <= curt["flexible_ev_count"] <= defer["flexible_ev_count"], summary
-    assert summary["trade_curve_ordering"]["ordering_holds"] is True
+    # Curtailment leg SURVIVED the rewrite: a curtailment block is present.
+    curt = summary["curtailment"]
+    assert curt["mechanism"] == "curtailment"
+    assert curt["flexible_ev_count"] >= firm_ev, curt
 
     # The capped curtailment loading is <= the limit (a feasible flexible state).
     loading = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_flex.parquet")
@@ -742,24 +758,69 @@ def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
         loading.values.max() <= float(LINE_LOADING_LIMIT_PERCENT) + 1e-6
     ), loading.values.max()
 
-    # flexible_hosting.json carries both curve blocks.
+    # flexible_hosting.json carries the scenarios mapping + headline + curtailment.
     flexible_json = json.loads((tmp_path / "flexible_hosting.json").read_text())
+    assert set(flexible_json["scenarios"]) == {"overnight", "workplace", "all_day"}
+    assert flexible_json["headline_scenario"] == "workplace"
     assert "curtailment" in flexible_json
-    assert "deferral" in flexible_json
-    assert (
-        flexible_json["curtailment"]["flexible_ev_count"] == curt["flexible_ev_count"]
-    )
-    assert flexible_json["deferral"]["flexible_ev_count"] == defer["flexible_ev_count"]
+    assert flexible_json["scenarios"]["workplace"]["flexible_ev_count"] == wp
 
-    # contract_activations.parquet is the tidy two-curve trade-curve series, with
-    # both mechanisms' P95 lost fractions monotonic non-decreasing in ev_count.
-    activations = pd.read_parquet(_PROJECT_DATA_DIR / "contract_activations.parquet")
-    assert "ev_count" in activations.columns
-    assert "curtailed_lost_fraction_p95" in activations.columns
-    assert "irreducible_lost_fraction_p95" in activations.columns
-    curve = activations.sort_values("penetration")
-    curt_fracs = list(curve["curtailed_lost_fraction_p95"])
-    assert curt_fracs == sorted(curt_fracs), curt_fracs
+    # availability_curve.parquet is the tidy three-scenario trade-curve series, with
+    # the retained curtailment lost-fraction column + monotonic unserved_fraction_p95.
+    curve = pd.read_parquet(_PROJECT_DATA_DIR / "availability_curve.parquet")
+    assert {"scenario", "penetration", "ev_count", "unserved_fraction_p95"} <= set(
+        curve.columns
+    ), curve.columns
+    # Curtailment SURVIVED as a column on the availability curve.
+    assert "curtailed_lost_fraction_p95" in curve.columns, curve.columns
+    assert set(curve["scenario"].unique()) == {"overnight", "workplace", "all_day"}
+    ov_curve = curve[curve["scenario"] == "overnight"].sort_values("penetration")
+    unserved = list(ov_curve["unserved_fraction_p95"])
+    assert unserved == sorted(unserved), unserved  # SC4 non-decreasing
+
+
+def test_sc4_monotonicity_tripwire_survives() -> None:
+    """A synthetic NON-monotone unserved curve trips the located SC4 tripwire.
+
+    Proves the per-scenario monotonicity guard was NOT dropped in the
+    deferral->power-limited rewrite (Issue 4). Drives ``_availability_sweep`` with a
+    tiny synthetic base/ev_stack whose aggregate EV draw DECREASES as penetration rises
+    (an adversarial alloc_fn), so a later, higher-penetration point yields a LOWER P95
+    unserved fraction -> the located ValueError must fire. No project cache needed.
+    """
+    import numpy as np  # local: keep the integration block self-contained
+
+    # One element over one bus, rating 100 kW; a 24 h base flat at 90 (10 kW headroom).
+    n_hour = 24
+    indicator = np.array([[1.0]], dtype="float64")
+    base = np.full((1, n_hour), 90.0, dtype="float64")
+    # ev_stack: one realization, a flat 1 kW/EV-unit draw across the whole day so the
+    # in-window overnight session saturates at high aggregate scale.
+    ev_stack = np.ones((1, n_hour), dtype="float64")
+
+    # Adversarial alloc: assign a LARGER EV scale at the SMALLER penetration so the
+    # unserved fraction is high early then drops -> non-monotone -> the tripwire fires.
+    def bad_alloc(penetration: float) -> np.ndarray:
+        mapping = {0.1: 500.0, 0.2: 1.0}
+        # round to match the swept grid keys
+        return np.array([mapping.get(round(penetration, 1), 1.0)], dtype="float64")
+
+    # Monkeypatch the sweep grid to the two adversarial points via a tiny shim: call
+    # _availability_sweep but with PENETRATION restricted through the alloc mapping.
+    # _availability_sweep reads EXTENDED_PENETRATION_SWEEP internally; the alloc only
+    # diverges at 0.1 vs 0.2, and the SC4 guard fires on the first decrease it sees.
+    with pytest.raises(ValueError, match="monotonic non-decreasing"):
+        _availability_sweep(
+            base,
+            ev_stack,
+            indicator,
+            feeder_row=0,
+            feeder_kw=100.0,
+            alloc_fn=bad_alloc,
+            downstream_home_count=10,
+            limit=100.0,
+            start_hod=0,
+        )
 
 
 @pytest.mark.skipif(
@@ -770,61 +831,79 @@ def test_derive_flexibility_both_curves(tmp_path: Path) -> None:
         "and compute_congestion.py first"
     ),
 )
-def test_deferral_curve_persisted_fresh_and_consistent(tmp_path: Path) -> None:
-    """``deferral_curve.parquet`` is written fresh and agrees with the headline.
+def test_penetration_cliff_inside_sweep(tmp_path: Path) -> None:
+    """The overnight unserved cliff lands INSIDE the effective sweep (Pitfall 2 / A2).
 
-    Regression guard for the artifact-integrity defect where stage 5 computed the
-    corrected per-penetration deferral trade-curve in memory but NEVER wrote it,
-    leaving a STALE ORPHAN ``deferral_curve.parquet`` on disk (the buggy
-    0-loss / feasible-to-14-EVs global-pooling curve) inconsistent with the
-    corrected deferral headline (5 EVs). The fix persists the curve and registers
-    it in the report; this test asserts:
-
-      * the parquet EXISTS and is FRESH (re-written by THIS run, mtime advances);
-      * it carries the five-column deferral schema with the ``deferral_feasible``
-        gate == ``irreducible_lost_fraction_p95 < tolerance``;
-      * its deferral-flexible point (largest ev_count whose P95 irreducible-lost
-        fraction < tolerance) EQUALS ``flexible_hosting.json``'s
-        ``deferral.flexible_ev_count`` (the consistency guard);
-      * the curve shows the cliff (NOT 0.0 everywhere).
+    Asserts the OVERNIGHT scenario's availability curve shows a NON-ZERO
+    unserved_fraction_p95 at the top of the EFFECTIVE sweep grid
+    (EXTENDED_PENETRATION_SWEEP) AND that the cliff is INFORMATIVE — the gate is
+    reached inside the sweep (the overnight curve crosses the 1% tolerance), so the
+    flexible count does NOT saturate uninformatively at the very top. This is the
+    append-only sweep-extension guard: the frozen PENETRATION_SWEEP stays unedited and
+    the extended grid carries the cliff.
     """
     shutil.copy2(
         _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
     )
-    curve_path = _PROJECT_DATA_DIR / "deferral_curve.parquet"
-    before = curve_path.stat().st_mtime if curve_path.is_file() else -1.0
-
     derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
 
-    # Persisted + freshly re-written by THIS run (would have caught the orphan).
-    assert curve_path.is_file(), curve_path
-    assert curve_path.stat().st_mtime > before, "deferral_curve.parquet went stale"
+    curve = pd.read_parquet(_PROJECT_DATA_DIR / "availability_curve.parquet")
+    ov = curve[curve["scenario"] == "overnight"].sort_values("penetration")
+    top_pen = float(max(EXTENDED_PENETRATION_SWEEP))
+    top_row = ov[ov["penetration"] == round(top_pen, 6)]
+    assert not top_row.empty, ov["penetration"].tolist()
+    # Non-zero unserved at the effective sweep top (not flat-zero saturation).
+    assert float(top_row["unserved_fraction_p95"].iloc[0]) > 0.0, top_row
+    # Informative cliff: the overnight curve crosses the 1% gate INSIDE the sweep, so
+    # the gate actually binds (some swept points fail) rather than passing them all.
+    tol = float(TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95)
+    assert float(ov["unserved_fraction_p95"].max()) >= tol, (
+        "overnight unserved never reaches the 1% gate inside the effective sweep — "
+        "the cliff is outside the grid (uninformative saturation); extend the sweep."
+    )
 
-    curve = pd.read_parquet(curve_path)
-    expected_cols = {
-        "penetration",
-        "ev_count",
-        "curtailed_lost_fraction_p95",
-        "irreducible_lost_fraction_p95",
-        "deferral_feasible",
-    }
-    assert expected_cols <= set(curve.columns), curve.columns
 
-    tol = float(TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95)
-    # The persisted gate column equals the strict-< tolerance gate exactly.
-    recomputed = curve["irreducible_lost_fraction_p95"] < tol
-    assert (curve["deferral_feasible"].astype(bool) == recomputed).all(), curve
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex stage-2/3 cache + profiles + stage-4 firm_hosting.json "
+        "not present; run prepare_topology_cache.py, generate_annual_profiles.py, "
+        "and compute_congestion.py first"
+    ),
+)
+def test_flexible_leg_byte_stable(tmp_path: Path) -> None:
+    """The re-baselined flexible leg is byte-stable across two runs (DAYTIME-05).
 
-    # The curve is NOT degenerate-0 everywhere: a real cliff exists.
-    assert float(curve["irreducible_lost_fraction_p95"].max()) > 0.0, curve
+    Runs derive_flexibility twice into two tmp dirs; the PRIMARY assertion is that the
+    NEW three-scenario availability output hash (availability_curve_content_sha256 — the
+    artifact that actually changed this phase) is identical across runs. As a secondary
+    unchanged-curtailment regression guard, the line_loading_flex.parquet
+    content_sha256 (flex_loading_content_sha256) is also identical.
+    """
+    out1_dir = tmp_path / "run1"
+    out2_dir = tmp_path / "run2"
+    out1_dir.mkdir()
+    out2_dir.mkdir()
+    shutil.copy2(
+        _PROJECT_JSON_DIR / "firm_hosting.json", out1_dir / "firm_hosting.json"
+    )
+    shutil.copy2(
+        _PROJECT_JSON_DIR / "firm_hosting.json", out2_dir / "firm_hosting.json"
+    )
 
-    # Consistency guard: the persisted curve's deferral-flexible point (largest
-    # passing ev_count) == the headline deferral.flexible_ev_count.
-    passing = curve.loc[curve["deferral_feasible"].astype(bool), "ev_count"]
-    persisted_flexible = int(passing.max()) if len(passing) else 0
+    s1 = derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, out1_dir)["summary"]
+    s2 = derive_flexibility(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, out2_dir)["summary"]
 
-    headline = json.loads((tmp_path / "flexible_hosting.json").read_text())
-    assert persisted_flexible == int(headline["deferral"]["flexible_ev_count"]), (
-        persisted_flexible,
-        headline["deferral"]["flexible_ev_count"],
+    # PRIMARY: the NEW flexible-leg availability output is byte-stable (DAYTIME-05).
+    assert (
+        s1["availability_curve_content_sha256"]
+        == s2["availability_curve_content_sha256"]
+    ), (
+        s1["availability_curve_content_sha256"],
+        s2["availability_curve_content_sha256"],
+    )
+    # SECONDARY: the unchanged curtailment loading parquet is also byte-stable.
+    assert s1["flex_loading_content_sha256"] == s2["flex_loading_content_sha256"], (
+        s1["flex_loading_content_sha256"],
+        s2["flex_loading_content_sha256"],
     )
