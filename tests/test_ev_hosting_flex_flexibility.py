@@ -401,9 +401,7 @@ def test_power_limited_chronological() -> None:
     base[2] = 60.0  # 40 kW headroom, deep night (also later in clock order)
     ev = np.zeros(24, dtype="float64")
     ev[18] = 30.0
-    out = flex_power_limited(
-        ev, base, rating, sessions=(PLUGIN_WINDOW,), start_hod=0
-    )
+    out = flex_power_limited(ev, base, rating, sessions=(PLUGIN_WINDOW,), start_hod=0)
     delivered = np.asarray(out["delivered"], dtype="float64")
     # Arrival hour 18 is throttled to its own headroom (5), NOT skipped for a valley.
     np.testing.assert_allclose(delivered[18], 5.0)

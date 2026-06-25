@@ -339,6 +339,215 @@ def flex_deferral(
     }
 
 
+def _day_session_hours(
+    n_hour: int,
+    sessions: Sequence[Sequence[int]],
+    start_hod: int,
+) -> list[list[list[int]]]:
+    """Segment the hour vector into per-day, chronologically-ordered session sets.
+
+    Generalizes ``_overnight_session_ids`` from ONE contiguous overnight session to
+    a SET of disjoint plug-in sessions per day (overnight home + daytime workplace,
+    D-04). The clock-phase arithmetic is REUSED VERBATIM: the annual index ``idx``
+    carries clock hour ``(start_hod + idx) % 24`` and absolute day
+    ``(start_hod + idx) // 24``; an overnight (wrap-midnight) window's evening hours
+    (clock >= 18) anchor on their OWN absolute day while its morning hours anchor on
+    the PREVIOUS day's 18:00 lead edge. A workplace ``[9-16]`` window does NOT wrap
+    midnight, so every member hour anchors on its own absolute day (a same-day
+    contiguous run, no anchoring needed).
+
+    Per-day confinement (CR-02 generalized): each hour is assigned to the
+    ``(anchor_day, session_index)`` of the window it belongs to, so a day's
+    overnight-remainder may only carry forward into THAT day's later sessions — never
+    into another day's session.
+
+    For a lone ``n_hour <= 24`` vector the documented per-day contract holds: the
+    whole vector is one calendar day; every window's in-window hours form that day's
+    session (matching the unit-test fixtures).
+
+    Args:
+        n_hour: Length of the ev/base vector.
+        sessions: A tuple of session windows; each window is a sequence of
+            hour-of-day ints (membership taken modulo 24). Window order in this tuple
+            is the WITHIN-DAY chronological order ties are broken by (overnight first,
+            then workplace) — but member hours are always emitted in clock order and
+            the natural clock ordering of session start hours is preserved.
+        start_hod: The TMY's first-row clock hour-of-day (0 for midnight fixtures).
+
+    Returns:
+        A list over calendar days (ascending anchor day); each element is that day's
+        list of sessions ordered chronologically; each session is a list of its
+        member hour indices in CLOCK (ascending-clock) order.
+    """
+    idx = np.arange(n_hour)
+    clock = (int(start_hod) + idx) % 24
+    abs_day = (int(start_hod) + idx) // 24
+    # window_sets[w] is the resolved hour-of-day membership set of session window w.
+    window_sets = [{int(h) % 24 for h in window} for window in sessions]
+    # A window "wraps midnight" if it contains both an evening (>=18) and a
+    # morning (<18) hour-of-day; only such windows need the previous-day anchoring.
+    wraps = [any(h >= 18 for h in s) and any(h < 18 for h in s) for s in window_sets]
+    # A wrap-midnight overnight session anchored on day D spans clock 18-23 of D +
+    # clock 0-7 of D+1; the workplace [9-16] window of calendar day D+1 follows that
+    # overnight chronologically, so it is grouped under the SAME anchor (D). A daytime
+    # (non-wrapping) window therefore anchors on the PREVIOUS calendar day, joining
+    # the overnight session that just ended that morning (D-04: overnight-evening ->
+    # overnight-morning -> workplace, within one logical plug-in day).
+    any_wrap = any(wraps)
+
+    # Per-(anchor_day, session_index) -> list of (clock, hour_index) member tuples.
+    day_sessions: dict[int, dict[int, list[tuple[int, int]]]] = {}
+    for i in range(n_hour):
+        c = int(clock[i])
+        for w, members in enumerate(window_sets):
+            if c not in members:
+                continue
+            if n_hour <= 24:
+                anchor = 0
+            elif wraps[w] and c < 18:
+                # Morning hour of a wrap-midnight window anchors on the previous day.
+                anchor = int(abs_day[i]) - 1
+            elif not wraps[w] and any_wrap:
+                # A daytime window groups with the overnight session that ended that
+                # morning (the previous calendar day's anchor).
+                anchor = int(abs_day[i]) - 1
+            else:
+                anchor = int(abs_day[i])
+            day_sessions.setdefault(anchor, {}).setdefault(w, []).append((c, i))
+            break  # an hour belongs to the FIRST matching window only.
+
+    out: list[list[list[int]]] = []
+    for anchor in sorted(day_sessions):
+        sess_map = day_sessions[anchor]
+        day_list: list[list[int]] = []
+        # Sessions chronologically: the within-day order is the session-window order
+        # (overnight first, then workplace), member hours in ARRIVAL-clock order. For a
+        # wrap-midnight window the arrival edge is 18:00, so evening hours (clock >= 18)
+        # precede morning hours (clock < 18); a same-day window sorts by raw clock.
+        for w in sorted(sess_map):
+            if wraps[w]:
+                key = lambda t: (0, t[0]) if t[0] >= 18 else (1, t[0])  # noqa: E731
+            else:
+                key = lambda t: (0, t[0])  # noqa: E731
+            members = sorted(sess_map[w], key=key)
+            day_list.append([i for _, i in members])
+        out.append(day_list)
+    return out
+
+
+def flex_power_limited(
+    ev: np.ndarray,
+    base: np.ndarray,
+    rating: float,
+    *,
+    sessions: Sequence[Sequence[int]],
+    charger_kw: float = float("inf"),
+    limit: float = float(LINE_LOADING_LIMIT_PERCENT),
+    annual_ev_demand: float | None = None,
+    start_hod: int = 0,
+) -> dict[str, Any]:
+    """Power-limited natural EV charging over a multi-session availability window.
+
+    The genuinely-new flexible-leg mechanism that REPLACES the 10.1 valley-fill
+    ``flex_deferral`` (left dormant beside it). Each hour the aggregate EV draw is
+    throttled to ``min(remaining_requirement, charger_kw, max(0, rating − base[h]))``,
+    walked in CLOCK order from arrival, NEVER relocated to a chosen lower-base hour.
+    Undelivered energy carries forward to the day's NEXT chronological session; energy
+    still undelivered after the day's LAST session is the unserved energy (D-01/D-03).
+
+    Contrast with ``flex_deferral``: that kernel computes ``placed = min(ev, headroom)``
+    then refills the over-cap excess into the session's hours sorted lowest-base-first
+    (a valley-fill placement). This kernel DELETES that valley placement and the
+    excess/refill concept: energy is throttled in place and what does not fit THIS hour
+    simply waits for the next chronological plug-in hour. (The source-inspection guard
+    in the unit tests asserts this kernel contains no such valley placement.)
+
+    Per-day confinement (CR-02 generalized, D-04): the day's sessions are derived by
+    ``_day_session_hours`` and ``carry`` is threaded only across that day's
+    chronologically-ordered sessions — a December overnight's remainder may carry into
+    that day's workplace ``[9-16]`` session, NEVER into another day. The
+    overnight-only scenario degenerates to single-session throttling (carry is a
+    same-day no-op past the last session).
+
+    The over-limit/headroom decision uses the SAME strict-``>`` convention as
+    ``flex_deferral`` — the ``max(0, rating − base)`` headroom is the per-hour cap (no
+    second epsilon, T-10.1-07): an hour whose base sits exactly at the rating has zero
+    headroom and hosts no charging.
+
+    Args:
+        ev: ``(n_hour,)`` float64 per-hour natural EV draw in kW (the energy that
+            wants to charge in each hour; hour-of-day or annual).
+        base: ``(n_hour,)`` float64 per-hour non-EV base demand in kW.
+        rating: The element kW rating (the headroom denominator, > 0).
+        sessions: A tuple of session windows (each a sequence of hour-of-day ints),
+            e.g. ``AVAILABILITY_SCENARIOS["workplace"]``. Membership is modulo 24.
+        charger_kw: Optional per-hour aggregate charger-power ceiling; defaults to
+            ``+inf`` so the headroom is the only non-requirement cap (the natural
+            aggregate draw is the ceiling — RESEARCH Open-Q1).
+        limit: The loading-percent congestion limit (strict ``>``); retained for
+            signature parity with ``flex_deferral`` (the headroom cap encodes it).
+        annual_ev_demand: The ``unserved_fraction`` denominator; defaults to
+            ``ev.sum()`` when ``None``.
+        start_hod: The annual array's clock hour-of-day at index 0
+            (``tmy_start_hod()`` after CR-01); used to segment sessions per day.
+
+    Returns:
+        ``{delivered, unserved, unserved_fraction, threshold_convention}`` where
+        ``delivered`` is the ``(n_hour,)`` post-throttle hourly EV draw, ``unserved``
+        is the total kWh undelivered after every day's last session, and
+        ``unserved_fraction`` is ``unserved / annual_ev_demand``.
+
+    Raises:
+        ValueError: If ``rating`` is non-positive or ``ev``/``base`` shapes differ.
+    """
+    ev = np.asarray(ev, dtype=DTYPE)
+    base = np.asarray(base, dtype=DTYPE)
+    if float(rating) <= 0.0:
+        raise ValueError(
+            "flex_power_limited received a non-positive rating "
+            f"({float(rating)}); the headroom (rating - base) would be ill-defined. "
+            "Remediation: pass the feeder element's positive kW rating from "
+            "line_transformer_ratings_kw.json."
+        )
+    if ev.shape != base.shape:
+        raise ValueError(
+            "flex_power_limited received mismatched ev/base shapes "
+            f"(ev={ev.shape}, base={base.shape}); they must align hour-for-hour. "
+            "Remediation: pass per-hour ev and base vectors of identical length."
+        )
+
+    n_hour = ev.shape[0]
+    delivered = np.zeros(n_hour, dtype=DTYPE)
+    unserved_total = 0.0
+
+    # Segment into per-day chronologically-ordered session sets (CR-02 generalized);
+    # carry-forward stays within a day's session set.
+    for day_sessions in _day_session_hours(n_hour, sessions, int(start_hod)):
+        carry = 0.0
+        for member_hours in day_sessions:  # chronological order within the day
+            required = float(ev[member_hours].sum()) + carry
+            remaining = required
+            for h in member_hours:  # CLOCK order, NOT base-sorted (D-03)
+                if remaining <= 1e-12:
+                    break
+                headroom_h = max(0.0, float(rating) - float(base[h]))
+                take = min(remaining, float(charger_kw), headroom_h)
+                delivered[h] += take
+                remaining -= take
+            carry = max(0.0, remaining)  # unserved -> next session THIS day
+        unserved_total += carry  # unserved after the day's LAST session
+
+    unserved_total = max(0.0, unserved_total)
+    denom = float(ev.sum()) if annual_ev_demand is None else float(annual_ev_demand)
+    unserved_fraction = (unserved_total / denom) if denom > 0.0 else 0.0
+    return {
+        "delivered": delivered.astype(DTYPE),
+        "unserved": float(unserved_total),
+        "unserved_fraction": float(unserved_fraction),
+        "threshold_convention": "strict_gt_limit",
+    }
+
+
 def flex_metrics(
     curtailed: np.ndarray,
     ev_demand: np.ndarray,
