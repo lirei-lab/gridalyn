@@ -101,6 +101,101 @@ quantitative biases: (a) **per-EV energy ~2× high** (flat 5 h vs ~2 h active, 2
 **optimistic**; (b) **EV coincident power high** (4.32 vs ~1.4 kW) → **pessimistic** on the
 peak. They partly offset, but both should move toward the Canadian values.
 
+## Power-limited multi-session availability (Phase 10.3)
+
+The flexible leg was re-baselined from the 10.1 in-window valley-fill **deferral**
+mechanism to **power-limited natural charging** (V1G smart-charging) over multiple
+daily availability sessions (D-08 goal amendment; ROADMAP lineage). This subsection
+records the model, the windows, the scenarios, the unserved-energy gate, and — the
+honest, genuinely-load-bearing record — the **weak** midday-headroom margin.
+
+### Model
+
+Per hour the aggregate EV draw is throttled to the available headroom and the charger
+ceiling:
+
+```
+delivered[h] = min(remaining_requirement, charger_kw, max(0, rating − base[h]))
+```
+
+walked in **clock order** from arrival across the day's sessions; energy undelivered in
+one session **carries forward** (per-day **carry-forward**) to that day's next
+chronological session. Energy still undelivered after the day's **last** session is the
+**unserved energy**. There is no valley-fill / `argsort` relocation: charging is throttled
+in place and what does not fit this hour simply waits for the next chronological plug-in
+hour. `charger_kw=inf` (the `min(natural aggregate draw, max(0, rating − base))`
+natural-draw cap, RESEARCH Open-Q1 / Assumption A1) — at the
+aggregate level the natural draw is the ceiling and the headroom binds first; no separate
+aggregate charger limit is imposed. The model runs at **aggregate** (feeder-transformer
+downstream-sum) granularity, reusing the existing TMY heating-degree base unchanged (no
+new daytime-occupancy term — byte-stability).
+
+The over-limit/headroom decision reuses the strict-`>` `is_congested` convention (no
+second epsilon): an hour whose base sits exactly at the rating has zero headroom and
+hosts no charging.
+
+### Windows & scenarios
+
+- **`WORKPLACE_WINDOW = [9-16]`** — the same-day daytime workplace plug-in window (does
+  not wrap midnight). Rationale: many EVs are plugged in at the workplace during the day,
+  adding lower-loaded midday hours to complete the charge.
+- **`AVAILABILITY_SCENARIOS`** (three, emitted side-by-side):
+  - `overnight` — the 18→07 home-only baseline session.
+  - `workplace` — overnight home **+** the daytime `[9-16]` window — **the citable
+    HEADLINE**.
+  - `all_day` — full 24 h availability, the hosting **ceiling**.
+
+### Unserved-energy gate
+
+`TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95 = 0.01` — the unserved-energy fraction
+(energy undelivered at throttled power across all available session-hours, ÷ annual EV
+demand) must be **strict-`<` 1% at P95** for a swept point to pass. This is a NEW aliased
+constant reusing the value `0.01`; it does not edit the dormant deferral gate
+`TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`.
+
+### Re-derived hosting (modeled 71.25 kW / 7-home idx-62 unit, K=1000, P95)
+
+| Scenario | flexible EVs | hosting_expansion | unserved P95 @ flexible |
+|---|---|---|---|
+| firm (read denominator) | 3 | — | — |
+| `overnight` | **34** | +10.33 | 0.0088 |
+| `workplace` (HEADLINE) | **35** | +10.67 | 0.0020 |
+| `all_day` (ceiling) | **35** | +10.67 | 0.0019 |
+
+(The 10.1 spike's indicative 5/6/14 counts were on the older 50 kVA/6-home unit and the
+deferral mechanism; the pipeline **re-derives** these under power-limiting on the
+re-calibrated 71.25 kW/7-home unit.) Both runs are **byte-stable** (identical
+`availability_curve_content_sha256`).
+
+### The midday-headroom premise is WEAK (honest framing)
+
+The premise that daytime `[9-16]` headroom exceeds overnight headroom holds only
+**marginally** on this cold-climate TMY (RESEARCH Pitfall 1, verified against the
+committed TMY):
+
+| Window | Mean cold-day headroom |
+|---|---|
+| workplace `[9-16]` | **~33.6 kW** (33.57) |
+| overnight `[18-23, 0-7]` | **~32.0 kW** (31.95) |
+
+Workplace exceeds overnight by only **~1.6 kW (+~5%)** — the cold snaps are sustained day
+and night (average cold-day diurnal swing ~9.4 °C; even the warmest midday hour is
+~−16 °C). **The lift comes from the extra ~8 available HOURS, not richer midday
+headroom; `all_day` is the ceiling.** Daytime availability does **not** unlock dramatic
+capacity — this is recorded honestly so a future TMY re-copy re-checks the premise
+(`test_midday_headroom_premise`).
+
+### Penetration sweep extension (append-only)
+
+Under power-limited charging the per-hour headroom (~27-34 kW) vastly exceeds the
+aggregate EV draw until very high penetration, so the overnight unserved-energy P95 stays
+below the 1% gate across the entire frozen `PENETRATION_SWEEP` (0→2.0) — a flat-zero
+saturation that would pin the flexible count uninformatively at the sweep top (Pitfall 2).
+The overnight cliff crosses 1% near **~4.6 EV/home**, so an **append-only**
+`EXTENDED_PENETRATION_SWEEP` (0→5.0 at the same 0.1 step) was added **below** the frozen
+block; the single re-point site is the sweep loop in `apply_flexibility_contracts.py`. The
+frozen `PENETRATION_SWEEP` and the golden config bytes are never mutated.
+
 ## Recommended values (Québec / Canada-defensible, verified)
 
 | Knob | Current | Defensible | Action |

@@ -86,10 +86,30 @@ interpolates between this trough (Jul) and ``WINTER_PEAK_FACTOR`` (Jan/Dec) so
 winter > summer at every hour-of-day."""
 
 DAILY_PATTERN = (
-    0.55, 0.50, 0.48, 0.47, 0.48, 0.55,  # 00:00-05:00 overnight base
-    0.70, 0.85, 0.80, 0.72, 0.68, 0.66,  # 06:00-11:00 morning ramp
-    0.65, 0.64, 0.65, 0.70, 0.82, 1.00,  # 12:00-17:00 building toward peak
-    1.05, 1.00, 0.92, 0.80, 0.68, 0.60,  # 18:00-23:00 evening heating peak
+    0.55,
+    0.50,
+    0.48,
+    0.47,
+    0.48,
+    0.55,  # 00:00-05:00 overnight base
+    0.70,
+    0.85,
+    0.80,
+    0.72,
+    0.68,
+    0.66,  # 06:00-11:00 morning ramp
+    0.65,
+    0.64,
+    0.65,
+    0.70,
+    0.82,
+    1.00,  # 12:00-17:00 building toward peak
+    1.05,
+    1.00,
+    0.92,
+    0.80,
+    0.68,
+    0.60,  # 18:00-23:00 evening heating peak
 )
 """DEPRECATED (D-14): superseded by the TMY heating-degree base. Value left
 unedited (Pitfall 6).
@@ -100,7 +120,13 @@ EV coincidence stresses the same hours as the base peak (the firm-limit driver).
 """
 
 WEEKLY_PATTERN = (
-    1.00, 0.99, 0.99, 0.99, 1.00, 1.04, 1.05,
+    1.00,
+    0.99,
+    0.99,
+    0.99,
+    1.00,
+    1.04,
+    1.05,
 )
 """DEPRECATED (D-14): superseded by the TMY heating-degree base. Value left
 unedited (Pitfall 6).
@@ -137,8 +163,35 @@ Recalibrated 10-03 per CALIBRATION.md "Recommended values": EV daily energy
 yielded 21.6 kWh, ~2x the verified Canadian session energy). The flat in-window
 shape stays seasonless (Charge-the-North validated)."""
 
-EV_SWEEP = (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34,
-            36, 38, 40, 42, 44, 46, 48, 50, 52)
+EV_SWEEP = (
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14,
+    16,
+    18,
+    20,
+    22,
+    24,
+    26,
+    28,
+    30,
+    32,
+    34,
+    36,
+    38,
+    40,
+    42,
+    44,
+    46,
+    48,
+    50,
+    52,
+)
 """Ascending total-feeder EV counts to sweep (D-07/D-08), integer step 2 from 0
 to 52. The swept variable is the TOTAL EV count on the feeder (the headline
 units).
@@ -342,8 +395,27 @@ stable to the Phase-12 1e-6 baseline while staying fast over 8760 h. Part of the
 reproducibility contract with ``SEED`` (D-13); revisit in Plan 02 if P95 drifts."""
 
 PENETRATION_SWEEP = (
-    0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-    1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0,
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0,
+    1.1,
+    1.2,
+    1.3,
+    1.4,
+    1.5,
+    1.6,
+    1.7,
+    1.8,
+    1.9,
+    2.0,
 )
 """EV-per-home penetration grid (0 → 2.0) swept on the small LV transformer
 (D-07, discretion). Supersedes the Phase-9 integer ``EV_SWEEP`` (a total-feeder
@@ -483,3 +555,50 @@ pass. This ADDS an aliased constant (RESEARCH Pitfall 4) reusing the value 0.01;
 it does NOT rename or edit ``TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` (which
 stays for the now-dormant valley-fill deferral path). Same value, different
 meaning: "unserved energy" (power-limited) vs "irreducible lost" (deferral)."""
+
+EXTENDED_PENETRATION_SWEEP = PENETRATION_SWEEP + (
+    2.1,
+    2.2,
+    2.3,
+    2.4,
+    2.5,
+    2.6,
+    2.7,
+    2.8,
+    2.9,
+    3.0,
+    3.1,
+    3.2,
+    3.3,
+    3.4,
+    3.5,
+    3.6,
+    3.7,
+    3.8,
+    3.9,
+    4.0,
+    4.1,
+    4.2,
+    4.3,
+    4.4,
+    4.5,
+    4.6,
+    4.7,
+    4.8,
+    4.9,
+    5.0,
+)
+"""Extended EV-per-home penetration grid (0 → 5.0) for the power-limited
+availability sweep (DAYTIME-04, Plan 02). APPEND-ONLY — the frozen
+``PENETRATION_SWEEP`` (0 → 2.0, byte-frozen inside the locked Phase-10.1 block
+above) is left UNEDITED; this constant is ``PENETRATION_SWEEP`` plus the additional
+``2.1 → 5.0`` grid at the same 0.1 step. RATIONALE (RESEARCH Pitfall 2 / A2): under
+power-limited natural charging the per-hour headroom (~27-34 kW) vastly exceeds the
+aggregate EV draw until VERY high penetration, so the overnight-only unserved-energy
+P95 stays below the 1% gate across the entire frozen 0 → 2.0 grid (flat-zero
+saturation — the flexible count pins at the sweep top, an UNINFORMATIVE result). The
+overnight unserved cliff crosses 1% near ~4.6 EV/home; extending to 5.0 lands the
+cliff INSIDE the effective sweep so the gate is informative for every scenario. The
+single re-point site is ``_availability_sweep``'s penetration loop in
+``apply_flexibility_contracts.py`` (Plan 02); the frozen ``PENETRATION_SWEEP`` and
+the golden config bytes are never mutated."""

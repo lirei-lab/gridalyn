@@ -36,6 +36,7 @@ are numpy + the sibling ``_congestion`` / ``config`` project modules.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, Callable, Sequence
 
 import numpy as np
@@ -346,6 +347,14 @@ def _day_session_hours(
 ) -> list[list[list[int]]]:
     """Segment the hour vector into per-day, chronologically-ordered session sets.
 
+    Thin normalizing wrapper around the ``lru_cache``-d ``_day_session_hours_cached``:
+    the segmentation depends ONLY on ``(n_hour, sessions, start_hod)`` — never on the
+    per-realization ``ev`` vector — so over a Monte-Carlo K-loop at fixed scenario the
+    identical structure is recomputed thousands of times. Hashing the windows to a
+    tuple-of-tuples lets the cache serve every repeat call for free (the dominant cost
+    of ``flex_power_limited`` over the annual 8760 h vector; performance, not
+    behavior). The returned nested lists are treated read-only by all callers.
+
     Generalizes ``_overnight_session_ids`` from ONE contiguous overnight session to
     a SET of disjoint plug-in sessions per day (overnight home + daytime workplace,
     D-04). The clock-phase arithmetic is REUSED VERBATIM: the annual index ``idx``
@@ -378,6 +387,24 @@ def _day_session_hours(
         A list over calendar days (ascending anchor day); each element is that day's
         list of sessions ordered chronologically; each session is a list of its
         member hour indices in CLOCK (ascending-clock) order.
+    """
+    sessions_key = tuple(tuple(int(h) for h in window) for window in sessions)
+    return _day_session_hours_cached(int(n_hour), sessions_key, int(start_hod))
+
+
+@lru_cache(maxsize=32)
+def _day_session_hours_cached(
+    n_hour: int,
+    sessions: tuple[tuple[int, ...], ...],
+    start_hod: int,
+) -> list[list[list[int]]]:
+    """``_day_session_hours`` body, cached on its hashable normalized arguments.
+
+    The segmentation is purely a function of ``(n_hour, sessions, start_hod)``; caching
+    serves the identical structure across every Monte-Carlo realization at fixed
+    scenario without recomputing it. ``maxsize=32`` comfortably covers the few distinct
+    (scenario, n_hour) combinations a run exercises. See ``_day_session_hours`` for the
+    full segmentation contract (this function carries the implementation only).
     """
     idx = np.arange(n_hour)
     clock = (int(start_hod) + idx) % 24
