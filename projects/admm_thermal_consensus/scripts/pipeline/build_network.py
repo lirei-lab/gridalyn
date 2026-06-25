@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -33,6 +34,21 @@ def main() -> None:
     # scale so the uncoordinated aggregate peak == TARGET_FEEDER_PEAK_MW on the feeder
     scale_kw_to_mw = (C.TARGET_FEEDER_PEAK_MW * 1000.0 / uncoordinated_peak_kw) / 1000.0
 
+    # Calibrate trunk ampacity so the uncoordinated winter peak reaches a
+    # realistic overload. The scale maps the uncoordinated peak to
+    # TARGET_FEEDER_PEAK_MW, so distributing that MW reproduces the peak flow.
+    import pandapower as pp
+
+    tan_phi = math.tan(math.acos(C.POWER_FACTOR))
+    net_cal = build_ieee33_benchmark_feeder()
+    for bus, w in bus_weights.items():
+        mask = net_cal.load.bus == bus
+        net_cal.load.loc[mask, "p_mw"] = C.TARGET_FEEDER_PEAK_MW * w
+        net_cal.load.loc[mask, "q_mvar"] = C.TARGET_FEEDER_PEAK_MW * w * tan_phi
+    pp.runpp(net_cal, algorithm="nr", init="auto")
+    worst_i_ka = float(net_cal.res_line.i_ka.max())
+    line_max_i_ka = worst_i_ka / (C.TARGET_UNCOORD_LINE_LOADING_PCT / 100.0)
+
     C.JSON_DIR.mkdir(parents=True, exist_ok=True)
     bw_path = C.JSON_DIR / "bus_weights.json"
     ns_path = C.JSON_DIR / "network_scale.json"
@@ -45,6 +61,8 @@ def main() -> None:
                 "native_total_load_mw": total_p,
                 "power_factor": C.POWER_FACTOR,
                 "n_load_buses": int(len(loads)),
+                "line_max_i_ka": line_max_i_ka,
+                "uncoordinated_worst_line_i_ka": worst_i_ka,
             },
             indent=2,
         ),
@@ -61,6 +79,7 @@ def main() -> None:
             "native_total_load_mw": total_p,
             "target_feeder_peak_mw": C.TARGET_FEEDER_PEAK_MW,
             "scale_aggregate_kw_to_feeder_mw": scale_kw_to_mw,
+            "line_max_i_ka": line_max_i_ka,
         },
     )
     print(f"build_network: IEEE-33, {len(loads)} load buses, scale={scale_kw_to_mw:.6e}")

@@ -35,9 +35,9 @@ def main() -> None:
         int(k): float(v)
         for k, v in json.loads((C.JSON_DIR / "bus_weights.json").read_text()).items()
     }
-    scale = json.loads((C.JSON_DIR / "network_scale.json").read_text())[
-        "scale_aggregate_kw_to_feeder_mw"
-    ]
+    network_scale = json.loads((C.JSON_DIR / "network_scale.json").read_text())
+    scale = network_scale["scale_aggregate_kw_to_feeder_mw"]
+    line_max_i_ka = network_scale["line_max_i_ka"]
     tan_phi = math.tan(math.acos(C.POWER_FACTOR))
 
     rows = []
@@ -49,6 +49,7 @@ def main() -> None:
         nonconverged = 0
         for t in range(len(agg_kw)):
             net = build_ieee33_benchmark_feeder()
+            net.line["max_i_ka"] = line_max_i_ka
             p_total_mw = agg_kw[t] * scale  # aggregate kW -> feeder MW
             for bus, w in bus_weights.items():
                 mask = net.load.bus == bus

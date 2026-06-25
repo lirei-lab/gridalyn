@@ -41,6 +41,7 @@ POWER_FACTOR = 0.95
 TARGET_FEEDER_PEAK_MW = 4.6  # uncoordinated peak is scaled to this on the feeder
 VOLTAGE_LOWER_PU = 0.95
 LINE_LOADING_LIMIT_PCT = 100.0
+TARGET_UNCOORD_LINE_LOADING_PCT = 115.0  # calibrate trunk ampacity to this at the uncoordinated peak
 
 # ── TOU price (CAD/kWh) by hour, deterministic ─────────────────────
 def tou_price_per_hour() -> list[float]:
