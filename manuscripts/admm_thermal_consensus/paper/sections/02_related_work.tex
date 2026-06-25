@@ -38,6 +38,19 @@ pandapower \cite{thurner2018pandapower} provides convenient AC Newton-Raphson
 power flow over it. These tools are mature; what is missing is their systematic
 use as the \emph{acceptance test} for a coordination scheme.
 
+\subsection{Communication in demand-side management}
+The reliability of the communication layer is increasingly recognized as a
+first-order constraint on demand-side management rather than an implementation
+detail. Surveys of information and communication technologies for modern
+demand-side management catalog the latency, packet-loss, and coverage limitations
+of the metering and signalling infrastructure that coordination schemes assume
+\cite{Said2023}, and identify intermittent connectivity behind the meter as a
+recurring obstacle to scalable demand response. This motivates our explicit
+non-responsive-fraction model: rather than assuming perfect reporting, we treat
+silent agents as the expected operating condition and ask how far coordination
+can be pushed before the missing telemetry --- even with a learned imputer in the
+loop --- can no longer protect the feeder.
+
 \subsection{The delta}
 Prior work treats coordination quality and network feasibility as separate
 concerns: ADMM papers report aggregate metrics, network papers assume a given

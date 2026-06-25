@@ -6,7 +6,7 @@ resolution into $T = 96$ steps. We coordinate $N = 30$ electric-heating homes
 with comfort band $\alpha = 0.5$, comfort weight $\lambda = 0.15$, flattening
 weight $\mu = 1.0$, and ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The
 communication-failure fraction is swept over
-$\rho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$.
+$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$.
 
 Energy cost is evaluated against a time-of-use tariff with an off-peak rate of
 0.078, a mid-peak rate of 0.128, and an evening-peak rate of 0.158~CAD/kWh.
@@ -34,13 +34,54 @@ Comfort band $\alpha$ & 0.5 \\
 Comfort weight $\lambda$ & 0.15 \\
 Flattening weight $\mu$ & 1.0 \\
 ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
-Non-responsive fraction $\rho$ & $\{0.0, 0.2, 0.4, 0.6, 0.8\}$ \\
+Non-responsive fraction $\varrho$ & $\{0.0, 0.2, 0.4, 0.6, 0.8\}$ \\
 TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
 Feeder & IEEE 33-bus, 12.66 kV \\
 Power factor & 0.95 \\
 Uncoordinated worst-line loading & 115\% (calibrated) \\
 Power flow & AC Newton-Raphson \\
 Software & pandapower 3.4.0, scikit-learn 1.6.1, LightGBM 4.6.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Reproducibility and governed artifacts}
+The study is fully declarative. A \texttt{project.yaml} (a \emph{StudyProject}
+contract) and a \texttt{workflow.yaml} (an eight-stage directed acyclic graph)
+drive the entire pipeline; no step depends on hand-edited intermediate state.
+The runner executes the stages in topological order --- synthetic cold-day
+weather and per-home baseline generation, ADMM coordination, LightGBM imputer
+training and cross-validation, the communication-failure sweep, power-flow
+validation, and reporting --- and each stage emits a governed JSON report
+following a fixed schema. Every report carries the same envelope fields
+(\texttt{report\_id}, \texttt{schema\_version}, \texttt{created\_at},
+\texttt{source\_domain}, \texttt{inputs}, \texttt{artifacts}, \texttt{summary},
+\texttt{validation}), and each recorded artifact stores its byte count and SHA-256
+digest, so every number in this paper is traceable to a specific file and run.
+A regression baseline pins the headline aggregate peaks, and the run is
+deterministic: fixed random seeds and a synthetic weather day remove any
+external data dependency, so a reader can re-run the study from its configuration
+and obtain baseline-matching results. We claim re-runnable, citable
+reproducibility on this single configuration --- not statistical generality
+across feeders or climates, which the limitations discuss. Table~\ref{tab:stages}
+lists the eight stages and their principal governed outputs.
+
+\begin{table}[t]
+\centering
+\caption{Workflow stages and principal governed outputs.}
+\label{tab:stages}
+\begin{tabular}{@{}rll@{}}
+\toprule
+\# & Stage & Principal output \\
+\midrule
+1 & Weather generation      & Synthetic cold-day temperature \\
+2 & Baseline heating        & Per-home $h_{i,t}$ profiles \\
+3 & Background load         & Fixed non-deferrable aggregate $B$ \\
+4 & ADMM coordination       & Ideal $x_{i,t}$, iteration count \\
+5 & Imputer training        & LightGBM model + CV metrics \\
+6 & Communication sweep     & Per-$\varrho$ imputed aggregates \\
+7 & Power-flow validation   & $V_{\min}$, line loading, verdict \\
+8 & Reporting               & Figures, KPI tables, JSON report \\
 \bottomrule
 \end{tabular}
 \end{table}

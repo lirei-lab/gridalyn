@@ -56,7 +56,15 @@ signal-level study into a network-validated one. Our contributions are:
 The central finding is that coordination not only flattens the aggregate (a
 12.7\% peak cut) but \emph{clears} a 115\% thermal overload to 99.7\%, and that
 this cleared state holds under communication failure up to a non-responsive
-fraction of 0.6 before re-violating at 0.8.
+fraction of 0.6 before re-violating at 0.8. Throughout, we keep the
+communication-failure fraction (denoted $\varrho$) notationally distinct from the
+ADMM penalty ($\rho_{\mathrm{ADMM}}$) so the two roles of the symbol are never
+conflated; the Nomenclature collects all symbols. We also stress two honest
+caveats that the results section quantifies: the flattening preserves per-home
+comfort by construction (heat is re-timed, never withheld), and because the
+objective targets a flat profile rather than the time-of-use price, the energy-bill
+saving is deliberately modest --- the value of this demand response is capacity
+relief, demonstrated here as restored feeder feasibility, not a cheaper bill.
 
 The remainder of the paper is organized as follows.
 Section~\ref{sec:methodology} is preceded by the related work and the system

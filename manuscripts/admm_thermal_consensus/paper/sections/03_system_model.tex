@@ -38,9 +38,11 @@ realistic overload that motivates demand response in the first place. All loads
 use a power factor of 0.95.
 
 \subsection{Communication-failure model}
-At coordination time a fraction $\rho$ of the agents become non-responsive and
-report nothing to the coordinator. We sweep
-$\rho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $6$, $12$, $18$,
+At coordination time a fraction $\varrho$ of the agents become non-responsive and
+report nothing to the coordinator. We use $\varrho$ for this
+communication-failure fraction throughout, kept notationally distinct from the
+ADMM penalty $\rho_{\mathrm{ADMM}}$ of Section~\ref{sec:methodology}. We sweep
+$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $6$, $12$, $18$,
 and $24$ silent homes out of $30$. For each non-responsive agent the coordinator
 substitutes an imputed heating profile $\hat{x}_{i,t}$ produced by a trained
 regressor (Section~\ref{sec:methodology}) and proceeds as if it were the true

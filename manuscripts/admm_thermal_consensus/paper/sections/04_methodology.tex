@@ -52,6 +52,40 @@ guarantees that every iterate respects comfort and conserves daily energy, so th
 coordinated schedule is feasible for the homes by construction. The number of
 iterations to convergence is recorded as a tractability metric.
 
+\subsubsection{Capped-energy projection in the $x$-update}
+We make the local step explicit because its structure is what keeps every iterate
+feasible. For home~$i$ the unconstrained comfort-plus-penalty objective is a
+separable strictly convex quadratic, so its minimizer is available in closed form.
+Writing $a_i = z - u$ for the current penalty anchor, the prox optimum is the
+per-step convex combination
+\begin{equation}
+\tilde{x}_i \;=\;
+\frac{\lambda\,h_i + \rho_{\mathrm{ADMM}}\,a_i}{\lambda + \rho_{\mathrm{ADMM}}},
+\label{eq:prox}
+\end{equation}
+which trades the comfort pull toward $h_i$ against the consensus pull toward
+$a_i$. This unconstrained point need not respect~\eqref{eq:agent}, so we
+Euclidean-project it onto the intersection of the comfort box
+$[(1-\alpha)h_{i,t},(1+\alpha)h_{i,t}]$ and the daily-energy hyperplane
+$\sum_t x_{i,t} = \sum_t h_{i,t}$:
+\begin{equation}
+x_i \;=\; \arg\min_{x}\;\tfrac12\lVert x - \tilde{x}_i\rVert_2^2
+\quad\text{s.t.}\quad
+x \in \text{box}_i,\;\; \mathbf{1}^{\top}x = \mathbf{1}^{\top}h_i .
+\label{eq:proj}
+\end{equation}
+Introducing a single scalar dual $\nu_i$ for the energy constraint, the projection
+has the water-filling form
+$x_{i,t} = \mathrm{clip}_{[(1-\alpha)h_{i,t},\,(1+\alpha)h_{i,t}]}(\tilde{x}_{i,t} + \nu_i)$,
+and the value of $\nu_i$ that restores $\mathbf{1}^{\top}x_i = \mathbf{1}^{\top}h_i$
+is found by a 1-D bisection on the scalar dual. Because the clipped sum is
+monotone non-decreasing in $\nu_i$, the bisection is exact and costs only a handful
+of evaluations, so the whole $x$-update is closed-form up to a scalar root-find.
+The subsequent $z$-update is fully separable per time step --- each component of
+$z$ is the average of the corresponding aggregate-plus-dual component driven toward
+the flat target $c$ --- and therefore also closed form, which is why a full ADMM
+sweep is inexpensive even with $N=30$ agents over $T=96$ steps.
+
 \subsection{Imputation of non-responsive agents}
 When agent $i$ is non-responsive its baseline $h_i$ is unavailable to the
 coordinator, so we replace it with a learned estimate $\hat{h}_i$. We train a
@@ -67,7 +101,7 @@ model never saw.
 
 \subsection{Power-flow validation loop}
 The novel stage closes the loop on physics. For each scenario (uncoordinated,
-ideal, and each $\rho$) we take the resulting aggregate, distribute it across the
+ideal, and each $\varrho$) we take the resulting aggregate, distribute it across the
 32 IEEE-33 load buses by their native load shares, and scale so that the
 uncoordinated peak reaches the calibrated feeder. The trunk ampacity is fixed so
 the uncoordinated peak loads the worst line to 115\%. We then run an AC
