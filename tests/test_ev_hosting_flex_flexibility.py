@@ -20,9 +20,14 @@ from projects.ev_hosting_flex.scripts._flexibility import (
     flex_curtailment,
     flex_deferral,
     flex_metrics,
+    flex_power_limited,
     flexible_ev_count,
 )
-from projects.ev_hosting_flex.scripts.config import PLUGIN_WINDOW
+from projects.ev_hosting_flex.scripts.config import (
+    AVAILABILITY_SCENARIOS,
+    PLUGIN_WINDOW,
+    WORKPLACE_WINDOW,
+)
 
 _LIMIT = 100.0
 
@@ -367,6 +372,166 @@ def test_flex_deferral_at_limit_not_congested() -> None:
     out = flex_deferral(ev, base, rating, plugin_window=PLUGIN_WINDOW, limit=_LIMIT)
     assert out["remaining"] == 0.0
     np.testing.assert_allclose(np.asarray(out["placed"]).sum(), 0.0)
+
+
+# ─── flex_power_limited: chronological throttle + carry-forward (DAYTIME-01..03)
+# Power-limited natural charging REPLACES valley-fill: each hour the EV draw is
+# throttled to min(remaining_requirement, charger_kw, max(0, rating - base[h])) in
+# CLOCK order; undelivered energy carries forward to the day's next session; energy
+# unserved after the day's last session is the unserved energy. No argsort/valley
+# placement. ``sessions`` is a tuple of session windows (each a tuple of hours-of-day).
+
+
+def test_power_limited_chronological() -> None:
+    """Delivered[h] = min(remaining, charger_kw, max(0, rating-base[h])), clock order.
+
+    rating=100, single overnight session (PLUGIN_WINDOW). base is shaped so the
+    EARLIEST clock hour 18 has SMALL headroom (5) and a LATER hour 22 has LARGE
+    headroom (40); a deep-night hour 2 also has large headroom (40). A 30 kWh spike
+    arrives at hour 18. Chronological throttle (NOT base-sorted) walks the session in
+    CLOCK order from arrival: at h18 take min(30, inf, 5) = 5 -> remaining 25; the
+    NEXT in-clock-order in-window hour with headroom serves the rest. Energy must NOT
+    jump ahead to the lowest-base hour first (that would be the valley-fill the new
+    kernel deletes). Assert h18 delivers exactly 5 (its headroom), the remainder is
+    served chronologically, and total delivered == 30 (ample headroom downstream).
+    """
+    rating = 100.0
+    base = np.full(24, 95.0, dtype="float64")  # 5 kW headroom default
+    base[22] = 60.0  # 40 kW headroom, but LATER in clock order than 18
+    base[2] = 60.0  # 40 kW headroom, deep night (also later in clock order)
+    ev = np.zeros(24, dtype="float64")
+    ev[18] = 30.0
+    out = flex_power_limited(
+        ev, base, rating, sessions=(PLUGIN_WINDOW,), start_hod=0
+    )
+    delivered = np.asarray(out["delivered"], dtype="float64")
+    # Arrival hour 18 is throttled to its own headroom (5), NOT skipped for a valley.
+    np.testing.assert_allclose(delivered[18], 5.0)
+    # All 30 kWh is delivered within the session (ample downstream headroom).
+    np.testing.assert_allclose(delivered.sum(), 30.0)
+    assert out["unserved"] == 0.0
+    # No relocation: energy never lands in an hour whose headroom is zero / negative.
+    headroom = np.maximum(0.0, rating - base)
+    assert np.all(delivered <= headroom + 1e-9)
+
+
+def test_power_limited_no_valley_sort() -> None:
+    """Source has no argsort / no key= base sort / no second epsilon (D-03).
+
+    Mirrors the existing flex_deferral source-inspection guard: the power-limited
+    kernel must reuse the strict-> headroom convention (is_congested or the identical
+    max(0, rating-base) cap) and contain NO valley-fill placement and NO bare
+    ``> limit`` / ``>= limit`` second epsilon.
+    """
+    import inspect
+
+    src = inspect.getsource(flex_power_limited)
+    assert "is_congested(" in src or "max(0.0, float(rating)" in src
+    assert "argsort" not in src
+    assert "key=" not in src  # no sorted(..., key=base) valley placement
+    assert "> limit" not in src
+    assert ">= limit" not in src
+
+
+def test_power_limited_unserved_fraction() -> None:
+    """A saturated single session leaves a hand-computed unserved remainder (D-02).
+
+    rating=100, base=99 flat -> every hour offers only 1 kW headroom. The overnight
+    session (PLUGIN_WINDOW) has 14 in-window hours, so at most 14 kWh can be delivered
+    at throttled power. A 100 kWh spike at hour 18: delivered = 14 (1 kW each over the
+    14 session hours), unserved = 100 - 14 = 86, fraction = 86 / annual_ev_demand.
+    """
+    rating = 100.0
+    base = np.full(24, 99.0, dtype="float64")  # 1 kW headroom everywhere
+    ev = np.zeros(24, dtype="float64")
+    ev[18] = 100.0
+    out = flex_power_limited(
+        ev, base, rating, sessions=(PLUGIN_WINDOW,), annual_ev_demand=100.0, start_hod=0
+    )
+    np.testing.assert_allclose(np.asarray(out["delivered"]).sum(), 14.0)
+    np.testing.assert_allclose(out["unserved"], 86.0)
+    np.testing.assert_allclose(out["unserved_fraction"], 0.86)
+
+
+def test_power_limited_carry_forward() -> None:
+    """Overnight remainder is served by the SAME day's workplace [9-16] session (D-01).
+
+    A >24h two-day vector (48h, start_hod=0). The overnight session is saturated
+    (base=99 -> 1 kW/hour) while the workplace [9-16] session has ample headroom
+    (base=50 -> 50 kW/hour). A spike arrives early on day 0. With overnight-only the
+    spike is largely unserved; adding the workplace window carries the overnight
+    remainder forward to that day's [9-16] hours, dropping final unserved. Assert
+    (a) the workplace hours receive the carried energy, (b) total unserved with the
+    workplace session < unserved overnight-only, and (c) per-day confinement: day-0
+    energy never lands in day-1 hours.
+    """
+    n_hour = 48
+    rating = 100.0
+    base = np.full(n_hour, 99.0, dtype="float64")  # saturated overnight default
+    # Workplace [9-16] on BOTH days gets ample headroom.
+    for day in (0, 1):
+        for hod in WORKPLACE_WINDOW:
+            base[day * 24 + hod] = 50.0
+    ev = np.zeros(n_hour, dtype="float64")
+    ev[0] = 40.0  # a day-0 spike (hour-of-day 0, an overnight in-window hour)
+
+    overnight_only = flex_power_limited(
+        ev, base, rating, sessions=(PLUGIN_WINDOW,), annual_ev_demand=40.0, start_hod=0
+    )
+    with_workplace = flex_power_limited(
+        ev,
+        base,
+        rating,
+        sessions=(PLUGIN_WINDOW, WORKPLACE_WINDOW),
+        annual_ev_demand=40.0,
+        start_hod=0,
+    )
+    delivered = np.asarray(with_workplace["delivered"], dtype="float64")
+
+    # (a) day-0 workplace hours [9..16] receive the carried-forward energy.
+    day0_workplace = [h for h in WORKPLACE_WINDOW]
+    assert sum(delivered[h] for h in day0_workplace) > 0.0
+    # (b) the extra workplace availability reduces unserved energy.
+    assert with_workplace["unserved"] < overnight_only["unserved"]
+    # (c) per-day confinement: NO day-1 hour (index >= 24) receives day-0's energy.
+    assert np.all(delivered[24:] == 0.0)
+
+
+def test_power_limited_at_limit_not_congested() -> None:
+    """base exactly at limit, ev=0 -> nothing throttled, unserved 0 (strict ->).
+
+    rating=100, base=100 flat (headroom max(0, 100-100)=0), ev=0. No EV requirement,
+    nothing delivered, nothing unserved.
+    """
+    rating = 100.0
+    base = np.full(24, 100.0, dtype="float64")
+    ev = np.zeros(24, dtype="float64")
+    out = flex_power_limited(ev, base, rating, sessions=(PLUGIN_WINDOW,), start_hod=0)
+    np.testing.assert_allclose(np.asarray(out["delivered"]).sum(), 0.0)
+    assert out["unserved"] == 0.0
+    assert out["unserved_fraction"] == 0.0
+
+
+def test_midday_headroom_premise() -> None:
+    """Mean workplace [9-16] headroom >= mean overnight headroom (Pitfall 1 DIRECTION).
+
+    Encodes the VALIDATED direction (workplace ~33.57 kW vs overnight ~31.95 kW over
+    cold days) so a future TMY re-copy re-checks it. Uses a synthetic cold-day base
+    whose midday heating demand is marginally LOWER than overnight (warmer midday),
+    giving slightly MORE midday headroom. Asserts only the direction (>=), NOT a large
+    margin (the real premise holds only ~+5%).
+    """
+    rating = 100.0
+    # Synthetic single cold day: overnight base higher (colder) than midday base.
+    base = np.full(24, 70.0, dtype="float64")  # overnight default (30 kW headroom)
+    for hod in WORKPLACE_WINDOW:
+        base[hod] = 66.0  # marginally warmer midday -> 34 kW headroom
+    headroom = np.maximum(0.0, rating - base)
+    overnight_hours = sorted(set(PLUGIN_WINDOW))
+    workplace_hours = sorted(set(WORKPLACE_WINDOW))
+    mean_overnight = float(np.mean([headroom[h] for h in overnight_hours]))
+    mean_workplace = float(np.mean([headroom[h] for h in workplace_hours]))
+    assert mean_workplace >= mean_overnight
 
 
 # ─── flexible_ev_count: sweep, tolerance boundary, monotonicity ─────────────
