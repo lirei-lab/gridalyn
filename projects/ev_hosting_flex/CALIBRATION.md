@@ -263,6 +263,101 @@ All re-run digests are byte-stable across two consecutive runs (D-05/D-13).
 **no baseline is broken** — only the phase outputs shift, deliberately, onto the
 literature-defensible partial-coincidence model.
 
+## Cold-load pickup (CLPU) base uplift — `CLPU_PEAK` (260625-pwz)
+
+The governed base `_stochastic.tmy_base` was a **static grades-day heating
+envelope that never spikes**: the coldest-evening 7-home feeder base reached only
+**~62 %** of the 71.25 kW rating (43.94 / 71.25; the config-derived ADMD figure is
+~64 %, 45.5 / 71.25), so EV scenarios barely congested and (under the
+literature-grounded partial coincidence `EV_COINCIDENCE_RHO = 0.5`) `firm_ev_count`
+sat at an unrealistically high **6**. **Cold-load pickup** — thermostats recovering
+from daytime setback together on cold evenings — lifts the cold-evening base to the
+**~80 % design point** the 75 kVA transformer is sized for, making congestion
+genuine. This ports the validated manuscript prototype
+(`manuscripts/ev_hosting_flex/scripts/figures/_clpu.py`, quick 260625-pul) into the
+GOVERNED pipeline (the manuscript figures already included CLPU; the governed base
+did not).
+
+### Mechanism
+
+On cold evenings occupants return home and thermostats recover from daytime setback
+~simultaneously: the **hourly** heating coincidence jumps from its normal
+thermostatic diversity (~0.5 — about half the baseboards drawing at any instant)
+toward ~1.0 (all on), briefly lifting the aggregate heating peak. The factor is
+applied to the **HEATING term only** (`max(0, T_BALANCE − temp) / R_THERM`) in BOTH
+`_stochastic.tmy_base` (the annual base) and `_twostage.compose_scenarios` (the
+two-stage cold-day ensemble, reconstructed from the same heating form). The
+occupancy-shaped `BG_KW` background and the EV layer are **never** amplified.
+
+### Chosen knobs (`config.py`, append-only)
+
+| Knob | Value | Meaning |
+|---|---|---|
+| `CLPU_PEAK` | **1.40** | Hourly-averaged evening setback-recovery bump on the heating term |
+| `CLPU_TEMP_ONSET` | **−8 °C** | CLPU begins below this (factor 1.0 above) |
+| `CLPU_TEMP_FULL` | **−22 °C** | Full synchronization at/below this (strength clips at 1) |
+| `CLPU_WINDOW` | **{16: 0.55, 17: 1.00, 18: 0.75, 19: 0.45}** | Evening recovery decay weights by hour-of-day (fraction of full `CLPU_PEAK`) |
+
+### Citable basis
+
+- **CALIBRATION.md [2-1]** (above): winter CLPU **~2.2 p.u.** — but that is the
+  **sub-hourly / post-outage** diversity-loss extreme (thermostatic diversity ~0.5
+  rising toward 1.0 after a diversity-loss event). The **hourly** evening bump is
+  **~1.3–1.5**.
+- **PES-PSRC report 075**: resistance heaters ~50 % drawing in normal operation,
+  rising toward 100 % after a diversity-loss event.
+- **Validated prototype** (quick 260625-pul): firm 5→2, base ~62 %→81 %.
+
+**Calibration framing.** `CLPU_PEAK = 1.40` lands the coldest-evening feeder base at
+the **~80 % design point** the 75 kVA / 71.25 kW unit is sized for, up from the
+pre-CLPU ~62 % (config-derived ~64 %, 45.5 / 71.25). It is **NOT 2.0** (which pushes
+the base **alone** above the rating → firm 0, congesting with zero EVs, unphysical
+for an HQ-sized unit) and **NOT 1.0** (the static envelope, firm an unrealistically
+high 6). At 1.40 the base sits near the design peak so **EVs remain the congestion
+trigger**.
+
+**Honest caveat.** 1.40 is the **hourly-averaged** evening bump. The sub-hourly
+post-outage CLPU (~2.2 p.u.) is stronger and is **intentionally NOT** used at the
+hourly resolution of this study.
+
+### Determinism guard
+
+`clpu_factor(hod, temp)` is a **pure function of (hour-of-day, temperature) only —
+no RNG, no global state**, so byte-stability is trivial. The hard guard is
+**`CLPU_PEAK = 1.0` reproduces the pre-CLPU base AND the two-stage `required`
+ensemble bit-for-bit** — and this is only meaningful because the pre-CLPU
+`content_sha256` of both was **captured on the unmodified tree BEFORE any edit** and
+**pinned as the literal** the guard test asserts against (`PRE_CLPU_BASE_*_SHA256`
+/ `PRE_CLPU_REQUIRED_SHA256` in `tests/test_ev_hosting_flex_stochastic.py`),
+otherwise the comparison would reduce to the `x·1.0 == x` tautology. Both governed
+re-run digests (base, two-stage required + headline) are byte-stable across two
+consecutive non-worktree runs.
+
+### Before/after headline re-base (deliberate; modeled 71.25 kW / 7-home idx-62 unit, K=1000, P95)
+
+| Headline | Pre-CLPU (CF ≈ 0.71, ρ = 0.5) | Now (CLPU_PEAK = 1.40) |
+|---|---|---|
+| coldest-evening feeder base / rating | **~62 %** (43.94 / 71.25) | **~81 %** (57.89 / 71.25) |
+| per-home design-cold peak | ~6.28 kW | **~8.27 kW** |
+| `firm_ev_count` | 6 | **3** (firm drops as the base lifts) |
+| curtailment flexible | 8 (+33 %) | **7** (+133 % vs firm 3) |
+| flexible — overnight | 35 | **35** (+1066.7 %) |
+| flexible — **workplace (HEADLINE)** | 35 | **35** (+1066.7 %) |
+| flexible — all_day (ceiling) | 35 | **35** (+1066.7 %) |
+| two-stage OPTIMAL (ε = 0.05) | 11 (+83.3 %) | **10** (+233.3 %) |
+
+The two-stage cvxpy solve still matches the closed-form oracle exactly
+(`cvxpy_oracle_drift = 0.0 ≤ 1e-6`, `cvxpy_fellback = false`, status `optimal`).
+The hosting-expansion **percentages rise** because the firm denominator dropped
+(6 → 3) even though the absolute flexible counts are similar — the study's headline
+is now keyed off the realistic cold-evening congestion the static envelope missed.
+
+**Deliberate citable-headline re-base.** This is the **third** deliberate re-base
+(after the TMY/stochastic Phase 10.1 and the `EV_COINCIDENCE_RHO` 260625-lgg
+re-base). **No committed Phase-12 regression baseline exists yet** (Phase 12 not
+done), so **no baseline is broken** — only the phase outputs move, deliberately,
+onto the literature-defensible CLPU cold-evening base.
+
 ## Recommended values (Québec / Canada-defensible, verified)
 
 | Knob | Current | Defensible | Action |
