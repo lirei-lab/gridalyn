@@ -645,3 +645,61 @@ a HIGHER ρ (≥0.6) pushes CF above the cited 0.7 ceiling (firm 5). ``ρ = 0.5`
 the unique value satisfying BOTH the cited CF band AND the firm [5, 6] band on
 this 71.25 kW / 7-home idx-62 unit. See ``_stochastic.blend_ev_aggregate`` for the
 byte-stable per-count blend kernel."""
+
+# ─── Cold-load pickup (CLPU) base uplift (260625-pwz, ported from quick 260625-pul) ──
+# APPEND-ONLY block below every locked constant above (everything through
+# ``EV_COINCIDENCE_RHO`` is byte-frozen — do NOT edit any constant above). These
+# knobs port the validated manuscript-prototype cold-load-pickup factor
+# (``manuscripts/ev_hosting_flex/scripts/figures/_clpu.py``, quick 260625-pul) into
+# the GOVERNED base. On cold evenings occupants return home and thermostats recover
+# from daytime setback ~simultaneously: the hourly heating coincidence jumps from
+# its normal thermostatic diversity (~0.5 — about half the baseboards drawing at any
+# instant) toward ~1.0 (all on), briefly lifting the aggregate heating peak. The
+# factor is applied to the HEATING term ONLY (``max(0, T_BALANCE - temp) / R_THERM``)
+# in BOTH ``_stochastic.tmy_base`` and ``_twostage.compose_scenarios``; the
+# occupancy-shaped ``BG_KW`` background and the EV layer are NEVER amplified.
+
+CLPU_PEAK = 1.40
+"""Hourly-averaged evening setback-recovery bump on the per-home heating term
+(260625-pwz). The multiplicative peak the cold-evening recovery window reaches at
+full coldness.
+
+CITABLE BASIS. CALIBRATION.md [2-1] gives winter CLPU ~2.2 p.u. — but that is the
+SUB-HOURLY / post-outage diversity-loss extreme (thermostatic diversity ~0.5
+rising toward 1.0 after a diversity-loss event; PES-PSRC report 075: resistance
+heaters ~50% drawing normally, rising toward 100%). At the HOURLY resolution of
+this governed study the evening setback-recovery bump that lifts the cold-evening
+base from its steady ~62% of rating to the ~80% design point the 75 kVA
+transformer is sized for is ~1.3-1.5; 1.40 is the calibrated hourly value (the
+validated prototype, quick 260625-pul: firm 5->2, base 62%->81%).
+
+CALIBRATION FRAMING. 1.40 lands the coldest-evening feeder-aggregate base at the
+~80% design point — NOT 2.0 (which pushes the base ALONE above the rating → firm 0,
+congesting with zero EVs, unphysical for an HQ-sized unit) and NOT 1.0 (the
+pre-CLPU static grades-day envelope that never spikes, firm an unrealistically
+high 6). At 1.40 the base lands near the design peak so EVs remain the congestion
+trigger. EV_COINCIDENCE_RHO=0.5 (260625-lgg) STAYS unchanged.
+
+DETERMINISM. ``clpu_factor`` is a pure function of (hour-of-day, temperature) —
+no RNG, no global state — so CLPU_PEAK=1.0 reproduces the pre-CLPU base AND the
+two-stage ``required`` ensemble bit-for-bit (the reproducibility guards, pinned in
+``tests/test_ev_hosting_flex_stochastic.py`` against hashes captured BEFORE any
+CLPU edit)."""
+
+CLPU_TEMP_ONSET = -8.0
+"""Outdoor temperature (degC) below which CLPU begins (260625-pwz). Above this the
+heating coincidence is at its normal diversified level (factor 1.0); people heat
+hard and setback recovery synchronizes below it. Prototype ``CLPU_TEMP_ONSET``."""
+
+CLPU_TEMP_FULL = -22.0
+"""Outdoor temperature (degC) at/below which the heating coincidence is fully
+synchronized (260625-pwz) → CLPU reaches ``CLPU_PEAK`` in-window. Between
+``CLPU_TEMP_ONSET`` and this the strength ramps linearly. Prototype
+``CLPU_TEMP_FULL``."""
+
+CLPU_WINDOW = {16: 0.55, 17: 1.00, 18: 0.75, 19: 0.45}
+"""Evening setback-recovery decay weights by hour-of-day (260625-pwz). Each value
+is the fraction of the full ``CLPU_PEAK`` bump applied at that clock hour (1.0 =
+full); hours outside this set get factor 1.0 (no CLPU). The 16→19 ramp-up/decay
+mirrors occupants returning home and thermostats recovering then re-diversifying
+over ~2-3 h. Applied to the HEATING term only. Prototype ``CLPU_WINDOW``."""

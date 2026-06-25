@@ -22,22 +22,32 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from projects.ev_hosting_flex.scripts import _stochastic as _stochastic_mod
 from projects.ev_hosting_flex.scripts._stochastic import (
     blend_ev_aggregate,
+    clpu_factor,
     ev_realizations,
     mc_p95,
     tmy_base,
     tmy_start_hod,
 )
+from projects.ev_hosting_flex.scripts._twostage import compose_scenarios
 from projects.ev_hosting_flex.scripts.config import (
     ADMD_KW,
     BG_KW,
+    CLPU_PEAK,
+    CLPU_TEMP_FULL,
+    CLPU_TEMP_ONSET,
+    CLPU_WINDOW,
     EV_COINCIDENCE_RHO,
     PLUGIN_PROB,
+    POWER_FACTOR,
     R_THERM,
+    ROUND_DECIMALS,
     SEED,
     T_BALANCE,
     TMY_INPUT_PATH,
+    TRANSFORMER_KVA,
 )
 
 # ─────────────────────────── TMY base (Task 1) ───────────────────────────
@@ -59,14 +69,23 @@ def test_tmy_base_shape_and_dtype() -> None:
 
 
 def test_tmy_base_design_cold_peak_anchored_to_admd() -> None:
-    """At the design-cold hour the per-home peak lands in the 6.0-7.5 kW band."""
+    """At the design-cold hour the CLPU-lifted per-home peak lands in [7.5, 9.5] kW.
+
+    Re-based under cold-load pickup (260625-pwz): the steady design-cold heating
+    envelope (~6.5 kW/home ADMD, the non-CLPU floor) is multiplied at the coldest
+    EVENING recovery hour by ``clpu_factor`` (up to CLPU_PEAK=1.40), lifting the
+    annual per-home peak to ~8.3 kW. The pre-CLPU band was [6.0, 7.5]; the CLPU port
+    deliberately lifts it (the cold-evening congestion-driving tail the static
+    grades-day envelope missed). The ADMD ~6.5 kW anchor remains the off-peak /
+    non-evening cold floor.
+    """
     base = tmy_base(np.array([1.0], dtype="float64"))
     per_home = base[0]  # share 1.0 -> per-home kW
-    # Design-cold peak is the annual maximum of the per-home base.
+    # Design-cold peak is the annual maximum of the per-home base (CLPU-lifted).
     peak = float(per_home.max())
-    assert 6.0 <= peak <= 7.5, f"design-cold per-home peak {peak} outside [6.0, 7.5]"
-    # Sanity: the ADMD anchor (6.5 kW) sits inside the realized band.
-    assert peak >= ADMD_KW - 1.0
+    assert 7.5 <= peak <= 9.5, f"CLPU design-cold per-home peak {peak} outside [7.5, 9.5]"
+    # Sanity: the CLPU-lifted peak sits at/above the steady ADMD anchor (6.5 kW).
+    assert peak >= ADMD_KW
 
 
 def test_tmy_base_warm_hour_zero_heating() -> None:
@@ -319,3 +338,148 @@ def test_blend_rho_validation_out_of_range_raises() -> None:
         with pytest.raises(ValueError) as exc:
             blend_ev_aggregate(unit, 3, rho=bad, seed=SEED)
         assert "[0, 1]" in str(exc.value)
+
+
+# ─────────────── cold-load pickup (CLPU) base uplift (260625-pwz) ──────────────
+#
+# PRE-CLPU REFERENCE HASHES — captured on the UNMODIFIED tree BEFORE any CLPU edit
+# (config.py / _stochastic.py / _twostage.py), so the CLPU_PEAK=1.0 reproducibility
+# guards below assert equality to the HISTORICAL pre-CLPU bytes, NOT a same-run
+# recomputation (which would reduce the guard to the x*1.0==x tautology). HOW they
+# were obtained, on commit 0648e85 with CLPU absent:
+#   PRE_CLPU_BASE_1HOME_SHA256 = _content_sha256(round(tmy_base([1.0]), 6))
+#       (also equals the stage-3 single-home base; the 7-home value below equals the
+#        governed annual_profiles_report.json base_load.content_sha256.)
+#   PRE_CLPU_BASE_7HOME_SHA256 = _content_sha256(round(tmy_base([1.0]*7), 6))
+#   PRE_CLPU_REQUIRED_SHA256   = _content_sha256(
+#       compose_scenarios(default_rng(SEED), n_ev=3, n_homes=7, feeder_kw=71.25))
+# These are the guard expectations; recompute (and document the re-baseline) ONLY if
+# the pre-CLPU base/scenario model is intentionally changed.
+PRE_CLPU_BASE_1HOME_SHA256 = (
+    "e4fc7f644bd609729172bc73ce957e0239c8e6f504b389ee4c3da4b91aec5cc8"
+)
+PRE_CLPU_BASE_7HOME_SHA256 = (
+    "8e559dc044fae9232bfabb1dc133b1fbef0506876dfc5d77849af2d082c0b01a"
+)
+PRE_CLPU_REQUIRED_SHA256 = (
+    "351a8054b23144894668c6a51d5dbba82f56523ef43cc45b6f4d7060a969c31a"
+)
+
+_FEEDER_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)  # 71.25 kW (modeled rating)
+_DOWNSTREAM_HOMES = 7  # the idx-62 feeder's downstream home count
+
+
+def test_clpu_factor_deterministic_byte_identical() -> None:
+    """``clpu_factor`` is RNG-free: two calls with equal inputs are byte-identical."""
+    hod = np.array([16, 17, 18, 19, 5, 12], dtype="int64")
+    temp = np.array([-25.0, -25.0, -25.0, -25.0, -25.0, -25.0], dtype="float64")
+    a = clpu_factor(hod, temp)
+    b = clpu_factor(hod, temp)
+    assert a.dtype == np.dtype("float64")
+    assert np.array_equal(a, b)
+    assert _content_sha256(a) == _content_sha256(b)
+
+
+def test_clpu_factor_one_outside_window_and_above_onset() -> None:
+    """The factor is exactly 1.0 outside the window and at/above the onset temp."""
+    # Cold but OUTSIDE the evening recovery window -> factor 1.0.
+    out_of_window = clpu_factor(
+        np.array([5, 12, 23]), np.array([-30.0, -30.0, -30.0])
+    )
+    np.testing.assert_array_equal(out_of_window, np.ones(3, dtype="float64"))
+    # In-window but WARM (at/above onset) -> no synchronization -> factor 1.0.
+    warm_in_window = clpu_factor(
+        np.array([16, 17, 18, 19]), np.full(4, CLPU_TEMP_ONSET)
+    )
+    np.testing.assert_array_equal(warm_in_window, np.ones(4, dtype="float64"))
+
+
+def test_clpu_factor_ramps_to_peak_at_full_cold() -> None:
+    """At/below CLPU_TEMP_FULL the peak in-window hour reaches ``CLPU_PEAK``."""
+    # CLPU_WINDOW[17] == 1.00 -> the full-weight hour hits CLPU_PEAK at full cold.
+    f_full = clpu_factor(np.array([17]), np.array([CLPU_TEMP_FULL]))
+    assert f_full[0] == pytest.approx(CLPU_PEAK, abs=1e-12)
+    # A partial-weight hour (16, weight 0.55) ramps to 1 + (peak-1)*0.55 at full cold.
+    f_partial = clpu_factor(np.array([16]), np.array([CLPU_TEMP_FULL - 5.0]))
+    assert f_partial[0] == pytest.approx(
+        1.0 + (CLPU_PEAK - 1.0) * CLPU_WINDOW[16], abs=1e-12
+    )
+    # Colder than CLPU_TEMP_FULL clips strength at 1 (does not exceed CLPU_PEAK).
+    f_clip = clpu_factor(np.array([17]), np.array([-40.0]))
+    assert f_clip[0] == pytest.approx(CLPU_PEAK, abs=1e-12)
+
+
+def test_clpu_heating_only_background_unchanged() -> None:
+    """The BG_KW occupancy background is unchanged by CLPU; only heating is scaled.
+
+    A warm hour (temp >= T_BALANCE) has zero heating, so the per-home base equals
+    ``BG_KW * _occ(hod)`` REGARDLESS of CLPU (the background is never amplified).
+    """
+    df = pd.read_csv(TMY_INPUT_PATH).iloc[:8760].copy()
+    temp = df["temp_air"].to_numpy("float64")
+    hod = df["timestamp"].astype(str).str.slice(11, 13).astype(int).to_numpy()
+    warm = np.where(temp >= T_BALANCE)[0]
+    assert warm.size > 0, "TMY has no warm hour to test the unamplified background"
+    h = int(warm[0])
+    base = tmy_base(np.array([1.0], dtype="float64"))
+    expected = BG_KW * _occ(hod[h])  # heating term is zero -> CLPU multiplies nothing
+    assert base[0, h] == pytest.approx(expected, abs=1e-12)
+
+
+def test_clpu_peak_one_reproduces_pre_clpu_base_pinned_hash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CLPU_PEAK=1.0 reproduces the captured pre-CLPU base bit-for-bit (pinned hash).
+
+    Asserts the regenerated base's ``content_sha256`` equals the PINNED pre-CLPU
+    literal captured on the unmodified tree (NOT a same-run un-multiplied recompute,
+    which would be the x*1.0==x tautology). ``clpu_factor`` reads ``CLPU_PEAK`` from
+    the ``_stochastic`` module global, so we monkeypatch it there.
+    """
+    monkeypatch.setattr(_stochastic_mod, "CLPU_PEAK", 1.0)
+    base_1h = np.round(
+        tmy_base(np.array([1.0], dtype="float64")), ROUND_DECIMALS
+    ).astype("float64")
+    assert _content_sha256(base_1h) == PRE_CLPU_BASE_1HOME_SHA256
+    base_7h = np.round(
+        tmy_base(np.array([1.0] * _DOWNSTREAM_HOMES, dtype="float64")), ROUND_DECIMALS
+    ).astype("float64")
+    assert _content_sha256(base_7h) == PRE_CLPU_BASE_7HOME_SHA256
+
+
+def test_clpu_peak_one_reproduces_pre_clpu_required_pinned_hash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CLPU_PEAK=1.0 reproduces the captured pre-CLPU two-stage required ensemble.
+
+    Asserts the regenerated ``compose_scenarios`` ``required`` ensemble (FIXED params
+    n_ev=3, n_homes=7, feeder_kw=71.25) hashes to the PINNED pre-CLPU literal captured
+    on the unmodified tree. ``compose_scenarios`` calls ``clpu_factor``, which reads
+    ``CLPU_PEAK`` from the ``_stochastic`` module global, so patching it there at 1.0
+    makes the heating uplift identically 1.0 and the ensemble byte-stable to pre-CLPU.
+    """
+    monkeypatch.setattr(_stochastic_mod, "CLPU_PEAK", 1.0)
+    required = compose_scenarios(
+        np.random.default_rng(SEED),
+        n_ev=3,
+        n_homes=_DOWNSTREAM_HOMES,
+        feeder_kw=_FEEDER_KW,
+    )
+    assert _content_sha256(required) == PRE_CLPU_REQUIRED_SHA256
+
+
+def test_clpu_design_point_coldest_evening_base_in_band() -> None:
+    """The CLPU-lifted coldest-evening feeder base / 71.25 sits in [0.75, 0.90].
+
+    The 7-home feeder-aggregate base peak (at default CLPU_PEAK=1.40) reaches the
+    ~80% design point the 75 kVA / 71.25 kW unit is sized for. The pre-CLPU ~62%
+    (43.94 / 71.25) is documented in CALIBRATION.md, NOT re-derived in this absolute
+    assertion (no relative-to-pre-CLPU clause).
+    """
+    per_home = tmy_base(np.array([1.0], dtype="float64"))[0]
+    feeder_base_peak = float((_DOWNSTREAM_HOMES * per_home).max())
+    pct = feeder_base_peak / _FEEDER_KW
+    assert 0.75 <= pct <= 0.90, (
+        f"CLPU-lifted coldest-evening feeder base {feeder_base_peak:.3f} kW is "
+        f"{pct:.3f} of {_FEEDER_KW} kW, outside the [0.75, 0.90] design band"
+    )

@@ -47,7 +47,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from projects.ev_hosting_flex.scripts._stochastic import _ev_day, _occ
+from projects.ev_hosting_flex.scripts._stochastic import _ev_day, _occ, clpu_factor
 from projects.ev_hosting_flex.scripts.config import (
     BG_KW,
     C_ACTIVATE,
@@ -262,8 +262,17 @@ def compose_scenarios(
         # PINNED draw order (Pitfall 4): daily offset -> hourly noise -> EV day.
         toff = rng.normal(0.0, sigma_daily) + rng.normal(0.0, sigma_hourly, 24)
         temp = t0 + toff
+        # Cold-load pickup (260625-pwz): the per-scenario cold-day heating term gets
+        # the SAME deterministic ``clpu_factor(hod, temp)`` as the annual base
+        # (``_stochastic.tmy_base``) so the two-stage scenario ensemble stays
+        # consistent with the CLPU-lifted base. Keyed off the per-scenario PERTURBED
+        # temp + the cold-day hod. HEATING term only — the BG_KW background and the EV
+        # day ``g`` below are NOT amplified. ``clpu_factor`` is RNG-free, so the pinned
+        # per-scenario draw order is untouched and CLPU_PEAK=1.0 reproduces the
+        # pre-CLPU ``required`` ensemble bit-for-bit (the reproducibility guard).
         d = int(n_homes) * (
-            BG_KW * occ + np.maximum(0.0, T_BALANCE - temp) / R_THERM
+            BG_KW * occ
+            + np.maximum(0.0, T_BALANCE - temp) / R_THERM * clpu_factor(hod, temp)
         )
         g = _ev_day(rng, int(n_ev))  # reused 10.1 EV physics (never re-implemented)
         req[w] = np.maximum(0.0, d + g - float(feeder_kw))

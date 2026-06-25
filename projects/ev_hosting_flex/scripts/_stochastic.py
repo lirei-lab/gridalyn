@@ -42,6 +42,10 @@ from projects.ev_hosting_flex.scripts.config import (
     BG_KW,
     CALENDAR_HOURS,
     CHARGER_MIX,
+    CLPU_PEAK,
+    CLPU_TEMP_FULL,
+    CLPU_TEMP_ONSET,
+    CLPU_WINDOW,
     DTYPE,
     EV_COINCIDENCE_RHO,
     EV_KWH_MEDIAN,
@@ -79,6 +83,49 @@ def _occ(hour: np.ndarray) -> np.ndarray:
     return 0.7 + 0.3 * np.exp(
         -0.5 * ((np.asarray(hour, dtype=DTYPE) - 19.0) / 4.0) ** 2
     )
+
+
+def clpu_factor(hod: np.ndarray, temp: np.ndarray) -> np.ndarray:
+    """Return the multiplicative cold-load-pickup factor on the heating term (>= 1).
+
+    On cold evenings occupants return home and thermostats recover from daytime
+    setback ~simultaneously: the hourly heating coincidence jumps from its normal
+    thermostatic diversity (~0.5) toward ~1.0, briefly lifting the aggregate
+    heating peak. Ported verbatim from the validated manuscript prototype
+    (``manuscripts/ev_hosting_flex/scripts/figures/_clpu.py``, quick 260625-pul).
+
+    DETERMINISTIC: a pure function of (hour-of-day, temperature) only — NO RNG, NO
+    global state — so two calls with equal inputs return byte-identical arrays and
+    the CLPU-lifted base stays byte-stable (the reproducibility guard). Applied to
+    the HEATING term ONLY in ``tmy_base`` / ``_twostage.compose_scenarios``; the
+    ``BG_KW`` occupancy background and the EV layer are never amplified.
+
+    The in-window coldness strength ramps linearly:
+    ``strength = clip((CLPU_TEMP_ONSET - temp) / (CLPU_TEMP_ONSET - CLPU_TEMP_FULL),
+    0, 1)`` — 0 at/above ``CLPU_TEMP_ONSET`` (no CLPU), 1 at/below
+    ``CLPU_TEMP_FULL`` (full synchronization). The per-hour factor is
+    ``1 + (CLPU_PEAK - 1) * CLPU_WINDOW[hod] * strength`` inside the evening
+    recovery window and exactly 1.0 outside it.
+
+    Args:
+        hod: Hour-of-day array (0..23), aligned element-wise to ``temp``.
+        temp: Outdoor temperature array (degC), aligned element-wise to ``hod``.
+
+    Returns:
+        A float64 array (same shape as ``temp``) of heating multipliers: 1.0
+        outside the cold-evening recovery window, ramping to ``CLPU_PEAK`` at the
+        coldest in-window hour.
+    """
+    hod_arr = np.asarray(hod)
+    temp_arr = np.asarray(temp, dtype=DTYPE)
+    strength = np.clip(
+        (CLPU_TEMP_ONSET - temp_arr) / (CLPU_TEMP_ONSET - CLPU_TEMP_FULL), 0.0, 1.0
+    )
+    factor = np.ones(temp_arr.shape, dtype=DTYPE)
+    for h, w in CLPU_WINDOW.items():
+        sel = hod_arr == h
+        factor[sel] = 1.0 + (CLPU_PEAK - 1.0) * w * strength[sel]
+    return factor
 
 
 def tmy_base(
@@ -131,7 +178,13 @@ def tmy_base(
     temp = df["temp_air"].to_numpy(DTYPE)
     # tz-proof local hour-of-day: slice "YYYY-MM-DD HH:MM:SS-05:00"[11:13].
     hod = df["timestamp"].astype(str).str.slice(11, 13).astype(int).to_numpy()
-    heat = np.maximum(0.0, T_BALANCE - temp) / R_THERM
+    # Cold-load pickup (260625-pwz): the per-home heating term is multiplied by the
+    # deterministic ``clpu_factor(hod, temp)`` so the cold-evening heating coincidence
+    # lifts from its steady diversified level toward ~1.0 (CALIBRATION.md [2-1],
+    # quick 260625-pul). Applied to the HEATING term ONLY — the BG_KW occupancy
+    # background below and the EV layer are NEVER amplified. CLPU_PEAK=1.0 reproduces
+    # the pre-CLPU base bit-for-bit (the reproducibility guard).
+    heat = np.maximum(0.0, T_BALANCE - temp) / R_THERM * clpu_factor(hod, temp)
     # tmy_base correctly keys the occupancy bump off the REAL hour-of-day at each
     # annual position (``_occ(hod)``), so the base's own clock phase is intact: the
     # array index ``i`` carries clock hour ``hod[i] = (hod[0] + i) % 24``. The EV
