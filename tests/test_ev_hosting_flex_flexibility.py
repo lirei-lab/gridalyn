@@ -658,6 +658,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
 )
 from projects.ev_hosting_flex.scripts.pipeline.apply_flexibility_contracts import (  # noqa: E402
     _availability_sweep,
+    _curve_flexible,
     derive_flexibility,
 )
 
@@ -907,3 +908,65 @@ def test_flexible_leg_byte_stable(tmp_path: Path) -> None:
         s1["flex_loading_content_sha256"],
         s2["flex_loading_content_sha256"],
     )
+
+
+# ─── CR-01/WR-04 cache-free gate-selection regression (CI-visible, no cache) ─────
+
+
+def test_curve_flexible_rejects_ev_count_straddle() -> None:
+    """``_curve_flexible`` selects at penetration granularity, not by ev_count.
+
+    Guards CR-01: ``ev_count = round(penetration * homes)`` is NON-injective, so two
+    swept penetration rows can share one ev_count. P95 lost fraction is monotone in
+    penetration, so an ev_count whose LOW-penetration row passes the strict-``<`` gate
+    can have a HIGHER-penetration realization of the SAME ev_count that FAILS. The
+    pre-fix helper keyed its passing set on ev_count, took ``max(passing)``, and
+    resolved ``at_flex`` via a last-match re-scan — so it reported the straddling
+    ev_count flexible with a fraction that CONTRADICTS the gate it claims to satisfy.
+
+    This drives the helper directly with a hand-built straddle curve (NO project
+    cache, NO ``skipif``) so CI catches the inversion the integration assertion could
+    not (it is cache-gated). The pre-fix body returns ``(4, 0.011)``; the fixed body
+    must return ``(3, 0.004)`` — the largest ev_count ALL of whose rows pass, with an
+    ``at_flex`` strictly below tolerance.
+    """
+    tolerance = 0.01
+    curve: list[dict[str, object]] = [
+        {"penetration": 0.5, "ev_count": 4, "f": 0.005},  # PASS (low pen of count 4)
+        {"penetration": 0.6, "ev_count": 4, "f": 0.011},  # FAIL (high pen of count 4)
+        {"penetration": 0.4, "ev_count": 3, "f": 0.004},  # PASS (count 3 all-pass)
+    ]
+
+    flexible, at_flex = _curve_flexible(curve, "f", tolerance)
+
+    # Count 4 STRADDLES the gate (one row fails), so it MUST NOT be reported flexible;
+    # count 3 is the largest ev_count all of whose rows pass.
+    assert flexible == 3, (flexible, at_flex)
+    # at_flex is the fraction at the selected (gate-passing) row for the chosen count
+    # and is strictly below tolerance by construction — never the failing 0.011.
+    assert at_flex == 0.004, (flexible, at_flex)
+    assert at_flex < tolerance, (flexible, at_flex)
+
+
+def test_curve_flexible_at_flex_is_strictly_below_tolerance() -> None:
+    """``at_flex`` is resolved from the SELECTED row, never a last-match re-scan (WR-04).
+
+    A monotone all-passing curve (one ev_count per penetration, every row ``< tol``)
+    must return the top ev_count and the binding (worst-passing) fraction for that
+    count — strictly below tolerance. This is the WR-04 continuity guard at unit
+    level: the same shared helper, the same ``tuple[int, float]`` contract, asserted
+    independent of the curtailment caller, pinning that ``at_flex`` cannot pick up a
+    larger fraction belonging to a different ev_count.
+    """
+    tolerance = 0.01
+    curve: list[dict[str, object]] = [
+        {"penetration": 0.2, "ev_count": 2, "f": 0.002},
+        {"penetration": 0.3, "ev_count": 3, "f": 0.005},
+        {"penetration": 0.4, "ev_count": 4, "f": 0.009},
+    ]
+
+    flexible, at_flex = _curve_flexible(curve, "f", tolerance)
+
+    assert flexible == 4, (flexible, at_flex)
+    assert at_flex == 0.009, (flexible, at_flex)
+    assert at_flex < tolerance, (flexible, at_flex)
