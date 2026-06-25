@@ -602,3 +602,42 @@ cliff INSIDE the effective sweep so the gate is informative for every scenario. 
 single re-point site is ``_availability_sweep``'s penetration loop in
 ``apply_flexibility_contracts.py`` (Plan 02); the frozen ``PENETRATION_SWEEP`` and
 the golden config bytes are never mutated."""
+
+# ─── Partial EV coincidence / diversity (260625-lgg, EV-COINCIDENCE-RECAL) ────
+# APPEND-ONLY block below every locked constant above (everything through
+# ``EXTENDED_PENETRATION_SWEEP`` is byte-frozen — do NOT edit any constant above).
+# This knob replaces the implicit FULL-coincidence assumption baked into the
+# four EV-demand consume sites (each built EV demand as ONE per-EV-unit shape
+# scaled by the EV count → every EV charging the same shape at the same time, a
+# model coincidence factor CF ≈ 1). The recalibration blends that coincident term
+# with an INDEPENDENT term (``count`` independently-drawn per-EV days summed) at a
+# literature-grounded mixing weight ``EV_COINCIDENCE_RHO`` so the model CF lands at
+# the citable 0.55–0.7 band for ~7 cold-Québec dwellings.
+
+EV_COINCIDENCE_RHO = 0.2
+"""EV-aggregate coincidence mixing weight ``ρ`` in [0, 1] (EV-COINCIDENCE-RECAL).
+
+The per-feeder EV aggregate at an integer EV ``count`` is the ρ-blend
+``ρ · count · ev_unit  +  (1 − ρ) · independent_aggregate(count)`` where
+``ev_unit`` is the existing ``(K, 8760)`` ``n_ev=1`` per-EV-unit realization shape
+(the COINCIDENT shape — every EV identical and simultaneous) and
+``independent_aggregate(count)`` is ``count`` INDEPENDENTLY-drawn per-EV days
+summed (the diversified shape). ``ρ`` interpolates the two:
+
+  - ``ρ = 1`` → the legacy FULL-coincidence edge: the blend is exactly
+    ``count · ev_unit`` bit-for-bit (the diversified term is multiplied by 0).
+    Model coincidence factor CF ≈ 1 (firm ~2–3, over-conservative).
+  - ``ρ = 0`` → fully INDEPENDENT per-EV draws (maximally diversified); CF ≈ the
+    diversity floor for the count (firm ~6).
+
+CITABLE BASIS (Jonas, Daniels & Macht, *Energies* 2023, **16(4):1592**, >7000 CA
+stations: residential charging peaks 15:00–24:00, EV coincidence **< 0.25 for
+>50 EVs**; CALIBRATION.md [EV-3] / §3/§5: coincidence is **HIGHER for the few
+dwellings on one transformer** and **RISES with cold ambient + lower charge
+power** → CF ≈ 0.55–0.7 for 7 cold-Québec all-electric homes). Prototype
+260625-lf4 calibrated the citable CF ≈ 0.55 to ``ρ* ≈ 0.20`` (CF ≈ 0.55 lands at
+the DIVERSIFIED end of this 7-dwelling model); a slightly higher ρ maps toward
+CF ≈ 0.7. The default ``0.2`` lands the model CF in the cited 0.55–0.7 band and
+the firm count in the ~5–6 band (confirmed empirically by the non-worktree
+re-run, 260625-lgg). See ``_stochastic.blend_ev_aggregate`` for the byte-stable
+per-count blend kernel."""

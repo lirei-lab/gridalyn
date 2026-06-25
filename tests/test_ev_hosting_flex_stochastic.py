@@ -23,6 +23,7 @@ import pandas as pd
 import pytest
 
 from projects.ev_hosting_flex.scripts._stochastic import (
+    blend_ev_aggregate,
     ev_realizations,
     mc_p95,
     tmy_base,
@@ -31,6 +32,7 @@ from projects.ev_hosting_flex.scripts._stochastic import (
 from projects.ev_hosting_flex.scripts.config import (
     ADMD_KW,
     BG_KW,
+    EV_COINCIDENCE_RHO,
     PLUGIN_PROB,
     R_THERM,
     SEED,
@@ -199,3 +201,121 @@ def test_mc_p95_pinned_interpolation() -> None:
     got = mc_p95(vec)
     want = float(np.percentile(np.asarray(vec, "float64"), 95, interpolation="linear"))
     assert got == pytest.approx(want, abs=0.0)
+
+
+# ───────────── partial-coincidence blend kernel (260625-lgg) ──────────────
+
+
+def _coincidence_factor(blended: np.ndarray, ev_unit: np.ndarray, count: int) -> float:
+    """Model coincidence factor: aggregate feeder peak / sum of per-EV peaks (over K).
+
+    The aggregate peak is the K-mean of the per-realization annual max of the
+    blended feeder draw; the per-EV-peak sum is ``count`` times the K-mean of the
+    per-realization annual max of the single-EV unit. CF = 1 at full coincidence
+    (every EV identical + simultaneous), < 1 as diversity spreads the peaks.
+    """
+    agg_peak = float(blended.max(axis=1).mean())
+    per_ev_peak_sum = float(count) * float(ev_unit.max(axis=1).mean())
+    return agg_peak / per_ev_peak_sum if per_ev_peak_sum > 0 else 0.0
+
+
+def _unit_stack(k: int = 16, start_hod: int = 0) -> np.ndarray:
+    """Return a small ``(K, 8760)`` n_ev=1 per-EV-unit stack (the coincident shape)."""
+    return ev_realizations(
+        np.random.default_rng(SEED), k, n_ev=1, n_bus=1, start_hod=start_hod
+    )[:, 0, :]
+
+
+def test_blend_shape_dtype_and_zero_count() -> None:
+    """``blend_ev_aggregate`` returns float64 ``(K, 8760)``; count=0 is all-zero."""
+    unit = _unit_stack(k=8)
+    out = blend_ev_aggregate(unit, 4, rho=0.2, seed=SEED)
+    assert out.shape == (8, 8760)
+    assert out.dtype == np.dtype("float64")
+    zero = blend_ev_aggregate(unit, 0, rho=0.2, seed=SEED)
+    assert zero.shape == (8, 8760)
+    assert float(np.abs(zero).max()) == 0.0
+
+
+def test_blend_math_matches_explicit_two_term_formula() -> None:
+    """The blend equals ``ρ·count·unit + (1−ρ)·independent(count)`` to <= 1e-9."""
+    unit = _unit_stack(k=8)
+    count, rho = 3, 0.2
+    out = blend_ev_aggregate(unit, count, rho=rho, seed=SEED)
+    # Rebuild the independent term with the SAME per-count SeedSequence keying.
+    rng_count = np.random.default_rng(np.random.SeedSequence([int(SEED), count]))
+    independent = ev_realizations(rng_count, 8, n_ev=count, n_bus=1, start_hod=0)[:, 0, :]
+    expected = rho * count * unit + (1.0 - rho) * independent
+    np.testing.assert_allclose(out, expected, rtol=0, atol=1e-9)
+
+
+def test_blend_rho_one_reproduces_coincident_bit_for_bit() -> None:
+    """``ρ=1`` reproduces the legacy ``count·unit`` path bit-for-bit (sha256 equal)."""
+    unit = _unit_stack(k=8)
+    count = 5
+    out = blend_ev_aggregate(unit, count, rho=1.0, seed=SEED)
+    legacy = (unit * float(count)).astype("float64")
+    assert _content_sha256(out) == _content_sha256(legacy)
+
+
+def test_blend_cf_falls_with_diversity_and_configured_rho_in_band() -> None:
+    """CF peaks at ρ=1 and falls toward the diversified end; configured ρ in [0.5,0.75].
+
+    The per-realization peak of the convex mixture ``ρ·A + (1−ρ)·B`` is a convex
+    function of ρ, so the K-mean CF need not be strictly monotone step-by-step
+    (a shallow convex dip near the diversified floor is expected); the LOAD-BEARING
+    property is that full coincidence (ρ=1) is the MAXIMUM (CF == 1) and that moving
+    to the diversified end drops CF substantially — which is what makes the firm
+    rise. The configured ``EV_COINCIDENCE_RHO`` lands the model CF in the cited band.
+    """
+    unit = _unit_stack(k=256)
+    count = 6
+    cf_full = _coincidence_factor(
+        blend_ev_aggregate(unit, count, rho=1.0, seed=SEED), unit, count
+    )
+    cf_indep = _coincidence_factor(
+        blend_ev_aggregate(unit, count, rho=0.0, seed=SEED), unit, count
+    )
+    # ρ=1 is full coincidence (CF == 1 exactly) and is the maximum CF.
+    assert cf_full == pytest.approx(1.0, abs=1e-9)
+    # The diversified end drops CF substantially (the source of the firm rise).
+    assert cf_indep < cf_full - 0.2, f"CF did not fall with diversity: {cf_full}->{cf_indep}"
+    # Coarse trend across the interior grid: every ρ<1 sits strictly below full.
+    for r in (0.8, 0.6, 0.4, 0.2):
+        cf_r = _coincidence_factor(
+            blend_ev_aggregate(unit, count, rho=r, seed=SEED), unit, count
+        )
+        assert cf_r < cf_full, f"CF at rho={r} ({cf_r}) not below full coincidence"
+    # The configured EV_COINCIDENCE_RHO lands the model CF in the cited band.
+    cf_cfg = _coincidence_factor(
+        blend_ev_aggregate(unit, count, rho=EV_COINCIDENCE_RHO, seed=SEED),
+        unit,
+        count,
+    )
+    assert 0.5 <= cf_cfg <= 0.75, f"configured-rho CF {cf_cfg} outside [0.5, 0.75]"
+
+
+def test_blend_per_count_byte_stable_same_count() -> None:
+    """Two calls for the SAME count (same seed) are byte-identical (D-05/D-13)."""
+    unit = _unit_stack(k=8)
+    a = blend_ev_aggregate(unit, 7, rho=0.2, seed=SEED)
+    b = blend_ev_aggregate(unit, 7, rho=0.2, seed=SEED)
+    assert _content_sha256(a) == _content_sha256(b)
+
+
+def test_blend_independent_of_sweep_order() -> None:
+    """Drawing count=4 before count=7 does not change the count=7 result."""
+    unit = _unit_stack(k=8)
+    direct7 = blend_ev_aggregate(unit, 7, rho=0.2, seed=SEED)
+    _ = blend_ev_aggregate(unit, 4, rho=0.2, seed=SEED)  # draw a different count first
+    after7 = blend_ev_aggregate(unit, 7, rho=0.2, seed=SEED)
+    assert _content_sha256(direct7) == _content_sha256(after7)
+
+
+def test_blend_rho_validation_out_of_range_raises() -> None:
+    """A ρ outside [0, 1] raises a located ValueError (T-lgg-01)."""
+    unit = _unit_stack(k=4)
+    for bad in (-0.1, 1.5):
+        with pytest.raises(ValueError) as exc:
+            blend_ev_aggregate(unit, 3, rho=bad, seed=SEED)
+        assert "[0, 1]" in str(exc.value)

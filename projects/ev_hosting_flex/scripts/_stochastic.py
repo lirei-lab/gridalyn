@@ -43,11 +43,13 @@ from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_HOURS,
     CHARGER_MIX,
     DTYPE,
+    EV_COINCIDENCE_RHO,
     EV_KWH_MEDIAN,
     EV_KWH_MIN,
     EV_KWH_SIGMA,
     PLUGIN_PROB,
     R_THERM,
+    SEED,
     T_BALANCE,
     TMY_INPUT_PATH,
 )
@@ -284,6 +286,118 @@ def ev_realizations(
         annual = np.tile(day_phased, n_days)  # (8760,)
         stack[kk, :, :] = annual[None, :]
     return stack
+
+
+def blend_ev_aggregate(
+    ev_unit: np.ndarray,
+    count: int,
+    rho: float = EV_COINCIDENCE_RHO,
+    *,
+    seed: int = SEED,
+    start_hod: int = 0,
+    k: int | None = None,
+) -> np.ndarray:
+    """Return the partial-coincidence ρ-blended per-feeder EV aggregate (kW).
+
+    Replaces the implicit full-coincidence ``count · ev_unit`` pattern at the four
+    EV-demand consume sites (EV-COINCIDENCE-RECAL). For an integer EV ``count`` and
+    each Monte-Carlo realization ``k`` the blended feeder aggregate is the convex
+    mix of a COINCIDENT and an INDEPENDENT term: ``ρ · count · ev_unit_k  +
+    (1 − ρ) · independent_aggregate_k(count)``. The coincident term scales the
+    existing ``(K, 8760)`` ``n_ev=1`` per-EV-unit stack (every EV identical and
+    simultaneous, model coincidence factor ≈ 1). The independent term is ``count``
+    INDEPENDENTLY-drawn per-EV days SUMMED — exactly
+    ``ev_realizations(rng_count, K, n_ev=count, n_bus=1, start_hod=start_hod)[:, 0,
+    :]`` — reusing the SAME pinned per-EV draw order (``_ev_day``: ``rng.random`` →
+    ``rng.choice`` → ``rng.lognormal`` → ``rng.normal``); it is NEVER re-implemented
+    here.
+
+    ρ semantics. ``ρ = 1`` reproduces the legacy coincident path bit-for-bit
+    (the diversified term is multiplied by 0, so the result is exactly ``count ·
+    ev_unit`` with identical ``content_sha256``) — the reproducibility guard.
+    ``ρ = 0`` is fully independent (maximally diversified). The default ``ρ`` is
+    ``config.EV_COINCIDENCE_RHO`` (the citable partial-coincidence value).
+
+    Per-count byte-stability (D-05/D-13). The independent draw for a given
+    ``count`` is keyed by ``np.random.SeedSequence([int(seed), int(count)])`` →
+    ``np.random.default_rng(...)`` so it is byte-stable AND independent of sweep
+    order: two calls for the same count produce byte-identical aggregates, and
+    drawing some other count first never perturbs this count's result. ``count =
+    0`` returns an all-zero ``(K, 8760)`` array WITHOUT drawing.
+
+    CR-01 phase alignment. ``start_hod`` is applied to BOTH terms: the coincident
+    ``ev_unit`` is assumed already phased to the TMY clock (the persisted
+    ``ev_stack_K.npy`` is), and the independent term is drawn through
+    ``ev_realizations`` with the same ``start_hod`` so the EV evening peak of both
+    components stays on the TMY cold-evening base.
+
+    Args:
+        ev_unit: The ``(K, 8760)`` float64 ``n_ev=1`` per-EV-unit realization stack
+            (the coincident shape; the persisted ``ev_stack_K.npy``).
+        count: The integer feeder EV count (>= 0); ``0`` yields zeros.
+        rho: The coincidence mixing weight ρ in [0, 1] (default
+            ``EV_COINCIDENCE_RHO``).
+        seed: The locked base seed the per-count independent draw is keyed from
+            (default ``config.SEED``).
+        start_hod: The TMY first-row clock hour-of-day both terms are phased to
+            (default 0, the legacy midnight phase).
+        k: The K realization-axis width; inferred from ``ev_unit.shape[0]`` when
+            ``None``.
+
+    Returns:
+        A ``(K, 8760)`` float64 blended per-realization feeder EV aggregate (kW),
+        unrounded (callers round pre-write).
+
+    Raises:
+        ValueError: If ``rho`` is outside [0, 1], ``count`` is negative, or
+            ``ev_unit`` is not a 2-D ``(K, 8760)`` array.
+    """
+    rho_f = float(rho)
+    if not (0.0 <= rho_f <= 1.0):
+        raise ValueError(
+            f"blend_ev_aggregate received rho={rho!r}; the coincidence mixing "
+            "weight must lie in the closed interval [0, 1] (rho=1 is the legacy "
+            "full-coincidence edge, rho=0 fully independent). Remediation: pass "
+            "config.EV_COINCIDENCE_RHO or a value in [0, 1]."
+        )
+    unit = np.ascontiguousarray(ev_unit, dtype=DTYPE)
+    if unit.ndim != 2:
+        raise ValueError(
+            "blend_ev_aggregate received an ev_unit with ndim="
+            f"{unit.ndim} (shape {unit.shape}); it must be a 2-D (K, 8760) per-EV-"
+            "unit realization stack. Remediation: pass the (K, 8760) ev_stack_K.npy "
+            "(or ev_realizations(rng, K, n_ev=1, n_bus=1, start_hod=...)[:, 0, :])."
+        )
+    k_eff = int(unit.shape[0]) if k is None else int(k)
+    n_count = int(count)
+    if n_count < 0:
+        raise ValueError(
+            f"blend_ev_aggregate received count={count!r}; the feeder EV count "
+            "must be a non-negative integer. Remediation: pass round(penetration * "
+            "downstream_home_count)."
+        )
+    n_hour = int(unit.shape[1])
+    if n_count == 0:
+        # No EVs: blend is identically zero (and we draw nothing — order-free).
+        return np.zeros((k_eff, n_hour), dtype=DTYPE)
+
+    coincident = rho_f * float(n_count) * unit  # (K, 8760) coincident term
+    if rho_f >= 1.0:
+        # ρ == 1: the diversified term is multiplied by 0 — reproduce the legacy
+        # coincident path bit-for-bit WITHOUT drawing (the reproducibility guard).
+        return coincident.astype(DTYPE)
+
+    # Per-count byte-stable, sweep-order-independent independent aggregate. The
+    # SeedSequence([seed, count]) child keys the draw to THIS count only, drawn in
+    # the SAME pinned per-EV order as the coincident unit (ev_realizations/_ev_day).
+    rng_count = np.random.default_rng(
+        np.random.SeedSequence([int(seed), n_count])
+    )
+    independent = ev_realizations(
+        rng_count, k_eff, n_ev=n_count, n_bus=1, start_hod=start_hod
+    )[:, 0, :]  # (K, 8760) — count independent per-EV days summed
+    blended = coincident + (1.0 - rho_f) * independent
+    return blended.astype(DTYPE)
 
 
 def mc_p95(values_over_k: np.ndarray) -> float:
