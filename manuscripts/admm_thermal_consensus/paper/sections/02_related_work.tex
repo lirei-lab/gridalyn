@@ -1,62 +1,123 @@
 \section{Related Work}
+Our contribution sits at the intersection of five strands of literature:
+distributed (ADMM/consensus) coordination, network-aware demand response,
+resilience of distributed coordination to communication failures, machine-learning
+imputation of missing load telemetry, and the flexibility of residential electric
+heating. We review each and then make the gap explicit
+(Table~\ref{tab:related}).
 
-\subsection{ADMM and sharing for demand response}
-ADMM \cite{boyd2011admm} decomposes a coupled optimization into local subproblems
-linked by a consensus or sharing constraint, and has become a standard tool for
-distributed energy coordination. The sharing form (Boyd et al., Section~7.3) is
-particularly suited to demand flattening, where many agents contribute to a
-single shared resource. Asynchronous and energy-grid-specific variants extend it
-to microgrids and optimal power flow
-\cite{UllahPark2019,Li8409328}. These works establish that ADMM converges to a
-flattened aggregate; they do not, in general, check that the aggregate is
-feasible on the underlying network.
+\subsection{ADMM and consensus for distributed energy coordination}
+ADMM \cite{boyd2011admm} decomposes a coupled optimization into local
+subproblems linked by a consensus or sharing constraint, and is now a standard
+tool for distributed energy coordination. The sharing form
+(Boyd et al., Section~7.3) is particularly suited to demand flattening, where many
+agents contribute to one shared resource. It underpins distributed optimal power
+flow \cite{Erseghe2014}, communication-efficient and consensus-based demand
+response \cite{Tsai2017,Nguyen2018}, asynchronous microgrid energy management
+\cite{Zheng2018}, and hierarchical transactive coordination of home energy
+management systems \cite{Etedadi2024}. These works establish that ADMM converges
+to a flattened or cost-optimal aggregate; with few exceptions they treat the
+\emph{aggregate signal} as the deliverable and do not verify that it is feasible
+on the underlying feeder.
 
-\subsection{Multi-agent resilience to non-responsiveness}
-A separate line of work studies how multi-agent coordination degrades when
-agents lose communication. Brown et al. show that even a single lost link can
-drive game-theoretic multi-agent systems to arbitrarily poor states
-\cite{Brown2017}, and consensus-control surveys catalog fault-tolerant
-mechanisms \cite{GaoHe2022}. In the distributed-optimization setting,
-communication delay and loss have been shown to slow or destabilize ADMM-based
-optimal power flow \cite{Guo2017}. This literature characterizes \emph{when}
-coordination breaks but rarely couples the failure model to a concrete recovery
-mechanism whose error is then propagated into feeder physics.
+\subsection{Network-aware coordination}
+A second strand embeds network physics in the coordination itself. Distributed
+AC optimal power flow couples ADMM with the branch-flow equations
+\cite{Mhanna2019}, and recent work coordinates distributed energy resources with
+inverter Volt-VAr control through a three-block AC-OPF ADMM \cite{Gebbran2023}.
+Network-constrained demand-response pricing \cite{Mieth2020}, ADMM-based
+congestion-management markets \cite{Shen2020}, and capacity-constrained electric-vehicle
+charging \cite{Ma2018} all respect feeder limits during coordination. A
+parallel line handles uncertainty through chance-constrained AC-OPF, enforcing
+probabilistic voltage and thermal limits for renewables \cite{DallAnese2017} and
+flexible-load ensembles \cite{Hassan2019}. This literature proves that
+network-feasible coordination is achievable, but each work assumes
+\emph{perfect, complete communication}: every agent reports on every iteration.
 
-\subsection{Imputation of missing telemetry}
-When agents fall silent, the coordinator must estimate their contribution.
-Machine-learning imputation of missing time-series telemetry, and its downstream
-effect on forecasting, is an active area \cite{Saad2020}, with cooperative
-network estimators able to fill missing data across agents
-\cite{Gholami2016}. Gradient-boosted trees such as LightGBM \cite{ke2017lightgbm}
-are strong tabular regressors and are well matched to imputing a single agent's
-heating from weather and calendar features.
+\subsection{Resilience to communication failures}
+A third strand studies how coordination degrades when agents fall silent. Brown
+et al. show that even a single lost link can drive multi-agent systems to
+arbitrarily poor states \cite{Brown2017}, and fault-tolerant consensus is a
+mature survey topic \cite{GaoHe2022}. In distributed optimization, stochastic
+communication delay slows ADMM-based OPF \cite{Xu2019}, lossy links are handled
+by robust dispatch \cite{Wu2017} and relaxed asynchronous ADMM with convergence
+guarantees \cite{Bastianello2021}, and adversarial or non-responsive agents can
+be detected and isolated to preserve convergence \cite{Gusrialdi2023}. Learning
+has begun to enter the loop --- e.g.\ to warm-start consensus-ADMM OPF
+\cite{Lee2026}. This literature characterizes \emph{when} coordination breaks and
+offers robust-by-design or detect-and-isolate responses, but it rarely
+\emph{reconstructs} a silent agent's contribution, and never propagates that
+reconstruction error into feeder physics.
 
-\subsection{Distribution power flow}
-Physical validation requires a feeder model and a solver. The IEEE 33-bus radial
-test feeder \cite{baran1989network} is the canonical distribution benchmark, and
-pandapower \cite{thurner2018pandapower} provides convenient AC Newton-Raphson
-power flow over it. These tools are mature; what is missing is their systematic
-use as the \emph{acceptance test} for a coordination scheme.
+\subsection{Imputation and forecasting of missing telemetry}
+When an agent falls silent the coordinator must estimate its consumption.
+Machine-learning imputation of missing smart-meter data spans denoising diffusion
+models \cite{Buwaneswaran2026}, correlation-clustering for faulted grid data
+\cite{RazaviFar2020}, and low-rank recovery of asynchronous meter streams
+\cite{Yuan2021}. For the closely related task of short-term load prediction,
+gradient-boosted trees are competition-winning regressors
+\cite{BenTaieb2014,Lloyd2014}, motivating our use of LightGBM
+\cite{ke2017lightgbm} to impute a silent home's heating from weather and calendar
+features. Crucially, in all of this work the imputer or forecaster is evaluated
+\emph{in isolation} --- by held-out RMSE --- and is never embedded in a
+distributed coordinator nor propagated into a power-flow feasibility check.
 
-\subsection{Communication in demand-side management}
-The reliability of the communication layer is increasingly recognized as a
-first-order constraint on demand-side management rather than an implementation
-detail. Surveys of information and communication technologies for modern
-demand-side management catalog the latency, packet-loss, and coverage limitations
-of the metering and signalling infrastructure that coordination schemes assume
-\cite{Said2023}, and identify intermittent connectivity behind the meter as a
-recurring obstacle to scalable demand response. This motivates our explicit
-non-responsive-fraction model: rather than assuming perfect reporting, we treat
-silent agents as the expected operating condition and ask how far coordination
-can be pushed before the missing telemetry --- even with a learned imputer in the
-loop --- can no longer protect the feeder.
+\subsection{Residential electric-heating flexibility}
+Finally, the resource we coordinate --- thermostatically controlled electric
+heating --- is itself well studied. Aggregate thermostatic flexibility can be
+quantified for demand response \cite{Gasca2022}, direct electric space heating
+combined with partial thermal storage shifts load under comfort constraints via
+linear programming \cite{Ali2014}, heat-pump-plus-storage flexibility reduces
+peak demand and generation capacity \cite{Baeten2017}, and field experiments
+confirm the aggregate effect and its rebound dynamics \cite{Lakshmanan2016}. In
+cold climates specifically, electrically heated buildings with thermal storage
+enable peak shaving \cite{Guzman2015}, and multi-unit residential flexibility and
+predictive heating control have been demonstrated in Qu\'ebec-style winter-peaking
+contexts \cite{Nagarsheth2024,Toquica2022}. The distributed-control variants
+closest to ours coordinate large TCL populations through asynchronous greedy
+\cite{Kaheni2023} or resilient-consensus \cite{Liu2026} schemes --- yet these
+remain abstract control formulations without an AC feeder model, and the broader
+thermal-DR literature is overwhelmingly centralized and not network-validated.
 
-\subsection{The delta}
-Prior work treats coordination quality and network feasibility as separate
-concerns: ADMM papers report aggregate metrics, network papers assume a given
-load. We connect them. By feeding the coordinated (and imputation-perturbed)
-aggregate into an AC power flow and reading back thermal and voltage violations,
-we measure coordination by the metric an operator cares about: does the feeder
-stay within limits? To our knowledge this closed loop --- ADMM, imputation, and
-power-flow validation under a swept communication-failure fraction --- has not
-been reported for cold-climate electric heating.
+\subsection{The gap}
+Table~\ref{tab:related} positions representative prior work along the five
+capabilities our study requires together: distributed ADMM/consensus
+coordination, AC power-flow validation, an explicit communication-failure model,
+machine-learning imputation of the missing agents, and uncertainty
+quantification of the resulting risk. Every ingredient exists --- but only in
+disjoint subsets. Distributed-ADMM coordinators assume perfect communication;
+network-aware and chance-constrained methods are centralized or assume complete
+reporting; resilience methods detect or tolerate failures rather than reconstruct
+the missing agents; imputation accuracy is studied standalone; and thermal-DR
+studies seldom touch the feeder at all. To our knowledge no prior work closes the
+full loop --- distributed ADMM coordination of cold-climate electric heating,
+machine-learning imputation of communication-failed homes, AC power-flow
+validation on a distribution feeder, and Monte-Carlo quantification of the
+resulting violation probability under a swept non-responsive fraction. That
+closed loop is the contribution of this paper.
+
+\begin{table*}[t]
+\centering
+\caption{Positioning against representative prior work. \checkmark: addressed;
+$\sim$: partial; --: not addressed. PF: power flow.}
+\label{tab:related}
+\begin{tabular}{lccccc}
+\toprule
+Representative work & Distributed & AC PF & Comms-failure & ML imputation & Uncertainty \\
+ & ADMM/consensus & validation & model & of missing agents & quantification \\
+\midrule
+Distributed AC-OPF \cite{Erseghe2014,Mhanna2019}        & \checkmark & \checkmark & --        & --        & --        \\
+ADMM AC-OPF DER coord.\ \cite{Gebbran2023}              & \checkmark & \checkmark & --        & --        & --        \\
+Consensus / sharing DR \cite{Nguyen2018,Etedadi2024}    & \checkmark & --        & --        & --        & --        \\
+Chance-constrained OPF \cite{DallAnese2017,Hassan2019}  & --        & \checkmark & --        & --        & \checkmark \\
+ADMM-OPF under delay \cite{Xu2019}                      & \checkmark & \checkmark & \checkmark & --        & $\sim$    \\
+Resilient distributed opt.\ \cite{Gusrialdi2023}        & \checkmark & --        & \checkmark & --        & --        \\
+Learning-augmented ADMM-OPF \cite{Lee2026}              & \checkmark & \checkmark & --        & $\sim$    & --        \\
+Distributed TCL control \cite{Kaheni2023,Liu2026}       & \checkmark & --        & $\sim$    & --        & --        \\
+ML telemetry imputation \cite{Buwaneswaran2026,Yuan2021} & --        & --        & --        & \checkmark & --        \\
+Thermal-DR flexibility \cite{Gasca2022,Ali2014}         & --        & --        & --        & --        & --        \\
+\midrule
+\textbf{This work}                                      & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table*}
