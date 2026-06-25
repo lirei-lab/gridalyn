@@ -1,0 +1,24 @@
+\section{Conclusion}
+
+We presented a network-validated pipeline that coordinates cold-climate electric
+heating with sharing-ADMM, reconstructs non-responsive agents with a LightGBM
+imputer, and --- the closing contribution --- validates the coordinated aggregate
+on the IEEE 33-bus feeder with AC power flow. The closed loop turns abstract
+flattening metrics into a feeder verdict: ideal coordination cuts the aggregate
+peak by 12.7\% and clears a 115\% thermal line overload down to 99.7\%, while
+lifting the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
+resilient to communication failure up to a non-responsive fraction of 0.6 and
+re-violates at 0.8 (108\% loading), establishing a critical-$\rho$ threshold
+between the two. A secondary finding is that ADMM iteration count explodes with
+$\rho$ (8 to 280) well before the outcome degrades, offering an early-warning
+signal.
+
+The study has clear limitations. It covers a single cold day and a single feeder;
+the communication-failure model is a stochastic non-responsive fraction rather
+than a protocol-level simulation of delays, drops, and retransmissions; and the
+\texttt{case33bw} voltage profile is inherently stressed, so voltage is reported
+as a severity measure rather than a compliance test. Future work will extend the
+loop to multiple feeders and days, study the spatial placement of agents on the
+feeder (which determines how much each contributes to the binding constraint),
+and couple the coordinator to a flexibility market so that the cleared headroom
+can be priced and settled.

@@ -1,0 +1,92 @@
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Sharing-ADMM coordination}
+Let $x_i \in \mathbb{R}^{T}$ be the heating schedule of home $i$, $h_i$ its
+baseline, and $B \in \mathbb{R}^{T}$ the fixed background aggregate. The
+coordinator flattens the total feeder load toward a constant target $c$ while
+respecting each home's comfort. We solve the sharing problem
+
+\begin{equation}
+\min_{\{x_i\}}\;
+\sum_{i=1}^{N} \frac{\lambda}{2}\,\lVert x_i - h_i \rVert_2^2
+\;+\; \frac{\mu}{2}\,\Big\lVert \sum_{i=1}^{N} x_i + B - c\,\mathbf{1} \Big\rVert_2^2
+\label{eq:sharing}
+\end{equation}
+
+subject to~\eqref{eq:agent} for every $i$, where $c$ is the constant level that
+conserves total daily energy, $\lambda = 0.15$ weights comfort deviation,
+$\mu = 1.0$ weights flattening, and $\mathbf{1}$ is the all-ones vector. The
+first term keeps each home close to its comfortable baseline; the second
+penalizes any departure of the total load from a flat profile.
+
+Following the sharing form of ADMM \cite{boyd2011admm}, we introduce an
+auxiliary aggregate variable $z$ and a scaled dual $u$ with penalty
+$\rho_{\mathrm{ADMM}} = 1.0$, and iterate three steps. The
+\textbf{$x$-update} solves each home's local problem in parallel: a comfort-plus-penalty
+proximal step followed by projection of the result onto the box-and-energy-plane
+feasible set of~\eqref{eq:agent}. The \textbf{$z$-update} is the closed-form
+average that drives the shared aggregate toward the flat target. The
+\textbf{$u$-update} is the standard scaled dual ascent on the sharing residual.
+Algorithm~\ref{alg:admm} summarizes one full sweep.
+
+\begin{algorithm}[t]
+\caption{Sharing-ADMM heating coordination}
+\label{alg:admm}
+\KwIn{baselines $\{h_i\}$, background $B$, target $c$, weights $\lambda,\mu$, penalty $\rho_{\mathrm{ADMM}}$}
+\KwOut{coordinated schedules $\{x_i\}$}
+initialize $x_i \leftarrow h_i$, $z \leftarrow 0$, $u \leftarrow 0$\;
+\Repeat{aggregate residual converged}{
+  \ForEach{home $i$ (in parallel)}{
+    proximal step on $\frac{\lambda}{2}\lVert x_i - h_i\rVert^2$ plus penalty toward $z-u$\;
+    project $x_i$ onto the box-and-energy set of~\eqref{eq:agent}\;
+  }
+  $z \leftarrow$ closed-form average enforcing the flat aggregate target\;
+  $u \leftarrow u + \big(\textstyle\sum_i x_i + B\big) - z$\;
+}
+\Return{$\{x_i\}$}\;
+\end{algorithm}
+
+The $x$-update projection is what makes the scheme physically meaningful: it
+guarantees that every iterate respects comfort and conserves daily energy, so the
+coordinated schedule is feasible for the homes by construction. The number of
+iterations to convergence is recorded as a tractability metric.
+
+\subsection{Imputation of non-responsive agents}
+When agent $i$ is non-responsive its baseline $h_i$ is unavailable to the
+coordinator, so we replace it with a learned estimate $\hat{h}_i$. We train a
+single LightGBM gradient-boosted-tree regressor \cite{ke2017lightgbm} that maps a
+small feature vector --- ambient temperature, the sine and cosine of the hour of
+day, and the agent's nameplate heating level --- to instantaneous heating power.
+The model is trained on the responsive population and applied step-by-step to
+each silent agent, yielding $\hat{x}_{i,t}$ that the coordinator treats as the
+agent's contribution. Generalization to unseen homes is assessed by a 5-fold
+leave-agents-out cross-validation, which holds out entire agents rather than
+random samples and therefore measures the realistic case of imputing a home the
+model never saw.
+
+\subsection{Power-flow validation loop}
+The novel stage closes the loop on physics. For each scenario (uncoordinated,
+ideal, and each $\rho$) we take the resulting aggregate, distribute it across the
+32 IEEE-33 load buses by their native load shares, and scale so that the
+uncoordinated peak reaches the calibrated feeder. The trunk ampacity is fixed so
+the uncoordinated peak loads the worst line to 115\%. We then run an AC
+Newton-Raphson power flow at every one of the 96 time steps (672 solves across
+all scenarios, all converged) and record, per scenario, the worst-of-day
+minimum bus voltage and the worst-of-day maximum line loading. A scenario is
+flagged as violating if any line exceeds 100\% loading at any step. This turns
+an abstract kilowatt signal into a binary feeder verdict and a pair of
+continuous severity measures.
+
+Three modeling choices deserve comment. \emph{Load allocation by native share}
+keeps the spatial signature of the IEEE-33 case intact, so the worst line is the
+one the benchmark already stresses (the trunk leaving the substation) rather than
+an artifact of our placement. \emph{Ampacity calibration to 115\%} is what makes
+the experiment decision-relevant: a feeder that is comfortably within limits in
+the uncoordinated case has nothing to gain from demand response, so we set the
+binding constraint exactly where coordination must act to clear it. \emph{Solving
+every step} rather than only the aggregate-peak step matters because imputation
+error can shift the worst instant: the uncoordinated worst is the evening peak,
+but under heavy imputation the binding step can migrate, and an
+aggregate-peak-only check would miss it. Reporting the worst-of-day envelope
+across all 96 steps therefore gives a conservative, instant-agnostic verdict.

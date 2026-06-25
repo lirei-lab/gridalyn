@@ -1,0 +1,69 @@
+\section{Introduction}
+
+\IEEEPARstart{T}{he} electrification of heating in cold-climate regions concentrates
+distribution-system stress into a few winter hours. In the province of Qu\'ebec,
+where electric space heating is the dominant heating technology, the system
+peak is driven almost entirely by simultaneous resistive and heat-pump heating
+on the coldest mornings and evenings. As distributed energy resources (DERs)
+proliferate and heating loads grow, these synchronized peaks threaten thermal
+limits on feeder trunk conductors and depress voltages far from the substation.
+Because the flexibility lives behind thousands of meters and not at a single
+controllable node, centralized dispatch scales poorly; decentralized
+coordination, in which each home solves a small local problem and exchanges only
+an aggregate signal, is the natural fit.
+
+The alternating direction method of multipliers (ADMM) \cite{boyd2011admm} is a
+workhorse for this setting: its sharing form lets a coordinator flatten a common
+resource (here, total feeder load) while each agent retains private control of
+its own heating schedule. ADMM-based demand response is well studied, yet two
+gaps undermine its real-world credibility.
+
+The first gap is \emph{fragility to communication failures}. Multi-agent
+coordination implicitly assumes every agent reports on every iteration; when a
+fraction of agents fall silent, the aggregate the coordinator optimizes is no
+longer the aggregate that materializes on the wire. How badly the coordinated
+outcome degrades --- and how an operator might recover it by forecasting the
+missing contributions --- is rarely quantified end to end.
+
+The second gap is \emph{physical validity}. The literature typically stops at
+the coordinated aggregate kilowatt signal and reports peak or peak-to-average
+reductions. It almost never asks the operational question that matters: is the
+coordinated aggregate actually feasible on the feeder? A flatter aggregate is
+worthless if it still overloads a trunk line or sags a remote bus below limits.
+
+This paper closes the loop between coordination and feeder physics. We adapt the
+sharing-ADMM-plus-imputation methodology from a prior multi-agent thesis and
+\emph{extend} it with an AC power-flow validation stage, turning a purely
+signal-level study into a network-validated one. Our contributions are:
+
+\begin{itemize}
+  \item A sharing-ADMM coordinator for deferrable electric heating that flattens
+  the feeder aggregate subject to per-home comfort bounds and a daily-energy
+  conservation constraint (load is shifted, never curtailed).
+  \item A LightGBM imputer that reconstructs the heating of non-responsive
+  agents from ambient temperature, time-of-day, and nameplate features, letting
+  the coordinator stay accurate as the non-responsive fraction grows.
+  \item An AC power-flow validation stage on the IEEE 33-bus feeder in
+  pandapower that distributes the coordinated aggregate across load buses,
+  calibrates trunk ampacity to a realistic uncoordinated overload, and records
+  worst-of-day minimum voltage and maximum line loading --- closing the loop on
+  physical feasibility.
+  \item A fully reproducible, governed study driving the entire pipeline from a
+  declarative configuration, with every reported number traceable to a recorded
+  artifact.
+\end{itemize}
+
+The central finding is that coordination not only flattens the aggregate (a
+12.7\% peak cut) but \emph{clears} a 115\% thermal overload to 99.7\%, and that
+this cleared state holds under communication failure up to a non-responsive
+fraction of 0.6 before re-violating at 0.8.
+
+The remainder of the paper is organized as follows.
+Section~\ref{sec:methodology} is preceded by the related work and the system
+model; Section~II surveys ADMM-based demand response, multi-agent resilience,
+telemetry imputation, and distribution power flow, and states our delta against
+each. Section~III formalizes the agents, the feeder, and the
+communication-failure model. Section~\ref{sec:methodology} develops the
+sharing-ADMM updates, the LightGBM imputer, and the power-flow validation loop.
+Section~V details the case-study configuration, Section~VI reports the aggregate,
+robustness, and network-feasibility results, and Section~VII concludes.

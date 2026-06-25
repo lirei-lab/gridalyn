@@ -1,0 +1,49 @@
+\section{Related Work}
+
+\subsection{ADMM and sharing for demand response}
+ADMM \cite{boyd2011admm} decomposes a coupled optimization into local subproblems
+linked by a consensus or sharing constraint, and has become a standard tool for
+distributed energy coordination. The sharing form (Boyd et al., Section~7.3) is
+particularly suited to demand flattening, where many agents contribute to a
+single shared resource. Asynchronous and energy-grid-specific variants extend it
+to microgrids and optimal power flow
+\cite{UllahPark2019,Li8409328}. These works establish that ADMM converges to a
+flattened aggregate; they do not, in general, check that the aggregate is
+feasible on the underlying network.
+
+\subsection{Multi-agent resilience to non-responsiveness}
+A separate line of work studies how multi-agent coordination degrades when
+agents lose communication. Brown et al. show that even a single lost link can
+drive game-theoretic multi-agent systems to arbitrarily poor states
+\cite{Brown2017}, and consensus-control surveys catalog fault-tolerant
+mechanisms \cite{GaoHe2022}. In the distributed-optimization setting,
+communication delay and loss have been shown to slow or destabilize ADMM-based
+optimal power flow \cite{Guo2017}. This literature characterizes \emph{when}
+coordination breaks but rarely couples the failure model to a concrete recovery
+mechanism whose error is then propagated into feeder physics.
+
+\subsection{Imputation of missing telemetry}
+When agents fall silent, the coordinator must estimate their contribution.
+Machine-learning imputation of missing time-series telemetry, and its downstream
+effect on forecasting, is an active area \cite{Saad2020}, with cooperative
+network estimators able to fill missing data across agents
+\cite{Gholami2016}. Gradient-boosted trees such as LightGBM \cite{ke2017lightgbm}
+are strong tabular regressors and are well matched to imputing a single agent's
+heating from weather and calendar features.
+
+\subsection{Distribution power flow}
+Physical validation requires a feeder model and a solver. The IEEE 33-bus radial
+test feeder \cite{baran1989network} is the canonical distribution benchmark, and
+pandapower \cite{thurner2018pandapower} provides convenient AC Newton-Raphson
+power flow over it. These tools are mature; what is missing is their systematic
+use as the \emph{acceptance test} for a coordination scheme.
+
+\subsection{The delta}
+Prior work treats coordination quality and network feasibility as separate
+concerns: ADMM papers report aggregate metrics, network papers assume a given
+load. We connect them. By feeding the coordinated (and imputation-perturbed)
+aggregate into an AC power flow and reading back thermal and voltage violations,
+we measure coordination by the metric an operator cares about: does the feeder
+stay within limits? To our knowledge this closed loop --- ADMM, imputation, and
+power-flow validation under a swept communication-failure fraction --- has not
+been reported for cold-climate electric heating.

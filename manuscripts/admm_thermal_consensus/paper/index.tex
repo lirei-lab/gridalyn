@@ -1,0 +1,50 @@
+\documentclass{ieeeaccess}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{cite}
+\usepackage{url}
+\graphicspath{{figures/}{./}}
+
+% Title-block fields with no class-level defaults.
+\doi{10.1109/ACCESS.2026.0000000}
+\artnum{}
+
+% The class caption macro tests \xfigwd, which is only set by its bespoke
+% \Figure command. Provide a fallback so standard figure environments compile.
+\makeatletter
+\providecommand{\xfigwd}{\columnwidth}
+\makeatother
+
+\begin{document}
+\title{Network-Validated Distributed ADMM Coordination of Cold-Climate Electric Heating under Communication Failures}
+\author{NILSON HENAO}
+\address{University of Qu\'ebec at Trois-Rivi\`eres, Trois-Rivi\`eres, QC G8Z 4M3, Canada (e-mail: nilsonfh@gmail.com)}
+\markboth{N. Henao: Network-Validated ADMM Coordination under Communication Failures}{N. Henao: Network-Validated ADMM Coordination under Communication Failures}
+\maketitle
+
+\begin{abstract}
+\input{sections/00_abstract}
+\end{abstract}
+
+\begin{IEEEkeywords}
+ADMM, distributed optimization, demand response, communication failures, machine learning imputation, power flow, IEEE 33-bus, electric heating.
+\end{IEEEkeywords}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_system_model}
+\input{sections/04_methodology}
+\input{sections/05_case_study}
+\input{sections/06_results}
+\input{sections/07_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\EOD
+\end{document}

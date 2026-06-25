@@ -1,0 +1,46 @@
+\section{Case Study Setup}
+
+The study runs on a single synthetic Trois-Rivi\`eres cold day with a minimum
+ambient temperature of $-21.9\,^{\circ}\mathrm{C}$, discretized at 15-minute
+resolution into $T = 96$ steps. We coordinate $N = 30$ electric-heating homes
+with comfort band $\alpha = 0.5$, comfort weight $\lambda = 0.15$, flattening
+weight $\mu = 1.0$, and ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The
+communication-failure fraction is swept over
+$\rho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$.
+
+Energy cost is evaluated against a time-of-use tariff with an off-peak rate of
+0.078, a mid-peak rate of 0.128, and an evening-peak rate of 0.158~CAD/kWh.
+Physical feasibility uses the IEEE 33-bus feeder with all loads at a power factor
+of 0.95, with the aggregate scaled so the uncoordinated winter peak reaches the
+feeder and trunk ampacity calibrated to a 115\% uncoordinated overload. The
+software stack is pandapower~3.4.0 for power flow, scikit-learn~1.6.1 for the
+cross-validation harness, and LightGBM~4.6.0 for the imputer. Every input,
+intermediate, and reported figure is emitted as a governed artifact so the run
+is reproducible from its declarative configuration.
+Table~\ref{tab:params} collects the principal parameters.
+
+\begin{table}[t]
+\centering
+\caption{Principal case-study parameters.}
+\label{tab:params}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Value \\
+\midrule
+Homes $N$ & 30 \\
+Horizon / resolution & 96 steps / 15 min \\
+Coldest-day min.\ temperature & $-21.9\,^{\circ}\mathrm{C}$ \\
+Comfort band $\alpha$ & 0.5 \\
+Comfort weight $\lambda$ & 0.15 \\
+Flattening weight $\mu$ & 1.0 \\
+ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
+Non-responsive fraction $\rho$ & $\{0.0, 0.2, 0.4, 0.6, 0.8\}$ \\
+TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
+Feeder & IEEE 33-bus, 12.66 kV \\
+Power factor & 0.95 \\
+Uncoordinated worst-line loading & 115\% (calibrated) \\
+Power flow & AC Newton-Raphson \\
+Software & pandapower 3.4.0, scikit-learn 1.6.1, LightGBM 4.6.0 \\
+\bottomrule
+\end{tabular}
+\end{table}

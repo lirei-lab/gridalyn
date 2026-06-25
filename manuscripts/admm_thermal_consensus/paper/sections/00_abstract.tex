@@ -1,0 +1,18 @@
+Decentralized coordination of flexible loads through the alternating direction
+method of multipliers (ADMM) is an established way to flatten the winter peaks
+that cold-climate electric heating imposes on distribution feeders. Two gaps
+limit its practical credibility. First, multi-agent schemes are fragile to
+communication failures: when agents stop responding, the coordinated aggregate
+degrades in ways rarely quantified. Second, the coordinated aggregate is almost
+never checked against the physics of the feeder it is supposed to relieve. We
+close both gaps with a network-validated pipeline that combines a sharing-ADMM
+coordinator, a LightGBM imputer that reconstructs the heating of non-responsive
+agents, and an AC power-flow validation stage on the IEEE 33-bus feeder modeled
+in pandapower. On a synthetic Trois-Rivi\`eres cold day with 30 electric-heating
+homes, ideal coordination cuts the aggregate peak by 12.7\%, from 169.1 to
+147.7~kW, and drives the peak-to-average ratio from 1.146 to 1.001. On the
+feeder, coordination clears a 115\% thermal line overload down to 99.7\% and
+lifts the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
+resilient up to a non-responsive fraction of 0.6, then re-violates at 0.8, where
+imputation error re-introduces a 108\% overload. The result is a reproducible,
+governed study that ties coordination quality to measurable feeder feasibility.

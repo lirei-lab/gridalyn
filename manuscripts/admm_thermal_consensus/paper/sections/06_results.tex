@@ -1,0 +1,176 @@
+\section{Results}
+
+\subsection{Aggregate coordination}
+Figure~\ref{fig:profiles} shows the cold-day aggregate load. The uncoordinated
+profile exhibits the classic double peak --- a morning and an evening heating
+surge --- whereas the ideal ADMM coordination flattens it to a nearly constant
+$\approx 147.7$~kW. The $\rho = 0.8$ trace, in which most agents are imputed,
+recovers much of the flattening but leaves residual peaks where imputation error
+accumulates.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_aggregate_profiles.pdf}
+\caption{Aggregate cold-day load: uncoordinated double-peak versus the flat
+ADMM-ideal profile ($\approx 147.7$~kW) and the $\rho = 0.8$ imputed case with
+residual peaks.}
+\label{fig:profiles}
+\end{figure}
+
+Table~\ref{tab:agg} quantifies the aggregate key performance indicators. Ideal
+coordination cuts the peak from 169.1 to 147.7~kW, a 12.7\% reduction, and drives
+the peak-to-average ratio (PAR) from 1.146 down to 1.001 --- essentially a flat
+load. A PAR of 1.001 is the practical floor: it means the coordinated aggregate
+is constant to within a tenth of a percent across the entire day, so the
+flattening objective in~\eqref{eq:sharing} has been met almost exactly. Energy
+cost falls slightly, from 371.0 to 364.8~CAD, because the daily-energy constraint
+conserves total heating; the saving comes from shifting load out of the
+evening-peak TOU window (0.158~CAD/kWh) toward off-peak hours (0.078~CAD/kWh)
+rather than from using less energy. The modest size of the cost reduction is
+itself a useful result: with energy conserved, demand response of this kind buys
+\emph{capacity} relief (a lower peak) far more than it buys energy savings, and
+the case for it must rest on the network benefit rather than the bill.
+
+The imputed scenarios track the ideal closely up to $\rho = 0.6$ and only degrade
+materially at $\rho = 0.8$, where the peak rises to 159.4~kW and PAR to 1.080.
+The per-scenario imputation RMSE (last column) is non-monotone in $\rho$: it
+grows from 0.170 to 0.252~kW as the imputed population grows, then dips to
+0.234~kW at $\rho = 0.8$. This is an averaging effect --- with 24 of 30 agents
+imputed, individual errors partially cancel in the aggregate --- and it explains
+why the aggregate-level damage at $\rho = 0.8$ comes less from raw imputation
+error than from the loss of the responsive agents whose true, flexible schedules
+were doing most of the flattening work.
+
+\begin{table}[t]
+\centering
+\caption{Aggregate KPIs by scenario.}
+\label{tab:agg}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Scenario & Peak (kW) & PAR & Cost (CAD) & RMSE (kW) \\
+\midrule
+Uncoordinated      & 169.1 & 1.1458 & 371.0 & --- \\
+Coordinated ideal  & 147.7 & 1.0007 & 364.8 & --- \\
+Imputed $\rho{=}0.0$ & 147.7 & 1.0007 & 364.8 & 0.000 \\
+Imputed $\rho{=}0.2$ & 147.7 & 1.0009 & 364.9 & 0.170 \\
+Imputed $\rho{=}0.4$ & 147.8 & 1.0012 & 364.9 & 0.242 \\
+Imputed $\rho{=}0.6$ & 148.1 & 1.0035 & 364.9 & 0.252 \\
+Imputed $\rho{=}0.8$ & 159.4 & 1.0802 & 366.2 & 0.234 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Imputation accuracy and robustness}
+The LightGBM imputer is a competent forecaster of an unseen home's heating. Under
+5-fold leave-agents-out cross-validation it achieves an RMSE of 0.294~kW and an
+MAE of 0.247~kW, against a heating standard deviation of 0.575~kW. At roughly
+51\% of the natural variability, the imputer is clearly better than predicting
+the mean and is accurate enough that the coordinated aggregate barely moves for
+small non-responsive fractions, as seen in the per-scenario RMSE column of
+Table~\ref{tab:agg}.
+
+Figure~\ref{fig:peakpar} plots peak and PAR against $\rho$. Both stay essentially
+flat through $\rho = 0.6$ and then turn sharply upward at $\rho = 0.8$, the
+signature of a robustness threshold rather than a gradual decay.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_peak_par_vs_rho.pdf}
+\caption{Aggregate peak and PAR versus the non-responsive fraction $\rho$.}
+\label{fig:peakpar}
+\end{figure}
+
+A secondary finding concerns tractability rather than outcome quality. The ADMM
+iteration count grows steeply with $\rho$: 8 iterations for the ideal case, then
+14, 21, 150, and 280 for $\rho = 0.2, 0.4, 0.6, 0.8$ respectively (all runs
+converged). Communication failure thus degrades coordination \emph{tractability}
+--- the effort to reach consensus --- well before it degrades the coordinated
+\emph{outcome}, an early-warning signal an operator could monitor.
+
+The shape of this curve is informative. From $\rho = 0.0$ to $\rho = 0.4$ the
+iteration count roughly doubles per step (8, 14, 21), an almost linear growth
+that the coordinator absorbs easily. Between $\rho = 0.4$ and $\rho = 0.6$ it
+jumps by a factor of seven (21 to 150), and by $\rho = 0.8$ it reaches 280 ---
+35 times the ideal effort. The knee of this curve sits at the same place as the
+feasibility knee in the network results below, near $\rho = 0.6$. The two are
+linked: as more agents are imputed, the aggregate the coordinator sees diverges
+from the aggregate that physically forms, the sharing residual becomes harder to
+drive to zero, and convergence slows. Iteration count is therefore a cheap,
+purely software-side proxy for the harder-to-observe physical-feasibility margin,
+because both respond to the same underlying quantity --- the mismatch injected by
+imputation.
+
+\subsection{Network validation}
+The closed-loop contribution is summarized in Figure~\ref{fig:network} and
+Table~\ref{tab:net}. The uncoordinated aggregate loads the worst trunk line to
+115\% --- a thermal violation --- and drops the worst minimum voltage to
+0.905~p.u. Ideal coordination \emph{clears} the thermal overload: maximum line
+loading falls to 99.7\% (no violation) and worst minimum voltage rises to
+0.918~p.u. This is the core result: flattening the aggregate is not merely a
+statistical improvement, it restores feeder feasibility.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_network_violation_vs_rho.pdf}
+\caption{Worst minimum bus voltage (left axis) and worst maximum line loading
+(right axis) versus the non-responsive fraction $\rho$ --- the headline
+feasibility figure. Line loading clears below 100\% through $\rho = 0.6$ and
+re-violates at $\rho = 0.8$.}
+\label{fig:network}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Network feasibility on IEEE-33 (worst of day).}
+\label{tab:net}
+\begin{tabular}{@{}lrrrl@{}}
+\toprule
+Scenario & Peak (MW) & $V_{\min}$ (p.u.) & Loading (\%) & Violation \\
+\midrule
+Uncoordinated      & 4.60 & 0.905 & 115.0 & yes \\
+Coordinated ideal  & 4.02 & 0.918 &  99.7 & no \\
+Imputed $\rho{=}0.0$ & 4.02 & 0.918 &  99.7 & no \\
+Imputed $\rho{=}0.2$ & 4.02 & 0.918 &  99.7 & no \\
+Imputed $\rho{=}0.4$ & 4.02 & 0.918 &  99.7 & no \\
+Imputed $\rho{=}0.6$ & 4.03 & 0.918 & 100.0 & no (edge) \\
+Imputed $\rho{=}0.8$ & 4.34 & 0.911 & 108.0 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The cleared state is resilient to communication failure up to $\rho = 0.6$, where
+the worst line rides the 100.0\% edge but does not violate. At $\rho = 0.8$ the
+accumulated imputation error re-introduces a 108\% overload --- the feeder
+re-violates. The story is therefore $115\% \rightarrow 99.7\% \rightarrow 108\%$:
+coordination clears the overload, the clearance survives substantial
+non-responsiveness, and only collapses once most agents must be imputed. This
+identifies a critical non-responsive fraction between 0.6 and 0.8 beyond which
+imputation can no longer protect the feeder.
+
+\paragraph{An honest note on voltage.} We report voltage as a \emph{severity}
+measure, not a compliance verdict. On the \texttt{case33bw} benchmark the worst
+minimum voltage never reaches the 0.95~p.u. ANSI limit in any scenario --- the
+feeder is inherently stressed --- so we do not claim voltage compliance.
+Coordination nonetheless reduces under-voltage \emph{depth} (0.905 to
+0.918~p.u.), which is a genuine improvement in feeder condition. The clean
+cleared/re-violated headline comes from line loading, where the 100\% thermal
+limit gives an unambiguous binary verdict.
+
+\subsection{Discussion}
+Three observations tie the results together. First, the aggregate, tractability,
+and feasibility curves all share the same knee near $\rho = 0.6$: the iteration
+count, the peak, and the worst line loading all stay benign through $\rho = 0.6$
+and break together at $\rho = 0.8$. This suggests that a single observable
+quantity --- the divergence between the imputed and the realized aggregate ---
+governs all three, and that an operator monitoring ADMM convergence effort has an
+early proxy for impending feeder violation. Second, the network result is not a
+restatement of the aggregate result: a 12.7\% peak cut is a statistical
+improvement, but \emph{clearing a 115\% overload to 99.7\%} is an operational
+state change from infeasible to feasible, and the two need not coincide on a
+different feeder or load allocation. Third, the failure at $\rho = 0.8$ is graceful
+rather than catastrophic --- 108\% loading, not a non-converging power flow ---
+which indicates that the imputer keeps the system in a recoverable regime even
+when most agents are silent. Together these support the central claim that
+coordination quality should be measured by feeder feasibility, and that
+imputation extends the range of communication failure over which that feasibility
+holds.

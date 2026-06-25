@@ -1,0 +1,49 @@
+\section{System Model}
+
+\subsection{Agents and deferrable heating}
+We model $N = 30$ representative cold-climate electric-heating homes over a
+single synthetic Trois-Rivi\`eres cold day at 15-minute resolution
+($T = 96$ time steps). Each home $i$ has a thermostat-driven baseline heating
+profile $h_{i,t}$ produced by a behavioral model conditioned on the ambient
+temperature, plus a fixed (non-deferrable) background load. The coldest-day
+minimum temperature is $-21.9\,^{\circ}\mathrm{C}$ (daily mean
+$-18.3\,^{\circ}\mathrm{C}$), which sets a demanding heating duty.
+
+Heating is treated as deferrable within a comfort band of $\pm 50\%$ of the
+baseline ($\alpha = 0.5$): the coordinator may shift \emph{when} a home heats but
+must conserve the home's total daily heating energy, so demand is shifted rather
+than curtailed. With $x_{i,t}$ the coordinated heating power of home $i$ at step
+$t$, each agent is constrained by
+
+\begin{equation}
+(1-\alpha)\,h_{i,t} \le x_{i,t} \le (1+\alpha)\,h_{i,t},
+\qquad \sum_{t} x_{i,t} = \sum_{t} h_{i,t}.
+\label{eq:agent}
+\end{equation}
+
+The box bound preserves thermal comfort at every step, and the equality plane
+preserves daily heating energy. Background load is held fixed and is not subject
+to~\eqref{eq:agent}.
+
+\subsection{The feeder}
+Physical feasibility is assessed on the IEEE 33-bus radial test feeder
+\cite{baran1989network} as implemented in pandapower
+\cite{thurner2018pandapower} (the \texttt{case33bw} case): 33 buses, 32 lines,
+32 distributed loads, a single external-grid substation at the head, and a
+nominal voltage of 12.66~kV. The coordinated aggregate is allocated to the 32
+load buses in proportion to their native load shares and scaled so that the
+uncoordinated winter peak reaches the feeder. The trunk conductor ampacity is
+calibrated so that the uncoordinated peak loads the worst line to 115\% --- a
+realistic overload that motivates demand response in the first place. All loads
+use a power factor of 0.95.
+
+\subsection{Communication-failure model}
+At coordination time a fraction $\rho$ of the agents become non-responsive and
+report nothing to the coordinator. We sweep
+$\rho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $6$, $12$, $18$,
+and $24$ silent homes out of $30$. For each non-responsive agent the coordinator
+substitutes an imputed heating profile $\hat{x}_{i,t}$ produced by a trained
+regressor (Section~\ref{sec:methodology}) and proceeds as if it were the true
+contribution. The imputation error therefore propagates first into the
+coordinated aggregate and ultimately into the feeder power flow, which is exactly
+the propagation path this study quantifies.
