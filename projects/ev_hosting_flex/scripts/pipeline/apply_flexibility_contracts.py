@@ -335,24 +335,48 @@ def _availability_sweep(
 def _curve_flexible(
     curve: list[dict[str, object]], frac_key: str, tolerance: float
 ) -> tuple[int, float]:
-    """Return the largest EV count whose P95 lost fraction is strictly < tolerance.
+    """Return the largest EV count all of whose penetration rows pass the gate.
+
+    ``ev_count = round(penetration * downstream_home_count)`` is NON-injective, so
+    two swept penetration rows can share one ev_count. The P95 lost fraction is
+    monotone in penetration, so gating on the ev_count alone (keying the passing set
+    by ev_count and taking ``max``) can report a count flexible when a higher-
+    penetration realization of that SAME count breaches the strict-``<`` gate, and
+    can resolve ``at_flex`` to the FAILING row — an internal contradiction (CR-01 /
+    WR-04). This gates AND selects at penetration granularity: an ev_count is
+    eligible only if EVERY one of its rows is strictly below tolerance, and
+    ``at_flex`` is the binding (worst-passing, highest-fraction) row of the selected
+    count — strictly below tolerance by construction.
 
     Args:
-        curve: The per-penetration trade-curve rows from ``_availability_sweep``.
+        curve: The per-penetration trade-curve rows from ``_availability_sweep``;
+            each row carries both ``"penetration"`` and ``"ev_count"``.
         frac_key: The P95 lost-fraction key to gate on.
         tolerance: The strict-``<`` P95 tolerance.
 
     Returns:
-        ``(flexible_ev_count, lost_fraction_p95_at_flexible)``.
+        ``(flexible_ev_count, lost_fraction_p95_at_flexible)`` — the largest ev_count
+        all of whose rows pass the strict-``<`` gate and the binding fraction at that
+        count; ``(0, 0.0)`` if no ev_count is eligible.
     """
-    passing = [
-        int(row["ev_count"]) for row in curve if float(row[frac_key]) < float(tolerance)
-    ]
-    flexible = max(passing) if passing else 0
-    at_flex = 0.0
+    tol = float(tolerance)
+    rows_by_count: dict[int, list[float]] = {}
     for row in curve:
-        if int(row["ev_count"]) == flexible:
-            at_flex = float(row[frac_key])
+        rows_by_count.setdefault(int(row["ev_count"]), []).append(float(row[frac_key]))
+
+    # An ev_count is eligible only if EVERY one of its swept rows passes the gate.
+    eligible = {
+        ev_count: fractions
+        for ev_count, fractions in rows_by_count.items()
+        if all(fraction < tol for fraction in fractions)
+    }
+    if not eligible:
+        return 0, 0.0
+
+    flexible = max(eligible)
+    # at_flex is the binding (worst-passing, highest-fraction) row of the selected
+    # count — still strictly < tol because every row of an eligible count passes.
+    at_flex = max(eligible[flexible])
     return flexible, at_flex
 
 
