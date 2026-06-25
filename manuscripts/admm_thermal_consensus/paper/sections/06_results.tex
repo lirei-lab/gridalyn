@@ -186,6 +186,66 @@ Coordination nonetheless reduces under-voltage \emph{depth} (0.905 to
 cleared/re-violated headline comes from line loading, where the 100\% thermal
 limit gives an unambiguous binary verdict.
 
+\subsection{Forecast uncertainty quantification}
+The network verdict above rests on a single realization per non-responsive
+fraction: one failing-agent subset and the raw point forecast. To test whether
+that point estimate understates risk, we quantify two sources of uncertainty.
+The first is aleatory --- \emph{which} agents fall silent, since the feeder
+impact depends on the placement and schedule of the missing population. The
+second is imputation error in the reconstructed heating. For each fraction
+$\varrho$ we draw 200 random failing subsets; for each subset the imputed agents'
+heating is perturbed by Gaussian forecast residuals with standard deviation equal
+to the imputer's cross-validated RMSE (0.294~kW, Section above), sharing-ADMM is
+re-solved, and the resulting daily peak is mapped to the worst-of-day minimum
+voltage and maximum line loading through a precomputed peak-to-network curve.
+The mapping is valid because, with fixed bus-share injection, the worst-of-day
+network metrics are monotone functions of the daily peak; the curve reproduces
+the deterministic operating points exactly --- the 169.1~kW uncoordinated peak,
+for instance, maps to 0.905~p.u. and 115.0\% loading.
+
+Figure~\ref{fig:uncertainty} and Table~\ref{tab:uncertainty} report the result
+over 200 draws per fraction (mean with [P5, P95] band). The probability of a
+thermal violation rises from 0 for $\varrho \le 0.4$, through 0.56 at
+$\varrho = 0.6$, to 1.00 at $\varrho = 0.8$. The single-realization analysis
+reported $\varrho = 0.6$ as marginally compliant (99.98\% loading), but once the
+uncertainty in which agents fail and in the forecast is accounted for, the worst
+line exceeds its thermal limit in 56\% of draws: the point estimate understated
+the risk. The [P5, P95] band is tight at low $\varrho$ --- forecast errors average
+out across a large responsive population --- and widens sharply once a majority of
+agents are imputed and that averaging no longer holds. This reframes the operator
+takeaway: the critical transition is not a single deterministic fraction but a
+probabilistic risk threshold centered near $\varrho = 0.6$, where roughly one
+realization in two breaches the feeder.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_uncertainty_loading.pdf}
+\caption{Monte-Carlo forecast-uncertainty sweep (200 draws per fraction). Worst
+maximum line loading mean with its P5--P95 band versus the non-responsive
+fraction $\varrho$ (left axis, with the 100\% thermal limit), and the probability
+of a line violation as bars (right axis). The image's ``rho'' axis is the
+non-responsive fraction $\varrho$.}
+\label{fig:uncertainty}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Monte-Carlo line loading and violation probability by fraction
+(200 draws each; mean [P5, P95]).}
+\label{tab:uncertainty}
+\begin{tabular}{@{}lll@{}}
+\toprule
+$\varrho$ & Loading (\%) [P5, P95] & $P(\text{violation})$ \\
+\midrule
+0.0 & 99.7 & 0.00 \\
+0.2 & 99.7 [99.7, 99.7]   & 0.00 \\
+0.4 & 99.7 [99.7, 99.8]   & 0.00 \\
+0.6 & 100.4 [99.8, 102.0] & 0.56 \\
+0.8 & 107.5 [106.0, 109.2] & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Discussion}
 Three observations tie the results together. First, the aggregate, tractability,
 and feasibility curves all share the same knee near $\varrho = 0.6$: the iteration

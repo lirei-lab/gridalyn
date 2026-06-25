@@ -1,0 +1,88 @@
+\relax 
+\citation{boyd2011admm}
+\providecommand \oddpage@label [2]{}
+\@writefile{toc}{\contentsline {section}{Nomenclature}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\citation{boyd2011admm}
+\citation{UllahPark2019,Li8409328}
+\citation{Brown2017}
+\citation{GaoHe2022}
+\citation{Guo2017}
+\citation{Saad2020}
+\citation{Gholami2016}
+\citation{ke2017lightgbm}
+\citation{baran1989network}
+\citation{thurner2018pandapower}
+\citation{Said2023}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}ADMM and sharing for demand response}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Multi-agent resilience to non-responsiveness}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Imputation of missing telemetry}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Distribution power flow}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Communication in demand-side management}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-F}}The delta}{2}{}\protected@file@percent }
+\citation{baran1989network}
+\citation{thurner2018pandapower}
+\citation{boyd2011admm}
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Model}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Agents and deferrable heating}{3}{}\protected@file@percent }
+\newlabel{eq:agent}{{1}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}The feeder}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Communication-failure model}{3}{}\protected@file@percent }
+\@writefile{loa}{\contentsline {algocf}{\numberline {1}{\ignorespaces Sharing-ADMM heating coordination}}{3}{}\protected@file@percent }
+\newlabel{alg:admm}{{1}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Methodology}{3}{}\protected@file@percent }
+\newlabel{sec:methodology}{{IV}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Sharing-ADMM coordination}{3}{}\protected@file@percent }
+\newlabel{eq:sharing}{{2}{3}}
+\citation{ke2017lightgbm}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-A}1}Capped-energy projection in the $x$-update}{4}{}\protected@file@percent }
+\newlabel{eq:prox}{{3}{4}}
+\newlabel{eq:proj}{{4}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Imputation of non-responsive agents}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Power-flow validation loop}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Case Study Setup}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Reproducibility and governed artifacts}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Principal case-study parameters.}}{5}{}\protected@file@percent }
+\newlabel{tab:params}{{1}{5}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Workflow stages and principal governed outputs.}}{5}{}\protected@file@percent }
+\newlabel{tab:stages}{{2}{5}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Results}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Aggregate coordination}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Aggregate cold-day load: uncoordinated double-peak versus the flat ADMM-ideal profile ($\approx 147.7$\nobreakspace  {}kW) and the $\varrho = 0.8$ imputed case with residual peaks. Here $\varrho $ is the non-responsive fraction.}}{5}{}\protected@file@percent }
+\newlabel{fig:profiles}{{1}{5}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {VI-A}1}Comfort preservation}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Aggregate KPIs by scenario.}}{6}{}\protected@file@percent }
+\newlabel{tab:agg}{{3}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Aggregate peak and PAR versus the non-responsive fraction $\varrho $. The horizontal axis labelled ``rho'' in the plotted image denotes this fraction $\varrho $, not the ADMM penalty $\rho _{\mathrm  {ADMM}}$.}}{6}{}\protected@file@percent }
+\newlabel{fig:peakpar}{{2}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Imputation accuracy and robustness}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Worst minimum bus voltage (left axis) and worst maximum line loading (right axis) versus the non-responsive fraction $\varrho $ --- the headline feasibility figure. Line loading clears below 100\% through $\varrho = 0.6$ and re-violates at $\varrho = 0.8$. The image's ``rho'' axis is the non-responsive fraction $\varrho $.}}{6}{}\protected@file@percent }
+\newlabel{fig:network}{{3}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Network validation}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Network feasibility on IEEE-33 (worst of day).}}{7}{}\protected@file@percent }
+\newlabel{tab:net}{{4}{7}}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {VI-C}0a}An honest note on voltage.}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Forecast uncertainty quantification}{7}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Monte-Carlo forecast-uncertainty sweep (200 draws per fraction). Worst maximum line loading mean with its P5--P95 band versus the non-responsive fraction $\varrho $ (left axis, with the 100\% thermal limit), and the probability of a line violation as bars (right axis). The image's ``rho'' axis is the non-responsive fraction $\varrho $.}}{7}{}\protected@file@percent }
+\newlabel{fig:uncertainty}{{4}{7}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Monte-Carlo line loading and violation probability by fraction (200 draws each; mean [P5, P95]).}}{7}{}\protected@file@percent }
+\newlabel{tab:uncertainty}{{5}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Discussion}{7}{}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{references}
+\bibcite{boyd2011admm}{1}
+\bibcite{UllahPark2019}{2}
+\bibcite{Li8409328}{3}
+\bibcite{Brown2017}{4}
+\bibcite{GaoHe2022}{5}
+\bibcite{Guo2017}{6}
+\bibcite{Saad2020}{7}
+\bibcite{Gholami2016}{8}
+\bibcite{ke2017lightgbm}{9}
+\bibcite{baran1989network}{10}
+\bibcite{thurner2018pandapower}{11}
+\bibcite{Said2023}{12}
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{REFERENCES}{8}{}\protected@file@percent }
+\gdef \@abspage@last{8}

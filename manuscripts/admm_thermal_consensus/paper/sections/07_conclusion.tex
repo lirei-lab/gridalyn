@@ -8,8 +8,12 @@ flattening metrics into a feeder verdict: ideal coordination cuts the aggregate
 peak by 12.7\% and clears a 115\% thermal line overload down to 99.7\%, while
 lifting the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
 resilient to communication failure up to a non-responsive fraction of 0.6 and
-re-violates at 0.8 (108\% loading), establishing a critical non-responsive
-fraction $\varrho$ between the two. A secondary finding is that ADMM iteration
+re-violates at 0.8 (108\% loading). A Monte-Carlo analysis over which agents fail
+and the forecast error reframes this critical fraction as a probabilistic risk
+threshold rather than a single deterministic point: the probability of a thermal
+violation rises from 0 ($\varrho \le 0.4$) through 0.56 at $\varrho = 0.6$ to 1.0
+at $\varrho = 0.8$, so the deterministic ``edge'' compliance at $\varrho = 0.6$
+understated the true risk. A secondary finding is that ADMM iteration
 count explodes with $\varrho$ (8 to 280) well before the outcome degrades,
 offering an early-warning signal.
 
