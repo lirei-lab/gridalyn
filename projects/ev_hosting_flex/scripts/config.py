@@ -438,3 +438,48 @@ ECOS is DROPPED — D-08's "ECOS fallback" wording is refined (RESEARCH Open-Q1 
 Pitfall 5) because ECOS is NOT installed here; the closed-form oracle is the sole
 fallback (D-08c). The cvxpy solve must reproduce the oracle to ≤1e-6 or the stage
 falls back to the oracle and records the divergence."""
+
+# ─── Phase-10.3 (DAYTIME-01..06): power-limited multi-session availability ───
+# APPEND-ONLY block below the locked 10.1/10.2 blocks; do NOT redefine
+# PLUGIN_WINDOW, DTYPE, ROUND_DECIMALS, K, PENETRATION_SWEEP, TOLERANCE_* (every
+# constant above — through ``TWOSTAGE_SOLVER`` — is byte-frozen, mirroring
+# RECAL-09 / TWOSTAGE-07). These pin the power-limited natural-charging
+# (V1G smart-charging) flexible leg that REPLACES the 10.1 valley-fill deferral
+# mechanism: each hour the aggregate EV draw is throttled to
+# ``min(draw, max(0, rating − base))``, chronologically per availability session,
+# with undelivered energy carried forward to the day's next session. Energy still
+# undelivered after the day's last session is the unserved energy. The leg is
+# re-baselined under three availability scenarios (overnight / +workplace[9-16] /
+# all-day ceiling) on the locked idx-62 71.25 kW / 7-home unit (Plan 02).
+
+WORKPLACE_WINDOW = (9, 10, 11, 12, 13, 14, 15, 16)
+"""Daytime workplace plug-in window (hours-of-day 9..16, D-05). The same-day
+contiguous ``[9-16]`` window an EV is plugged in at the workplace; unlike
+``PLUGIN_WINDOW`` it does NOT wrap midnight, so its multi-session segmentation is
+a simple same-day run (no evening-anchoring). Power-limiting + unserved-energy
+accounting apply to this session in chronological order alongside the overnight
+home session (D-04). The midday headroom that motivates it holds only marginally
+(workplace ~33.57 kW vs overnight ~31.95 kW over the 14 coldest days, RESEARCH
+Pitfall 1); the dominant lift is the extra available HOURS, not midday richness."""
+
+AVAILABILITY_SCENARIOS = {
+    "overnight": (PLUGIN_WINDOW,),
+    "workplace": (PLUGIN_WINDOW, WORKPLACE_WINDOW),  # ← HEADLINE (D-07)
+    "all_day": (tuple(range(24)),),
+}
+"""Ordered availability-scenario session sets for the three-scenario re-baseline
+(D-06/D-07). Each value is a tuple of session windows (each window itself a tuple
+of hour-of-day ints) the power-limited kernel iterates per day. ``"overnight"`` is
+the 18→07 home-only baseline; ``"workplace"`` adds the daytime ``WORKPLACE_WINDOW``
+and is the citable HEADLINE (D-07); ``"all_day"`` is the full-availability ceiling
+(all 24 hours). Insertion order (overnight → workplace → all_day) is the report
+emission order (Plan 02 wraps the per-penetration K-loop in this scenario loop)."""
+
+TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95 = 0.01
+"""Power-limited flexible-leg acceptability gate (DAYTIME-02). The unserved-energy
+fraction (energy undelivered at throttled power across ALL available session-hours,
+divided by annual EV demand) must be strict-``<`` 1% at P95 for a swept point to
+pass. This ADDS an aliased constant (RESEARCH Pitfall 4) reusing the value 0.01;
+it does NOT rename or edit ``TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` (which
+stays for the now-dormant valley-fill deferral path). Same value, different
+meaning: "unserved energy" (power-limited) vs "irreducible lost" (deferral)."""
