@@ -55,6 +55,7 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from projects.ev_hosting_flex.scripts._stochastic import (  # noqa: E402
+    blend_ev_aggregate,
     tmy_start_hod,
 )
 from projects.ev_hosting_flex.scripts._twostage import (  # noqa: E402
@@ -69,6 +70,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     EPS_FRONTIER,
     EPS_HEADLINE,
     EPS_SHOW,
+    EV_COINCIDENCE_RHO,
     N_SCENARIOS,
     PENETRATION_SWEEP,
     POWER_FACTOR,
@@ -255,6 +257,10 @@ def derive_twostage(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
     feeder_indicator = np.ones(len(bus_ids), dtype=DTYPE)  # the feeder subtree sum
     base_feeder = feeder_indicator @ base_arr  # (8760,) deterministic feeder base
     ev_unit = _read_ev_stack(data_dir / "ev_stack_K.npy")  # (K, 8760) per-EV unit
+    # PARTIAL-COINCIDENCE blend phase (EV-COINCIDENCE-RECAL): both blend terms are
+    # phased to the TMY clock so the feeder EV aggregate stays on the cold-evening
+    # base, consistent with stages 3/4/5 (CR-01).
+    start_hod = tmy_start_hod()
 
     # ── Composed cold-day scenario ensemble (cvxpy↔oracle + frontier + panel). ──
     required = compose_scenarios(
@@ -280,7 +286,11 @@ def derive_twostage(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
         ev_count = int(round(float(penetration) * downstream_home_count))
         if ev_count <= 0:
             continue
-        ev_feeder = ev_unit * float(ev_count)  # (K, 8760) total feeder EV draw
+        # ρ-blended feeder aggregate at this count (EV-COINCIDENCE-RECAL) instead of
+        # the legacy coincident ``ev_unit * ev_count`` (every EV identical + sim.).
+        ev_feeder = blend_ev_aggregate(
+            ev_unit, ev_count, EV_COINCIDENCE_RHO, seed=SEED, start_hod=start_hod
+        )  # (K, 8760) total feeder EV draw
         frac = _annual_activated_fraction(
             base_feeder, ev_feeder, feeder_kw, EPS_HEADLINE
         )
@@ -288,7 +298,11 @@ def derive_twostage(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
             flexible_ev_count = max(flexible_ev_count, ev_count)
 
     # ── The optimal annual headline at the derived flexible count (per-day stream). ──
-    ev_stack_flexible = ev_unit * float(flexible_ev_count)  # (K, 8760)
+    # ρ-blended feeder aggregate at the optimal flexible count (EV-COINCIDENCE-RECAL).
+    ev_stack_flexible = blend_ev_aggregate(
+        ev_unit, int(flexible_ev_count), EV_COINCIDENCE_RHO, seed=SEED,
+        start_hod=start_hod,
+    )  # (K, 8760)
     headline = annual_twostage_headline(
         base_arr,
         ev_stack_flexible,

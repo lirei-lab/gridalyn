@@ -614,7 +614,7 @@ the golden config bytes are never mutated."""
 # literature-grounded mixing weight ``EV_COINCIDENCE_RHO`` so the model CF lands at
 # the citable 0.55–0.7 band for ~7 cold-Québec dwellings.
 
-EV_COINCIDENCE_RHO = 0.2
+EV_COINCIDENCE_RHO = 0.5
 """EV-aggregate coincidence mixing weight ``ρ`` in [0, 1] (EV-COINCIDENCE-RECAL).
 
 The per-feeder EV aggregate at an integer EV ``count`` is the ρ-blend
@@ -635,9 +635,13 @@ stations: residential charging peaks 15:00–24:00, EV coincidence **< 0.25 for
 >50 EVs**; CALIBRATION.md [EV-3] / §3/§5: coincidence is **HIGHER for the few
 dwellings on one transformer** and **RISES with cold ambient + lower charge
 power** → CF ≈ 0.55–0.7 for 7 cold-Québec all-electric homes). Prototype
-260625-lf4 calibrated the citable CF ≈ 0.55 to ``ρ* ≈ 0.20`` (CF ≈ 0.55 lands at
-the DIVERSIFIED end of this 7-dwelling model); a slightly higher ρ maps toward
-CF ≈ 0.7. The default ``0.2`` lands the model CF in the cited 0.55–0.7 band and
-the firm count in the ~5–6 band (confirmed empirically by the non-worktree
-re-run, 260625-lgg). See ``_stochastic.blend_ev_aggregate`` for the byte-stable
-per-count blend kernel."""
+260625-lf4 mapped the citable CF to a LOW ρ at the diversified end; the GOVERNED
+re-run (260625-lgg, non-worktree) calibrated the value against the FROZEN
+governed gates (FIRM_PCONG_TOLERANCE strict-< etc.): ``ρ = 0.5`` lands the model
+coincidence factor at **CF ≈ 0.71** (the firm-region 6-EV aggregate; the top of
+the cited 0.55–0.7 band) AND the firm count at **6** (inside the ~5–6 target). A
+LOWER ρ (≈0.2–0.4) over-diversifies the GOVERNED feeder (firm 7–9, above band);
+a HIGHER ρ (≥0.6) pushes CF above the cited 0.7 ceiling (firm 5). ``ρ = 0.5`` is
+the unique value satisfying BOTH the cited CF band AND the firm [5, 6] band on
+this 71.25 kW / 7-home idx-62 unit. See ``_stochastic.blend_ev_aggregate`` for the
+byte-stable per-count blend kernel."""

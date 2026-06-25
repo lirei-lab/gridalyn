@@ -68,15 +68,21 @@ from projects.ev_hosting_flex.scripts._congestion import (  # noqa: E402
 from projects.ev_hosting_flex.scripts._profiles import (  # noqa: E402
     allocate_ev_per_bus,
 )
-from projects.ev_hosting_flex.scripts._stochastic import mc_p95  # noqa: E402
+from projects.ev_hosting_flex.scripts._stochastic import (  # noqa: E402
+    blend_ev_per_bus,
+    mc_p95,
+    tmy_start_hod,
+)
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
+    EV_COINCIDENCE_RHO,
     FIRM_PCONG_TOLERANCE,
     LINE_LOADING_LIMIT_PERCENT,
     PENETRATION_SWEEP,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
     ROUND_DECIMALS,
+    SEED,
     TARGET_HOMES,
     TRANSFORMER_KVA,
 )
@@ -345,12 +351,26 @@ def derive_congestion(
     base = _read_profile(data_dir / "base_load_8760.parquet", bus_ids)
     ev_stack = _read_ev_stack(data_dir / "ev_stack_K.npy", len(bus_ids))
     k_realizations = int(ev_stack.shape[0])
+    # The per-EV-unit (K, 8760) stack (every bus carries the same shape); the blend
+    # kernel distributes the ρ-blended feeder aggregate across buses by alloc shares.
+    ev_unit_k = np.asarray(ev_stack[:, 0, :], dtype=DTYPE)  # (K, 8760)
+    start_hod = tmy_start_hod()
 
     # The penetration->per-bus EV allocation: EV/home penetration × downstream homes,
     # distributed by the largest-remainder Hamilton allocator over the buses.
     def alloc_fn(penetration: float) -> np.ndarray:
         total_ev = int(round(float(penetration) * downstream_home_count))
         return allocate_ev_per_bus(total_ev, building_count).astype(DTYPE)
+
+    # PARTIAL-COINCIDENCE blend (EV-COINCIDENCE-RECAL): the per-bus blended EV demand
+    # stack for an integer EV count. Distributes the byte-stable ρ-blended feeder
+    # aggregate across buses by the SAME allocate_ev_per_bus shares so the
+    # downstream-sum proxy (D-02) is preserved — proxy_loading is never bypassed.
+    def blend_fn(total_ev: int) -> np.ndarray:
+        per_bus_ev = allocate_ev_per_bus(int(total_ev), building_count).astype(DTYPE)
+        return blend_ev_per_bus(
+            ev_unit_k, per_bus_ev, EV_COINCIDENCE_RHO, seed=SEED, start_hod=start_hod
+        )
 
     # ── The re-calibrated firm gate: firm = P(cong) ≤ FIRM_PCONG_TOLERANCE (D-06) ──
     firm = firm_pcong_count(
@@ -362,6 +382,7 @@ def derive_congestion(
         PENETRATION_SWEEP,
         float(FIRM_PCONG_TOLERANCE),
         float(LINE_LOADING_LIMIT_PERCENT),
+        blend_fn=blend_fn,
     )
 
     firm_penetration = float(firm["firm_penetration"])
@@ -391,24 +412,27 @@ def derive_congestion(
         )
 
     # ── Firm-penetration loading at the MEAN + P95 EV realizations (D-07) ──
-    per_bus_firm = alloc_fn(firm_penetration)
+    # The per-bus blended EV demand stack at the firm EV count (same ρ-blend the
+    # firm gate swept), so the reported MEAN/P95 loading states are consistent with
+    # the partial-coincidence firm (EV-COINCIDENCE-RECAL).
+    ev_demand_firm = blend_fn(firm_ev)  # (K, n_bus, 8760)
     # Per-realization max loading over the feeder subtree, to find the P95
     # realization index (the conservative headline congestion state, D-07).
     per_realization_max = np.empty(k_realizations, dtype=DTYPE)
     for kk in range(k_realizations):
-        demand_kk = base + ev_stack[kk] * per_bus_firm[:, None]
+        demand_kk = base + ev_demand_firm[kk]
         loading_kk, _ = proxy_loading(indicator, demand_kk, elem_kw)
         per_realization_max[kk] = float(loading_kk.max())
 
     # MEAN realization (firm baseline reference) + P95 realization (headline).
-    mean_demand = base + ev_stack.mean(axis=0) * per_bus_firm[:, None]
+    mean_demand = base + ev_demand_firm.mean(axis=0)
     loading_firm_mean, _ = proxy_loading(indicator, mean_demand, elem_kw)
 
     p95_max_loading = mc_p95(per_realization_max)
     # The realization whose subtree max-loading is closest to the P95 value is the
     # representative P95 congestion state (deterministic argmin over K).
     p95_idx = int(np.argmin(np.abs(per_realization_max - p95_max_loading)))
-    p95_demand = base + ev_stack[p95_idx] * per_bus_firm[:, None]
+    p95_demand = base + ev_demand_firm[p95_idx]
     loading_p95, elem_demand_p95 = proxy_loading(indicator, p95_demand, elem_kw)
 
     # The five CONG-02 metrics at the P95 realization (D-07 conservative headline).

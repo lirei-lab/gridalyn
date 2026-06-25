@@ -303,6 +303,7 @@ def firm_pcong_count(
     penetration_sweep: Sequence[float],
     tolerance: float,
     limit: float = float(LINE_LOADING_LIMIT_PERCENT),
+    blend_fn: Callable[[int], np.ndarray] | None = None,
 ) -> dict[str, Any]:
     """Sweep penetration and return the firm ``P(cong) <= tolerance`` crossing (D-06).
 
@@ -314,6 +315,17 @@ def firm_pcong_count(
     ``P(cong) = hits / K``. Firm = the largest ``p`` with ``P(cong) <= tolerance``,
     refined by the manuscript linear-interp crossing (``_hosting_at_tol``).
 
+    PARTIAL-COINCIDENCE BLEND (EV-COINCIDENCE-RECAL). When ``blend_fn`` is provided
+    the per-bus EV demand stack ``(K, n_bus, n_hour)`` for the penetration's integer
+    EV count comes from ``blend_fn(count)`` instead of the legacy coincident
+    ``ev_stack[kk] * per_bus_ev[:, None]`` (every EV identical + simultaneous). The
+    blended stack is the ρ-mix of a coincident + an independent term distributed
+    across buses by the SAME ``allocate_ev_per_bus`` shares so the feeder
+    aggregate ``indicator @ demand`` is unchanged in total (the D-02 proxy seam is
+    preserved — ``proxy_loading`` is still the only aggregation). With
+    ``blend_fn=None`` the legacy coincident path is used unchanged (so existing unit
+    fixtures and the ρ=1 edge match bit-for-bit).
+
     There is NO second epsilon: every threshold decision routes through
     ``is_congested`` (strict ``>``, D-09 / T-10.1-07). A realization whose worst
     loading sits exactly at the limit (100.0) does NOT count as congested.
@@ -322,7 +334,8 @@ def firm_pcong_count(
         base: ``(n_bus, n_hour)`` float64 base demand in kW (the TMY base).
         ev_stack: ``(K, n_bus, n_hour)`` float64 stochastic EV K-realization unit
             stack (from ``_stochastic.ev_realizations``); ``ev_stack[k]`` is one
-            realization's per-bus EV unit shape (per EV-per-home).
+            realization's per-bus EV unit shape (per EV-per-home). Used only on the
+            legacy coincident path (``blend_fn=None``).
         alloc_fn: ``penetration -> (n_bus,)`` float64 per-bus EV allocation; the
             realization unit shape is scaled by ``alloc_fn(p)[:, None]``.
         indicator: ``(n_elem, n_bus)`` float64 downstream matrix.
@@ -330,6 +343,9 @@ def firm_pcong_count(
         penetration_sweep: Ascending EV-per-home penetration grid.
         tolerance: The firm ``P(cong)`` tolerance (``FIRM_PCONG_TOLERANCE``).
         limit: The loading-percent congestion limit (strict ``>``).
+        blend_fn: Optional ``int_ev_count -> (K, n_bus, n_hour)`` partial-coincidence
+            per-bus blended EV demand builder (EV-COINCIDENCE-RECAL); when ``None``
+            the legacy coincident ``ev_stack[kk] * per_bus_ev`` path is used.
 
     Returns:
         ``{firm_penetration, firm_ev_count, p_cong, p_cong_at_firm,
@@ -357,9 +373,16 @@ def firm_pcong_count(
     p_cong = np.zeros(sweep.shape[0], dtype=DTYPE)
     for pi, pen in enumerate(sweep):
         per_bus_ev = np.asarray(alloc_fn(float(pen)), dtype=DTYPE)
+        ev_demand_stack: np.ndarray | None = None
+        if blend_fn is not None:
+            total_ev = int(round(float(per_bus_ev.sum())))
+            ev_demand_stack = np.asarray(blend_fn(total_ev), dtype=DTYPE)
         hits = 0
         for kk in range(k_realizations):
-            demand = base + ev_stack[kk] * per_bus_ev[:, None]
+            if ev_demand_stack is not None:
+                demand = base + ev_demand_stack[kk]
+            else:
+                demand = base + ev_stack[kk] * per_bus_ev[:, None]
             loading, _ = proxy_loading(indicator, demand, elem_kw)
             # REUSE the kept strict-> helper — no second epsilon (T-10.1-07).
             if is_congested(loading, limit).any():

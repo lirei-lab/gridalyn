@@ -400,6 +400,62 @@ def blend_ev_aggregate(
     return blended.astype(DTYPE)
 
 
+def blend_ev_per_bus(
+    ev_unit: np.ndarray,
+    per_bus_ev: np.ndarray,
+    rho: float = EV_COINCIDENCE_RHO,
+    *,
+    seed: int = SEED,
+    start_hod: int = 0,
+) -> np.ndarray:
+    """Return the ρ-blended per-bus EV demand stack ``(K, n_bus, 8760)`` (kW).
+
+    Builds the byte-stable partial-coincidence FEEDER aggregate for the integer EV
+    count ``round(sum(per_bus_ev))`` via :func:`blend_ev_aggregate`, then
+    DISTRIBUTES it across buses by the per-bus allocation SHARES
+    ``per_bus_ev / sum(per_bus_ev)``. Distributing by the existing
+    ``allocate_ev_per_bus`` shares keeps the downstream-sum proxy seam intact: for
+    any element indicator row the element demand ``indicator @ demand`` equals the
+    same share of the blended feeder aggregate it carried under the legacy
+    coincident path (D-02 — ``proxy_loading`` is still the only aggregation; the
+    blend only changes the per-realization SHAPE, not which buses are summed).
+
+    The whole-count blend is computed ONCE and reused across buses (so the per-count
+    independent draw is the same regardless of how the count splits across buses),
+    making the per-bus stack byte-stable and sweep-order-independent. At ``ρ = 1``
+    the result is exactly the legacy coincident ``per_bus_ev[:, None] * ev_unit``
+    bit-for-bit (distributing ``count·ev_unit`` by the count shares returns
+    ``per_bus_ev·ev_unit``).
+
+    Args:
+        ev_unit: The ``(K, 8760)`` float64 ``n_ev=1`` per-EV-unit realization stack.
+        per_bus_ev: The ``(n_bus,)`` integer/float per-bus EV allocation
+            (``allocate_ev_per_bus``); its rounded sum is the feeder EV count.
+        rho: The coincidence mixing weight ρ in [0, 1] (default
+            ``EV_COINCIDENCE_RHO``).
+        seed: The locked base seed the per-count independent draw is keyed from.
+        start_hod: The TMY first-row clock hour-of-day both blend terms are phased to.
+
+    Returns:
+        A ``(K, n_bus, 8760)`` float64 per-bus blended EV demand stack (kW).
+    """
+    per_bus = np.asarray(per_bus_ev, dtype=DTYPE)
+    total_ev = int(round(float(per_bus.sum())))
+    unit = np.ascontiguousarray(ev_unit, dtype=DTYPE)
+    k_eff = int(unit.shape[0])
+    n_bus = int(per_bus.shape[0])
+    n_hour = int(unit.shape[1])
+    if total_ev <= 0:
+        return np.zeros((k_eff, n_bus, n_hour), dtype=DTYPE)
+    aggregate = blend_ev_aggregate(
+        unit, total_ev, rho, seed=seed, start_hod=start_hod
+    )  # (K, 8760) blended feeder aggregate
+    shares = (per_bus / float(total_ev)).astype(DTYPE)  # (n_bus,) sums to 1.0
+    # Distribute the aggregate across buses by the allocation shares; the per-bus
+    # axis is the outer broadcast so indicator @ demand recovers the share-sum.
+    return (shares[None, :, None] * aggregate[:, None, :]).astype(DTYPE)
+
+
 def mc_p95(values_over_k: np.ndarray) -> float:
     """Return the 95th percentile over the realization axis (D-07).
 

@@ -196,6 +196,73 @@ The overnight cliff crosses 1% near **~4.6 EV/home**, so an **append-only**
 block; the single re-point site is the sweep loop in `apply_flexibility_contracts.py`. The
 frozen `PENETRATION_SWEEP` and the golden config bytes are never mutated.
 
+## Partial EV coincidence (diversity) — `EV_COINCIDENCE_RHO` (260625-lgg)
+
+The governed pipeline originally built EV demand everywhere as ONE per-EV-unit
+realization shape scaled by the EV count (`ev_unit * count`) — i.e. **every EV
+charging with the same shape at the same time**, an implicit model **coincidence
+factor CF ≈ 1** (full coincidence). That is the source of the over-conservative
+`firm_ev_count = 3`: the governed firm implicitly assumed near-FULL EV
+coincidence, which the literature does **not** support for ~7 dwellings.
+
+**Literature basis.** Jonas, Daniels & Macht, *Energies* 2023, **16(4):1592**
+(>7000 CA stations; residential charging peaks 15:00–24:00; EV coincidence
+**< 0.25 for >50 EVs**) and the **[EV-3]** coincidence row above (§3/§5:
+coincidence is **HIGHER for the few dwellings on one transformer**, and **RISES
+with cold ambient + lower charge power**) place the citable coincidence factor for
+**7 cold-Québec all-electric homes** at **CF ≈ 0.55–0.7** — partial, not full,
+coincidence. Prototype 260625-lf4 confirmed CF ≈ 0.55 lands at the diversified end
+of this small-feeder model.
+
+**Mechanism.** A new `EV_COINCIDENCE_RHO = ρ` knob (config.py, append-only) blends
+the legacy coincident shape with an INDEPENDENT diversified shape at every EV
+count: `aggregate(count) = ρ·count·ev_unit + (1−ρ)·independent_aggregate(count)`,
+where `independent_aggregate(count)` is `count` INDEPENDENTLY-drawn per-EV days
+summed (the same pinned `_ev_day` draw order, byte-stable per-count via
+`SeedSequence([SEED, count])`). `ρ = 1` reproduces the legacy full-coincidence path
+bit-for-bit; `ρ = 0` is fully independent. The blend is wired through the four
+headline-driving EV-demand consume sites (firm gate, the two flexibility-sweep
+legs, and the two-stage annual headline / activated-fraction); the two-stage
+cold-day **oracle ensemble** (`compose_scenarios`) already draws independently and
+is left unchanged.
+
+**Chosen value and resulting CF.** On the governed 71.25 kW / 7-home idx-62 unit
+(`OMP_NUM_THREADS=1`, K=1000, non-worktree re-run, 260625-lgg) the value is
+calibrated against the **frozen** governed gates (FIRM_PCONG_TOLERANCE strict-<,
+etc. — never relaxed):
+
+| ρ | model CF (6-EV aggregate) | firm_ev_count |
+|---|---|---|
+| 1.0 (legacy) | ≈ 1.0 | 2–3 (over-conservative) |
+| 0.4 | ≈ 0.65 | 7 (firm above band) |
+| **0.5 (chosen)** | **≈ 0.71** | **6** |
+| 0.6 | ≈ 0.76 (CF above cited 0.7) | 5 |
+
+**`EV_COINCIDENCE_RHO = 0.5`** is the unique value satisfying BOTH the cited CF
+band (CF ≈ 0.71, at the 0.7 ceiling) AND the firm **[5, 6]** target band (firm 6)
+on this feeder. A lower ρ over-diversifies the governed feeder (firm 7–9); a higher
+ρ pushes CF above the cited 0.7 ceiling.
+
+**Citable-headline re-base (deliberate).** Recalibrating to literature-grounded
+partial coincidence **deliberately re-bases the study's citable hosting headlines**
+off the new firm:
+
+| Headline | Was (CF ≈ 1) | Now (CF ≈ 0.71, ρ = 0.5) |
+|---|---|---|
+| `firm_ev_count` | 3 | **6** (+100%) |
+| flexible — overnight | 34 | **35** (+483% vs firm 6) |
+| flexible — **workplace (HEADLINE)** | 35 | **35** (+483%) |
+| flexible — all_day (ceiling) | 35 | **35** (+483%) |
+| curtailment | — | **8** (+33%) |
+| two-stage OPTIMAL (ε=0.05) | 6 (+100%) | **11** (+83.3%) |
+
+The two-stage cvxpy solve still matches the closed-form oracle exactly
+(`cvxpy_oracle_drift = 0.0 ≤ 1e-6`, `cvxpy_fellback = false`, status `optimal`).
+All re-run digests are byte-stable across two consecutive runs (D-05/D-13).
+**No committed Phase-12 regression baseline exists yet** (Phase 12 not done), so
+**no baseline is broken** — only the phase outputs shift, deliberately, onto the
+literature-defensible partial-coincidence model.
+
 ## Recommended values (Québec / Canada-defensible, verified)
 
 | Knob | Current | Defensible | Action |

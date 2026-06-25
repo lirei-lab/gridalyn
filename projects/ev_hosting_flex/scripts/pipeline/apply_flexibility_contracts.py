@@ -82,17 +82,20 @@ from projects.ev_hosting_flex.scripts._profiles import (  # noqa: E402
     allocate_ev_per_bus,
 )
 from projects.ev_hosting_flex.scripts._stochastic import (  # noqa: E402
+    blend_ev_aggregate,
     mc_p95,
     tmy_start_hod,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     AVAILABILITY_SCENARIOS,
     DTYPE,
+    EV_COINCIDENCE_RHO,
     EXTENDED_PENETRATION_SWEEP,
     LINE_LOADING_LIMIT_PERCENT,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
     ROUND_DECIMALS,
+    SEED,
     TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX,
     TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95,
     TRANSFORMER_KVA,
@@ -103,6 +106,19 @@ _ = is_congested
 
 # The citable headline scenario (D-07): workplace home+daytime availability.
 HEADLINE_SCENARIO = "workplace"
+
+# SC4 monotonicity SANITY-tripwire noise band (EV-COINCIDENCE-RECAL). Under partial
+# coincidence (EV_COINCIDENCE_RHO < 1) each swept EV count draws its OWN independent
+# per-count realization (SeedSequence([SEED, count])), so the P95 lost/unserved
+# fraction is monotone-non-decreasing only IN EXPECTATION — adjacent counts carry
+# independent Monte-Carlo sampling noise of order a few 1e-6. The legacy 1e-6
+# (one ROUND_DECIMALS grid step) slack was tuned for the OLD coincident path (one
+# realization scaled by count → exactly monotone) and now trips on pure sampling
+# jitter. This band absorbs that sub-gate MC noise. It is a SANITY tripwire on the
+# trade-curve SHAPE, NOT the acceptability gate: the strict-< 1% feasibility gates
+# (TOLERANCE_*_P95) are UNCHANGED, and this 1e-4 band (0.01 pp of the fraction) is
+# ~50× below the 1% gate, so a genuine trade-curve reversal still trips it.
+_SC4_MONOTONE_NOISE_BAND = 1.0e-4
 
 # The modeled small HQ LV transformer rating in kW (D-01/D-02) — the SAME modeled
 # rating stage 4 keys congestion off, not the cache subtree rating.
@@ -245,21 +261,31 @@ def _availability_sweep(
     # the frozen PENETRATION_SWEEP (0 → 2.0) is never edited — this is the single
     # re-point site (DAYTIME-04 / T-10.3-06).
     pens = list(EXTENDED_PENETRATION_SWEEP)
-    ev_scales: list[float] = []
     ev_counts: list[int] = []
     for penetration in pens:
-        per_bus_ev = alloc_fn(float(penetration))  # (n_bus,)
-        ev_scales.append(float(feeder_indicator @ per_bus_ev))
         ev_counts.append(int(round(float(penetration) * downstream_home_count)))
+
+    # PARTIAL-COINCIDENCE blend (EV-COINCIDENCE-RECAL): the byte-stable ρ-blended
+    # FEEDER aggregate (K, 8760) per penetration's integer EV count, replacing the
+    # legacy coincident ``ev_stack[kk] * ev_unit_feeder_scale`` (every EV identical +
+    # simultaneous). The feeder-aggregate seam is the D-02 proxy basis already (the
+    # curtailment/power-limited legs operate on the feeder downstream-sum), so the
+    # blend slots in at the same aggregate granularity. count=0 yields zeros.
+    blended_feeder = [
+        blend_ev_aggregate(
+            ev_stack, ev_counts[pi], EV_COINCIDENCE_RHO, seed=SEED, start_hod=start_hod
+        )
+        for pi in range(len(pens))
+    ]  # list of (K, 8760)
 
     # ── The retained CURTAILMENT curve (scenario-independent over-cap excess) ──
     curtail_curve: list[dict[str, object]] = []
     prev_curt_p95 = -1.0
     for pi, penetration in enumerate(pens):
-        ev_unit_feeder_scale = ev_scales[pi]
+        blended_kk = blended_feeder[pi]  # (K, n_hour) ρ-blended feeder aggregate
         curt_fractions = np.empty(k, dtype=DTYPE)
         for kk in range(k):
-            ev_feeder = ev_stack[kk] * ev_unit_feeder_scale  # (n_hour,)
+            ev_feeder = blended_kk[kk]  # (n_hour,) partial-coincidence aggregate
             total = float(ev_feeder.sum())
             loading = (base_feeder + ev_feeder) / float(feeder_kw) * 100.0
             over = is_congested(loading, limit)  # strict-> reuse, no second epsilon
@@ -267,7 +293,7 @@ def _availability_sweep(
             excess = float(np.where(over, ev_feeder - placed, 0.0).sum())
             curt_fractions[kk] = excess / total if total > 0 else 0.0
         curt_p95 = mc_p95(curt_fractions)
-        if curt_p95 + 10.0**-ROUND_DECIMALS < prev_curt_p95:
+        if curt_p95 + _SC4_MONOTONE_NOISE_BAND < prev_curt_p95:
             raise ValueError(
                 "ev_hosting_flex stage 5: P95 curtailment-lost fraction decreased "
                 f"from {prev_curt_p95} to {curt_p95} as penetration rose to "
@@ -289,10 +315,10 @@ def _availability_sweep(
         curve: list[dict[str, object]] = []
         prev_unserved_p95 = -1.0
         for pi, penetration in enumerate(pens):
-            ev_unit_feeder_scale = ev_scales[pi]
+            blended_kk = blended_feeder[pi]  # (K, n_hour) ρ-blended feeder aggregate
             unserved_fractions = np.empty(k, dtype=DTYPE)
             for kk in range(k):
-                ev_feeder = ev_stack[kk] * ev_unit_feeder_scale  # (n_hour,)
+                ev_feeder = blended_kk[kk]  # (n_hour,) partial-coincidence aggregate
                 # charger_kw=inf: at aggregate level the natural EV draw is the only
                 # non-headroom ceiling; the max(0, rating - base) headroom binds first
                 # (RESEARCH Open-Q1 / Assumption A1). The throttle walks each day's
@@ -311,7 +337,7 @@ def _availability_sweep(
             # SC4 monotonicity tripwire per scenario: the P95 unserved fraction is
             # non-decreasing in penetration (more EV energy => at least as much
             # undeliverable remainder at throttled power).
-            if unserved_p95 + 10.0**-ROUND_DECIMALS < prev_unserved_p95:
+            if unserved_p95 + _SC4_MONOTONE_NOISE_BAND < prev_unserved_p95:
                 raise ValueError(
                     "ev_hosting_flex stage 5: P95 unserved-energy fraction decreased "
                     f"from {prev_unserved_p95} to {unserved_p95} as penetration rose "
