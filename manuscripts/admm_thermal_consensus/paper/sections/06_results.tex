@@ -119,7 +119,7 @@ $\varrho{=}1.0$  & 401.9 & ---   & ---   & 0.304 \\
 \end{table}
 
 \subsection{Imputation accuracy and robustness}
-The LightGBM imputer is a competent forecaster of an unseen home's heating. Under
+The deployed ML imputer (gradient-boosted trees) is a competent forecaster of an unseen home's heating. Under
 5-fold leave-agents-out cross-validation it achieves an RMSE of 0.304~kW and an
 MAE of 0.255~kW, against a heating standard deviation of 0.736~kW. At roughly
 41\% of the natural variability, the imputer is clearly better than predicting
@@ -162,7 +162,7 @@ as a cost of the physical comfort model, not as an operational early-warning
 signal.
 
 \subsection{Imputation method comparison and the value of imputation}
-The results so far use a single imputer (LightGBM). Two questions remain: how
+The sweeps so far use one representative ML imputer. Two questions remain: how
 much does imputation \emph{itself} buy, and how much does the \emph{choice} of
 method matter? To answer them fairly we adopt a stricter \emph{realized-load}
 model that separates belief from reality: a silent home physically draws its
@@ -170,10 +170,12 @@ model that separates belief from reality: a silent home physically draws its
 \emph{estimate} and flattens the responsive homes against it; the feeder then
 experiences the realized aggregate --- responsive coordinated schedules plus the
 true silent load plus background. ``No imputation'' is the coordinator flattening
-the responsive subset \emph{blind} to the silent homes. We compare four learned
-estimators (LightGBM, random forest, ridge regression, $k$-nearest neighbours),
-a naive ``mean-level'' baseline (a flat profile at each silent home's known
-nameplate level --- correct energy, no shape), and the no-imputation case.
+the responsive subset \emph{blind} to the silent homes. We compare three families
+of learned regressors --- a regularized linear model (ridge regression), tree
+ensembles (gradient boosting and random forests), and an instance-based model
+($k$-nearest neighbours) --- together with a naive ``mean-level'' baseline (a flat
+profile at each silent home's known nameplate level --- correct energy, no shape)
+and the no-imputation case.
 
 Table~\ref{tab:imputers} reports both layers of metric. Intrinsically (5-fold
 leave-agents-out), ridge regression is the most accurate (RMSE 0.280~kW,
@@ -219,13 +221,24 @@ ridge, $k$-NN, and the naive mean-level baseline. The dominant gap is therefore
 imputation versus none --- roughly a 17--21~kW reduction (396 to 375--379~kW) that
 turns a certain violation into a cleared feeder --- and the \emph{choice} of method
 is secondary at this fraction. Among the methods the ranking still tracks
-intrinsic accuracy: ridge is best both intrinsically (RMSE 0.280~kW) and on
-realized loading (102.0\%, $P_{\mathrm{viol}} = 0.00$), while LightGBM is the only
-one with a non-trivial residual risk (0.15). The practical lesson is therefore
+intrinsic accuracy: the regularized linear model (ridge) is best both
+intrinsically (RMSE 0.280~kW, $R^2 = 0.70$) and on realized loading (102.0\%,
+$P_{\mathrm{viol}} = 0.00$), ahead of the instance-based and tree-ensemble
+methods, with the gradient-boosted model the only one carrying non-trivial
+residual risk (0.15). Ridge wins for a physically intuitive reason. A home's
+heating is, to first order, a \emph{linear} function of these features:
+steady-state demand scales with the indoor--outdoor temperature gap and with the
+home's nameplate level, with only a mild diurnal term --- so the target is smooth
+and nearly linear. With just a few dozen homes (and entire homes held out in
+cross-validation), a low-variance regularized linear model generalizes to an
+unseen home better than the higher-variance tree ensembles or nearest-neighbour
+rule, which overfit the small sample; this is the bias--variance trade-off
+favouring the simpler model on scarce, smooth data. The practical lesson is
 twofold: \emph{using} an imputer matters far more than \emph{which} one --- one
-versus none is the gap that dominates --- and a simple ridge model is the best,
-cheapest choice on data of this size, while LightGBM remains a robust default that
-scales to the larger populations a utility would face.
+versus none is the gap that dominates --- and on data of this size and structure a
+simple ridge regressor is the most accurate and lowest-risk choice, while the
+tree ensembles remain robust defaults that would scale to the much larger,
+less linear populations a utility ultimately faces.
 
 \begin{figure}[t]
 \centering

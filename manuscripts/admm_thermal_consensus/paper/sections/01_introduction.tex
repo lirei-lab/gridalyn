@@ -40,11 +40,13 @@ signal-level study into a network-validated one. Our contributions are:
   \item A sharing-ADMM coordinator for deferrable electric heating that flattens
   the feeder aggregate subject to per-home comfort bounds and a daily-energy
   conservation constraint (load is shifted, never curtailed).
-  \item A LightGBM imputer that reconstructs the heating of non-responsive
+  \item A machine-learning imputer that reconstructs the heating of non-responsive
   agents from ambient temperature, time-of-day, and nameplate features, letting
   the coordinator stay accurate as the non-responsive fraction grows, together
-  with a comparison of four learned estimators against naive and no-imputation
-  baselines under a realized-load model that isolates the value of imputation.
+  with a comparison of three families of ML regressors (regularized-linear,
+  tree-ensemble, and instance-based) against naive and no-imputation baselines
+  under a realized-load model that both isolates the value of imputation and
+  identifies a regularized linear model as the most accurate on this data.
   \item An AC power-flow validation stage on a synthetic LV residential feeder of
   74 literal all-electric homes behind a single 400~kVA MV/LV distribution
   transformer in pandapower, in which the homes load the transformer directly and
@@ -78,6 +80,6 @@ model; Section~II surveys ADMM-based demand response, multi-agent resilience,
 telemetry imputation, and distribution power flow, and states our delta against
 each. Section~III formalizes the agents, the feeder, and the
 communication-failure model. Section~\ref{sec:methodology} develops the
-sharing-ADMM updates, the LightGBM imputer, and the power-flow validation loop.
+sharing-ADMM updates, the ML imputer, and the power-flow validation loop.
 Section~V details the case-study configuration, Section~VI reports the aggregate,
 robustness, and network-feasibility results, and Section~VII concludes.

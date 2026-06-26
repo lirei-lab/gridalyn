@@ -23,9 +23,15 @@ reframes this critical fraction as a probabilistic risk threshold rather than a
 single deterministic point: the probability of a thermal violation stays near 0
 through $\varrho = 0.8$, rises to 0.20 at $\varrho = 0.85$ and 0.79 at
 $\varrho = 0.88$, and reaches certainty by $\varrho = 0.90$, so the deterministic
-compliance at $\varrho = 0.85$ understated the true risk. The distributed ADMM was
-validated against a centralized CVXPY solve (aggregate peak agreeing to within
-$0.05\%$).
+compliance at $\varrho = 0.85$ understated the true risk. Comparing three families
+of ML regressors for the imputer, we found that a regularized linear model (ridge)
+was the most accurate and lowest-risk on this dataset --- a low-variance linear
+model suits the small, smooth, near-linear relationship between heating and the
+weather/calendar/level features better than higher-variance tree ensembles or
+nearest neighbours --- but the decisive factor was imputing at all versus not, the
+choice of method being secondary once any reasonable imputer is in the loop. The
+distributed ADMM was validated against a centralized CVXPY solve (aggregate peak
+agreeing to within $0.05\%$).
 
 The study has clear limitations. It covers a single cold day and a single feeder,
 and the binding constraint is the distribution transformer's thermal loading;

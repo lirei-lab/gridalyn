@@ -56,9 +56,9 @@ models \cite{Buwaneswaran2026}, correlation-clustering for faulted grid data
 \cite{RazaviFar2020}, and low-rank recovery of asynchronous meter streams
 \cite{Yuan2021}. For the closely related task of short-term load prediction,
 gradient-boosted trees are competition-winning regressors
-\cite{BenTaieb2014,Lloyd2014}, motivating our use of LightGBM
-\cite{ke2017lightgbm} to impute a silent home's heating from weather and calendar
-features. Crucially, in all of this work the imputer or forecaster is evaluated
+\cite{BenTaieb2014,Lloyd2014}, one of the families we evaluate
+\cite{ke2017lightgbm} for imputing a silent home's heating from weather and
+calendar features. Crucially, in all of this work the imputer or forecaster is evaluated
 \emph{in isolation} --- by held-out RMSE --- and is never embedded in a
 distributed coordinator nor propagated into a power-flow feasibility check.
 

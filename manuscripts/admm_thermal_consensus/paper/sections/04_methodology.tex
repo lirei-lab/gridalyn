@@ -114,9 +114,12 @@ regressor that maps a small feature vector --- ambient temperature, the sine and
 cosine of the hour of day, and the agent's nameplate heating level --- to
 instantaneous heating power. The model is trained on the responsive population
 and applied to each silent agent, yielding $\hat{x}_{i,t}$ that the coordinator
-treats as the agent's contribution. The default estimator is a gradient-boosted-tree
-regressor \cite{ke2017lightgbm}; several learned and naive alternatives are
-compared in Section~\ref{sec:results}. Generalization to unseen homes is assessed
+treats as the agent's contribution. We keep the estimator generic and compare
+three families of machine-learning regressors --- a regularized linear model
+(ridge regression), tree ensembles (gradient boosting \cite{ke2017lightgbm} and
+random forests), and an instance-based model ($k$-nearest neighbours) --- against
+naive and no-imputation baselines in Section~\ref{sec:results}, and report the
+most accurate. Generalization to unseen homes is assessed
 by leave-agents-out cross-validation, which holds out entire agents rather than
 random samples and therefore measures the realistic case of imputing a home the
 model never saw.
