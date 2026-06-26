@@ -47,6 +47,15 @@ def main() -> None:
     pd.DataFrame(heat, index=idx, columns=cols).to_parquet(heat_path)
     pd.DataFrame(bg, index=idx, columns=cols).to_parquet(bg_path)
 
+    # per-home RC thermal parameters (same seed -> same buildings as the loads),
+    # exported so the coordinator can penalize indoor-temperature excursion and
+    # the comfort-validation stage can replay the thermal response.
+    from gridalyn.assets.datagen.agents.fleet import make_buildings
+
+    buildings = make_buildings(C.N_AGENTS, seed=C.SEED)
+    resistance = [float(b.R) for b in buildings]
+    capacitance = [float(b.C) for b in buildings]
+
     levels = heat.mean(axis=1)
     params = {
         "n_agents": C.N_AGENTS,
@@ -54,6 +63,8 @@ def main() -> None:
         "resolution_minutes": C.RESOLUTION_MINUTES,
         "temperature_c": temp.tolist(),
         "agent_levels_kw": levels.tolist(),
+        "thermal_resistance_c_per_kw": resistance,
+        "thermal_capacitance_kwh_per_c": capacitance,
         "total_heating_kwh": float(heat.sum() * C.STEP_HOURS),
         "uncoordinated_peak_kw": float((heat.sum(axis=0) + bg.sum(axis=0)).max()),
     }

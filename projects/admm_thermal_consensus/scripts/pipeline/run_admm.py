@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
+from projects.admm_thermal_consensus.scripts import comfort
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 
 
@@ -54,16 +55,22 @@ def main() -> None:
     profiles["uncoordinated"] = total_unc
     kpis["uncoordinated"] = _kpis(total_unc, price_per_step)
 
+    prox = comfort.prox_inverse()
+
     # 2) coordinated ideal
     res = solve_sharing_admm(
         heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
         rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
+        comfort_prox_inverse=prox,
     )
     total_ideal = res.x.sum(axis=0) + bg_total
     profiles["coordinated_ideal"] = total_ideal
     kpis["coordinated_ideal"] = _kpis(total_ideal, price_per_step)
     kpis["coordinated_ideal"]["comfort_mae_kw"] = float(np.abs(res.x - heat).mean())
+    ideal_dt = comfort.temperature_excursion(res.x, heat)
+    kpis["coordinated_ideal"]["comfort_max_dT_c"] = float(ideal_dt.max())
+    kpis["coordinated_ideal"]["comfort_median_dT_c"] = float(np.median(ideal_dt))
     convergence["coordinated_ideal"] = {
         "iterations": res.iterations,
         "primal_residual": res.primal_residual,
@@ -84,6 +91,7 @@ def main() -> None:
             rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
             max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
             responsive=responsive, forecast=forecast,
+            comfort_prox_inverse=prox,
         )
         total = res.x.sum(axis=0) + bg_total
         key = f"imputed_rho_{int(round(rho_frac * 100)):03d}"

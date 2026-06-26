@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
+from projects.admm_thermal_consensus.scripts import comfort
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 from projects.admm_thermal_consensus.scripts.forecast.methods import (
     ESTIMATING_METHODS,
@@ -44,17 +45,18 @@ DISPLAY = {
 }
 
 
-def _admm_responsive(heating, background):
+def _admm_responsive(heating, background, prox_subset):
     """Flatten a (responsive) subset and return its coordinated schedules."""
     res = solve_sharing_admm(
         heating=heating, background=background, alpha=C.DEFERRABILITY_ALPHA,
         rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
+        comfort_prox_inverse=prox_subset,
     )
     return res.x
 
 
-def _realized_peak(method, heat, bg, levels, temp, silent, seed):
+def _realized_peak(method, heat, bg, levels, temp, silent, seed, prox):
     """Realized daily-peak (kW) for one method and one silent set."""
     bg_total = bg.sum(axis=0)
     resp = np.ones(C.N_AGENTS, dtype=bool)
@@ -64,7 +66,7 @@ def _realized_peak(method, heat, bg, levels, temp, silent, seed):
         return float((heat.sum(axis=0) + bg_total).max())
     if method == "none":
         # coordinator is blind to the silent homes: flatten responsives only
-        sched = _admm_responsive(heat[resp_idx], bg[resp_idx])
+        sched = _admm_responsive(heat[resp_idx], bg[resp_idx], prox[resp_idx])
         realized = sched.sum(axis=0) + heat[silent].sum(axis=0) + bg_total
         return float(realized.max())
     # estimating methods: pin silent homes to the estimate, optimize responsives
@@ -77,6 +79,7 @@ def _realized_peak(method, heat, bg, levels, temp, silent, seed):
         rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
         responsive=resp, forecast=forecast,
+        comfort_prox_inverse=prox,
     )
     # REALITY: silent homes draw their true heating, not the estimate
     realized = res.x[resp_idx].sum(axis=0) + heat[silent].sum(axis=0) + bg_total
@@ -128,6 +131,7 @@ def main() -> None:
         return float(np.interp(peak_kw, peaks_kw, loadings))
 
     intrinsic = _intrinsic_cv(heat, levels, temp)
+    prox = comfort.prox_inverse()
 
     # downstream: deterministic silent set per fraction, per method
     rng = np.random.default_rng(C.SEED)
@@ -137,7 +141,7 @@ def main() -> None:
         n_down = int(round(rho_frac * C.N_AGENTS))
         silent = drop[:n_down]
         for m in METHODS:
-            pk = _realized_peak(m, heat, bg, levels, temp, silent, C.SEED)
+            pk = _realized_peak(m, heat, bg, levels, temp, silent, C.SEED, prox)
             curves[m].append({"rho": rho_frac, "peak_kw": pk,
                               "loading_pct": loading_of(pk),
                               "violation": loading_of(pk) > C.LINE_LOADING_LIMIT_PCT})
@@ -151,7 +155,7 @@ def main() -> None:
         peaks, loads = [], []
         for _ in range(C.COMPARISON_MC_DRAWS):
             silent = mc_rng.choice(C.N_AGENTS, size=n_down, replace=False)
-            pk = _realized_peak(m, heat, bg, levels, temp, silent, C.SEED)
+            pk = _realized_peak(m, heat, bg, levels, temp, silent, C.SEED, prox)
             peaks.append(pk)
             loads.append(loading_of(pk))
         loads = np.asarray(loads)

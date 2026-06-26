@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT))
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
+from projects.admm_thermal_consensus.scripts import comfort
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 from projects.admm_thermal_consensus.scripts import lv_feeder
 
@@ -65,6 +66,7 @@ def main() -> None:
             float(np.interp(peak_kw, peaks_kw, loadings)),
         )
 
+    prox = comfort.prox_inverse()
     rng = np.random.default_rng(C.SEED)
     records = []
     per_draw = []
@@ -87,6 +89,7 @@ def main() -> None:
                 rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
                 max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
                 responsive=responsive, forecast=fc,
+                comfort_prox_inverse=prox,
             )
             total = res.x.sum(axis=0) + bg_total
             pk = float(total.max())

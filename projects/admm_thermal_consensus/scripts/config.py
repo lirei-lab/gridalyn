@@ -29,15 +29,17 @@ GENERATOR = "thermodynamic"  # exposes per-home heating vs background split
 ADMM_RHO = 1.0          # penalty parameter
 ADMM_LAMBDA = 0.15      # comfort weight (stay near thermostat baseline)
 ADMM_MU = 1.0           # aggregate flattening weight
-ADMM_MAX_ITERS = 300
+ADMM_MAX_ITERS = 500   # comfort-coupled x-update needs more sweeps than the plain solver
 ADMM_TOL = 1e-4         # on combined primal+dual residual
 DEFERRABILITY_ALPHA = 0.5  # heating may modulate +/-50% around baseline per step
+COMFORT_GAMMA = 2.0   # weight on the modelled indoor-temperature excursion (~+/-1 C)
+COMFORT_BAND_C = 1.0  # target/reported comfort band on indoor temperature (deg C)
 
 # ── Communication-failure sweep ────────────────────────────────────
 RHO_SWEEP = (
-    0.0, 0.2, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0
-)  # fraction of non-responsive agents; dense near the flexibility-exhaustion knee
-ILLUSTRATIVE_RHO = 0.8  # non-responsive fraction shown as the degraded-comms curve
+    0.0, 0.2, 0.4, 0.6, 0.7, 0.8, 0.82, 0.85, 0.88, 0.9, 0.95, 1.0
+)  # fraction of non-responsive agents; dense near the feasibility knee (~0.85)
+ILLUSTRATIVE_RHO = 0.9  # non-responsive fraction shown as the degraded-comms curve
 
 # ── Network: synthetic LV residential feeder with a real distribution trafo ──
 # 80 literal homes hang off one MV/LV transformer; the uncoordinated winter peak
@@ -56,8 +58,12 @@ LV_R_OHM_KM = 0.206         # NAYY-style LV cable resistance
 LV_X_OHM_KM = 0.080         # LV cable reactance
 LV_MAX_I_KA = 0.275         # LV cable ampacity
 VOLTAGE_LOWER_PU = 0.95
-TRANSFORMER_LOADING_LIMIT_PCT = 100.0
-LINE_LOADING_LIMIT_PCT = 100.0  # retained alias for the thermal limit
+# Short-duration winter overload limit (IEEE C57.91): nameplate (100%) is not a
+# hard cliff -- cold ambient and thermal mass let a distribution transformer
+# carry a brief overload without exceeding its hottest-spot limit. We adopt a
+# conservative 105% planning limit for the recurring winter peak.
+TRANSFORMER_LOADING_LIMIT_PCT = 105.0
+LINE_LOADING_LIMIT_PCT = 105.0  # retained alias for the thermal limit
 
 # ── Forecast-uncertainty Monte Carlo ───────────────────────────────
 # For each non-responsive fraction we draw UQ_N_DRAWS random failing
@@ -73,7 +79,7 @@ UQ_BAND_LOW_PCT = 5.0
 UQ_BAND_HIGH_PCT = 95.0
 
 # ── Imputation-method comparison ───────────────────────────────────
-COMPARISON_REP_RHO = 0.6     # representative fraction for per-method P(violation)
+COMPARISON_REP_RHO = 0.8     # representative fraction for per-method P(violation)
 COMPARISON_MC_DRAWS = 100    # random silent subsets at the representative fraction
 
 # ── TOU price (CAD/kWh) by hour, deterministic ─────────────────────

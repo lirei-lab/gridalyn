@@ -90,3 +90,11 @@ spec:
       outputs:
         - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.pdf
         - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.png
+    - id: comfort_validation
+      needs: [generate_agents]
+      command: uv run python projects/admm_thermal_consensus/scripts/pipeline/comfort_validation.py
+      outputs:
+        - projects/admm_thermal_consensus/outputs/json/comfort_validation.json
+        - projects/admm_thermal_consensus/outputs/reports/comfort_report.json
+        - projects/admm_thermal_consensus/outputs/figures/fig_comfort.pdf
+        - projects/admm_thermal_consensus/outputs/figures/fig_comfort.png
