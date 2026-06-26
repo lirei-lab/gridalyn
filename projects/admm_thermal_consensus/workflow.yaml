@@ -77,3 +77,16 @@ spec:
       outputs:
         - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.pdf
         - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.png
+    - id: imputer_comparison
+      needs: [run_admm, build_network]
+      command: uv run python projects/admm_thermal_consensus/scripts/pipeline/imputer_comparison.py
+      outputs:
+        - projects/admm_thermal_consensus/outputs/data/imputer_comparison_curves.parquet
+        - projects/admm_thermal_consensus/outputs/json/imputer_comparison.json
+        - projects/admm_thermal_consensus/outputs/reports/imputer_comparison_report.json
+    - id: make_comparison_figure
+      needs: [imputer_comparison]
+      command: uv run python projects/admm_thermal_consensus/scripts/pipeline/make_comparison_figure.py
+      outputs:
+        - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.pdf
+        - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.png

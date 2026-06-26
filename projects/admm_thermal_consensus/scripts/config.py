@@ -59,6 +59,10 @@ UQ_PEAK_RANGE_MW = (3.4, 5.4)
 UQ_BAND_LOW_PCT = 5.0
 UQ_BAND_HIGH_PCT = 95.0
 
+# ── Imputation-method comparison ───────────────────────────────────
+COMPARISON_REP_RHO = 0.6     # representative fraction for per-method P(violation)
+COMPARISON_MC_DRAWS = 100    # random silent subsets at the representative fraction
+
 # ── TOU price (CAD/kWh) by hour, deterministic ─────────────────────
 def tou_price_per_hour() -> list[float]:
     """Return a 24-length CAD/kWh time-of-use price vector."""
