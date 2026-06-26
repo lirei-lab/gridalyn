@@ -39,22 +39,15 @@ from projects.ev_hosting_flex.scripts.config import (
     ARRIVAL_CLIP,
     ARRIVAL_MEAN_H,
     ARRIVAL_STD_H,
-    BG_KW,
     CALENDAR_HOURS,
     CHARGER_MIX,
-    CLPU_PEAK,
-    CLPU_TEMP_FULL,
-    CLPU_TEMP_ONSET,
-    CLPU_WINDOW,
     DTYPE,
     EV_COINCIDENCE_RHO,
     EV_KWH_MEDIAN,
     EV_KWH_MIN,
     EV_KWH_SIGMA,
     PLUGIN_PROB,
-    R_THERM,
     SEED,
-    T_BALANCE,
     TMY_INPUT_PATH,
 )
 
@@ -83,132 +76,6 @@ def _occ(hour: np.ndarray) -> np.ndarray:
     return 0.7 + 0.3 * np.exp(
         -0.5 * ((np.asarray(hour, dtype=DTYPE) - 19.0) / 4.0) ** 2
     )
-
-
-def clpu_factor(hod: np.ndarray, temp: np.ndarray) -> np.ndarray:
-    """Return the multiplicative cold-load-pickup factor on the heating term (>= 1).
-
-    RETIRED-AS-BASE (Phase 13 RETIRE-01): the annual degree-day base generator
-    (``tmy_base``) that applied this CLPU factor is removed from the new pipeline
-    path (the design-day MC seam in ``_generators.py`` recalibrates the SDK
-    building agent instead — no CLPU). The FUNCTION is NOT deleted: it is still
-    imported by ``_twostage.compose_scenarios`` (the two-stage program), so it is
-    KEPT importable. Only its use as the annual-base coincidence lift is retired.
-
-    On cold evenings occupants return home and thermostats recover from daytime
-    setback ~simultaneously: the hourly heating coincidence jumps from its normal
-    thermostatic diversity (~0.5) toward ~1.0, briefly lifting the aggregate
-    heating peak. Ported verbatim from the validated manuscript prototype
-    (``manuscripts/ev_hosting_flex/scripts/figures/_clpu.py``, quick 260625-pul).
-
-    DETERMINISTIC: a pure function of (hour-of-day, temperature) only — NO RNG, NO
-    global state — so two calls with equal inputs return byte-identical arrays and
-    the CLPU-lifted base stays byte-stable (the reproducibility guard). Applied to
-    the HEATING term ONLY in ``tmy_base`` / ``_twostage.compose_scenarios``; the
-    ``BG_KW`` occupancy background and the EV layer are never amplified.
-
-    The in-window coldness strength ramps linearly:
-    ``strength = clip((CLPU_TEMP_ONSET - temp) / (CLPU_TEMP_ONSET - CLPU_TEMP_FULL),
-    0, 1)`` — 0 at/above ``CLPU_TEMP_ONSET`` (no CLPU), 1 at/below
-    ``CLPU_TEMP_FULL`` (full synchronization). The per-hour factor is
-    ``1 + (CLPU_PEAK - 1) * CLPU_WINDOW[hod] * strength`` inside the evening
-    recovery window and exactly 1.0 outside it.
-
-    Args:
-        hod: Hour-of-day array (0..23), aligned element-wise to ``temp``.
-        temp: Outdoor temperature array (degC), aligned element-wise to ``hod``.
-
-    Returns:
-        A float64 array (same shape as ``temp``) of heating multipliers: 1.0
-        outside the cold-evening recovery window, ramping to ``CLPU_PEAK`` at the
-        coldest in-window hour.
-    """
-    hod_arr = np.asarray(hod)
-    temp_arr = np.asarray(temp, dtype=DTYPE)
-    strength = np.clip(
-        (CLPU_TEMP_ONSET - temp_arr) / (CLPU_TEMP_ONSET - CLPU_TEMP_FULL), 0.0, 1.0
-    )
-    factor = np.ones(temp_arr.shape, dtype=DTYPE)
-    for h, w in CLPU_WINDOW.items():
-        sel = hod_arr == h
-        factor[sel] = 1.0 + (CLPU_PEAK - 1.0) * w * strength[sel]
-    return factor
-
-
-def tmy_base(
-    nameplate_share: np.ndarray,
-    *,
-    df: pd.DataFrame | None = None,
-) -> np.ndarray:
-    """Return the per-bus TMY heating-degree annual base load in kW.
-
-    RETIRED (Phase 13 RETIRE-01): the annual 8760h degree-day base generator is
-    REMOVED from the new pipeline path — the design-day MC seam
-    (``_generators.make_design_day_ensemble``) supersedes it with the SDK building
-    agent recalibrated to the Québec archetype over the binding cold design day.
-    The function body is KEPT importable (not physically deleted) because the
-    Phase-14 ``compute_congestion`` retarget is its last remaining consumer; it is
-    physically deleted in Phase 14 when that consumer migrates. Do NOT route the
-    new pipeline through this generator.
-
-    Per-home load = ``BG_KW * _occ(hod) + max(0, T_BALANCE - temp) / R_THERM``,
-    read network-free from the committed Trois-Rivieres TMY (D-08/D-09). The
-    result is addressable per bus — ``base[bus] = nameplate_share[bus] *
-    per_home`` — so ``_congestion.proxy_loading`` aggregates it over the feeder
-    subtree (the D-02 seam). Reads only the committed project-local CSV — never
-    a network weather download / auto-fetch source (REPRO guard, D-09).
-
-    Args:
-        nameplate_share: Per-bus nameplate share (relative home weight), SORTED-
-            bus order, shape ``(n_bus,)``.
-        df: Optional pre-loaded TMY frame (tests inject malformed frames); when
-            ``None`` the committed ``TMY_INPUT_PATH`` CSV is read.
-
-    Returns:
-        A ``(n_bus, CALENDAR_HOURS)`` float64 per-bus hourly base-load array.
-
-    Raises:
-        ValueError: If the TMY is missing ``temp_air``/``timestamp`` or has
-            fewer than ``CALENDAR_HOURS`` rows (V5 validation, located +
-            remediating — never silently truncating).
-    """
-    if df is None:
-        df = pd.read_csv(TMY_INPUT_PATH)
-    missing = [c for c in ("timestamp", "temp_air") if c not in df.columns]
-    if missing:
-        raise ValueError(
-            "tmy_base received a TMY frame missing required column(s) "
-            f"{missing} (have {list(df.columns)}); cannot build the "
-            "heating-degree base. Remediation: regenerate / re-copy the "
-            f"committed TMY at {TMY_INPUT_PATH} with 'timestamp' and "
-            "'temp_air' columns (PVGIS SARAH-3 schema)."
-        )
-    if len(df) < CALENDAR_HOURS:
-        raise ValueError(
-            f"tmy_base received a short TMY frame ({len(df)} rows); the "
-            f"heating-degree base needs at least {CALENDAR_HOURS} hourly rows "
-            "and refuses to silently truncate. Remediation: re-copy the full "
-            f"8760-row committed TMY at {TMY_INPUT_PATH}."
-        )
-    df = df.iloc[:CALENDAR_HOURS]
-    temp = df["temp_air"].to_numpy(DTYPE)
-    # tz-proof local hour-of-day: slice "YYYY-MM-DD HH:MM:SS-05:00"[11:13].
-    hod = df["timestamp"].astype(str).str.slice(11, 13).astype(int).to_numpy()
-    # Cold-load pickup (260625-pwz): the per-home heating term is multiplied by the
-    # deterministic ``clpu_factor(hod, temp)`` so the cold-evening heating coincidence
-    # lifts from its steady diversified level toward ~1.0 (CALIBRATION.md [2-1],
-    # quick 260625-pul). Applied to the HEATING term ONLY — the BG_KW occupancy
-    # background below and the EV layer are NEVER amplified. CLPU_PEAK=1.0 reproduces
-    # the pre-CLPU base bit-for-bit (the reproducibility guard).
-    heat = np.maximum(0.0, T_BALANCE - temp) / R_THERM * clpu_factor(hod, temp)
-    # tmy_base correctly keys the occupancy bump off the REAL hour-of-day at each
-    # annual position (``_occ(hod)``), so the base's own clock phase is intact: the
-    # array index ``i`` carries clock hour ``hod[i] = (hod[0] + i) % 24``. The EV
-    # stack must be phased to THIS clock at consume time (see tmy_start_hod /
-    # ev_realizations ``start_hod``) so they sum coincidently (CR-01).
-    per_home = (BG_KW * _occ(hod) + heat).astype(DTYPE)
-    share = np.asarray(nameplate_share, dtype=DTYPE)
-    return share[:, None] * per_home[None, :]
 
 
 def tmy_start_hod(*, df: pd.DataFrame | None = None) -> int:

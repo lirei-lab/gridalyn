@@ -1,5 +1,19 @@
 """Deterministic closed-form per-node cap/curtailment kernel for ev_hosting_flex.
 
+RETIRED (Phase 15 RETIRE-02, D-13): this whole module — the curtailment cap
+(``flex_curtailment``), the deferral/power-limited availability legs
+(``flex_deferral`` / ``flex_power_limited`` + their session helpers), the
+energy-fraction metrics (``flex_metrics``), and the energy-gated sweep
+(``flexible_ev_count``) — is removed from the new pipeline path. The Phase-15
+controller (``apply_flexibility_contracts``, Plan 03) replaces it with the
+two-stage day-ahead reserve/activation scheme gated on realized ``P(overload) ≤
+ε`` ALONE (energy reported, never gated). The module is BANNERED here but NOT
+physically deleted this plan: the live stage-5 ``apply_flexibility_contracts``
+body still imports ``flex_curtailment``/``flex_metrics``/``flex_power_limited``
+until Plan 03 re-points it; the whole file is physically deleted in Plan 03 when
+that last consumer migrates (banner-now / delete-when-import-gone, Pitfall 3). Do
+NOT route any new pipeline through these legs.
+
 The flexibility sibling of the Phase-9 ``_congestion.py`` proxy kernel. Implements
 the three Phase-10 flexibility gaps, all pure-numpy, float64, deterministic to
 1e-6 (FLEX-01/02/03, D-01..D-10):

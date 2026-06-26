@@ -41,11 +41,81 @@ import numpy as np
 
 from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_HOURS,
+    CALENDAR_START_WEEKDAY,
+    DAILY_PATTERN,
     FEEDER_ID,
     POWER_FACTOR,
+    SUMMER_TROUGH_FACTOR,
     TARGET_HOMES,
     TRANSFORMER_UTILIZATION_MARGIN,
+    WEEKLY_PATTERN,
+    WINTER_PEAK_FACTOR,
 )
+
+# Annual-envelope factor arrays built ONCE for the inlined factor helpers below
+# (Phase 15 RETIRE-02: severed from the retired annual-profiles module — the
+# three deterministic, RNG-free factor functions are inlined here so this module
+# no longer imports that retired module before it is deleted in Plan 03).
+_DAILY = np.asarray(DAILY_PATTERN, dtype="float64")
+_WEEKLY = np.asarray(WEEKLY_PATTERN, dtype="float64")
+_HOURS_PER_DAY = 24  # CALENDAR_HOURS / 24 == 365 (non-leap).
+
+
+def _winter_factor(hour_of_year: np.ndarray) -> np.ndarray:
+    """Return the float64 seasonal multiplier per hour, winter-peaked.
+
+    Inlined verbatim from the retired annual-profiles ``winter_factor`` (Phase 15
+    RETIRE-02): a deterministic cosine over the year interpolating between
+    ``SUMMER_TROUGH_FACTOR`` (mid-year) and ``WINTER_PEAK_FACTOR`` (year ends).
+    RNG-free; byte-identical to the pre-severance envelope so
+    ``annual_peak_base_factor`` (and the topology cache it sizes) is unchanged.
+
+    Args:
+        hour_of_year: Integer hour-of-year array (0 .. CALENDAR_HOURS-1).
+
+    Returns:
+        A float64 array of seasonal multipliers aligned to ``hour_of_year``.
+    """
+    day_of_year = np.asarray(hour_of_year, dtype="float64") // _HOURS_PER_DAY
+    n_days = CALENDAR_HOURS // _HOURS_PER_DAY
+    season = np.cos(2.0 * np.pi * day_of_year / float(n_days))
+    midpoint = (WINTER_PEAK_FACTOR + SUMMER_TROUGH_FACTOR) / 2.0
+    amplitude = (WINTER_PEAK_FACTOR - SUMMER_TROUGH_FACTOR) / 2.0
+    return (midpoint + amplitude * season).astype("float64")
+
+
+def _daily_factor(hour_of_year: np.ndarray) -> np.ndarray:
+    """Return the float64 daily-shape coefficient per hour.
+
+    Inlined verbatim from the retired annual-profiles ``daily_factor`` (Phase 15
+    RETIRE-02): indexes ``DAILY_PATTERN`` by ``hour_of_year % 24``. RNG-free.
+
+    Args:
+        hour_of_year: Integer hour-of-year array.
+
+    Returns:
+        A float64 array of daily-shape coefficients aligned to ``hour_of_year``.
+    """
+    hod = np.asarray(hour_of_year) % 24
+    return _DAILY[hod]
+
+
+def _weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
+    """Return the float64 weekly-shape coefficient per hour.
+
+    Inlined verbatim from the retired annual-profiles ``weekly_factor`` (Phase 15
+    RETIRE-02): weekday = ``((hour_of_year // 24) + CALENDAR_START_WEEKDAY) % 7``
+    (Mon=0), indexing ``WEEKLY_PATTERN``. RNG-free.
+
+    Args:
+        hour_of_year: Integer hour-of-year array.
+
+    Returns:
+        A float64 array of weekly-shape coefficients aligned to ``hour_of_year``.
+    """
+    weekday = ((np.asarray(hour_of_year) // 24) + CALENDAR_START_WEEKDAY) % 7
+    return _WEEKLY[weekday]
+
 
 # Re-pointing tolerance (D-03): the selected MV/LV transformer's downstream home
 # count must land within this many homes of TARGET_HOMES, else the twin lacks a
@@ -96,25 +166,17 @@ def annual_peak_base_factor() -> float:
 
     The maximum over the 8760h of ``winter(h) * daily(h) * weekly(h)`` — the
     multiplier that turns a per-bus nameplate sum into the annual winter-peak
-    downstream base demand. Reuses the unchanged ``_profiles`` factor functions
-    so the envelope stays byte-identical (D-01); deterministic, no RNG.
-
-    The ``_profiles`` import is function-local to avoid any import cycle
-    (``_profiles`` and ``_topology`` both sit in the same package layer).
+    downstream base demand. Reuses the INLINED factor helpers (Phase 15
+    RETIRE-02: severed from the retired annual-profiles module) so the envelope stays
+    byte-identical (D-01, ~1.76); deterministic, no RNG.
 
     Returns:
         The float64 maximum hour-of-year envelope multiplier (``> 1.0`` for the
         pinned winter-peaked envelope, ~1.76).
     """
-    from projects.ev_hosting_flex.scripts._profiles import (
-        daily_factor,
-        weekly_factor,
-        winter_factor,
-    )
-
     hours = np.arange(CALENDAR_HOURS)
     return float(
-        np.max(winter_factor(hours) * daily_factor(hours) * weekly_factor(hours))
+        np.max(_winter_factor(hours) * _daily_factor(hours) * _weekly_factor(hours))
     )
 
 

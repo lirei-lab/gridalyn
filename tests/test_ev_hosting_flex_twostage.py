@@ -13,12 +13,10 @@ solve fn); this test never ``import pandapower``.
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from projects.ev_hosting_flex.scripts._twostage import (
     assert_cvxpy_matches_oracle,
-    cold_day_temp,
     coldday_panel,
     compose_scenarios,
     eps_frontier,
@@ -28,7 +26,7 @@ from projects.ev_hosting_flex.scripts.config import (
     C_ACTIVATE,
     C_RESERVE,
     EPS_FRONTIER,
-    N_SCENARIOS,
+    K_DESIGN,
     SEED,
 )
 
@@ -93,13 +91,16 @@ def test_perhour_reliability() -> None:
 # ─── TWOSTAGE-03: composed scenarios byte-stable ─────────────────────────────
 
 
-def _toy_tmy() -> pd.DataFrame:
-    """A minimal 8760-row TMY frame with a single coldest hour."""
-    hours = np.arange(8760)
-    temp = 5.0 + 10.0 * np.sin(hours / 24.0)
-    temp[5000] = -25.0  # the annual coldest hour
-    ts = pd.date_range("1989-12-31 19:00", periods=8760, freq="h")
-    return pd.DataFrame({"timestamp": ts.astype(str), "temp_air": temp})
+def _toy_q_design() -> np.ndarray:
+    """A minimal (24,) day-ahead Q_design forecast trajectory (kW), evening-peaked.
+
+    Phase 15 RETIRE-02: the re-anchored ``compose_scenarios`` takes its base from
+    the emitted ``Q_design`` building-mean trajectory (kW), NOT a TMY cold-day
+    temperature reconstruction. This stands in for the emitted ``q_design.npy``.
+    """
+    hours = np.arange(24, dtype="float64")
+    # Winter evening-peaked building base ~50-65 kW (idx-62 7-home design-day scale).
+    return 50.0 + 12.0 * np.exp(-0.5 * ((hours - 18.0) / 3.0) ** 2)
 
 
 def _sha(arr: np.ndarray) -> str:
@@ -111,45 +112,57 @@ def _sha(arr: np.ndarray) -> str:
 
 def test_scenarios_byte_stable() -> None:
     """compose_scenarios is byte-identical across two seeded builds (TWOSTAGE-03)."""
-    df = _toy_tmy()
-    kw = dict(n_ev=9, n_homes=7, feeder_kw=71.25, df=df)
+    q_design = _toy_q_design()
+    kw = dict(n_ev=9, feeder_kw=71.25, q_design=q_design)
     a = compose_scenarios(np.random.default_rng(SEED), **kw)
     b = compose_scenarios(np.random.default_rng(SEED), **kw)
-    assert a.shape == (N_SCENARIOS, 24)
+    # Default ensemble size is now K_DESIGN (D-07: N_SCENARIOS -> K/N).
+    assert a.shape == (K_DESIGN, 24)
     assert a.dtype == np.float64
     assert _sha(a) == _sha(b)
 
 
 def test_scenarios_validates() -> None:
-    """Negative sigma / non-positive n raise located ValueErrors (V5)."""
-    df = _toy_tmy()
+    """Negative sigma / non-positive n / bad q_design raise located ValueErrors (V5)."""
+    q_design = _toy_q_design()
     with pytest.raises(ValueError):
         compose_scenarios(
             np.random.default_rng(SEED),
             n_ev=9,
-            n_homes=7,
             feeder_kw=71.25,
-            df=df,
+            q_design=q_design,
             n_scenarios=0,
         )
     with pytest.raises(ValueError):
         compose_scenarios(
             np.random.default_rng(SEED),
             n_ev=9,
-            n_homes=7,
             feeder_kw=71.25,
-            df=df,
+            q_design=q_design,
             sigma_daily=-1.0,
+        )
+    # A non-1-D q_design is rejected (the re-anchored V5 shape guard).
+    with pytest.raises(ValueError):
+        compose_scenarios(
+            np.random.default_rng(SEED),
+            n_ev=9,
+            feeder_kw=71.25,
+            q_design=np.zeros((2, 24), dtype="float64"),
         )
 
 
-def test_cold_day_temp() -> None:
-    """cold_day_temp returns 24h temp + hod at the annual coldest day."""
-    df = _toy_tmy()
-    temp, hod = cold_day_temp(df=df)
-    assert temp.shape == (24,)
-    assert hod.shape == (24,)
-    assert float(temp.min()) <= -25.0 + 1e-9
+def test_scenarios_anchored_on_q_design() -> None:
+    """The re-anchored ensemble tracks q_design: at n_ev=0 the mean ~= q_design - feeder.
+
+    With zero EVs and feeder_kw=0 the per-scenario base is ``q_design * perturb``
+    where ``E[perturb] == 1``, so the ensemble mean tracks ``q_design`` closely.
+    """
+    q_design = _toy_q_design()
+    req = compose_scenarios(
+        np.random.default_rng(SEED), n_ev=0, feeder_kw=0.0, q_design=q_design
+    )
+    # required = max(0, q_design*perturb + 0 - 0); mean over scenarios ~= q_design.
+    np.testing.assert_allclose(req.mean(axis=0), q_design, rtol=0.05)
 
 
 # ─── TWOSTAGE-05: eps-frontier + cold-day panel ──────────────────────────────
@@ -157,9 +170,9 @@ def test_cold_day_temp() -> None:
 
 def test_eps_frontier() -> None:
     """Reliability is monotone non-decreasing as eps decreases; panel keys tidy."""
-    df = _toy_tmy()
+    q_design = _toy_q_design()
     req = compose_scenarios(
-        np.random.default_rng(SEED), n_ev=11, n_homes=7, feeder_kw=71.25, df=df
+        np.random.default_rng(SEED), n_ev=11, feeder_kw=71.25, q_design=q_design
     )
     rows = eps_frontier(req, EPS_FRONTIER)
     assert len(rows) == len(EPS_FRONTIER)
@@ -177,9 +190,9 @@ def test_eps_frontier() -> None:
 def test_cvxpy_matches_oracle() -> None:
     """The gated CLARABEL solve reproduces the oracle reserve to <=1e-6 (TWOSTAGE-06)."""
     pytest.importorskip("cvxpy")
-    df = _toy_tmy()
+    q_design = _toy_q_design()
     req = compose_scenarios(
-        np.random.default_rng(SEED), n_ev=11, n_homes=7, feeder_kw=71.25, df=df
+        np.random.default_rng(SEED), n_ev=11, feeder_kw=71.25, q_design=q_design
     )
     oracle, meta = assert_cvxpy_matches_oracle(req, 0.1)
     assert meta["drift"] <= 1e-6
@@ -210,114 +223,20 @@ def test_config_locked_unchanged() -> None:
     assert K == 1000
 
 
-# ─── Stage integration tests: solve_twostage_program (Wave 2, 10.2-02) ──────
-# These drive the new pipeline stage between apply_flexibility_contracts and
-# validate_powerflow. The byte-stable + frontier-monotone tests use small
-# synthetic fixtures (no cube, no gitignored cache); the supersession-note test
-# drives the full stage against the regenerated project cache and skips cleanly
-# when the cache is absent (the MEMORY note: the ev_hosting_flex cache is
-# gitignored — regenerate before trusting cache-dependent tests).
-
-import os  # noqa: E402
-import shutil  # noqa: E402
-from pathlib import Path  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._twostage import (  # noqa: E402
-    annual_twostage_headline,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
-    EPS_HEADLINE,
-    PROJECT_OUTPUTS_DIR,
-    PROJECT_ROOT,
-)
-from projects.ev_hosting_flex.scripts.pipeline.solve_twostage_program import (  # noqa: E402
-    _content_sha256,
-    derive_twostage,
-    run_stage,
-)
-
-_PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
-_PROJECT_JSON_DIR = PROJECT_OUTPUTS_DIR / "json"
-_PROJECT_CACHE_DIR = PROJECT_OUTPUTS_DIR / "cache"
-_STAGE_REQUIRED = [
-    _PROJECT_JSON_DIR / "firm_hosting.json",
-    _PROJECT_DATA_DIR / "base_load_8760.parquet",
-    _PROJECT_DATA_DIR / "ev_stack_K.npy",
-]
-
-
-def _stage_cache_ready() -> bool:
-    """True iff the stage-3 profiles + stage-4 firm_hosting.json are present."""
-    return all(p.is_file() for p in _STAGE_REQUIRED)
-
-
-def _synth_headline_inputs() -> dict:
-    """A tiny (n_bus=2, 8760) base + (K=8, 8760) EV fixture for the annual harness.
-
-    Sized so no (365, K, 24) cube is ever materialized — the per-day streaming
-    harness consumes it one day at a time.
-    """
-    rng = np.random.default_rng(SEED)
-    n_bus, hours, k = 2, 8760, 8
-    base = rng.uniform(5.0, 30.0, size=(n_bus, hours)).astype("float64")
-    ev_stack = rng.uniform(0.0, 2.0, size=(k, hours)).astype("float64")
-    feeder_indicator = np.ones(n_bus, dtype="float64")
-    return {
-        "base": base,
-        "ev_stack": ev_stack,
-        "feeder_indicator": feeder_indicator,
-        "feeder_kw": 40.0,
-    }
-
-
-def test_annual_headline_byte_stable() -> None:
-    """The annual two-stage headline is byte-stable across two runs (TWOSTAGE-04)."""
-    fx = _synth_headline_inputs()
-    firm_ev_count, flexible_ev_count = 3, 6
-
-    def _headline() -> dict:
-        return annual_twostage_headline(
-            fx["base"],
-            fx["ev_stack"] * float(flexible_ev_count),
-            fx["feeder_indicator"],
-            fx["feeder_kw"],
-            eps=EPS_HEADLINE,
-            downstream_home_count=7,
-            firm_ev_count=firm_ev_count,
-            flexible_ev_count=flexible_ev_count,
-        )
-
-    a = _headline()
-    b = _headline()
-    arr_a = np.array(
-        [
-            a["hosting_expansion_percent"],
-            a["annual_activated_kwh"],
-            a["seasonal_peak_kw"],
-        ],
-        dtype="float64",
-    )
-    arr_b = np.array(
-        [
-            b["hosting_expansion_percent"],
-            b["annual_activated_kwh"],
-            b["seasonal_peak_kw"],
-        ],
-        dtype="float64",
-    )
-    assert _content_sha256(arr_a) == _content_sha256(arr_b)
-    # the hosting headline contract: (flexible - firm) / firm, flexible >= firm.
-    assert a["flexible_ev_count"] >= a["firm_ev_count"]
-    assert a["hosting_expansion_percent"] == pytest.approx(
-        (flexible_ev_count - firm_ev_count) / firm_ev_count
-    )
+# ─── TWOSTAGE-05: eps-frontier monotone (kernel re-anchored on Q_design) ─────
+# The retired stage-6 integration tests (annual_twostage_headline byte-stability
+# + the supersession-note full-stage run, which sourced the now-retired
+# base_load_8760.parquet / ev_stack_K.npy annual artifacts) were REMOVED in
+# Phase 15 RETIRE-02: stage 6 is re-pointed onto the Q_design/Q_real ensemble in
+# Plan 02, which re-introduces a stage-6 integration test against the new seam.
+# Only the kernel-level eps-frontier/panel test survives here (re-anchored).
 
 
 def test_eps_frontier_monotone_in_stage() -> None:
     """Frontier reliability is monotone in eps + panel schema is the tidy set."""
-    df = _toy_tmy()
+    q_design = _toy_q_design()
     req = compose_scenarios(
-        np.random.default_rng(SEED), n_ev=11, n_homes=7, feeder_kw=71.25, df=df
+        np.random.default_rng(SEED), n_ev=11, feeder_kw=71.25, q_design=q_design
     )
     rows = eps_frontier(req, EPS_FRONTIER)
     # EPS_FRONTIER descends -> reliability_hour non-decreasing as eps falls.
@@ -326,46 +245,3 @@ def test_eps_frontier_monotone_in_stage() -> None:
     panel = coldday_panel(req)
     # the cold-day panel parquet schema columns (TWOSTAGE-05).
     assert set(panel) == {"hour", "r_s", "a_mean", "req_p50", "req_p90"}
-
-
-@pytest.mark.skipif(
-    not _stage_cache_ready(),
-    reason=(
-        "ev_hosting_flex stage-3 profiles + stage-4 firm_hosting.json not present; "
-        "run generate_annual_profiles.py and compute_congestion.py first"
-    ),
-)
-def test_report_supersession_note(tmp_path: Path) -> None:
-    """The stage report carries the D-02 supersession note + cvxpy status (TWOSTAGE-06).
-
-    Drives derive_twostage against the regenerated project cache (skipping
-    cleanly when the gitignored cache is absent) and asserts the summary carries
-    the cvxpy drift/fallback status, then drives run_stage to assert the
-    supersession warning string is in validation.warnings.
-    """
-    pytest.importorskip("cvxpy")
-    # Seed a tmp json_dir with the real firm_hosting.json so derive is hermetic.
-    shutil.copy2(
-        _PROJECT_JSON_DIR / "firm_hosting.json", tmp_path / "firm_hosting.json"
-    )
-    derived = derive_twostage(_PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
-    summary = derived["summary"]
-    # cvxpy<->oracle drift/status surfaced in the summary (TWOSTAGE-06, D-08c).
-    assert "cvxpy_oracle_drift" in summary
-    assert "cvxpy_fellback" in summary
-    assert summary["flexible_ev_count"] >= summary["firm_ev_count"]
-    # the supersession note (D-02) mentions the optimal headline replacing curves.
-    note = derived["supersession_note"]
-    assert "Supersession" in note and "OPTIMAL" in note
-    assert "REPLACES" in note and "descriptive" in note
-
-    # run_stage routes the note into validation.warnings via write_report.
-    # project_script() discovers project.yaml from cwd; run from the project root.
-    cwd = os.getcwd()
-    try:
-        os.chdir(PROJECT_ROOT)
-        report = run_stage(data_dir=_PROJECT_DATA_DIR)
-    finally:
-        os.chdir(cwd)
-    warnings = report["validation"]["warnings"]
-    assert any("Supersession" in w and "REPLACES" in w for w in warnings)

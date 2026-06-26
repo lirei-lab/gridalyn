@@ -13,6 +13,13 @@ module completes in the phase that migrates ``allocate_ev_per_bus``'s last consu
 (RETIRE-01 closes across 13→14→15 as the consumers retarget). Do NOT route the new
 pipeline through the annual generators below.
 
+RETIRE-02 update (Phase 15, D-13): the function-local ``_profiles`` import in
+``_topology.annual_peak_base_factor`` was severed this plan (the three factor
+helpers are inlined into ``_topology``), so the ONLY remaining consumer of this
+module is the stage-5 ``apply_flexibility_contracts`` body's
+``allocate_ev_per_bus`` call. The whole file is physically deleted in Plan 03 when
+that body is re-pointed.
+
 Implements GAP-3 (the SDK has no annual one-call 8760h harness): a pure-numpy,
 float64, seed-free parametric base building-load envelope + a deterministic
 evening-window EV charging unit profile + a largest-remainder per-bus EV

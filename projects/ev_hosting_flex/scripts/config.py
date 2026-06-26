@@ -6,8 +6,8 @@ flattened module-level constants below are the contract: ``_topology.py`` and
 the stage scripts import them directly.
 """
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 ROOT = Path(__file__).parents[3]
 PROJECT_ROOT = ROOT / "projects" / "ev_hosting_flex"
@@ -241,17 +241,35 @@ transformer is resized (project-local in ``_topology.py`` /
 # POWER_FACTOR) above is untouched.
 
 TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX = 0.01
-"""Strict-``<`` primary acceptability gate (D-06): the annual curtailed-energy
+"""RETIRED (Phase 15 RETIRE-02, D-13): the energy-fraction acceptability gate is
+removed from the pipeline path — Phase 15 gates ``flexible_ev_count`` on realized
+``P(overload) ≤ ε`` ALONE; energy is reported, never gated. KEPT importable this
+plan because the retired ``_flexibility.flexible_ev_count`` default + the stage-5
+``apply_flexibility_contracts`` body still reference it; physically deleted in
+Plan 03 when that body + ``_flexibility.py`` are removed (banner-now /
+delete-when-import-gone, Pitfall 3).
+
+Strict-``<`` primary acceptability gate (D-06): the annual curtailed-energy
 fraction must be < 1% for a swept EV count to pass. A point sitting EXACTLY at
 this value does NOT pass (strict ``<``, pinned)."""
 
 TOLERANCE_ACTIVATION_HOURS_MAX = 100
-"""Secondary acceptability gate (D-06): the max total contract activation hours
+"""RETIRED (Phase 15 RETIRE-02, D-13): a secondary energy/activation acceptability
+gate; removed from the pipeline path (reliability-only gating). KEPT importable
+this plan (referenced by ``_flexibility.flexible_ev_count`` default); physically
+deleted in Plan 03 with ``_flexibility.py``.
+
+Secondary acceptability gate (D-06): the max total contract activation hours
 a swept EV count may incur and still pass when ``TOLERANCE_PRIMARY`` selects
 ``"activation_hours"``."""
 
 TOLERANCE_PRIMARY = "curtailed_energy_fraction"
-"""Active acceptability-criterion selector (D-06): the only accepted values are
+"""RETIRED (Phase 15 RETIRE-02, D-13): the energy/activation acceptability-criterion
+selector; removed from the pipeline path (reliability-only gating). KEPT importable
+this plan (referenced by ``_flexibility.flexible_ev_count`` default); physically
+deleted in Plan 03 with ``_flexibility.py``.
+
+Active acceptability-criterion selector (D-06): the only accepted values are
 ``"curtailed_energy_fraction"`` (the default primary strict-``<`` gate) and
 ``"activation_hours"`` (the secondary ``<=`` gate)."""
 
@@ -380,7 +398,14 @@ BG_KW = 1.2
 anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
 
 PLUGIN_WINDOW = (18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7)
-"""Hours an EV is physically present and may host deferred energy (D-11). The
+"""RETIRED (Phase 15 RETIRE-02, D-13): the deferral/availability plug-in window is
+removed from the pipeline path (the controller activates ``a_t = min(r_t,
+required)`` directly, no deferral session machinery). KEPT importable this plan
+because the retired ``_flexibility.flex_deferral``/``flex_power_limited`` legs
+still reference it; physically deleted in Plan 03 with ``_flexibility.py``
+(banner-now / delete-when-import-gone, Pitfall 3).
+
+Hours an EV is physically present and may host deferred energy (D-11). The
 wrap-midnight ~18:00 arrival → ~07:00 departure plug-in window (~11 h plugged vs
 ~2 h charging, CALIBRATION.md §5). Deferral (valley-fill) may only re-place EV
 energy in hours inside this set — NOT a fixed off-peak ``[22..6]`` block (which
@@ -389,7 +414,13 @@ ignores early departures, D-11)."""
 # ─── Monte-Carlo + penetration sweep (D-05/D-07, discretion) ─────────────
 
 K = 1000
-"""Monte-Carlo realizations per penetration point (D-05, Claude's discretion;
+"""RETIRED (Phase 15 RETIRE-02, D-13): the retired annual Monte-Carlo realization
+count. The design-day path uses ``K_DESIGN = 60`` (read from ``q_real.shape[0]``,
+never ``config.K``). KEPT importable this plan because the stage-6
+``solve_twostage_program`` body + ``test_ev_hosting_flex_twostage`` still reference
+it; physically deleted in Plan 02 when stage 6 re-points off the annual stack.
+
+Monte-Carlo realizations per penetration point (D-05, Claude's discretion;
 manuscript used 1500–2000). Default 1000 — the smallest K targeted to keep P95
 stable to the Phase-12 1e-6 baseline while staying fast over 8760 h. Part of the
 reproducibility contract with ``SEED`` (D-13); revisit in Plan 02 if P95 drifts."""
@@ -433,7 +464,12 @@ LV-transformer rating over the K realizations). Replaces the Phase-9 CONG-03
 cold-evening tail. Mirrors the existing ``TOLERANCE_*`` style."""
 
 TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95 = 0.01
-"""Flexible-leg (deferral) acceptability gate (D-12, FLEX-03 successor). The
+"""RETIRED (Phase 15 RETIRE-02, D-13): the deferral energy-fraction acceptability
+gate; removed from the pipeline path (reliability-only gating). KEPT importable
+this plan because the stage-6 ``solve_twostage_program`` body still references it;
+physically deleted in Plan 02 when stage 6 re-points off the deferral path.
+
+Flexible-leg (deferral) acceptability gate (D-12, FLEX-03 successor). The
 irreducible-lost-energy fraction — energy that fits in NEITHER the congested hour
 NOR any in-window valley (the ``remaining`` after valley-fill deferral) divided by
 annual EV demand — must be strict-``<`` 1% at P95 for a swept point to pass. The
@@ -525,7 +561,13 @@ falls back to the oracle and records the divergence."""
 # all-day ceiling) on the locked idx-62 71.25 kW / 7-home unit (Plan 02).
 
 WORKPLACE_WINDOW = (9, 10, 11, 12, 13, 14, 15, 16)
-"""Daytime workplace plug-in window (hours-of-day 9..16, D-05). The same-day
+"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited availability-sweep window
+is removed from the pipeline path (the controller replaces the availability sweep).
+KEPT importable this plan because the stage-5 ``apply_flexibility_contracts`` body +
+``AVAILABILITY_SCENARIOS`` still reference it; physically deleted in Plan 03 when
+that body is removed (banner-now / delete-when-import-gone, Pitfall 3).
+
+Daytime workplace plug-in window (hours-of-day 9..16, D-05). The same-day
 contiguous ``[9-16]`` window an EV is plugged in at the workplace; unlike
 ``PLUGIN_WINDOW`` it does NOT wrap midnight, so its multi-session segmentation is
 a simple same-day run (no evening-anchoring). Power-limiting + unserved-energy
@@ -539,7 +581,12 @@ AVAILABILITY_SCENARIOS = {
     "workplace": (PLUGIN_WINDOW, WORKPLACE_WINDOW),  # ← HEADLINE (D-07)
     "all_day": (tuple(range(24)),),
 }
-"""Ordered availability-scenario session sets for the three-scenario re-baseline
+"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited availability-scenario sweep
+is removed from the pipeline path (the controller replaces it). KEPT importable this
+plan because the stage-5 ``apply_flexibility_contracts`` body still references it;
+physically deleted in Plan 03 when that body is removed.
+
+Ordered availability-scenario session sets for the three-scenario re-baseline
 (D-06/D-07). Each value is a tuple of session windows (each window itself a tuple
 of hour-of-day ints) the power-limited kernel iterates per day. ``"overnight"`` is
 the 18→07 home-only baseline; ``"workplace"`` adds the daytime ``WORKPLACE_WINDOW``
@@ -548,7 +595,12 @@ and is the citable HEADLINE (D-07); ``"all_day"`` is the full-availability ceili
 emission order (Plan 02 wraps the per-penetration K-loop in this scenario loop)."""
 
 TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95 = 0.01
-"""Power-limited flexible-leg acceptability gate (DAYTIME-02). The unserved-energy
+"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited energy-fraction acceptability
+gate; removed from the pipeline path (reliability-only gating). KEPT importable this
+plan because the stage-5 ``apply_flexibility_contracts`` body still references it;
+physically deleted in Plan 03 when that body is removed.
+
+Power-limited flexible-leg acceptability gate (DAYTIME-02). The unserved-energy
 fraction (energy undelivered at throttled power across ALL available session-hours,
 divided by annual EV demand) must be strict-``<`` 1% at P95 for a swept point to
 pass. This ADDS an aliased constant (RESEARCH Pitfall 4) reusing the value 0.01;
@@ -588,7 +640,12 @@ EXTENDED_PENETRATION_SWEEP = PENETRATION_SWEEP + (
     4.9,
     5.0,
 )
-"""Extended EV-per-home penetration grid (0 → 5.0) for the power-limited
+"""RETIRED (Phase 15 RETIRE-02, D-13): the extended power-limited availability sweep
+grid is removed from the pipeline path (the controller replaces the sweep). KEPT
+importable this plan because the stage-5 ``apply_flexibility_contracts`` body still
+references it; physically deleted in Plan 03 when that body is removed.
+
+Extended EV-per-home penetration grid (0 → 5.0) for the power-limited
 availability sweep (DAYTIME-04, Plan 02). APPEND-ONLY — the frozen
 ``PENETRATION_SWEEP`` (0 → 2.0, byte-frozen inside the locked Phase-10.1 block
 above) is left UNEDITED; this constant is ``PENETRATION_SWEEP`` plus the additional
@@ -646,63 +703,14 @@ the unique value satisfying BOTH the cited CF band AND the firm [5, 6] band on
 this 71.25 kW / 7-home idx-62 unit. See ``_stochastic.blend_ev_aggregate`` for the
 byte-stable per-count blend kernel."""
 
-# ─── Cold-load pickup (CLPU) base uplift (260625-pwz, ported from quick 260625-pul) ──
-# APPEND-ONLY block below every locked constant above (everything through
-# ``EV_COINCIDENCE_RHO`` is byte-frozen — do NOT edit any constant above). These
-# knobs port the validated manuscript-prototype cold-load-pickup factor
-# (``manuscripts/ev_hosting_flex/scripts/figures/_clpu.py``, quick 260625-pul) into
-# the GOVERNED base. On cold evenings occupants return home and thermostats recover
-# from daytime setback ~simultaneously: the hourly heating coincidence jumps from
-# its normal thermostatic diversity (~0.5 — about half the baseboards drawing at any
-# instant) toward ~1.0 (all on), briefly lifting the aggregate heating peak. The
-# factor is applied to the HEATING term ONLY (``max(0, T_BALANCE - temp) / R_THERM``)
-# in BOTH ``_stochastic.tmy_base`` and ``_twostage.compose_scenarios``; the
-# occupancy-shaped ``BG_KW`` background and the EV layer are NEVER amplified.
-
-CLPU_PEAK = 1.40
-"""Hourly-averaged evening setback-recovery bump on the per-home heating term
-(260625-pwz). The multiplicative peak the cold-evening recovery window reaches at
-full coldness.
-
-CITABLE BASIS. CALIBRATION.md [2-1] gives winter CLPU ~2.2 p.u. — but that is the
-SUB-HOURLY / post-outage diversity-loss extreme (thermostatic diversity ~0.5
-rising toward 1.0 after a diversity-loss event; PES-PSRC report 075: resistance
-heaters ~50% drawing normally, rising toward 100%). At the HOURLY resolution of
-this governed study the evening setback-recovery bump that lifts the cold-evening
-base from its steady ~62% of rating to the ~80% design point the 75 kVA
-transformer is sized for is ~1.3-1.5; 1.40 is the calibrated hourly value (the
-validated prototype, quick 260625-pul: firm 5->2, base 62%->81%).
-
-CALIBRATION FRAMING. 1.40 lands the coldest-evening feeder-aggregate base at the
-~80% design point — NOT 2.0 (which pushes the base ALONE above the rating → firm 0,
-congesting with zero EVs, unphysical for an HQ-sized unit) and NOT 1.0 (the
-pre-CLPU static grades-day envelope that never spikes, firm an unrealistically
-high 6). At 1.40 the base lands near the design peak so EVs remain the congestion
-trigger. EV_COINCIDENCE_RHO=0.5 (260625-lgg) STAYS unchanged.
-
-DETERMINISM. ``clpu_factor`` is a pure function of (hour-of-day, temperature) —
-no RNG, no global state — so CLPU_PEAK=1.0 reproduces the pre-CLPU base AND the
-two-stage ``required`` ensemble bit-for-bit (the reproducibility guards, pinned in
-``tests/test_ev_hosting_flex_stochastic.py`` against hashes captured BEFORE any
-CLPU edit)."""
-
-CLPU_TEMP_ONSET = -8.0
-"""Outdoor temperature (degC) below which CLPU begins (260625-pwz). Above this the
-heating coincidence is at its normal diversified level (factor 1.0); people heat
-hard and setback recovery synchronizes below it. Prototype ``CLPU_TEMP_ONSET``."""
-
-CLPU_TEMP_FULL = -22.0
-"""Outdoor temperature (degC) at/below which the heating coincidence is fully
-synchronized (260625-pwz) → CLPU reaches ``CLPU_PEAK`` in-window. Between
-``CLPU_TEMP_ONSET`` and this the strength ramps linearly. Prototype
-``CLPU_TEMP_FULL``."""
-
-CLPU_WINDOW = {16: 0.55, 17: 1.00, 18: 0.75, 19: 0.45}
-"""Evening setback-recovery decay weights by hour-of-day (260625-pwz). Each value
-is the fraction of the full ``CLPU_PEAK`` bump applied at that clock hour (1.0 =
-full); hours outside this set get factor 1.0 (no CLPU). The 16→19 ramp-up/decay
-mirrors occupants returning home and thermostats recovering then re-diversifying
-over ~2-3 h. Applied to the HEATING term only. Prototype ``CLPU_WINDOW``."""
+# ─── Cold-load pickup (CLPU) base uplift — DELETED (Phase 15 RETIRE-02, D-13) ──
+# The CLPU base-uplift knobs (CLPU_PEAK / CLPU_TEMP_ONSET / CLPU_TEMP_FULL /
+# CLPU_WINDOW, quick 260625-pwz) are physically REMOVED this plan: their sole
+# consumer ``_stochastic.clpu_factor`` (and the annual ``tmy_base`` that applied
+# it) was deleted in the same plan, and the re-anchored ``_twostage.compose_
+# scenarios`` no longer applies CLPU (D-07: the base is now the emitted Q_design
+# building mean, no CLPU lift). No live consumer remained, so the block is deleted
+# outright rather than bannered.
 
 # ─── Phase-13 (GEN-01..04): generative-MC design-day seam ────────────────
 # APPEND-ONLY block below every locked constant above (everything through
@@ -776,3 +784,41 @@ EVs) so the Phase-14 congestion sweep can overlay any EV count up to this ceilin
 Sized comfortably above the expected firm count (firm=3 at the locked operating
 point; the EV sweep crosses the rating well below 18) per the probe
 ``exp_genseam.py`` (``EV_MAX = 18``)."""
+
+# ─── Phase-15 (CTRL-02, D-03/D-04/D-11): out-of-sample validation knobs ──────
+# APPEND-ONLY block below the Phase-13 design-day seam (everything above is
+# byte-frozen — do NOT edit any constant above). These pin the controller's
+# out-of-sample reliability harness (Plan 03): the reserve r_t is planned on a
+# Q_design-anchored forecast ensemble drawn from the K_DESIGN plan-seed block,
+# then validated on a FRESH DISJOINT Q_real ensemble drawn at controller time
+# with a seed block disjoint from the plan set, plus an adversarial colder-Q_real
+# degradation test. All three knobs are PINNED for Phase-17 byte-stability.
+
+OOS_N = 60
+"""Out-of-sample validation ensemble size N (D-04). Symmetric with ``K_DESIGN``
+(N = K = 60): the realized ``P(overload after activation)`` is evaluated on N
+independent ``Q_real`` realizations drawn at controller time. A larger N (200–500)
+for a tighter ε-tail estimate is a later precision option (D-04); pinned at 60
+here for the symmetric plan/validation budget."""
+
+OOS_SEED_OFFSET = 10000
+"""Disjoint validation seed-block offset (D-03). The out-of-sample ``Q_real``
+ensemble is drawn via ``make_design_day_ensemble(seed=SEED + OOS_SEED_OFFSET)`` so
+every per-realization stream (building ``seed + r``, EV pool ``seed + 7919·r``,
+forecast ``seed + 1``) is disjoint from the ``SEED`` plan/forecast block: 10000 ≫
+K = 60 and avoids the ``7919·r`` EV-pool stride collisions in range (RESEARCH A1),
+making the validation draws genuinely unseen by the plan."""
+
+ADVERSARIAL_DELTA_C = -5.0
+"""Pinned deterministic colder-``Q_real`` temperature offset (°C) for the
+adversarial degradation test (D-11). ``building_realization(..., t_offset=
+ADVERSARIAL_DELTA_C)`` regenerates the validation ``Q_real`` ensemble 5 °C colder;
+the realized ``P(overload)`` is asserted to DEGRADE above ε — quantified and
+REPORTED, never gated to fail (the in-band realized check is the non-adversarial
+assertion)."""
+
+ADV_SEED_OFFSET = 20000
+"""Disjoint adversarial seed-block offset (RESEARCH A4). The adversarial colder
+``Q_real`` ensemble is drawn from ``SEED + ADV_SEED_OFFSET + r`` — a third disjoint
+block distinct from both ``SEED`` (plan) and ``SEED + OOS_SEED_OFFSET`` (the
+in-band validation set) — so the three ensembles stay byte-independent."""
