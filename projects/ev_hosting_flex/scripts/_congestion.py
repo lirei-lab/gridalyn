@@ -60,6 +60,118 @@ def is_congested(
     return loading_pct > float(limit)
 
 
+def transformer_loading(q_total: np.ndarray, rating_kw: float) -> np.ndarray:
+    """Return the transformer loading fraction = (Σ building + Σ EV) / rating.
+
+    The design-day transformer-overload analog of ``proxy_loading`` (CONG-01): the
+    pre-aggregated transformer-load ``q_total`` in kW divided by the modeled usable
+    rating ``rating_kw`` (= ``TRANSFORMER_KVA * POWER_FACTOR`` = 71.25). Float64,
+    same shape as ``q_total``; a loading of ``1.0`` means exactly at rating.
+
+    Args:
+        q_total: Float64 transformer-load array in kW (any shape; aggregated
+            building + EV demand at the feeder transformer).
+        rating_kw: The modeled usable transformer rating in kW (> 0).
+
+    Returns:
+        A float64 ``numpy`` array of loading fractions, same shape as ``q_total``.
+    """
+    return np.asarray(q_total, dtype=DTYPE) / float(rating_kw)
+
+
+def is_overloaded(q_total: np.ndarray, rating_kw: float) -> np.ndarray:
+    """Return the boolean transformer-overload mask under the strict-``>`` rule.
+
+    The SINGLE source of truth for the transformer ``overload`` convention (CONG-01),
+    mirroring ``is_congested`` for the design-day transformer ensemble: a step is
+    overloaded iff its loading fraction strictly EXCEEDS ``1.0``. A step sitting
+    exactly at rating (loading == 1.0) is NOT overloaded. No epsilon. ``p_overload``
+    and ``firm_transformer_count`` route their threshold comparison through THIS
+    helper so the ``>`` vs ``>=`` convention lives in exactly one place.
+
+    Args:
+        q_total: Float64 transformer-load array in kW (any shape).
+        rating_kw: The modeled usable transformer rating in kW (> 0).
+
+    Returns:
+        A boolean ``numpy`` array, same shape as ``q_total``.
+    """
+    return transformer_loading(q_total, rating_kw) > 1.0
+
+
+def p_overload(
+    q_real: np.ndarray, ev_pool: np.ndarray, n_ev: int, rating_kw: float
+) -> float:
+    """Return P(any design-day step overloads) over the K ensemble at ``n_ev`` EVs.
+
+    Overlays the nested cumulative EV pool row ``n_ev`` onto the EV-free building
+    base ``q_real``, reduces ``is_overloaded`` over the step axis with ``.any`` (any
+    step overloads ⇒ the realization overloads), then averages the indicator over
+    the ``K`` realizations (the leading axis). ``K`` is taken from
+    ``q_real.shape[0]`` — never ``config.K`` (CONG-02; the design-day ensemble is
+    ``K_DESIGN`` = 60, not the retired annual 1000).
+
+    Args:
+        q_real: ``(K, n_steps)`` float64 EV-free transformer-load ensemble (kW).
+        ev_pool: ``(K, ev_max + 1, n_steps)`` float64 nested cumulative EV pool;
+            row ``n`` is the aggregate demand of the first ``n`` EVs (kW).
+        n_ev: The EV count to overlay (indexes the EV-pool middle axis).
+        rating_kw: The modeled usable transformer rating in kW (> 0).
+
+    Returns:
+        The overload probability as a plain ``float`` in ``[0, 1]``.
+    """
+    total = (
+        np.asarray(q_real, dtype=DTYPE)
+        + np.asarray(ev_pool, dtype=DTYPE)[:, int(n_ev), :]
+    )  # (K, n_steps)
+    return float(is_overloaded(total, rating_kw).any(axis=1).mean())  # over K
+
+
+def firm_transformer_count(
+    q_real: np.ndarray,
+    ev_pool: np.ndarray,
+    rating_kw: float,
+    tolerance: float,
+    ev_max: int,
+) -> dict[str, Any]:
+    """Return the largest EV count with ``P(overload) <= tolerance`` (CONG-02).
+
+    Sweeps integer EV counts ``n`` in ``range(ev_max + 1)``, accumulating
+    ``P(overload)`` per count into a curve, and assigns ``firm = n`` for EVERY count
+    whose ``P(overload) <= tolerance`` — a LAST-IN-TOLERANCE accumulation with NO
+    early break. This is the CRITICAL semantic difference from the retired
+    ``firm_ev_count`` (which breaks on the first overload): the nested cumulative EV
+    pool makes ``P(overload)`` monotonic non-decreasing in ``n``, so "largest with
+    ``P <= tol``" is the well-defined firm denominator. Copying the first-overload
+    break would give a different (wrong) answer on a curve that re-enters tolerance.
+
+    Args:
+        q_real: ``(K, n_steps)`` float64 EV-free transformer-load ensemble (kW).
+        ev_pool: ``(K, ev_max + 1, n_steps)`` float64 nested cumulative EV pool.
+        rating_kw: The modeled usable transformer rating in kW (> 0).
+        tolerance: The firm ``P(overload)`` tolerance (``FIRM_PCONG_TOLERANCE``).
+        ev_max: The maximum EV count (the EV-pool middle axis is ``ev_max + 1``).
+
+    Returns:
+        ``{firm_ev_count (int), p_overload_curve (list[float]), ev_sweep
+        (list[int]), threshold_convention ("strict_gt_rating")}``.
+    """
+    firm = 0
+    p_curve: list[float] = []
+    for n in range(int(ev_max) + 1):
+        p = p_overload(q_real, ev_pool, n, rating_kw)
+        p_curve.append(p)
+        if p <= float(tolerance):
+            firm = n  # last-in-tolerance: keep updating, NO break (CONG-02)
+    return {
+        "firm_ev_count": int(firm),
+        "p_overload_curve": [float(v) for v in p_curve],
+        "ev_sweep": list(range(int(ev_max) + 1)),
+        "threshold_convention": "strict_gt_rating",
+    }
+
+
 def feeder_elements(
     downstream_map: Mapping[str, Sequence[int]], feeder_key: str
 ) -> tuple[list[str], list[int]]:

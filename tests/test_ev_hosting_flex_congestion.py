@@ -23,8 +23,12 @@ from projects.ev_hosting_flex.scripts._congestion import (
     feeder_elements,
     firm_ev_count,
     firm_pcong_count,
+    firm_transformer_count,
     is_congested,
+    is_overloaded,
+    p_overload,
     proxy_loading,
+    transformer_loading,
 )
 
 # ─── Hand-computed 3-element x 4-hour fixture ────────────────────────────────
@@ -444,3 +448,101 @@ def test_derive_congestion_firm_pcong_and_p95(tmp_path: Path) -> None:
     p95 = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_p95.parquet")
     firm = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_firm.parquet")
     assert p95.shape == firm.shape
+
+
+# ─── Phase-14 transformer-overload kernel (CONG-01/02) — cache-free fixtures ──
+# Hand-built (K, n_steps) building base + (K, ev_max+1, n_steps) nested cumulative
+# EV pool so P(overload) at each EV count is an exactly-countable k/K and the firm
+# crossing is hand-computed. The rating is the pf-pinned modeled rating analog.
+
+_TR_RATING = 100.0  # a round rating so loading == q_total / 100 is by-eye exact.
+
+
+class TestTransformerOverloadKernel:
+    """CONG-01/02: strict-> overload boundary + last-in-tolerance firm sweep."""
+
+    def test_transformer_loading_is_q_over_rating(self) -> None:
+        """loading = (Σ building + Σ EV) / rating, float64 (CONG-01)."""
+        q_total = np.array([[50.0, 100.0, 150.0]], dtype="float64")
+        loading = transformer_loading(q_total, _TR_RATING)
+        assert str(loading.dtype) == "float64"
+        np.testing.assert_allclose(loading, [[0.5, 1.0, 1.5]])
+
+    def test_is_overloaded_strict_gt_rating(self) -> None:
+        """A step EXACTLY at rating (loading == 1.0) is NOT overloaded (strict >)."""
+        # 99.999 -> below, 100.0 -> exactly at rating (NOT overloaded), 100.001 -> over.
+        q_total = np.array([99.999, 100.0, 100.001], dtype="float64")
+        flags = is_overloaded(q_total, _TR_RATING)
+        assert list(flags) == [False, False, True]
+
+    def test_p_overload_over_k_ensemble(self) -> None:
+        """P(overload) = mean over K of any-step overload at EV count n_ev.
+
+        K=4 realizations, 2 steps. base sits at exactly rating (loading 1.0, NOT
+        overloaded). The nested EV pool at n_ev=1 adds a +1.0 kW spike on the first
+        3 of 4 realizations -> 3/4 = 0.75 overload over K. n_ev=0 adds nothing.
+        """
+        rating = _TR_RATING
+        q_real = np.full((4, 2), rating, dtype="float64")  # loading exactly 1.0
+        # ev_pool[:, 0, :] = 0 (no EV); ev_pool[:, 1, :] spikes first 3 realizations.
+        ev_pool = np.zeros((4, 2, 2), dtype="float64")
+        ev_pool[:3, 1, 0] = 1.0  # tips loading > 1 on 3/4 realizations at n_ev=1
+        assert p_overload(q_real, ev_pool, 0, rating) == 0.0  # at-rating, strict >
+        assert p_overload(q_real, ev_pool, 1, rating) == 0.75
+
+    def test_p_overload_reads_k_from_array_not_config(self) -> None:
+        """P(overload) is averaged over q_real.shape[0], never config.K (=1000)."""
+        rating = _TR_RATING
+        # Only K=5 realizations; if the kernel used config.K=1000 the mean would be
+        # diluted to 3/1000 instead of 3/5.
+        q_real = np.full((5, 2), rating, dtype="float64")
+        ev_pool = np.zeros((5, 2, 2), dtype="float64")
+        ev_pool[:3, 1, 0] = 1.0
+        assert q_real.shape[0] == 5
+        np.testing.assert_allclose(p_overload(q_real, ev_pool, 1, rating), 3.0 / 5.0)
+
+    def test_firm_transformer_count_last_in_tolerance_no_break(self) -> None:
+        """firm = LARGEST n with P(overload) <= tol — NOT the first-overload break.
+
+        Designed so a first-overload BREAK would give a DIFFERENT answer than
+        last-in-tolerance. The P(overload) curve is engineered NON-MONOTONIC across
+        the swept counts (a dip back into tolerance after a brief excursion):
+
+          n=0 -> P=0.0   (<= 0.10, in tol)
+          n=1 -> P=0.2   (>  0.10, OUT of tol)  <- a break would stop here, firm=0
+          n=2 -> P=0.0   (<= 0.10, in tol)      <- last-in-tolerance keeps going
+          n=3 -> P=0.4   (>  0.10, OUT of tol)
+
+        last-in-tolerance => firm = 2 (the LARGEST n still <= tol).
+        A first-overload break => firm = 0. The two disagree, pinning the semantics.
+        """
+        rating = _TR_RATING
+        K = 5
+        n_steps = 1
+        ev_max = 3
+        q_real = np.full((K, n_steps), rating, dtype="float64")  # loading exactly 1.0
+        ev_pool = np.zeros((K, ev_max + 1, n_steps), dtype="float64")
+        # n=0: no spike -> P=0.0
+        # n=1: spike 1/5 realizations -> P=0.2
+        ev_pool[:1, 1, 0] = 1.0
+        # n=2: NO spike -> P=0.0 (dips back into tolerance)
+        # n=3: spike 2/5 realizations -> P=0.4
+        ev_pool[:2, 3, 0] = 1.0
+
+        result = firm_transformer_count(q_real, ev_pool, rating, 0.10, ev_max)
+        assert result["firm_ev_count"] == 2  # last-in-tolerance, NOT the break's 0
+        np.testing.assert_allclose(result["p_overload_curve"], [0.0, 0.2, 0.0, 0.4])
+        assert list(result["ev_sweep"]) == [0, 1, 2, 3]
+        assert result["threshold_convention"] == "strict_gt_rating"
+
+    def test_firm_transformer_count_return_contract(self) -> None:
+        """firm_transformer_count returns the typed dict the stage consumes."""
+        rating = _TR_RATING
+        q_real = np.full((3, 1), rating * 0.5, dtype="float64")  # loading 0.5
+        ev_pool = np.zeros((3, 3, 1), dtype="float64")  # ev_max = 2, no overload
+        result = firm_transformer_count(q_real, ev_pool, rating, 0.10, 2)
+        assert isinstance(result["firm_ev_count"], int)
+        assert result["firm_ev_count"] == 2  # never overloads -> firm = ev_max
+        assert all(isinstance(v, float) for v in result["p_overload_curve"])
+        assert result["ev_sweep"] == [0, 1, 2]
+        assert result["threshold_convention"] == "strict_gt_rating"
