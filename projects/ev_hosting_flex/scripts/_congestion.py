@@ -313,7 +313,9 @@ def congestion_metrics(
     congested = is_congested(loading_pct, limit)
     overload_kw = np.where(congested, elem_demand - elem_kw[:, None], 0.0)
     metrics: dict[str, Any] = {
-        "max_line_loading_percent": float(round(float(loading_pct.max()), ROUND_DECIMALS)),
+        "max_line_loading_percent": float(
+            round(float(loading_pct.max()), ROUND_DECIMALS)
+        ),
         "n_congested_lines": int(congested.any(axis=1).sum()),
         "congested_line_hours": int(congested.sum()),
         "congested_hours_per_year": int(congested.any(axis=0).sum()),
@@ -445,9 +447,10 @@ def firm_pcong_count(
     Args:
         base: ``(n_bus, n_hour)`` float64 base demand in kW (the TMY base).
         ev_stack: ``(K, n_bus, n_hour)`` float64 stochastic EV K-realization unit
-            stack (from ``_stochastic.ev_realizations``); ``ev_stack[k]`` is one
-            realization's per-bus EV unit shape (per EV-per-home). Used only on the
-            legacy coincident path (``blend_fn=None``).
+            stack (the legacy annual EV sampler that fed this helper was retired in
+            Phase 15 RETIRE-02); ``ev_stack[k]`` is one realization's per-bus EV
+            unit shape (per EV-per-home). Used only on the legacy coincident path
+            (``blend_fn=None``).
         alloc_fn: ``penetration -> (n_bus,)`` float64 per-bus EV allocation; the
             realization unit shape is scaled by ``alloc_fn(p)[:, None]``.
         indicator: ``(n_elem, n_bus)`` float64 downstream matrix.
@@ -475,8 +478,8 @@ def firm_pcong_count(
             "firm_pcong_count received an ev_stack with ndim="
             f"{ev_stack.ndim} (shape {ev_stack.shape}); it must be a 3-D "
             "(K, n_bus, n_hour) Monte-Carlo realization stack. Remediation: pass "
-            "the stack from _stochastic.ev_realizations(rng, K, n_ev=..., "
-            "n_bus=n_bus)."
+            "a (K, n_bus, n_hour) EV realization stack (the legacy annual sampler "
+            "was retired in Phase 15 RETIRE-02)."
         )
     k_realizations = int(ev_stack.shape[0])
     n_bus = int(base.shape[0])

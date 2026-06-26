@@ -248,15 +248,23 @@ def test_eps_frontier_monotone_in_stage() -> None:
 
 
 def test_retired_kernel_symbols_deleted() -> None:
-    """RETIRE-02: cold_day_temp / annual_twostage_headline are physically gone."""
+    """RETIRE-02 fully closed: the annual generation seam is physically gone."""
     import projects.ev_hosting_flex.scripts._stochastic as stoch
     import projects.ev_hosting_flex.scripts._twostage as ts
 
     assert not hasattr(ts, "cold_day_temp")
     assert not hasattr(ts, "annual_twostage_headline")
-    # blend_ev_per_bus had no live consumer after Plan 02 — deleted; the kept MDPI
-    # primitives + the still-live blend_ev_aggregate/tmy_start_hod survive.
-    assert not hasattr(stoch, "blend_ev_per_bus")
+    # Plan 03 re-pointed the stage-5 controller off the annual EV sampler, so its
+    # last consumers are gone: blend_ev_per_bus (Plan 02) AND the now-orphaned
+    # tmy_start_hod / ev_realizations / blend_ev_aggregate are all deleted. Only the
+    # per-session MDPI primitives _generators.ev_nested_pool reuses survive.
+    for gone in (
+        "blend_ev_per_bus",
+        "tmy_start_hod",
+        "ev_realizations",
+        "blend_ev_aggregate",
+    ):
+        assert not hasattr(stoch, gone), gone
     for kept in ("_ev_day", "_session", "_occ", "mc_p95"):
         assert hasattr(stoch, kept), kept
 

@@ -30,7 +30,9 @@ from projects.ev_hosting_flex.scripts.config import (
     OOS_SEED_OFFSET,
     SEED,
 )
-from projects.ev_hosting_flex.scripts.pipeline import apply_flexibility_contracts as ctrl
+from projects.ev_hosting_flex.scripts.pipeline import (
+    apply_flexibility_contracts as ctrl,
+)
 
 _EV_SEED_STRIDE = 7919  # mirrors _generators._EV_SEED_STRIDE (RESEARCH A1).
 
@@ -139,9 +141,11 @@ def test_disjoint_seed_blocks_do_not_intersect() -> None:
     plan = plan_bld | plan_ev | plan_fcast
 
     oos_seed = SEED + OOS_SEED_OFFSET
-    oos = {oos_seed + r for r in range(n)} | {
-        oos_seed + _EV_SEED_STRIDE * r for r in range(n)
-    } | {oos_seed + 1}
+    oos = (
+        {oos_seed + r for r in range(n)}
+        | {oos_seed + _EV_SEED_STRIDE * r for r in range(n)}
+        | {oos_seed + 1}
+    )
 
     adv_seed = SEED + ADV_SEED_OFFSET
     adv = {adv_seed + r for r in range(n)}
@@ -219,13 +223,34 @@ _HAS_CACHE = (
 
 @pytest.mark.skipif(not _HAS_CACHE, reason="design-day cache absent (gitignored)")
 def test_controller_stage_end_to_end() -> None:
-    """The full governed controller stage runs and emits a re-baselined headline."""
+    """The governed controller stage emits the HONEST out-of-sample finding.
+
+    User Option-A authorization (2026-06-26): on this calibration the two-stage
+    controller does NOT expand hosting above firm out-of-sample — the honest
+    negative result is flexible_ev_count=2 < firm_ev_count=3 (a FALSIFIED
+    'flexible > firm' hypothesis, the D-02 forecast-blindness finding). The test
+    asserts that honest outcome, the reliability gate holding AT the flexible
+    count (realized <= eps with a_t <= r_t), the adversarial degradation, a sane
+    resource-value ratio (CTRL-03), and the prominent harder_truth note — NOT an
+    impossible flexible > firm gate.
+    """
     report = ctrl.run_stage()
     summary = report["summary"]
     assert summary["firm_ev_count"] == 3  # read, never re-run
-    assert summary["flexible_ev_count"] > summary["firm_ev_count"]
-    assert summary["hosting_expansion_percent"] > 0.0
+    # The honest finding (Option-A): flexible < firm, negative hosting expansion.
+    assert summary["flexible_ev_count"] == 2
+    assert summary["flexible_ev_count"] < summary["firm_ev_count"]
+    assert summary["hosting_expansion_percent"] < 0.0
+    assert summary["hosting_expansion_percent"] == pytest.approx(-1.0 / 3.0, abs=1e-5)
+    # The reliability gate still holds AT the (smaller) flexible count.
     assert summary["realized_p_overload_at_flexible"] <= EPS_HEADLINE
     # adversarial degrades above the non-adversarial realized value (reported).
-    assert summary["adversarial_p_overload"] >= summary["realized_p_overload_at_flexible"]
+    assert (
+        summary["adversarial_p_overload"] >= summary["realized_p_overload_at_flexible"]
+    )
+    # Phase-16 totals + a sane resource-value ratio are emitted (CTRL-03/D-12).
     assert "sum_r" in summary and "e_sum_a" in summary
+    assert 0.0 <= summary["ratio_e_sum_a_over_sum_r"] <= 1.0 + 1e-9
+    # The harder-truth (D-02 forecast-blindness) note is surfaced prominently.
+    assert "HARDER TRUTH" in summary["harder_truth"]
+    assert summary["harder_truth"] in report["validation"]["warnings"]
