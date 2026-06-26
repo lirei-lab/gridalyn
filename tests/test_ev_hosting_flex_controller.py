@@ -16,6 +16,7 @@ GUARD-02: numpy-only at module scope; this test never ``import pandapower``.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +29,7 @@ from projects.ev_hosting_flex.scripts.config import (
     K_DESIGN,
     OOS_N,
     OOS_SEED_OFFSET,
+    PROJECT_ROOT,
     SEED,
 )
 from projects.ev_hosting_flex.scripts.pipeline import (
@@ -234,7 +236,12 @@ def test_controller_stage_end_to_end() -> None:
     resource-value ratio (CTRL-03), and the prominent harder_truth note — NOT an
     impossible flexible > firm gate.
     """
-    report = ctrl.run_stage()
+    cwd = os.getcwd()
+    try:
+        os.chdir(PROJECT_ROOT)
+        report = ctrl.run_stage()
+    finally:
+        os.chdir(cwd)
     summary = report["summary"]
     assert summary["firm_ev_count"] == 3  # read, never re-run
     # The honest finding (Option-A): flexible < firm, negative hosting expansion.
