@@ -88,6 +88,13 @@ def _occ(hour: np.ndarray) -> np.ndarray:
 def clpu_factor(hod: np.ndarray, temp: np.ndarray) -> np.ndarray:
     """Return the multiplicative cold-load-pickup factor on the heating term (>= 1).
 
+    RETIRED-AS-BASE (Phase 13 RETIRE-01): the annual degree-day base generator
+    (``tmy_base``) that applied this CLPU factor is removed from the new pipeline
+    path (the design-day MC seam in ``_generators.py`` recalibrates the SDK
+    building agent instead — no CLPU). The FUNCTION is NOT deleted: it is still
+    imported by ``_twostage.compose_scenarios`` (the two-stage program), so it is
+    KEPT importable. Only its use as the annual-base coincidence lift is retired.
+
     On cold evenings occupants return home and thermostats recover from daytime
     setback ~simultaneously: the hourly heating coincidence jumps from its normal
     thermostatic diversity (~0.5) toward ~1.0, briefly lifting the aggregate
@@ -134,6 +141,15 @@ def tmy_base(
     df: pd.DataFrame | None = None,
 ) -> np.ndarray:
     """Return the per-bus TMY heating-degree annual base load in kW.
+
+    RETIRED (Phase 13 RETIRE-01): the annual 8760h degree-day base generator is
+    REMOVED from the new pipeline path — the design-day MC seam
+    (``_generators.make_design_day_ensemble``) supersedes it with the SDK building
+    agent recalibrated to the Québec archetype over the binding cold design day.
+    The function body is KEPT importable (not physically deleted) because the
+    Phase-14 ``compute_congestion`` retarget is its last remaining consumer; it is
+    physically deleted in Phase 14 when that consumer migrates. Do NOT route the
+    new pipeline through this generator.
 
     Per-home load = ``BG_KW * _occ(hod) + max(0, T_BALANCE - temp) / R_THERM``,
     read network-free from the committed Trois-Rivieres TMY (D-08/D-09). The
@@ -197,6 +213,11 @@ def tmy_base(
 
 def tmy_start_hod(*, df: pd.DataFrame | None = None) -> int:
     """Return the committed TMY's first-row clock hour-of-day (the canonical phase).
+
+    RETIRED (Phase 13 RETIRE-01): part of the annual-tiling generation path
+    (``ev_realizations`` phase alignment) the design-day MC seam supersedes. KEPT
+    importable for the not-yet-migrated Phase-14/15 consumers; physically deleted
+    when its last consumer (the annual ``ev_realizations`` path) migrates.
 
     The TMY annual series is the canonical clock for the whole pipeline: it carries
     real timestamps, so its array index ``i`` maps to clock hour-of-day
@@ -296,6 +317,14 @@ def ev_realizations(
 ) -> np.ndarray:
     """Return a byte-stable stochastic EV K-realization stack in kW.
 
+    RETIRED (Phase 13 RETIRE-01): the annual daily-shape-tiled EV generation path
+    is REMOVED from the new pipeline — the design-day MC seam draws the
+    nested/cumulative MDPI EV pool over the design day instead
+    (``_generators.ev_nested_pool``, reusing the kept ``_session``/``_ev_day``
+    primitives). KEPT importable (not physically deleted) because
+    ``blend_ev_aggregate``/``blend_ev_per_bus`` and the Phase-14/15 stages still
+    consume it; physically deleted when its last consumer migrates.
+
     Builds ``k`` independent Monte-Carlo realizations from a SINGLE seeded
     ``rng`` drawn in the pinned per-EV order (see ``_ev_day``); each realization
     is the daily evening EV shape PHASE-ALIGNED to the TMY clock then tiled across
@@ -351,6 +380,13 @@ def blend_ev_aggregate(
     k: int | None = None,
 ) -> np.ndarray:
     """Return the partial-coincidence ρ-blended per-feeder EV aggregate (kW).
+
+    RETIRED (Phase 13 RETIRE-01): the annual EV-aggregate blend over the tiled
+    ``ev_realizations`` stack is REMOVED from the new pipeline path — the
+    design-day MC seam exposes the nested-EV pool the Phase-14 sweep overlays
+    directly. KEPT importable (not physically deleted) because the Phase-14/15
+    stages (``compute_congestion``/``apply_flexibility_contracts`` retargets) are
+    its last consumers; physically deleted when they migrate.
 
     Replaces the implicit full-coincidence ``count · ev_unit`` pattern at the four
     EV-demand consume sites (EV-COINCIDENCE-RECAL). For an integer EV ``count`` and
@@ -443,12 +479,12 @@ def blend_ev_aggregate(
     # Per-count byte-stable, sweep-order-independent independent aggregate. The
     # SeedSequence([seed, count]) child keys the draw to THIS count only, drawn in
     # the SAME pinned per-EV order as the coincident unit (ev_realizations/_ev_day).
-    rng_count = np.random.default_rng(
-        np.random.SeedSequence([int(seed), n_count])
-    )
+    rng_count = np.random.default_rng(np.random.SeedSequence([int(seed), n_count]))
     independent = ev_realizations(
         rng_count, k_eff, n_ev=n_count, n_bus=1, start_hod=start_hod
-    )[:, 0, :]  # (K, 8760) — count independent per-EV days summed
+    )[
+        :, 0, :
+    ]  # (K, 8760) — count independent per-EV days summed
     blended = coincident + (1.0 - rho_f) * independent
     return blended.astype(DTYPE)
 
@@ -462,6 +498,11 @@ def blend_ev_per_bus(
     start_hod: int = 0,
 ) -> np.ndarray:
     """Return the ρ-blended per-bus EV demand stack ``(K, n_bus, 8760)`` (kW).
+
+    RETIRED (Phase 13 RETIRE-01): the annual per-bus EV blend is REMOVED from the
+    new pipeline path (the design-day MC seam supersedes the per-bus annual
+    distribution). KEPT importable for the not-yet-migrated Phase-14/15 consumers;
+    physically deleted when its last consumer migrates.
 
     Builds the byte-stable partial-coincidence FEEDER aggregate for the integer EV
     count ``round(sum(per_bus_ev))`` via :func:`blend_ev_aggregate`, then

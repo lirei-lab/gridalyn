@@ -1,5 +1,18 @@
 """Deterministic annual-profile numeric kernel for ev_hosting_flex.
 
+RETIRED (Phase 13 RETIRE-01, dependency-aware quarantine). The deterministic
+annual GENERATION functions in this module — ``winter_factor`` / ``daily_factor``
+/ ``weekly_factor`` / ``base_load_8760`` / ``ev_unit_profile`` — are DEAD
+generation code, removed from the new pipeline path (the Phase-13 design-day MC
+seam in ``_generators.py`` supersedes the whole annual-base/EV-unit envelope).
+They carry RETIRED banners but are NOT physically deleted yet: ``allocate_ev_per_bus``
+is a KEPT per-bus allocation helper hard-imported by the Phase-14/15 stages
+(``compute_congestion`` / ``apply_flexibility_contracts``), so deleting the module
+would break those not-yet-migrated consumers. The full physical deletion of this
+module completes in the phase that migrates ``allocate_ev_per_bus``'s last consumer
+(RETIRE-01 closes across 13→14→15 as the consumers retarget). Do NOT route the new
+pipeline through the annual generators below.
+
 Implements GAP-3 (the SDK has no annual one-call 8760h harness): a pure-numpy,
 float64, seed-free parametric base building-load envelope + a deterministic
 evening-window EV charging unit profile + a largest-remainder per-bus EV
@@ -53,6 +66,10 @@ _WEEKLY = np.asarray(WEEKLY_PATTERN, dtype=DTYPE)
 def winter_factor(hour_of_year: np.ndarray) -> np.ndarray:
     """Return the float64 seasonal multiplier per hour, winter-peaked.
 
+    RETIRED (Phase 13 RETIRE-01): dead annual-generation helper for the removed
+    ``base_load_8760`` envelope; kept importable until the module is physically
+    deleted (when ``allocate_ev_per_bus``'s last consumer migrates in Phase 14/15).
+
     A deterministic cosine over the year interpolating between
     ``SUMMER_TROUGH_FACTOR`` (mid-year, ~July) and ``WINTER_PEAK_FACTOR``
     (year ends, Jan/Dec). Because the seasonal term depends only on day-of-year,
@@ -76,6 +93,9 @@ def winter_factor(hour_of_year: np.ndarray) -> np.ndarray:
 def daily_factor(hour_of_year: np.ndarray) -> np.ndarray:
     """Return the float64 daily-shape coefficient per hour.
 
+    RETIRED (Phase 13 RETIRE-01): dead annual-generation helper for the removed
+    ``base_load_8760`` envelope; kept importable until physical deletion.
+
     Indexes ``DAILY_PATTERN`` by ``hour_of_year % 24`` (D-03).
 
     Args:
@@ -90,6 +110,9 @@ def daily_factor(hour_of_year: np.ndarray) -> np.ndarray:
 
 def weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
     """Return the float64 weekly-shape coefficient per hour.
+
+    RETIRED (Phase 13 RETIRE-01): dead annual-generation helper for the removed
+    ``base_load_8760`` envelope; kept importable until physical deletion.
 
     Weekday = ``((hour_of_year // 24) + CALENDAR_START_WEEKDAY) % 7`` (Mon=0),
     indexing ``WEEKLY_PATTERN`` (D-03).
@@ -107,11 +130,12 @@ def weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
 def base_load_8760(nameplate_kw: np.ndarray) -> np.ndarray:
     """Return the deterministic per-bus annual base building load in kW.
 
-    DEPRECATED (D-14): superseded by ``_stochastic.tmy_base`` — the base is now
-    TMY temperature-driven (heating-degree model over the committed
-    Trois-Rivieres TMY), not this weather-free parametric winter envelope. Body
-    left intact / diffable (Pitfall 6); imports are removed only when the
-    deterministic stage path is retired (Plan 03/04).
+    DEPRECATED (D-14) / RETIRED (Phase 13 RETIRE-01): superseded first by
+    ``_stochastic.tmy_base`` (TMY heating-degree base) and now by the Phase-13
+    design-day MC seam (``_generators.make_design_day_ensemble``). Removed from the
+    new pipeline path; body left intact / diffable (Pitfall 6) and kept importable
+    until the module is physically deleted when ``allocate_ev_per_bus``'s last
+    consumer migrates in Phase 14/15.
 
     ``(n_bus, CALENDAR_HOURS)`` float64 =
     ``nameplate_kw[:, None] * winter(hours) * daily(hours) * weekly(hours)``.
@@ -134,12 +158,11 @@ def base_load_8760(nameplate_kw: np.ndarray) -> np.ndarray:
 def ev_unit_profile() -> np.ndarray:
     """Return the deterministic per-EV evening-window annual unit draw in kW.
 
-    DEPRECATED (D-14): superseded by ``_stochastic.ev_realizations`` — the EV
-    layer is now a calibrated stochastic K-realization sampler (charger mix,
-    lognormal session energy, evening arrivals, plug-in probability), not this
-    flat deterministic evening-window unit profile. Body left intact / diffable
-    (Pitfall 6); imports are removed only when the deterministic stage path is
-    retired (Plan 03/04).
+    DEPRECATED (D-14) / RETIRED (Phase 13 RETIRE-01): superseded first by
+    ``_stochastic.ev_realizations`` (stochastic K-realization sampler) and now by
+    the Phase-13 design-day MC seam (``_generators.ev_nested_pool``). Removed from
+    the new pipeline path; body left intact / diffable (Pitfall 6) and kept
+    importable until the module is physically deleted in Phase 14/15.
 
     A fixed 24h window shape (flat inside ``CHARGING_WINDOW``, zero outside) tiled
     across 365 days and scaled by ``EV_UNIT_KW * DIVERSITY_FACTOR``. Flat/
@@ -157,6 +180,12 @@ def ev_unit_profile() -> np.ndarray:
 
 def allocate_ev_per_bus(total_ev: int, building_count: np.ndarray) -> np.ndarray:
     """Distribute ``total_ev`` across buses proportional to building count.
+
+    KEPT (Phase 13 RETIRE-01): this is NOT dead annual-generation code — it is a
+    generic per-bus EV allocation helper hard-imported by the Phase-14/15 stages
+    (``compute_congestion`` / ``apply_flexibility_contracts``). It survives the
+    RETIRE-01 quarantine intact; it is the reason ``_profiles.py`` is not physically
+    deleted in Phase 13.
 
     Largest-remainder (Hamilton) method over SORTED-bus order: floor the
     proportional shares, then assign the leftover one EV at a time to the buses
