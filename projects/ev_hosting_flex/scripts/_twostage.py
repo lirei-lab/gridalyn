@@ -51,13 +51,11 @@ from projects.ev_hosting_flex.scripts._stochastic import _ev_day
 from projects.ev_hosting_flex.scripts.config import (
     C_ACTIVATE,
     C_RESERVE,
-    CALENDAR_HOURS,
     DTYPE,
     EPS_SHOW,
     K_DESIGN,
     SIGMA_DAILY,
     SIGMA_HOURLY,
-    TMY_INPUT_PATH,
     TWOSTAGE_SOLVER,
 )
 
@@ -114,69 +112,11 @@ def twostage_oracle(required: np.ndarray, eps: float) -> dict[str, Any]:
         "r": r,
         "a": a,
         "rel_hour": float(1.0 - (residual > _RESIDUAL_TOL).mean()),  # D-05
-        "rel_day": float(
-            1.0 - (residual.max(axis=1) > _RESIDUAL_TOL).mean()
-        ),
+        "rel_day": float(1.0 - (residual.max(axis=1) > _RESIDUAL_TOL).mean()),
         "reservation_cost": float(C_RESERVE * r.sum()),
         "activation_cost": float(C_ACTIVATE * a.sum(axis=1).mean()),
         "activated_mean_kwh": float(a.sum(axis=1).mean()),
     }
-
-
-def cold_day_temp(
-    *, df: pd.DataFrame | None = None
-) -> tuple[np.ndarray, np.ndarray]:
-    """Return the 24h temperature + hour-of-day window at the annual coldest day.
-
-    RETIRED (Phase 15 RETIRE-02, D-07): the cold-day temperature + CLPU heating
-    base path is REMOVED from the re-anchored ``compose_scenarios`` — the two-stage
-    forecast ensemble is now anchored on the emitted ``Q_design`` building mean (a
-    kW trajectory), not a TMY cold-day temperature reconstruction. This function is
-    KEPT importable this plan because the stage-6 ``solve_twostage_program`` body
-    still references it until Plan 02 re-points stage 6 onto ``Q_design``; it is
-    physically deleted in Plan 02 when that last consumer migrates. Do NOT route the
-    re-anchored controller/program through this cold-day base.
-
-    Reads the committed project-local TMY (network-free; never an auto/download
-    source) and returns the day-aligned 24h slice containing the annual coldest
-    hour, the cold winter day the day-ahead forecast ensemble perturbs (D-03).
-    Mirrors ``twostage_prototype.py:_cold_day_temp`` L61-67 and validates columns
-    the way ``_stochastic.tmy_base`` does (V5, located + remediating).
-
-    Args:
-        df: Optional pre-loaded TMY frame (tests inject fixtures); when ``None``
-            the committed ``TMY_INPUT_PATH`` CSV is read.
-
-    Returns:
-        ``(temp, hod)``: a 24-length float64 temperature vector and a 24-length
-        int hour-of-day vector for the annual coldest day.
-
-    Raises:
-        ValueError: If the TMY is missing ``temp_air``/``timestamp`` or has fewer
-            than ``CALENDAR_HOURS`` rows (never silently truncating).
-    """
-    if df is None:
-        df = pd.read_csv(TMY_INPUT_PATH)
-    missing = [c for c in ("timestamp", "temp_air") if c not in df.columns]
-    if missing:
-        raise ValueError(
-            "cold_day_temp received a TMY frame missing required column(s) "
-            f"{missing} (have {list(df.columns)}); cannot locate the cold day. "
-            f"Remediation: re-copy the committed TMY at {TMY_INPUT_PATH} with "
-            "'timestamp' and 'temp_air' columns (PVGIS SARAH-3 schema)."
-        )
-    if len(df) < CALENDAR_HOURS:
-        raise ValueError(
-            f"cold_day_temp received a short TMY frame ({len(df)} rows); it needs "
-            f"at least {CALENDAR_HOURS} hourly rows and refuses to silently "
-            f"truncate. Remediation: re-copy the full {CALENDAR_HOURS}-row "
-            f"committed TMY at {TMY_INPUT_PATH}."
-        )
-    df = df.iloc[:CALENDAR_HOURS]
-    temp = df["temp_air"].to_numpy(DTYPE)
-    hod = df["timestamp"].astype(str).str.slice(11, 13).astype(int).to_numpy()
-    start = int(np.argmin(temp)) // 24 * 24  # day-aligned to a 0..23 window
-    return temp[start : start + 24], hod[start : start + 24]
 
 
 def compose_scenarios(
@@ -454,98 +394,4 @@ def coldday_panel(required: np.ndarray, *, eps: float = EPS_SHOW) -> dict[str, A
         "a_mean": a_mean,
         "req_p50": np.quantile(req, 0.5, axis=0, method="linear"),
         "req_p90": np.quantile(req, 0.9, axis=0, method="linear"),
-    }
-
-
-def annual_twostage_headline(
-    base: np.ndarray,
-    ev_stack: np.ndarray,
-    feeder_indicator: np.ndarray,
-    feeder_kw: float,
-    *,
-    eps: float,
-    downstream_home_count: int,
-    firm_ev_count: int,
-    flexible_ev_count: int,
-) -> dict[str, Any]:
-    """Return the optimal annual hosting headline, streaming per day (D-09, Pitfall 3).
-
-    RETIRED (Phase 15 RETIRE-02, D-07): the annual 8760h two-stage headline is
-    REMOVED from the new design-day pipeline path — Phase 15 derives the hosting
-    headline from the design-day controller (``apply_flexibility_contracts`` on the
-    emitted ``Q_design``/``Q_real`` ensemble, Plan 03) and stage 6 keeps only the
-    eps-frontier + cvxpy↔oracle proof (Plan 02). This function is KEPT importable
-    this plan because the stage-6 ``solve_twostage_program`` body still references
-    it until Plan 02 re-points stage 6; it is physically deleted in Plan 02 when
-    that last consumer migrates. Do NOT route the new pipeline through this annual
-    headline.
-
-    STREAMS per day over the full annual 8760h — NEVER materializing the
-    ``(365, n_scen, 24)`` cube (Pitfall 3). For each of the 365 days it builds the
-    per-day ``required`` ensemble from the deterministic per-day base slice
-    (projected onto the feeder via ``feeder_indicator @ base``) broadcast against
-    the EV scenario stack, takes the per-hour ``Q_{1−ε}`` reserve, activates, and
-    accumulates the annual activated energy and per-day reserved peak as scalars.
-    The hosting headline (``hosting_expansion_percent``) is the optimal
-    ``flexible_ev_count`` (re-derived under this scheme at ``eps`` by the caller)
-    over the firm count (D-02).
-
-    Args:
-        base: ``(n_bus, 8760)`` float64 base demand (kW).
-        ev_stack: ``(n_scen, n_bus, 8760)`` or ``(n_scen, 8760)`` float64 EV
-            scenario stack (kW); summed to the feeder if per-bus.
-        feeder_indicator: ``(n_bus,)`` float64 feeder downstream selector.
-        feeder_kw: The feeder's modeled kW rating ``S̄``.
-        eps: The fixed headline reliability level (e.g. ``EPS_HEADLINE``).
-        downstream_home_count: The feeder home count (headline EV-count basis).
-        firm_ev_count: The Phase-10.1 firm hosting EV count (the denominator).
-        flexible_ev_count: The optimal flexible EV count under this scheme.
-
-    Returns:
-        A headline dict ``{flexible_ev_count, firm_ev_count,
-        hosting_expansion_percent, annual_activated_kwh, seasonal_peak_kw,
-        reservation_days, downstream_home_count}``.
-
-    Raises:
-        ValueError: If ``eps`` is outside (0, 1) or ``firm_ev_count <= 0``.
-    """
-    _validate_eps(eps)
-    if int(firm_ev_count) <= 0:
-        raise ValueError(
-            f"annual_twostage_headline received firm_ev_count={firm_ev_count!r}; "
-            "the hosting-expansion denominator must be a positive integer. "
-            "Remediation: pass the Phase-10.1 firm_ev_count (>= 1)."
-        )
-    base_feeder = np.asarray(feeder_indicator, dtype=DTYPE) @ np.asarray(
-        base, dtype=DTYPE
-    )  # (8760,)
-    ev = np.asarray(ev_stack, dtype=DTYPE)
-    if ev.ndim == 3:
-        ev_feeder = np.einsum("b,sbt->st", np.asarray(feeder_indicator, DTYPE), ev)
-    else:
-        ev_feeder = ev  # already (n_scen, 8760)
-    n_days = CALENDAR_HOURS // 24
-    annual_activated = 0.0
-    daily_peak = np.zeros(n_days, dtype=DTYPE)
-    for day in range(n_days):
-        sl = slice(day * 24, (day + 1) * 24)
-        # per-day required: (n_scen, 24); stream — never the full-year cube.
-        req_d = np.maximum(
-            0.0, base_feeder[sl][None, :] + ev_feeder[:, sl] - float(feeder_kw)
-        )
-        r_d = np.quantile(req_d, 1.0 - eps, axis=0, method="linear")  # (24,)
-        a_d = np.minimum(r_d[None, :], req_d)
-        annual_activated += float(a_d.mean(axis=0).sum())
-        daily_peak[day] = float(r_d.max())
-    hosting_expansion_percent = (
-        int(flexible_ev_count) - int(firm_ev_count)
-    ) / int(firm_ev_count)
-    return {
-        "flexible_ev_count": int(flexible_ev_count),
-        "firm_ev_count": int(firm_ev_count),
-        "hosting_expansion_percent": float(hosting_expansion_percent),
-        "annual_activated_kwh": float(annual_activated),
-        "seasonal_peak_kw": float(daily_peak.max()),
-        "reservation_days": int((daily_peak > _RESIDUAL_TOL).sum()),
-        "downstream_home_count": int(downstream_home_count),
     }

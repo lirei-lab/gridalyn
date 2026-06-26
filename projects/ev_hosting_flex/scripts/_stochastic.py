@@ -83,8 +83,9 @@ def tmy_start_hod(*, df: pd.DataFrame | None = None) -> int:
 
     RETIRED (Phase 13 RETIRE-01): part of the annual-tiling generation path
     (``ev_realizations`` phase alignment) the design-day MC seam supersedes. KEPT
-    importable for the not-yet-migrated Phase-14/15 consumers; physically deleted
-    when its last consumer (the annual ``ev_realizations`` path) migrates.
+    importable because the not-yet-migrated Plan-03 stage-5
+    ``apply_flexibility_contracts`` still calls it; physically deleted in Plan 03
+    when that last consumer migrates.
 
     The TMY annual series is the canonical clock for the whole pipeline: it carries
     real timestamps, so its array index ``i`` maps to clock hour-of-day
@@ -189,8 +190,9 @@ def ev_realizations(
     nested/cumulative MDPI EV pool over the design day instead
     (``_generators.ev_nested_pool``, reusing the kept ``_session``/``_ev_day``
     primitives). KEPT importable (not physically deleted) because
-    ``blend_ev_aggregate``/``blend_ev_per_bus`` and the Phase-14/15 stages still
-    consume it; physically deleted when its last consumer migrates.
+    ``blend_ev_aggregate`` (its last live consumer after Plan 02) still calls it;
+    physically deleted in Plan 03 when ``apply_flexibility_contracts`` (the stage-5
+    consumer of ``blend_ev_aggregate``) migrates.
 
     Builds ``k`` independent Monte-Carlo realizations from a SINGLE seeded
     ``rng`` drawn in the pinned per-EV order (see ``_ev_day``); each realization
@@ -251,9 +253,9 @@ def blend_ev_aggregate(
     RETIRED (Phase 13 RETIRE-01): the annual EV-aggregate blend over the tiled
     ``ev_realizations`` stack is REMOVED from the new pipeline path — the
     design-day MC seam exposes the nested-EV pool the Phase-14 sweep overlays
-    directly. KEPT importable (not physically deleted) because the Phase-14/15
-    stages (``compute_congestion``/``apply_flexibility_contracts`` retargets) are
-    its last consumers; physically deleted when they migrate.
+    directly. KEPT importable (not physically deleted) because the Plan-03 stage-5
+    ``apply_flexibility_contracts`` retarget is now its LAST live consumer (stage 6
+    migrated off it in Plan 02); physically deleted in Plan 03 when it migrates.
 
     Replaces the implicit full-coincidence ``count · ev_unit`` pattern at the four
     EV-demand consume sites (EV-COINCIDENCE-RECAL). For an integer EV ``count`` and
@@ -354,67 +356,6 @@ def blend_ev_aggregate(
     ]  # (K, 8760) — count independent per-EV days summed
     blended = coincident + (1.0 - rho_f) * independent
     return blended.astype(DTYPE)
-
-
-def blend_ev_per_bus(
-    ev_unit: np.ndarray,
-    per_bus_ev: np.ndarray,
-    rho: float = EV_COINCIDENCE_RHO,
-    *,
-    seed: int = SEED,
-    start_hod: int = 0,
-) -> np.ndarray:
-    """Return the ρ-blended per-bus EV demand stack ``(K, n_bus, 8760)`` (kW).
-
-    RETIRED (Phase 13 RETIRE-01): the annual per-bus EV blend is REMOVED from the
-    new pipeline path (the design-day MC seam supersedes the per-bus annual
-    distribution). KEPT importable for the not-yet-migrated Phase-14/15 consumers;
-    physically deleted when its last consumer migrates.
-
-    Builds the byte-stable partial-coincidence FEEDER aggregate for the integer EV
-    count ``round(sum(per_bus_ev))`` via :func:`blend_ev_aggregate`, then
-    DISTRIBUTES it across buses by the per-bus allocation SHARES
-    ``per_bus_ev / sum(per_bus_ev)``. Distributing by the existing
-    ``allocate_ev_per_bus`` shares keeps the downstream-sum proxy seam intact: for
-    any element indicator row the element demand ``indicator @ demand`` equals the
-    same share of the blended feeder aggregate it carried under the legacy
-    coincident path (D-02 — ``proxy_loading`` is still the only aggregation; the
-    blend only changes the per-realization SHAPE, not which buses are summed).
-
-    The whole-count blend is computed ONCE and reused across buses (so the per-count
-    independent draw is the same regardless of how the count splits across buses),
-    making the per-bus stack byte-stable and sweep-order-independent. At ``ρ = 1``
-    the result is exactly the legacy coincident ``per_bus_ev[:, None] * ev_unit``
-    bit-for-bit (distributing ``count·ev_unit`` by the count shares returns
-    ``per_bus_ev·ev_unit``).
-
-    Args:
-        ev_unit: The ``(K, 8760)`` float64 ``n_ev=1`` per-EV-unit realization stack.
-        per_bus_ev: The ``(n_bus,)`` integer/float per-bus EV allocation
-            (``allocate_ev_per_bus``); its rounded sum is the feeder EV count.
-        rho: The coincidence mixing weight ρ in [0, 1] (default
-            ``EV_COINCIDENCE_RHO``).
-        seed: The locked base seed the per-count independent draw is keyed from.
-        start_hod: The TMY first-row clock hour-of-day both blend terms are phased to.
-
-    Returns:
-        A ``(K, n_bus, 8760)`` float64 per-bus blended EV demand stack (kW).
-    """
-    per_bus = np.asarray(per_bus_ev, dtype=DTYPE)
-    total_ev = int(round(float(per_bus.sum())))
-    unit = np.ascontiguousarray(ev_unit, dtype=DTYPE)
-    k_eff = int(unit.shape[0])
-    n_bus = int(per_bus.shape[0])
-    n_hour = int(unit.shape[1])
-    if total_ev <= 0:
-        return np.zeros((k_eff, n_bus, n_hour), dtype=DTYPE)
-    aggregate = blend_ev_aggregate(
-        unit, total_ev, rho, seed=seed, start_hod=start_hod
-    )  # (K, 8760) blended feeder aggregate
-    shares = (per_bus / float(total_ev)).astype(DTYPE)  # (n_bus,) sums to 1.0
-    # Distribute the aggregate across buses by the allocation shares; the per-bus
-    # axis is the outer broadcast so indicator @ demand recovers the share-sum.
-    return (shares[None, :, None] * aggregate[:, None, :]).astype(DTYPE)
 
 
 def mc_p95(values_over_k: np.ndarray) -> float:

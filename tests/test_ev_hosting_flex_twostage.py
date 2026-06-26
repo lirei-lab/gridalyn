@@ -224,12 +224,12 @@ def test_config_locked_unchanged() -> None:
 
 
 # ─── TWOSTAGE-05: eps-frontier monotone (kernel re-anchored on Q_design) ─────
-# The retired stage-6 integration tests (annual_twostage_headline byte-stability
-# + the supersession-note full-stage run, which sourced the now-retired
-# base_load_8760.parquet / ev_stack_K.npy annual artifacts) were REMOVED in
-# Phase 15 RETIRE-02: stage 6 is re-pointed onto the Q_design/Q_real ensemble in
-# Plan 02, which re-introduces a stage-6 integration test against the new seam.
-# Only the kernel-level eps-frontier/panel test survives here (re-anchored).
+# The retired stage-6 integration tests (the annual byte-stability headline + the
+# supersession-note full-stage run, which sourced the now-retired annual base /
+# annual EV stack artifacts) were REMOVED in Phase 15 RETIRE-02. Plan 02 re-points
+# stage 6 onto the Q_design/Q_real design-day ensemble and physically deletes the
+# retired kernel symbols (cold_day_temp / annual_twostage_headline); the stage-6
+# integration test below drives the re-pointed stage against the new seam.
 
 
 def test_eps_frontier_monotone_in_stage() -> None:
@@ -245,3 +245,93 @@ def test_eps_frontier_monotone_in_stage() -> None:
     panel = coldday_panel(req)
     # the cold-day panel parquet schema columns (TWOSTAGE-05).
     assert set(panel) == {"hour", "r_s", "a_mean", "req_p50", "req_p90"}
+
+
+def test_retired_kernel_symbols_deleted() -> None:
+    """RETIRE-02: cold_day_temp / annual_twostage_headline are physically gone."""
+    import projects.ev_hosting_flex.scripts._stochastic as stoch
+    import projects.ev_hosting_flex.scripts._twostage as ts
+
+    assert not hasattr(ts, "cold_day_temp")
+    assert not hasattr(ts, "annual_twostage_headline")
+    # blend_ev_per_bus had no live consumer after Plan 02 — deleted; the kept MDPI
+    # primitives + the still-live blend_ev_aggregate/tmy_start_hod survive.
+    assert not hasattr(stoch, "blend_ev_per_bus")
+    for kept in ("_ev_day", "_session", "_occ", "mc_p95"):
+        assert hasattr(stoch, kept), kept
+
+
+# ─── Stage 6 re-point: design-day Q_design ensemble end-to-end (RETIRE-02) ────
+
+
+def test_stage6_design_day_repoint(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """derive_twostage sources q_real/q_design/ev_pool + firm_hosting and proves cvxpy.
+
+    Drives the re-pointed stage-6 ``derive_twostage`` against synthetic design-day
+    artifacts (q_real (K, n_steps), q_design (n_steps,), ev_pool (K, ev_max+1,
+    n_steps)) + a firm_hosting.json denominator in tmp dirs, and asserts: the
+    optimal_hosting.json is framed on the design day (no annual_activated_fraction),
+    K/n_steps are read from q_real.shape, the cvxpy<->oracle drift is <=1e-6 (or a
+    recorded fallback), and the frontier/panel parquet are emitted.
+    """
+    pytest.importorskip("cvxpy")
+    import json
+
+    import pandas as pd
+
+    from projects.ev_hosting_flex.scripts.pipeline.solve_twostage_program import (
+        derive_twostage,
+    )
+
+    k, n_steps, ev_max = 12, 24, 6
+    rng = np.random.default_rng(SEED)
+    q_design = _toy_q_design()  # (24,)
+    # q_real: a small (K, n_steps) building-base ensemble around q_design.
+    q_real = np.maximum(
+        0.0, q_design[None, :] + rng.normal(0.0, 1.0, (k, n_steps))
+    ).astype("float64")
+    # ev_pool: nested cumulative (K, ev_max+1, n_steps), monotone in count.
+    per_ev = np.abs(rng.normal(2.0, 0.5, (k, ev_max, n_steps))).astype("float64")
+    ev_pool = np.concatenate(
+        [np.zeros((k, 1, n_steps)), np.cumsum(per_ev, axis=1)], axis=1
+    ).astype("float64")
+
+    data_dir = tmp_path / "data"
+    json_dir = tmp_path / "json"
+    data_dir.mkdir()
+    json_dir.mkdir()
+    np.save(data_dir / "q_real.npy", q_real)
+    np.save(data_dir / "q_design.npy", q_design.astype("float64"))
+    np.save(data_dir / "ev_pool_design.npy", ev_pool)
+    (json_dir / "firm_hosting.json").write_text(
+        json.dumps(
+            {
+                "firm_ev_count": 3,
+                "firm_penetration": 0.428571,
+                "downstream_home_count": 7,
+                "feeder_key": "transformer:62",
+                "feeder_transformer_modeled_kw": 71.25,
+            }
+        )
+    )
+
+    out = derive_twostage(tmp_path / "cache", data_dir, json_dir)
+
+    headline = json.loads((json_dir / "optimal_hosting.json").read_text())
+    # Framed on the design day — the retired annual key is gone.
+    assert "annual_activated_fraction" not in headline
+    assert "activated_mean_fraction" in headline
+    # K / n_steps read from q_real.shape, never config.K.
+    assert headline["k_realizations"] == k
+    assert headline["n_steps"] == n_steps
+    assert headline["firm_ev_count"] == 3
+    assert headline["representative_ev_count"] == 3
+    # The load-bearing cvxpy<->oracle <=1e-6 proof is preserved (or a fallback).
+    assert headline["cvxpy_oracle_drift"] <= 1e-6 or headline["cvxpy_fellback"]
+    assert "content_sha256" in headline
+    # The frontier + cold-day panel parquet are emitted on the new ensemble.
+    frontier = pd.read_parquet(data_dir / "twostage_frontier.parquet")
+    panel = pd.read_parquet(data_dir / "reserve_activation_coldday.parquet")
+    assert len(frontier) == len(EPS_FRONTIER)
+    assert list(panel.columns) == ["hour", "r_s", "a_mean", "req_p50", "req_p90"]
+    assert out["cvxpy_fellback"] in (True, False)
