@@ -37,42 +37,20 @@ sharing-ADMM-plus-imputation methodology from a prior multi-agent thesis and
 signal-level study into a network-validated one. Our contributions are:
 
 \begin{itemize}
-  \item A sharing-ADMM coordinator for deferrable electric heating that flattens
-  the feeder aggregate subject to per-home comfort bounds and a daily-energy
-  conservation constraint (load is shifted, never curtailed).
-  \item A machine-learning imputer that reconstructs the heating of non-responsive
-  agents from ambient temperature, time-of-day, and nameplate features, letting
-  the coordinator stay accurate as the non-responsive fraction grows, together
-  with a comparison of three families of ML regressors (regularized-linear,
-  tree-ensemble, and instance-based) against naive and no-imputation baselines
-  under a realized-load model that both isolates the value of imputation and
-  identifies a regularized linear model as the most accurate on this data.
-  \item An AC power-flow validation stage on a synthetic LV residential feeder of
-  74 literal all-electric homes behind a single 400~kVA MV/LV distribution
-  transformer in pandapower, in which the homes load the transformer directly and
-  one-for-one (no artificial scaling), and which records worst-of-day transformer
-  thermal loading and
-  minimum bus voltage, closing the loop on physical feasibility.
-  \item A fully reproducible study (deterministic, free of proprietary data,
-  and built on an open-source toolchain) in which every reported number is
-  generated from the run rather than transcribed by hand.
+  \item A comfort-aware sharing-ADMM coordinator for deferrable cold-climate
+  electric heating that flattens the feeder aggregate subject to a per-home
+  indoor-temperature comfort penalty and a daily-energy conservation constraint,
+  so load is shifted rather than curtailed.
+  \item A machine-learning imputation stage that reconstructs non-responsive agents
+  so coordination degrades gracefully as the communication-failure fraction grows;
+  comparing three ML families (regularized-linear, tree-ensemble, and
+  instance-based) against naive and no-imputation baselines, we find that
+  \emph{whether} one imputes matters far more than which method.
+  \item An AC power-flow validation loop that closes the coordinated aggregate back
+  onto feeder physics, quantifying the restored transformer and voltage feasibility
+  and its breakdown under a swept non-responsive fraction with Monte-Carlo risk
+  bands.
 \end{itemize}
-
-The central finding is that coordination not only flattens the aggregate (a
-9.4\% peak cut) but \emph{clears} a 109.6\% transformer thermal overload to
-98.9\% under a 105\% IEEE~C57.91 short-duration limit, and that this cleared state
-holds under communication failure up to a non-responsive fraction of about 0.8
-before re-violating near 0.87. Throughout, we keep the
-communication-failure fraction (denoted $\varrho$) notationally distinct from the
-ADMM penalty ($\rho_{\mathrm{ADMM}}$) so the two roles of the symbol are never
-conflated; the Nomenclature collects all symbols. We also stress two honest
-caveats that the results section quantifies: the coordination respects thermal
-comfort as a \emph{modelled} indoor-temperature excursion (held to
-$\approx 1\,^{\circ}\mathrm{C}$ via an RC-coupled penalty, not merely re-timed
-energy), and because the objective targets a flat profile rather than the
-time-of-use price, the energy-bill saving is deliberately modest: the value of
-this demand response is capacity relief, demonstrated here as restored feeder
-feasibility, not a cheaper bill.
 
 The remainder of the paper is organized as follows.
 Section~\ref{sec:methodology} is preceded by the related work and the system
