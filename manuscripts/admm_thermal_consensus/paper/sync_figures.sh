@@ -9,4 +9,12 @@ cp "$SRC"/fig_uncertainty_loading.pdf "$DST"/
 cp "$SRC"/fig_imputer_comparison.pdf "$DST"/
 cp "$SRC"/fig_comfort.pdf "$DST"/
 cp "$SRC"/fig_convergence.pdf "$DST"/
-echo "synced 7 figures to $DST"
+echo "synced 7 result figures to $DST"
+
+# Compile the standalone TikZ schematics (architecture + LV one-line) to PDF.
+# Kept separate from the main document because pgf's library loader clashes with
+# the thesis-adapted ieeeaccess.cls.
+( cd "$DST" && for f in fig_architecture fig_feeder; do
+    pdflatex -interaction=nonstopmode "$f.tex" >/dev/null 2>&1 || true
+  done )
+echo "compiled 2 TikZ schematics in $DST"

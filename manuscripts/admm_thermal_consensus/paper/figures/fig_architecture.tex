@@ -1,0 +1,26 @@
+\documentclass[border=2pt]{standalone}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning}
+\begin{document}
+\begin{tikzpicture}[>=Latex,
+  box/.style={draw, rounded corners, align=center, minimum height=12mm,
+              text width=20mm, inner sep=2pt, font=\small},
+  data/.style={draw, align=center, minimum height=11mm, text width=17mm,
+               inner sep=2pt, font=\small, fill=black!4}]
+\node[box, fill=blue!5] (homes) {Residential\\homes};
+\node[box, fill=orange!12, right=9mm of homes] (imp) {ML imputer\\{\scriptsize $\hat{x}_i$ for silent homes}};
+\node[box, fill=blue!10, right=9mm of imp] (admm) {Sharing-ADMM\\coordinator\\{\scriptsize flatten + comfort}};
+\node[data, right=9mm of admm] (agg) {Coordinated\\aggregate};
+\node[box, fill=green!10, right=9mm of agg] (pf) {LV feeder \&\\transformer\\{\scriptsize AC power flow}};
+\node[data, right=9mm of pf] (ver) {Feasibility\\verdict};
+\draw[->,thick] (homes)--(imp) node[midway,above,font=\scriptsize]{$h_i$\,/\,silent};
+\draw[->,thick] (imp)--(admm);
+\draw[->,thick] (admm)--(agg);
+\draw[->,thick] (agg)--(pf);
+\draw[->,thick] (pf)--(ver);
+\draw[->,dashed] (imp.south) to[out=-35,in=-145]
+  node[below,midway,font=\scriptsize]{imputation error propagates into feeder violations} (pf.south);
+\end{tikzpicture}
+\end{document}

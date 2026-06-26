@@ -1,7 +1,20 @@
 \section{System Model}
 This section defines the model in general terms; the population size, horizon,
 weights, feeder ratings, tariff, and sweep used to instantiate it are collected in
-Section~\ref{sec:casestudy}.
+Section~\ref{sec:casestudy}. Figure~\ref{fig:architecture} gives the closed-loop
+pipeline that the rest of the paper develops.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_architecture.pdf}
+\caption{Closed-loop pipeline. Responsive homes report their heating; a fraction
+$\varrho$ fall silent and are reconstructed by a machine-learning imputer. The
+sharing-ADMM coordinator flattens the aggregate subject to comfort, and the
+coordinated aggregate is injected into the LV feeder and validated by AC power flow
+against the transformer thermal limit. The dashed path is the contribution this
+study quantifies: how imputation error propagates into feeder violations.}
+\label{fig:architecture}
+\end{figure*}
 
 \subsection{Agents and deferrable heating}
 We coordinate a population of $N$ representative cold-climate electric-heating
@@ -41,7 +54,17 @@ distributed across several parallel LV feeders, so their aggregate heating loads
 the transformer directly. The binding constraint is therefore the transformer's
 thermal loading, the classic residential winter-peak (cold-load-pickup) limit,
 assessed against a short-duration overload limit; LV bus voltage is reported as a
-secondary severity measure. All loads use a common lagging power factor.
+secondary severity measure. All loads use a common lagging power factor. The
+one-line topology is shown in Figure~\ref{fig:feeder}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.66\columnwidth]{fig_feeder.pdf}
+\caption{One-line diagram of the synthetic LV residential test feeder: an MV grid
+source, a single MV/LV distribution transformer, and an LV busbar feeding four
+parallel radial feeders that carry the homes as literal loads.}
+\label{fig:feeder}
+\end{figure}
 
 \subsection{Communication-failure model}
 At coordination time a fraction $\varrho$ of the agents become non-responsive and
