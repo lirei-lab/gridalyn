@@ -12,10 +12,12 @@ in pandapower. On a synthetic Trois-Rivi\`eres cold day with 30 electric-heating
 homes, ideal coordination cuts the aggregate peak by 12.7\%, from 169.1 to
 147.7~kW, and drives the peak-to-average ratio from 1.146 to 1.001. On the
 feeder, coordination clears a 115\% thermal line overload down to 99.7\% and
-lifts the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
-resilient up to a non-responsive fraction of 0.6, then re-violates at 0.8, where
-imputation error re-introduces a 108\% overload. A Monte-Carlo analysis over
-which agents fail and the forecast error further shows the violation onset is
-probabilistic rather than sharp, centered near a non-responsive fraction of 0.6
-(56\% of realizations breach the thermal limit). The result is a reproducible,
-governed study that ties coordination quality to measurable feeder feasibility.
+lifts the worst minimum voltage from 0.905 to 0.918~p.u. A finely-resolved sweep
+shows the cleared state holds on a plateau through a non-responsive fraction of
+about 0.55 and then degrades as a roughly linear ramp --- not a sudden step ---
+crossing the thermal limit near 0.62 as imputation can no longer offset the lost
+controllable flexibility. A Monte-Carlo analysis over which agents fail and the
+forecast error shows the violation onset is probabilistic, centered near a
+non-responsive fraction of 0.6 (53\% of realizations breach the thermal limit)
+and certain by 0.65. The result is a reproducible, governed study that ties
+coordination quality to measurable feeder feasibility.

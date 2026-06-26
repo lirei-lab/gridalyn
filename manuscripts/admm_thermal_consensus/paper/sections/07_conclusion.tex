@@ -7,15 +7,20 @@ on the IEEE 33-bus feeder with AC power flow. The closed loop turns abstract
 flattening metrics into a feeder verdict: ideal coordination cuts the aggregate
 peak by 12.7\% and clears a 115\% thermal line overload down to 99.7\%, while
 lifting the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
-resilient to communication failure up to a non-responsive fraction of 0.6 and
-re-violates at 0.8 (108\% loading). A Monte-Carlo analysis over which agents fail
-and the forecast error reframes this critical fraction as a probabilistic risk
-threshold rather than a single deterministic point: the probability of a thermal
-violation rises from 0 ($\varrho \le 0.4$) through 0.56 at $\varrho = 0.6$ to 1.0
-at $\varrho = 0.8$, so the deterministic ``edge'' compliance at $\varrho = 0.6$
-understated the true risk. A secondary finding is that ADMM iteration
-count explodes with $\varrho$ (8 to 280) well before the outcome degrades,
-offering an early-warning signal.
+resilient to communication failure through a non-responsive fraction of 0.6, and
+a finely-resolved sweep shows the protection then unwinds not as a sudden step
+but as a plateau followed by a roughly linear ramp: the worst line loading stays
+clamped near 99.7\% up to $\varrho \approx 0.55$, crosses the 100\% limit near
+$\varrho = 0.62$, and rises linearly to the uncoordinated 115\% as the last homes
+fall silent. A Monte-Carlo analysis over which agents fail and the forecast error
+reframes this critical fraction as a probabilistic risk threshold rather than a
+single deterministic point: the probability of a thermal violation stays at 0
+through $\varrho = 0.55$, jumps to 0.53 at $\varrho = 0.6$, and is certain by
+$\varrho = 0.65$, so the deterministic ``edge'' compliance at $\varrho = 0.6$
+understated the true risk. A secondary finding is that the ADMM iteration count
+explodes at the same knee (from 26 to 150 between $\varrho = 0.55$ and $0.6$, on
+to 280 by $0.8$) one sweep step \emph{before} the outcome degrades, offering an
+early-warning signal.
 
 The study has clear limitations. It covers a single cold day and a single feeder;
 the communication-failure model is a stochastic non-responsive fraction rather
