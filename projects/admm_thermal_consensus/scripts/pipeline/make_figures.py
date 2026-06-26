@@ -46,19 +46,30 @@ def main() -> None:
     f1 = _save(fig, "fig_aggregate_profiles")
     plt.close(fig)
 
-    # Fig 2: peak & PAR vs rho
+    # Fig 2: coordinated peak vs rho (single axis). PAR = peak/mean with a
+    # constant (energy-conserving) mean, so PAR is proportional to peak and would
+    # plot as the identical curve; we show peak alone against two reference
+    # levels -- the uncoordinated peak and the peak that corresponds to the
+    # transformer thermal limit -- so the violation onset is visible.
     rhos = list(C.RHO_SWEEP)
     peaks = [kpis[f"imputed_rho_{int(round(r * 100)):03d}"]["peak_kw"] for r in rhos]
     pars = [kpis[f"imputed_rho_{int(round(r * 100)):03d}"]["par"] for r in rhos]
+    unc_peak = kpis["uncoordinated"]["peak_kw"]
+    # peak that maps to the transformer loading limit (from the power-flow run)
+    fs = feas.sort_values("worst_transformer_loading_pct")
+    peak_at_limit = float(
+        np.interp(C.TRANSFORMER_LOADING_LIMIT_PCT,
+                  fs["worst_transformer_loading_pct"], fs["peak_kw"])
+    )
     fig, ax1 = plt.subplots(figsize=(7, 4))
-    ax1.plot(rhos, peaks, "o-", color="tab:red", label="Peak [kW]")
-    ax1.axhline(kpis["uncoordinated"]["peak_kw"], ls=":", color="gray", label="Uncoordinated peak")
+    ax1.plot(rhos, peaks, "o-", color="tab:red", label="Coordinated peak")
+    ax1.axhline(unc_peak, ls=":", color="gray", label=f"Uncoordinated peak ({unc_peak:.0f} kW)")
+    ax1.axhline(peak_at_limit, ls="--", color="black",
+                label=f"Transformer limit ({C.TRANSFORMER_LOADING_LIMIT_PCT:.0f}%)")
     ax1.set_xlabel("Non-responsive fraction rho")
-    ax1.set_ylabel("Peak [kW]")
-    ax2 = ax1.twinx()
-    ax2.plot(rhos, pars, "s--", color="tab:blue", label="PAR")
-    ax2.set_ylabel("PAR")
-    ax1.legend(loc="upper left")
+    ax1.set_ylabel("Coordinated aggregate peak [kW]")
+    ax1.legend(loc="upper left", fontsize=8)
+    ax1.grid(alpha=0.3)
     f2 = _save(fig, "fig_peak_par_vs_rho")
     plt.close(fig)
 
