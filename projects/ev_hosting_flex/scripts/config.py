@@ -703,3 +703,76 @@ is the fraction of the full ``CLPU_PEAK`` bump applied at that clock hour (1.0 =
 full); hours outside this set get factor 1.0 (no CLPU). The 16→19 ramp-up/decay
 mirrors occupants returning home and thermostats recovering then re-diversifying
 over ~2-3 h. Applied to the HEATING term only. Prototype ``CLPU_WINDOW``."""
+
+# ─── Phase-13 (GEN-01..04): generative-MC design-day seam ────────────────
+# APPEND-ONLY block below every locked constant above (everything through
+# ``CLPU_WINDOW`` is byte-frozen — do NOT edit any constant above). These pin the
+# governed ``_generators.py`` design-day Monte-Carlo kernel: the SDK building
+# agent recalibrated to the Québec all-electric archetype + the project-local
+# MDPI EV sampler, run over the binding cold design day to emit the idx-62
+# transformer-load ensemble ``Q_real (K, n_steps)`` + the day-ahead forecast
+# ``Q_design``. The operating point below is EMPIRICALLY LOCKED (2026-06-26
+# throwaway probes ``exp_firmsweep.py`` / ``exp_genseam.py``); Phase 13 implements
+# it byte-stably, it does NOT re-discover it. Reuses the locked ``SEED``,
+# ``DTYPE``, ``ROUND_DECIMALS``, ``TMY_INPUT_PATH``, ``TRANSFORMER_KVA``,
+# ``POWER_FACTOR``, ``CHARGER_MIX``, ``EV_KWH_*``, ``ARRIVAL_*``, ``PLUGIN_PROB``,
+# ``SIGMA_DAILY``, ``SIGMA_HOURLY``, ``FIRM_PCONG_TOLERANCE`` (do NOT redefine them).
+
+R_QUEBEC = 7.0
+"""Recalibrated per-home thermal envelope resistance (°C/kW) of the SDK building
+agent for the Québec all-electric archetype (GEN-02; the LOCKED operating point).
+
+After ``make_buildings(n, seed)`` each ``Building.R`` is overridden to this value.
+The SDK default (``R_MEAN ≈ 11``) under-loads the 7-home idx-62 unit to ~6.5 kW/
+home / ~60% of the 71.25 kW rating; ``R = 7.0`` lands the EV-free design-day base
+at **~8.4 kW/home coincident / ~82–87% of the 71.25 kW rating, firm=3**
+(empirically verified at K=60 on the 1990-01-19 design day, probe
+``exp_firmsweep.py``). CALIBRATION.md anchors: PMC ~13 kW baseboard, HQ
+10–15 kW/dwelling. NOT the stale ``exp_genseam.py`` probe value (R=6.0); the
+firm-sweep R=7.0 row is the locked grid point. NO CLPU (the heating recalibration
+is the dominant lever; CLPU on top overshoots to ~117% / firm=0)."""
+
+P_HEAT_QUEBEC = 13.0
+"""Recalibrated per-home baseboard heating capacity (kW) of the SDK building agent
+(GEN-02; the LOCKED operating point).
+
+After ``make_buildings`` each ``Building.p_heat_max`` is overridden to this value
+(the SDK default ``P_HEAT_MAX_KW = 8.0`` under-sizes the all-electric Québec
+baseboard). Anchored to the Québec all-electric archetype (~13 kW installed
+baseboard nameplate; HQ 10–15 kW/dwelling), it pairs with ``R_QUEBEC = 7.0`` to
+land the design-day base at the locked ~82–87% rating / firm=3 operating point."""
+
+DESIGN_DAY_RES_MINUTES = 60
+"""Monte-Carlo aggregation resolution (minutes) for the design-day ensemble (GEN-01,
+Claude's discretion per CONTEXT). ``select_peak_load_day`` returns the design day at
+1-min native resolution; the building realization aggregates ``p_total_kw`` to this
+step (the building hourly aggregate worked in the probes — ``exp_firmsweep.py`` /
+``exp_genseam.py``). Default 60 (hourly → ``n_steps = 24``); a finer 5/15-min step
+is an option if the K ensemble fidelity needs it, at higher MC cost."""
+
+K_DESIGN = 60
+"""Design-day Monte-Carlo realization count (GEN-01, Claude's discretion).
+
+Each realization re-seeds the SDK building agent + the temperature-forecast-error
+offset from ``SEED + r`` (pinned). Chosen at the probe value ``K = 60`` — the count
+at which the firm-region operating point (base ~82–87% rating, firm=3) was
+empirically verified on the 1990-01-19 design day (``exp_firmsweep.py`` /
+``exp_genseam.py``) — large enough for a stable p50 base-peak yet fast enough to run
+the 7-home / 24-step kernel inside the unit-test budget (< 60 s). Part of the
+reproducibility contract with ``SEED``; the Phase-14 firm pin re-uses this K."""
+
+N_HOMES_FALLBACK = 7
+"""Downstream-home count used by the design-day kernel when the topology cache's
+idx-62 home count is unavailable (e.g. cache-free unit tests). The committed twin's
+idx-62 transformer subtree carries 7 all-electric homes (``TARGET_HOMES = 6``, the
+closest unit is idx-62 → 7); the governed stage passes the cache value, the unit
+tests pass this fallback so they stay cache-free (CONTEXT: the gitignored cache
+lives only in the main tree)."""
+
+DESIGN_DAY_EV_MAX = 18
+"""Nested-EV pool ceiling for the design-day MC sweep (GEN-03). ``ev_nested_pool``
+returns a ``(DESIGN_DAY_EV_MAX + 1, n_steps)`` cumulative pool (row n = the first n
+EVs) so the Phase-14 congestion sweep can overlay any EV count up to this ceiling.
+Sized comfortably above the expected firm count (firm=3 at the locked operating
+point; the EV sweep crosses the rating well below 18) per the probe
+``exp_genseam.py`` (``EV_MAX = 18``)."""
