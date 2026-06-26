@@ -12,10 +12,11 @@ coordinator flattens the total feeder load toward a constant target $c$ while
 respecting each home's comfort. We solve the sharing problem
 
 \begin{equation}
-\min_{\{x_i\}}\;
-\sum_{i=1}^{N} \Big[ \frac{\lambda}{2}\,\lVert x_i - h_i \rVert_2^2
-+ \frac{\gamma}{2}\,\lVert G_i (x_i - h_i) \rVert_2^2 \Big]
-\;+\; \frac{\mu}{2}\,\Big\lVert \sum_{i=1}^{N} x_i + B - c\,\mathbf{1} \Big\rVert_2^2
+\begin{aligned}
+\min_{\{x_i\}}\;\; &\sum_{i=1}^{N} \Big[ \tfrac{\lambda}{2}\lVert x_i - h_i \rVert_2^2
++ \tfrac{\gamma}{2}\lVert G_i (x_i - h_i) \rVert_2^2 \Big] \\
+&\;+\; \tfrac{\mu}{2}\Big\lVert \sum_{i=1}^{N} x_i + B - c\,\mathbf{1} \Big\rVert_2^2
+\end{aligned}
 \label{eq:sharing}
 \end{equation}
 
@@ -75,9 +76,11 @@ strictly convex quadratic, so its minimizer is available in closed form.
 Writing $a_i = z - u$ for the current penalty anchor, the prox optimum solves the
 linear system
 \begin{equation}
-\tilde{x}_i \;=\;
-M_i^{-1}\big[(\lambda I + \gamma\,G_i^{\top}G_i)\,h_i + \rho_{\mathrm{ADMM}}\,a_i\big],
-\quad M_i = \lambda I + \gamma\,G_i^{\top}G_i + \rho_{\mathrm{ADMM}} I,
+\begin{aligned}
+\tilde{x}_i &= M_i^{-1}\big[(\lambda I + \gamma\,G_i^{\top}G_i)\,h_i
++ \rho_{\mathrm{ADMM}}\,a_i\big], \\
+M_i &= (\lambda + \rho_{\mathrm{ADMM}})\,I + \gamma\,G_i^{\top}G_i,
+\end{aligned}
 \label{eq:prox}
 \end{equation}
 which trades the energy-plus-comfort pull toward $h_i$ against the consensus pull
