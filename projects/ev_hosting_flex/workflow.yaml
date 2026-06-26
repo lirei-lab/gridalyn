@@ -85,52 +85,56 @@ spec:
         - projects/ev_hosting_flex/outputs/json/firm_hosting.json
         - projects/ev_hosting_flex/outputs/reports/congestion_report.json
 
-    # ── Stage 5: flexibility contracts + flexible limit (live, FLEX-01/02/03/04) ─
+    # ── Stage 5: two-stage day-ahead flexibility controller (live, CTRL-01..04) ─
+    # Phase-15 RETIRE-02 re-point: replaces the retired power-limited/availability
+    # energy-gated sweep with the two-stage controller — plan r_t = Q_{1-eps} on
+    # Q_design (re-anchored compose_scenarios), validate realized P(overload after
+    # activation) <= eps OUT-OF-SAMPLE on a disjoint Q_real ensemble (+ an
+    # adversarial colder-Q_real test), report reserve-vs-activation resource value,
+    # and derive the re-baselined flexible_ev_count -> hosting_expansion_percent
+    # headline (firm 3 -> flexible). The stage BODY is re-pointed in Plan 03; the
+    # input/output wiring is re-pointed here onto the Phase-13/14 artifact set.
     - id: apply_flexibility_contracts
       needs: [compute_congestion]
       command: uv run python projects/ev_hosting_flex/scripts/pipeline/apply_flexibility_contracts.py
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/apply_flexibility_contracts.py
-        - projects/ev_hosting_flex/scripts/_flexibility.py
+        - projects/ev_hosting_flex/scripts/_twostage.py
+        - projects/ev_hosting_flex/scripts/_generators.py
         - projects/ev_hosting_flex/scripts/_congestion.py
-        - projects/ev_hosting_flex/scripts/_stochastic.py
-        - projects/ev_hosting_flex/scripts/_profiles.py
         - projects/ev_hosting_flex/scripts/config.py
-        # ORPHANED (RETIRE-01): base_load_8760 / ev_load_unit / ev_stack_K.npy are
-        # no longer produced by the Phase-13 generation seam (stage-3 now emits
-        # q_real/q_design/ev_pool_design). The apply_flexibility_contracts BODY is
-        # retargeted to the new artifacts in Phase 15; these legacy input
-        # declarations are dropped from the DAG here so the Phase-15 planner
-        # inherits a clean workflow.yaml.
+        - projects/ev_hosting_flex/outputs/data/q_real.npy
+        - projects/ev_hosting_flex/outputs/data/q_design.npy
+        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
+        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
         - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/node_building_count.json
-        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
       outputs:
-        - projects/ev_hosting_flex/outputs/data/line_loading_flex.parquet
-        - projects/ev_hosting_flex/outputs/data/contract_activations.parquet
+        - projects/ev_hosting_flex/outputs/data/reserve_activation.parquet
+        - projects/ev_hosting_flex/outputs/data/realized_reliability.parquet
         - projects/ev_hosting_flex/outputs/json/flexible_hosting.json
         - projects/ev_hosting_flex/outputs/reports/flexibility_contracts_report.json
 
-    # ── Stage 6: two-stage stochastic program — optimal hosting headline (live, TWOSTAGE-04/05/06/07) ─
+    # ── Stage 6: two-stage program — eps-frontier + cvxpy↔oracle proof (live, TWOSTAGE-05/06) ─
+    # Phase-15 RETIRE-02 re-point: stage 6 keeps ONLY the eps-frontier sensitivity
+    # + the cvxpy↔oracle ≤1e-6 equivalence proof, re-pointed onto the Q_design-
+    # anchored ensemble (the retired annual headline / annual base / annual EV
+    # stack / TMY annual path is gone). The stage BODY is re-pointed in Plan 02; the
+    # input/output wiring is re-pointed here onto q_real/q_design/ev_pool_design.
     - id: solve_twostage_program
       needs: [apply_flexibility_contracts]
       command: uv run python projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
         - projects/ev_hosting_flex/scripts/_twostage.py
-        - projects/ev_hosting_flex/scripts/_stochastic.py
+        - projects/ev_hosting_flex/scripts/_generators.py
         - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
+        - projects/ev_hosting_flex/outputs/data/q_real.npy
+        - projects/ev_hosting_flex/outputs/data/q_design.npy
+        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting.json
-        # ORPHANED (RETIRE-01): base_load_8760 / ev_stack_K.npy are no longer
-        # produced by the Phase-13 generation seam. solve_twostage_program's BODY
-        # is retargeted to q_real/q_design in Phase 15; these legacy input
-        # declarations are dropped from the DAG here.
-        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
-        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
-        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/optimal_hosting.json
         - projects/ev_hosting_flex/outputs/data/twostage_frontier.parquet

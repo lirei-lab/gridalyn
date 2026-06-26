@@ -458,6 +458,57 @@ deferred in the governed path and the kernel **raises** (`ImportError`) if a req
 SDK symbol is missing — it never substitutes a hand-rolled base
 (`test_no_silent_sdk_fallback_in_source`, `test_select_design_day_raises_when_sdk_unavailable`).
 
+## RETIRE-02 framing change — energy gates → reliability-only (Phase 15, D-14)
+
+**Dated: 2026-06-26.** Phase 15 (CTRL + RETIRE-02) re-points the flexibility stage
+from the energy-fraction-gated availability sweep to the two-stage day-ahead
+controller and records the following framing changes (D-14):
+
+- **(a) Energy → reliability-only acceptability.** The retired stage gated a swept
+  EV count on an **energy-fraction** tolerance (`TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX`
+  / `TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95` / `TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`,
+  all strict-`<` 1%). Phase 15 **removes the energy gate from the acceptability
+  decision**: energy (reserve `Σr`, expected activation `E[Σa]`) is **reported, never
+  gated**. The acceptability criterion is now **realized reliability alone** — the
+  largest adoption with **realized `P(transformer overload after activation) ≤ ε`**
+  (`ε = EPS_HEADLINE = 0.05`) on a fresh out-of-sample `Q_real` ensemble (D-12). The
+  superseded energy-gate knobs are bannered/deleted per RETIRE-02 (D-13).
+
+- **(b) SDK building adoption / recalibration.** The base building load is now the
+  **SDK building agent** (`make_buildings`/`simulate_buildings`) recalibrated to the
+  Québec all-electric archetype: per-home thermal envelope **`R_QUEBEC = 7.0` °C/kW**
+  and baseboard capacity **`P_HEAT_QUEBEC = 13.0` kW** (overriding the SDK defaults
+  `R_MEAN ≈ 11` / `P_HEAT_MAX = 8.0`, which under-load the 7-home idx-62 unit). This
+  lands the EV-free design-day base at **~82–87 % of the 71.25 kW rating, firm = 3**
+  (empirically locked at K = 60 on the 1990-01-19 design day). **No CLPU** — the
+  heating recalibration is the dominant lever; CLPU on top overshoots to ~117 % /
+  firm 0 (the CLPU base-uplift knobs are deleted this phase).
+
+- **(c) MDPI EV provenance.** The EV **truth** is the project-local MDPI sampler
+  (charger mix, lognormal session energy, Gaussian evening arrivals, plug-in
+  probability), grounded in **Jonas, Daniels & Macht, *Energies* 2023, 16(4):1592**
+  (Canada, >7000 charging stations): residential charging peaks 15:00–24:00. The SDK
+  `EVCharger` **session model is NOT adopted as truth**; only its cap-actuator
+  *pattern* (`dynamic_p_cap_kw`/`cls_active`) is ported, applied to the MDPI aggregate.
+
+- **(d) Transformer-overload framing.** Acceptability is keyed on the **transformer**
+  overload probability, not the prior congestion-line proxy: `loading = (Σ building +
+  Σ EV) / rating`, **overload = loading > 1 strict** (the Phase-14 single binding-state
+  kernel, rating = `TRANSFORMER_KVA · POWER_FACTOR` = 71.25 kW). Realized
+  `P(overload)` is the mean over the K/N design-day realizations of any step
+  overloading — the citable risk statement is a **design-day `P(overload)` + risk
+  distribution**, not an annual integrated risk (the latter is FUT-07).
+
+- **(e) ROADMAP #4 vs CONTEXT D-12 divergence (explicit).** ROADMAP Phase-15 success
+  criterion #4 reads `flexible_ev_count` requires realized reliability ≤ ε **AND
+  contract cost below break-even**. **CONTEXT D-12 (later, authoritative) overrides
+  this**: in Phase 15 `flexible_ev_count` is gated on **realized reliability ALONE**;
+  the **contract-cost / break-even gate is deferred to Phase 16** (economics ledger).
+  The controller emits the `Σr` / `E[Σa]` reserve/activation totals so Phase 16
+  applies the cost gate **without re-running** the controller. CONTEXT supersedes
+  ROADMAP per GSD upstream-input precedence; the headline shift (firm 3 → flexible,
+  +%) is reported explicitly with this rationale.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).
