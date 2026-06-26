@@ -455,6 +455,59 @@ def test_derive_congestion_transformer_firm_and_risk(tmp_path: Path) -> None:
     assert risk.shape[0] == int(summary["k_realizations"])
 
 
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex Phase-13 design-day .npy "
+        "(q_real.npy / ev_pool_design.npy) not present; run generate_design_day_mc.py "
+        "in the MAIN tree first (gitignored cache, skipif-skips in CI)"
+    ),
+)
+def test_governed_ensemble_firm_three() -> None:
+    """Governed reproduce-and-pin: firm = 3 from the regenerated design-day cache.
+
+    Loads the governed q_real.npy / ev_pool_design.npy, calls firm_transformer_count
+    with the pf-pinned rating (71.25), FIRM_PCONG_TOLERANCE, and ev_max from the
+    array, and asserts the firm is NON-DEGENERATE (1 <= firm <= 9) AND equals 3 at
+    the locked calibration (RESEARCH A1 / Open Q1 — the one number confirmed
+    empirically, not assumed). If the governed ensemble lands at 2 or 4 (still
+    non-degenerate), that +/-1 is the DOCUMENTED framing shift — relax to the
+    empirically-observed value and record it in the SUMMARY / divergence_note; do
+    NOT re-tune the locked R_QUEBEC / P_HEAT_QUEBEC calibration to force 3.
+
+    Also confirms stage/kernel agreement: the firm the kernel computes here equals
+    the firm the stage wrote to firm_hosting.json.
+    """
+    q_real = np.load(_PROJECT_DATA_DIR / "q_real.npy").astype("float64")
+    ev_pool = np.load(_PROJECT_DATA_DIR / "ev_pool_design.npy").astype("float64")
+    ev_max = int(ev_pool.shape[1] - 1)
+
+    result = firm_transformer_count(
+        q_real, ev_pool, _RATING_KW, float(FIRM_PCONG_TOLERANCE), ev_max
+    )
+    firm = int(result["firm_ev_count"])
+
+    # Non-degenerate (neither 0 nor pinned at the ev_max ceiling).
+    assert 1 <= firm <= 9, result
+    # The locked-calibration headline. If the governed ensemble shifts +/-1 this is
+    # the documented framing shift (RESEARCH A1) — update this pin to the empirical
+    # value and record the rationale in the SUMMARY; never re-tune the calibration.
+    assert firm == 3, (
+        f"governed firm={firm} (expected 3 at the locked calibration); if this is a "
+        "non-degenerate +/-1 framing shift, update the pin + record it in the "
+        "SUMMARY / divergence_note — do NOT re-tune R_QUEBEC / P_HEAT_QUEBEC"
+    )
+    # P(overload) at firm must be within tolerance; the next count must exceed it.
+    p_curve = result["p_overload_curve"]
+    assert p_curve[firm] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, result
+    if firm + 1 < len(p_curve):
+        assert p_curve[firm + 1] > float(FIRM_PCONG_TOLERANCE), result
+
+    # Stage/kernel agreement: the firm the stage wrote matches what the kernel computes.
+    firm_json = json.loads((_PROJECT_JSON_DIR / "firm_hosting.json").read_text())
+    assert int(firm_json["firm_ev_count"]) == firm, firm_json
+
+
 # ─── Phase-14 transformer-overload kernel (CONG-01/02) — cache-free fixtures ──
 # Hand-built (K, n_steps) building base + (K, ev_max+1, n_steps) nested cumulative
 # EV pool so P(overload) at each EV count is an exactly-countable k/K and the firm
