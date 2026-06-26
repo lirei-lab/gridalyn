@@ -1,10 +1,11 @@
 \section{Results}
+\label{sec:results}
 
 \subsection{Aggregate coordination}
 Figure~\ref{fig:profiles} shows the cold-day aggregate load. The uncoordinated
 profile exhibits the classic double peak --- a morning and an evening heating
 surge --- whereas the ideal ADMM coordination flattens it to a nearly constant
-$\approx 147.7$~kW. The $\varrho = 0.8$ trace, in which most agents are imputed,
+$\approx 362.3$~kW. The $\varrho = 0.8$ trace, in which most agents are imputed,
 recovers much of the flattening but leaves residual peaks where imputation error
 accumulates.
 
@@ -12,18 +13,18 @@ accumulates.
 \centering
 \includegraphics[width=\columnwidth]{fig_aggregate_profiles.pdf}
 \caption{Aggregate cold-day load: uncoordinated double-peak versus the flat
-ADMM-ideal profile ($\approx 147.7$~kW) and the $\varrho = 0.8$ imputed case with
+ADMM-ideal profile ($\approx 362.3$~kW) and the $\varrho = 0.8$ imputed case with
 residual peaks. Here $\varrho$ is the non-responsive fraction.}
 \label{fig:profiles}
 \end{figure}
 
 Table~\ref{tab:agg} quantifies the aggregate key performance indicators. Ideal
-coordination cuts the peak from 169.1 to 147.7~kW, a 12.7\% reduction, and drives
-the peak-to-average ratio (PAR) from 1.146 down to 1.001 --- essentially a flat
-load. A PAR of 1.001 is the practical floor: it means the coordinated aggregate
+coordination cuts the peak from 401.6 to 362.3~kW, a 9.8\% reduction, and drives
+the peak-to-average ratio (PAR) from 1.109 down to 1.000 --- essentially a flat
+load. A PAR of 1.000 is the practical floor: it means the coordinated aggregate
 is constant to within a tenth of a percent across the entire day, so the
 flattening objective in~\eqref{eq:sharing} has been met almost exactly. Energy
-cost falls slightly, from 371.0 to 364.8~CAD --- a 1.66\% reduction --- because
+cost falls slightly, from 909.5 to 895.4~CAD --- a 1.55\% reduction --- because
 the daily-energy constraint conserves total heating; the saving comes from
 shifting load out of the evening-peak TOU window (0.158~CAD/kWh) toward off-peak
 hours (0.078~CAD/kWh) rather than from using less energy. The modest size of the
@@ -39,7 +40,7 @@ than the bill.
 \subsubsection{Comfort preservation}
 The flattening is achieved without sacrificing thermal comfort. The mean absolute
 heating deviation of the ideal coordinated schedule from the thermostat baseline
-is 0.298~kW per home-step --- small against the $\approx 5$~kW heating level the
+is 0.264~kW per home-step --- small against the $\approx 5$~kW heating level the
 homes operate at. This is comfort preserved \emph{by construction}: the
 projection~\eqref{eq:proj} keeps every step inside the $\pm 50\%$ band of its
 baseline and conserves each home's daily heating energy, so the coordinator can
@@ -50,25 +51,25 @@ thermostat draws power.
 \subsubsection{A plateau-and-ramp transition}
 Swept finely (Table~\ref{tab:agg}), the degradation of coordination with the
 non-responsive fraction is not a smooth decay but a \emph{plateau followed by a
-ramp}. From $\varrho = 0$ to $\varrho \approx 0.55$ the coordinated peak stays
-clamped at the ideal optimum (147.7--147.8~kW, PAR within $0.15\%$ of unity);
-beyond a knee near $\varrho = 0.6$ it rises approximately linearly toward the
-uncoordinated peak, reaching 152.0, 155.4, 159.4, and finally 169.1~kW at
-$\varrho = 0.65, 0.75, 0.8$, and $1.0$. This shape is the signature of a
+ramp}. From $\varrho = 0$ to $\varrho \approx 0.70$ the coordinated peak stays
+clamped at the ideal optimum (362.3--362.6~kW, PAR within $0.1\%$ of unity);
+beyond a knee near $\varrho = 0.72$ it rises approximately linearly toward the
+uncoordinated peak, reaching 368.5, 375.0, 389.6, and finally 401.9~kW at
+$\varrho = 0.75, 0.8, 0.9$, and $1.0$. This shape is the signature of a
 \emph{flexibility-budget} mechanism, and it has two causes. First, an imputed
 home is pinned to its forecast --- which reproduces its \emph{natural}, peaky
 heating shape, not a flattened one --- so it leaves the coordination pool;
 degradation is therefore driven mainly by the \emph{loss of controllable
-flexibility}, not by raw forecast error (which stays small, RMSE $\le 0.28$~kW,
+flexibility}, not by raw forecast error (which stays small, RMSE $\approx 0.3$~kW,
 last column). Second, the remaining responsive homes flatten the total only up to
 their collective $\pm 50\%$ deferral budget: as long as that budget exceeds the
 peakiness injected by the pinned population, the peak is held exactly at the
-optimum (the plateau); once it is exhausted --- around $\varrho \approx 0.6$,
-where only $\sim 12$ of 30 homes remain controllable --- the residual peak passes
+optimum (the plateau); once it is exhausted --- around $\varrho \approx 0.72$,
+where only $\sim 20$ of 74 homes remain controllable --- the residual peak passes
 through, and it does so linearly. The transition is thus sharp at its
 \emph{onset} (a binding-constraint knee) but smooth thereafter (a linear ramp);
 the earlier impression of a sudden step was an artifact of coarse sampling
-between $\varrho = 0.6$ and $0.8$.
+between $\varrho = 0.7$ and $1.0$.
 
 \begin{table}[t]
 \centering
@@ -80,34 +81,35 @@ iterations to converge.}
 \toprule
 Scenario & Peak (kW) & PAR & Cost (CAD) & RMSE (kW) & Iter. \\
 \midrule
-Uncoordinated      & 169.1 & 1.1458 & 371.0 & ---   & ---  \\
-Coordinated ideal  & 147.7 & 1.0007 & 364.8 & ---   & 8    \\
-$\varrho{=}0.4$  & 147.8 & 1.0012 & 364.9 & 0.242 & 21   \\
-$\varrho{=}0.55$ & 147.8 & 1.0015 & 364.9 & 0.234 & 26   \\
-$\varrho{=}0.6$  & 148.1 & 1.0035 & 364.9 & 0.252 & 150  \\
-$\varrho{=}0.65$ & 152.0 & 1.0299 & 365.0 & 0.242 & 221  \\
-$\varrho{=}0.7$  & 153.8 & 1.0419 & 365.1 & 0.237 & 239  \\
-$\varrho{=}0.8$  & 159.4 & 1.0802 & 366.2 & 0.234 & 280  \\
-$\varrho{=}0.9$  & 164.0 & 1.1112 & 368.3 & 0.235 & 300  \\
-$\varrho{=}1.0$  & 169.1 & 1.1460 & 371.0 & 0.282 & 300  \\
+Uncoordinated      & 401.6 & 1.1090 & 909.5 & ---   & ---  \\
+Coordinated ideal  & 362.3 & 1.0000 & 895.4 & ---   & 8    \\
+$\varrho{=}0.4$  & 362.4 & 1.0003 & 895.4 & 0.305 & 18   \\
+$\varrho{=}0.55$ & 362.4 & 1.0004 & 895.5 & 0.302 & 27   \\
+$\varrho{=}0.6$  & 362.4 & 1.0004 & 895.5 & 0.304 & 28   \\
+$\varrho{=}0.65$ & 362.5 & 1.0006 & 895.5 & 0.303 & 36   \\
+$\varrho{=}0.7$  & 362.6 & 1.0008 & 895.5 & 0.301 & 65   \\
+$\varrho{=}0.75$ & 368.5 & 1.0171 & 895.8 & 0.305 & 300  \\
+$\varrho{=}0.8$  & 375.0 & 1.0350 & 896.6 & 0.304 & 300  \\
+$\varrho{=}0.9$  & 389.6 & 1.0753 & 902.6 & 0.303 & 300  \\
+$\varrho{=}1.0$  & 401.9 & 1.1093 & 909.5 & 0.304 & 300  \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Imputation accuracy and robustness}
 The LightGBM imputer is a competent forecaster of an unseen home's heating. Under
-5-fold leave-agents-out cross-validation it achieves an RMSE of 0.294~kW and an
-MAE of 0.247~kW, against a heating standard deviation of 0.575~kW. At roughly
-51\% of the natural variability, the imputer is clearly better than predicting
+5-fold leave-agents-out cross-validation it achieves an RMSE of 0.304~kW and an
+MAE of 0.255~kW, against a heating standard deviation of 0.736~kW. At roughly
+41\% of the natural variability, the imputer is clearly better than predicting
 the mean and is accurate enough that the coordinated aggregate barely moves for
 non-responsive fractions below the flexibility knee, as seen in the per-scenario
 RMSE column of Table~\ref{tab:agg}. Notably the per-scenario imputation RMSE is
-nearly flat in $\varrho$ (0.17--0.28~kW) even as the aggregate degrades sharply ---
+nearly flat in $\varrho$ ($\approx 0.30$~kW) even as the aggregate degrades sharply ---
 direct evidence that the damage past the knee comes from the loss of controllable
 agents, not from worsening forecasts.
 
 Figure~\ref{fig:peakpar} plots peak and PAR against $\varrho$ over the full
-12-point sweep. Both remain clamped at the optimum through $\varrho \approx 0.55$
+12-point sweep. Both remain clamped at the optimum through $\varrho \approx 0.70$
 and then rise approximately linearly to the uncoordinated values at $\varrho = 1$
 --- a plateau-and-ramp, not a gradual decay, with the ramp onset (knee) marking
 exhaustion of the responsive deferral budget.
@@ -123,25 +125,25 @@ $\varrho$, not the ADMM penalty $\rho_{\mathrm{ADMM}}$.}
 
 A secondary finding concerns tractability rather than outcome quality. The ADMM
 iteration count grows steeply with $\varrho$: 8 iterations for the ideal case,
-then 14, 21, 25, and 26 through $\varrho = 0.55$, then a jump to 150 at
-$\varrho = 0.6$ and on to 221, 254, and 280 at $\varrho = 0.65, 0.75$, and $0.8$,
-saturating at the 300-iteration cap by $\varrho = 0.9$ (all runs below the cap
-converged). Communication failure thus degrades coordination
+then 18, 27, 28, and 36 through $\varrho = 0.65$, rising to 65 at $\varrho = 0.70$
+and then hitting the 300-iteration cap at $\varrho = 0.75$ and beyond (all runs
+below the cap converged). Communication failure thus degrades coordination
 \emph{tractability} --- the effort to reach consensus --- well before it degrades
 the coordinated \emph{outcome}, an early-warning signal an operator could
 monitor.
 
 The shape of this curve is informative, and it shares its knee with the peak and
-the network results. Through $\varrho = 0.55$ the iteration count stays modest
-($\le 26$); at $\varrho = 0.6$ it jumps almost six-fold (26 to 150) even though
-the peak there has barely moved (148.1~kW). The knee of the iteration curve
-therefore \emph{precedes} the visible outcome degradation: the solver feels the
-flexibility budget run out --- the sharing residual becomes hard to drive to zero
-as the imputed aggregate diverges from the one that physically forms --- one
-sweep step before the peak and the line loading break. Iteration count is thus a
-cheap, purely software-side proxy for the harder-to-observe physical-feasibility
-margin, visible before any meter or power-flow check, because both respond to the
-same underlying quantity: the mismatch injected by imputation.
+the network results. Through $\varrho = 0.70$ the iteration count stays bounded
+($\le 65$); at $\varrho = 0.75$ it more than quadruples to the 300 cap even though
+the peak there has only just begun to move (368.5~kW). The knee of the iteration
+curve therefore \emph{precedes} the visible outcome degradation: the solver feels
+the flexibility budget run out --- the sharing residual becomes hard to drive to
+zero as the imputed aggregate diverges from the one that physically forms --- one
+sweep step before the peak and the transformer loading break. Iteration count is
+thus a cheap, purely software-side proxy for the harder-to-observe
+physical-feasibility margin, visible before any meter or power-flow check, because
+both respond to the same underlying quantity: the mismatch injected by
+imputation.
 
 \subsection{Imputation method comparison and the value of imputation}
 The results so far use a single imputer (LightGBM). Two questions remain: how
@@ -158,207 +160,203 @@ a naive ``mean-level'' baseline (a flat profile at each silent home's known
 nameplate level --- correct energy, no shape), and the no-imputation case.
 
 Table~\ref{tab:imputers} reports both layers of metric. Intrinsically (5-fold
-leave-agents-out), ridge regression is the most accurate (RMSE 0.270~kW,
-$R^2 = 0.63$), slightly ahead of $k$-NN and LightGBM ($\approx 0.29$~kW) and the
-random forest (0.319~kW); with only 30 homes and four smooth features the linear
-model is hard to beat. Notably the naive mean-level baseline \emph{ties} LightGBM
-on RMSE (0.295~kW) --- because each home's heating is dominated by its mean level,
-which that baseline gets exactly right --- so intrinsic RMSE alone badly
-under-rates the importance of getting the \emph{timing} right.
+leave-agents-out), ridge regression is the most accurate (RMSE 0.280~kW,
+$R^2 = 0.70$), slightly ahead of LightGBM (0.304~kW) and $k$-NN (0.308~kW) and the
+random forest (0.342~kW); with this small population and four smooth features the
+linear model is hard to beat. Notably the naive mean-level baseline is close to
+the learned methods on RMSE (0.312~kW) --- because each home's heating is
+dominated by its mean level, which that baseline gets exactly right --- so
+intrinsic RMSE alone badly under-rates the importance of getting the \emph{timing}
+right.
 
 \begin{table}[t]
 \centering
 \caption{Imputation methods: intrinsic accuracy (leave-agents-out CV) versus
 realized feeder impact at $\varrho = 0.6$ (mean over 200 random silent subsets).
-Lower realized loading is better.}
+Lower realized loading and violation probability are better.}
 \label{tab:imputers}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Method & RMSE & MAE & $R^2$ & Peak & Load. \\
- & (kW) & (kW) & & (kW) & (\%) \\
+Method & RMSE & $R^2$ & Peak & Load. & $P_{\mathrm{viol}}$ \\
+ & (kW) & & (kW) & (\%) & \\
 \midrule
-Ridge              & 0.270 & 0.228 & 0.63 & 150.8 & 101.9 \\
-$k$-NN             & 0.292 & 0.248 & 0.59 & 151.0 & 102.0 \\
-LightGBM           & 0.294 & 0.247 & 0.59 & 151.9 & 102.7 \\
-Random forest      & 0.319 & 0.267 & 0.54 & 151.6 & 102.5 \\
-Mean-level (naive) & 0.295 & 0.258 & 0.55 & 154.0 & 104.2 \\
-No imputation      & ---   & ---   & ---  & 162.4 & 110.2 \\
+Ridge              & 0.280 & 0.70 & 366.9 &  99.8 & 0.17 \\
+$k$-NN             & 0.308 & 0.67 & 368.1 & 100.1 & 0.61 \\
+LightGBM           & 0.304 & 0.67 & 370.4 & 100.8 & 0.92 \\
+Random forest      & 0.342 & 0.62 & 369.4 & 100.5 & 0.86 \\
+Mean-level (naive) & 0.312 & 0.65 & 376.6 & 102.5 & 1.00 \\
+No imputation      & ---   & ---  & 389.0 & 106.0 & 1.00 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The realized-impact columns and Figure~\ref{fig:comparison} tell the operational
-story. Without imputation the realized peak climbs steeply --- 162.4~kW (110\%
-loading) at $\varrho = 0.6$, with a wide $[158.8, 167.1]$~kW spread because the
-outcome depends entirely on \emph{which} uncontrolled homes fall silent. Any
-learned imputer holds the realized peak near 151~kW ($\approx 102\%$): imputation
-buys roughly an 11~kW reduction and halves the overshoot above the limit, and it
-also sharply reduces the variance. The naive mean-level baseline recovers part of
-this (154.0~kW) but trails the learned methods by $\approx 2$--3~kW --- direct
-evidence that reconstructing the \emph{shape}, not merely the energy, is what
-lets the responsive homes counter the silent peaks. Among the learned methods the
-downstream differences are small (under 1.5~kW) and track intrinsic accuracy
-(ridge best, random forest worst). The practical lesson is therefore twofold:
-\emph{using} an imputer matters far more than \emph{which} one, and a simple
-ridge model is a strong, cheap choice on data of this size --- LightGBM remains a
-robust default that scales to the larger populations a utility would face.
+story, and here the violation probability $P_{\mathrm{viol}}$ is the sharpest
+discriminator. Without imputation the realized peak climbs to 389.0~kW (106\%
+loading) at $\varrho = 0.6$ and the transformer violates in \emph{every} draw
+($P_{\mathrm{viol}} = 1.00$), because the outcome depends entirely on \emph{which}
+uncontrolled homes fall silent. Any learned imputer holds the realized peak near
+367--370~kW ($\approx 100$--101\%): imputation buys roughly a 19~kW reduction
+(389 to 370~kW) and, more importantly, drops the violation probability from 1.00
+(none) to as low as 0.17 (ridge). The naive mean-level baseline recovers part of
+the peak (376.6~kW) but still violates in every draw --- direct evidence that
+reconstructing the \emph{shape}, not merely the energy, is what lets the
+responsive homes counter the silent peaks. Among the learned methods
+$P_{\mathrm{viol}}$ now discriminates cleanly and tracks intrinsic forecast
+quality: ridge 0.17, $k$-NN 0.61, random forest 0.86, and LightGBM 0.92, with the
+realized-loading ranking none ($106\%$) $>$ naive ($102.5\%$) $>$ the ML cluster
+($\approx 100$--101\%) $>$ ideal ($98.5\%$). The practical lesson is therefore
+twofold: \emph{using} an imputer matters far more than \emph{which} one --- one
+versus none is the gap that dominates --- and a simple ridge model is the best,
+cheapest choice on data of this size, while LightGBM remains a robust default that
+scales to the larger populations a utility would face.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_imputer_comparison.pdf}
-\caption{Realized worst line loading versus the non-responsive fraction for each
-imputation method under the realized-load model. No imputation (red) diverges
-early; the learned methods cluster near the 100\% limit and are nearly
-indistinguishable; the naive mean-level baseline sits between them. All converge
-to the uncoordinated 115\% once every home is silent.}
+\caption{Realized worst transformer loading versus the non-responsive fraction for
+each imputation method under the realized-load model. No imputation (red) diverges
+early; the learned methods cluster near the 100\% limit; the naive mean-level
+baseline sits between them. All converge to the uncoordinated 109.6\% once every
+home is silent.}
 \label{fig:comparison}
 \end{figure}
 
 \subsection{Network validation}
 The closed-loop contribution is summarized in Figure~\ref{fig:network} and
-Table~\ref{tab:net}. The uncoordinated aggregate loads the worst trunk line to
-115\% --- a thermal violation --- and drops the worst minimum voltage to
-0.905~p.u. Ideal coordination \emph{clears} the thermal overload: maximum line
-loading falls to 99.7\% (no violation) and worst minimum voltage rises to
-0.918~p.u. This is the core result: flattening the aggregate is not merely a
-statistical improvement, it restores feeder feasibility.
+Table~\ref{tab:net}. The uncoordinated aggregate loads the 400~kVA transformer to
+109.6\% --- a thermal violation --- while the worst minimum voltage sits at a
+healthy 0.962~p.u. Ideal coordination \emph{clears} the thermal overload: maximum
+transformer loading falls to 98.5\% (no violation) and the worst minimum voltage
+stays healthy at 0.966~p.u. This is the core result: flattening the aggregate is
+not merely a statistical improvement, it restores feeder feasibility.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_network_violation_vs_rho.pdf}
-\caption{Worst minimum bus voltage (left axis) and worst maximum line loading
-(right axis) versus the non-responsive fraction $\varrho$ --- the headline
-feasibility figure. Loading stays cleared below 100\% through $\varrho = 0.6$,
-crosses the limit near $\varrho = 0.62$, and ramps linearly to the uncoordinated
-115\% at $\varrho = 1$. The image's ``rho'' axis is the non-responsive
+\caption{Worst minimum bus voltage (left axis) and worst maximum transformer
+loading (right axis) versus the non-responsive fraction $\varrho$ --- the headline
+feasibility figure. Loading stays cleared below 100\% through $\varrho = 0.70$,
+crosses the limit at $\varrho = 0.75$, and ramps linearly to the uncoordinated
+109.6\% at $\varrho = 1$. The image's ``rho'' axis is the non-responsive
 fraction $\varrho$.}
 \label{fig:network}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Network feasibility on IEEE-33 (worst of day), selected fractions.}
+\caption{Network feasibility on the LV feeder (worst of day), selected fractions.
+Loading is the 400~kVA transformer's worst-of-day loading.}
 \label{tab:net}
 \begin{tabular}{@{}lrrrl@{}}
 \toprule
-Scenario & Peak (MW) & $V_{\min}$ (p.u.) & Loading (\%) & Violation \\
+Scenario & Peak (kW) & $V_{\min}$ (p.u.) & Loading (\%) & Violation \\
 \midrule
-Uncoordinated      & 4.60 & 0.905 & 115.0 & yes \\
-Coordinated ideal  & 4.02 & 0.918 &  99.7 & no \\
-$\varrho{=}0.4$  & 4.02 & 0.918 &  99.7 & no \\
-$\varrho{=}0.55$ & 4.02 & 0.918 &  99.8 & no \\
-$\varrho{=}0.6$  & 4.03 & 0.918 & 100.0 & no (edge) \\
-$\varrho{=}0.65$ & 4.13 & 0.915 & 102.8 & yes \\
-$\varrho{=}0.7$  & 4.18 & 0.914 & 104.0 & yes \\
-$\varrho{=}0.8$  & 4.34 & 0.911 & 108.0 & yes \\
-$\varrho{=}0.9$  & 4.46 & 0.908 & 111.3 & yes \\
-$\varrho{=}1.0$  & 4.60 & 0.905 & 115.0 & yes \\
+Uncoordinated      & 401.6 & 0.962 & 109.6 & yes \\
+Coordinated ideal  & 362.3 & 0.966 &  98.5 & no \\
+$\varrho{=}0.4$  & 362.4 & 0.966 &  98.5 & no \\
+$\varrho{=}0.55$ & 362.4 & 0.966 &  98.5 & no \\
+$\varrho{=}0.7$  & 362.6 & 0.966 &  98.6 & no \\
+$\varrho{=}0.75$ & 368.5 & 0.966 & 100.2 & yes \\
+$\varrho{=}0.8$  & 375.0 & 0.965 & 102.1 & yes \\
+$\varrho{=}0.9$  & 389.6 & 0.964 & 106.2 & yes \\
+$\varrho{=}1.0$  & 401.9 & 0.962 & 109.6 & yes \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The cleared state is resilient to communication failure through $\varrho = 0.6$,
-where the worst line rides the 100.0\% edge but does not violate. The
-deterministic crossing falls between $\varrho = 0.6$ (99.98\%, cleared) and
-$\varrho = 0.65$ (102.8\%, violated); beyond it the loading ramps linearly ---
-104.0\%, 108.0\%, 111.3\% --- back to the uncoordinated 115\% once every home is
+The cleared state is resilient to communication failure through $\varrho = 0.70$,
+where the transformer holds at 98.6\% loading and does not violate. The
+deterministic crossing falls between $\varrho = 0.70$ (98.6\%, cleared) and
+$\varrho = 0.75$ (100.2\%, violated); beyond it the loading ramps linearly ---
+102.1\%, 106.2\% --- back to the uncoordinated 109.6\% once every home is
 imputed at $\varrho = 1$. The story is therefore
-$115\% \rightarrow 99.7\% \rightarrow 115\%$: coordination clears the overload,
-the clearance survives substantial non-responsiveness, and then the protection
-unwinds linearly as the controllable population vanishes. This pins the critical
-non-responsive fraction --- beyond which imputation can no longer protect the
-feeder --- to a narrow band around $\varrho = 0.62$.
+$109.6\% \rightarrow 98.5\% \rightarrow 109.6\%$: coordination clears the
+overload, the clearance survives substantial non-responsiveness, and then the
+protection unwinds linearly as the controllable population vanishes. This pins the
+critical non-responsive fraction --- beyond which imputation can no longer protect
+the transformer --- to a narrow band around $\varrho = 0.72$.
 
-\paragraph{An honest note on voltage.} We report voltage as a \emph{severity}
-measure, not a compliance verdict. On the \texttt{case33bw} benchmark the worst
-minimum voltage never reaches the 0.95~p.u. ANSI limit in any scenario --- the
-feeder is inherently stressed --- so we do not claim voltage compliance.
-Coordination nonetheless reduces under-voltage \emph{depth} (0.905 to
-0.918~p.u.), which is a genuine improvement in feeder condition. The clean
-cleared/re-violated headline comes from line loading, where the 100\% thermal
-limit gives an unambiguous binary verdict.
+\paragraph{Voltage stays healthy.} Across every scenario the worst minimum LV bus
+voltage stays in a comfortable $0.962$--$0.966$~p.u.\ band and never approaches
+the 0.95~p.u.\ limit, so the feeder is voltage-comfortable throughout and the
+\emph{transformer thermal loading} is the unambiguous binding constraint --- a
+cleaner story than a benchmark that is stressed on voltage to begin with. The
+100\% transformer rating gives an unambiguous binary verdict, and coordination is
+what moves the feeder across it from infeasible to feasible.
 
 \subsection{Forecast uncertainty quantification}
 The network verdict above rests on a single realization per non-responsive
-fraction: one failing-agent subset and the raw point forecast. To test whether
-that point estimate understates risk, we quantify two sources of uncertainty.
-The first is aleatory --- \emph{which} agents fall silent, since the feeder
-impact depends on the placement and schedule of the missing population. The
-second is imputation error in the reconstructed heating. For each fraction
-$\varrho$ we draw 200 random failing subsets; for each subset the imputed agents'
-heating is perturbed by Gaussian forecast residuals with standard deviation equal
-to the imputer's cross-validated RMSE (0.294~kW), sharing-ADMM is re-solved, and
-the resulting daily peak is mapped to the worst-of-day minimum voltage and
-maximum line loading through a precomputed peak-to-network curve. The mapping is
-valid because, with fixed bus-share injection, the worst-of-day network metrics
-are monotone functions of the daily peak; the curve reproduces the deterministic
-operating points exactly --- the 169.1~kW uncoordinated peak, for instance, maps
-to 0.905~p.u. and 115.0\% loading.
+fraction. To test whether that point estimate understates risk, we run the
+Monte-Carlo analysis of Section~\ref{sec:methodology} (200 draws per fraction over
+which agents fall silent and Gaussian forecast residuals of standard deviation
+0.304~kW, the imputer's cross-validated RMSE), mapping each draw's daily peak to
+the worst-of-day transformer loading.
 
 Figure~\ref{fig:uncertainty} and Table~\ref{tab:uncertainty} report the result
-over 200 draws per fraction (mean with [P5, P95] band). The probability of a
-thermal violation stays at 0 through $\varrho = 0.55$, jumps to 0.53 at
-$\varrho = 0.6$, and reaches 1.00 for $\varrho \ge 0.65$. The single-realization
-analysis reported $\varrho = 0.6$ as marginally compliant (99.98\% loading), but
+(mean with [P5, P95] band). The probability of a thermal violation stays at 0
+through $\varrho = 0.65$, ticks to 0.04 at $\varrho = 0.70$, jumps to 0.96 at
+$\varrho = 0.75$, and is 1.00 for $\varrho \ge 0.80$. The single-realization
+analysis reported $\varrho = 0.70$ as comfortably compliant (98.6\% loading), but
 once the uncertainty in which agents fail and in the forecast is accounted for,
-the worst line exceeds its thermal limit in 53\% of draws: the point estimate
-understated the risk. The [P5, P95] band is tight on the plateau --- forecast
-errors average out across a large responsive population --- and widens at the knee
-($[99.8, 101.4]\%$ at $\varrho = 0.6$, straddling the limit) before riding the
-ramp upward. This reframes the operator takeaway: the critical transition is not
-a single deterministic fraction but a probabilistic risk threshold centered on
-$\varrho = 0.6$, where roughly one realization in two breaches the feeder, with
-breach becoming certain by $\varrho = 0.65$.
+the transformer still clears at $\varrho = 0.70$ (only 4\% of draws breach) yet
+exceeds its limit in 96\% of draws by $\varrho = 0.75$: the deterministic estimate
+understated how abruptly the risk rises. The [P5, P95] band is tight on the
+plateau --- forecast errors average out across a large responsive population ---
+and widens at the knee ($[98.6, 99.95]\%$ at $\varrho = 0.70$, $[100.1, 102.0]\%$
+at $\varrho = 0.75$) before riding the ramp upward. This reframes the operator
+takeaway: the critical transition is not a single deterministic fraction but a
+probabilistic risk threshold centered near $\varrho = 0.72$, where the breach
+probability swings from near zero to near certainty across a single sweep step.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_uncertainty_loading.pdf}
 \caption{Monte-Carlo forecast-uncertainty sweep (200 draws per fraction). Worst
-maximum line loading mean with its P5--P95 band versus the non-responsive
+maximum transformer loading mean with its P5--P95 band versus the non-responsive
 fraction $\varrho$ (left axis, with the 100\% thermal limit), and the probability
-of a line violation as bars (right axis). The image's ``rho'' axis is the
+of a transformer violation as bars (right axis). The image's ``rho'' axis is the
 non-responsive fraction $\varrho$.}
 \label{fig:uncertainty}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Monte-Carlo line loading and violation probability by fraction
+\caption{Monte-Carlo transformer loading and violation probability by fraction
 (200 draws each; mean [P5, P95]).}
 \label{tab:uncertainty}
 \begin{tabular}{@{}lll@{}}
 \toprule
 $\varrho$ & Loading (\%) [P5, P95] & $P(\text{violation})$ \\
 \midrule
-0.40 & 99.7 [99.7, 99.8]    & 0.00 \\
-0.55 & 99.8 [99.8, 99.8]    & 0.00 \\
-0.60 & 100.3 [99.8, 101.4]  & 0.53 \\
-0.65 & 102.7 [101.3, 104.3] & 1.00 \\
-0.70 & 103.9 [102.5, 105.3] & 1.00 \\
-0.80 & 107.7 [106.2, 109.4] & 1.00 \\
-1.00 & 115.2 [113.6, 116.9] & 1.00 \\
+0.40 & 98.5 [98.5, 98.5]    & 0.00 \\
+0.55 & 98.5 [98.5, 98.5]    & 0.00 \\
+0.70 & 99.1 [98.6, 99.95]   & 0.04 \\
+0.75 & 101.0 [100.1, 102.0] & 0.96 \\
+0.80 & 102.5 [101.6, 103.4] & 1.00 \\
+1.00 & 110.0 [109.2, 110.9] & 1.00 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Discussion}
 Three observations tie the results together. First, the aggregate, tractability,
-and feasibility curves all share the same knee near $\varrho = 0.6$: the
-iteration count, the peak, and the worst line loading all stay benign on the
-plateau through $\varrho \approx 0.55$, break at the same knee, and ramp together
-thereafter. This suggests that a single observable quantity --- the divergence
-between the imputed and the realized aggregate, governed by the responsive
-flexibility budget --- drives all three, and that an operator monitoring ADMM
-convergence effort has an early proxy for impending feeder violation (the
-iteration knee leads the loading knee by one sweep step). Second, the network
-result is not a restatement of the aggregate result: a 12.7\% peak cut is a
-statistical improvement, but \emph{clearing a 115\% overload to 99.7\%} is an
-operational state change from infeasible to feasible, and the two need not
-coincide on a different feeder or load allocation. Third, the unwinding past the
-knee is graceful rather than catastrophic --- the loading ramps linearly to 115\%
-and the power flow always converges, never collapsing --- which indicates that
-the imputer keeps the system in a recoverable regime even when most agents are
-silent. Together these support the central claim that coordination quality should
-be measured by feeder feasibility, and that imputation extends the range of
-communication failure over which that feasibility holds --- here, up to a critical
-non-responsive fraction near $\varrho = 0.62$.
+and feasibility curves all share the same knee near $\varrho = 0.72$: the
+iteration count, the peak, and the worst transformer loading all stay benign on
+the plateau through $\varrho \approx 0.70$, break at the same knee, and ramp
+together thereafter. This suggests that a single observable quantity --- the
+divergence between the imputed and the realized aggregate, governed by the
+responsive flexibility budget --- drives all three, and that an operator
+monitoring ADMM convergence effort has an early proxy for impending feeder
+violation (the iteration knee leads the loading knee by one sweep step). Second,
+the network result is not a restatement of the aggregate result: a 9.8\% peak cut
+is a statistical improvement, but \emph{clearing a 109.6\% transformer overload to
+98.5\%} is an operational state change from infeasible to feasible, and the two
+need not coincide on a different feeder or load allocation. Third, the unwinding
+past the knee is graceful rather than catastrophic --- the loading ramps linearly
+to 109.6\% and the power flow always converges, never collapsing --- which
+indicates that the imputer keeps the system in a recoverable regime even when most
+agents are silent. Together these support the central claim that coordination
+quality should be measured by feeder feasibility, and that imputation extends the
+range of communication failure over which that feasibility holds --- here, up to a
+critical non-responsive fraction near $\varrho = 0.72$.

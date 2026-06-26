@@ -1,6 +1,10 @@
 \section{Methodology}
 \label{sec:methodology}
 
+This section states the method in general terms; the concrete feeder, agent
+population, weights, and tariff used to instantiate it are given in
+Section~\ref{sec:casestudy}.
+
 \subsection{Sharing-ADMM coordination}
 Let $x_i \in \mathbb{R}^{T}$ be the heating schedule of home $i$, $h_i$ its
 baseline, and $B \in \mathbb{R}^{T}$ the fixed background aggregate. The
@@ -15,20 +19,22 @@ respecting each home's comfort. We solve the sharing problem
 \end{equation}
 
 subject to~\eqref{eq:agent} for every $i$, where $c$ is the constant level that
-conserves total daily energy, $\lambda = 0.15$ weights comfort deviation,
-$\mu = 1.0$ weights flattening, and $\mathbf{1}$ is the all-ones vector. The
-first term keeps each home close to its comfortable baseline; the second
-penalizes any departure of the total load from a flat profile.
+conserves total daily energy, the weight $\lambda$ penalizes comfort deviation,
+the weight $\mu$ penalizes departure of the total load from a flat profile, and
+$\mathbf{1}$ is the all-ones vector. The first term keeps each home close to its
+comfortable baseline; the second rewards a flat aggregate. Because daily energy
+is conserved, $c$ is a constant and the objective is exactly the variance of the
+total load --- the scheme is valley-filling, not curtailment.
 
 Following the sharing form of ADMM \cite{boyd2011admm}, we introduce an
-auxiliary aggregate variable $z$ and a scaled dual $u$ with penalty
-$\rho_{\mathrm{ADMM}} = 1.0$, and iterate three steps. The
-\textbf{$x$-update} solves each home's local problem in parallel: a comfort-plus-penalty
-proximal step followed by projection of the result onto the box-and-energy-plane
-feasible set of~\eqref{eq:agent}. The \textbf{$z$-update} is the closed-form
-average that drives the shared aggregate toward the flat target. The
-\textbf{$u$-update} is the standard scaled dual ascent on the sharing residual.
-Algorithm~\ref{alg:admm} summarizes one full sweep.
+auxiliary aggregate variable $z$ and a scaled dual $u$ with penalty parameter
+$\rho_{\mathrm{ADMM}}$, and iterate three steps. The \textbf{$x$-update} solves
+each home's local problem in parallel: a comfort-plus-penalty proximal step
+followed by projection of the result onto the box-and-energy-plane feasible set
+of~\eqref{eq:agent}. The \textbf{$z$-update} is the closed-form average that
+drives the shared aggregate toward the flat target. The \textbf{$u$-update} is
+the standard scaled dual ascent on the sharing residual. Algorithm~\ref{alg:admm}
+summarizes one full sweep.
 
 \begin{algorithm}[t]
 \caption{Sharing-ADMM heating coordination}
@@ -83,44 +89,57 @@ monotone non-decreasing in $\nu_i$, the bisection is exact and costs only a hand
 of evaluations, so the whole $x$-update is closed-form up to a scalar root-find.
 The subsequent $z$-update is fully separable per time step --- each component of
 $z$ is the average of the corresponding aggregate-plus-dual component driven toward
-the flat target $c$ --- and therefore also closed form, which is why a full ADMM
-sweep is inexpensive even with $N=30$ agents over $T=96$ steps.
+the flat target $c$ --- and therefore also closed form. Both updates are
+vectorized across agents, so a full sweep remains inexpensive as the home
+population grows.
 
 \subsection{Imputation of non-responsive agents}
 When agent $i$ is non-responsive its baseline $h_i$ is unavailable to the
 coordinator, so we replace it with a learned estimate $\hat{h}_i$. We train a
-single LightGBM gradient-boosted-tree regressor \cite{ke2017lightgbm} that maps a
-small feature vector --- ambient temperature, the sine and cosine of the hour of
-day, and the agent's nameplate heating level --- to instantaneous heating power.
-The model is trained on the responsive population and applied step-by-step to
-each silent agent, yielding $\hat{x}_{i,t}$ that the coordinator treats as the
-agent's contribution. Generalization to unseen homes is assessed by a 5-fold
-leave-agents-out cross-validation, which holds out entire agents rather than
+regressor that maps a small feature vector --- ambient temperature, the sine and
+cosine of the hour of day, and the agent's nameplate heating level --- to
+instantaneous heating power. The model is trained on the responsive population
+and applied to each silent agent, yielding $\hat{x}_{i,t}$ that the coordinator
+treats as the agent's contribution. The default estimator is a gradient-boosted-tree
+regressor \cite{ke2017lightgbm}; several learned and naive alternatives are
+compared in Section~\ref{sec:results}. Generalization to unseen homes is assessed
+by leave-agents-out cross-validation, which holds out entire agents rather than
 random samples and therefore measures the realistic case of imputing a home the
 model never saw.
 
 \subsection{Power-flow validation loop}
 The novel stage closes the loop on physics. For each scenario (uncoordinated,
-ideal, and each $\varrho$) we take the resulting aggregate, distribute it across the
-32 IEEE-33 load buses by their native load shares, and scale so that the
-uncoordinated peak reaches the calibrated feeder. The trunk ampacity is fixed so
-the uncoordinated peak loads the worst line to 115\%. We then run an AC
-Newton-Raphson power flow at every one of the 96 time steps (672 solves across
-all scenarios, all converged) and record, per scenario, the worst-of-day
-minimum bus voltage and the worst-of-day maximum line loading. A scenario is
-flagged as violating if any line exceeds 100\% loading at any step. This turns
-an abstract kilowatt signal into a binary feeder verdict and a pair of
-continuous severity measures.
+ideal, and each non-responsive fraction $\varrho$) we inject the resulting
+aggregate into a radial distribution-feeder model with an explicit distribution
+transformer, distributing the demand across the feeder's load points, and solve
+an AC power flow at every time step. Per scenario we record the worst-of-day
+maximum transformer loading and minimum bus voltage. A scenario is flagged as
+violating if the transformer exceeds its thermal rating at any step. This turns
+an abstract kilowatt signal into a binary feeder verdict and a pair of continuous
+severity measures.
 
-Three modeling choices deserve comment. \emph{Load allocation by native share}
-keeps the spatial signature of the IEEE-33 case intact, so the worst line is the
-one the benchmark already stresses (the trunk leaving the substation) rather than
-an artifact of our placement. \emph{Ampacity calibration to 115\%} is what makes
-the experiment decision-relevant: a feeder that is comfortably within limits in
-the uncoordinated case has nothing to gain from demand response, so we set the
-binding constraint exactly where coordination must act to clear it. \emph{Solving
-every step} rather than only the aggregate-peak step matters because imputation
-error can shift the worst instant: the uncoordinated worst is the evening peak,
-but under heavy imputation the binding step can migrate, and an
-aggregate-peak-only check would miss it. Reporting the worst-of-day envelope
-across all 96 steps therefore gives a conservative, instant-agnostic verdict.
+Two modeling choices are methodological rather than case-specific. \emph{Sizing
+the binding constraint into overload} is what makes the experiment
+decision-relevant: a feeder comfortably within limits in the uncoordinated case
+has nothing to gain from demand response, so the transformer is rated such that
+the uncoordinated winter peak is in overload, placing the binding constraint
+exactly where coordination must act to clear it. \emph{Solving every step} rather
+than only the aggregate-peak step matters because imputation error can shift the
+worst instant: the uncoordinated worst is the evening peak, but under heavy
+imputation the binding step can migrate, and an aggregate-peak-only check would
+miss it. Reporting the worst-of-day envelope across the whole horizon therefore
+gives a conservative, instant-agnostic verdict.
+
+\subsection{Uncertainty quantification}
+The deterministic sweep fixes one failing-agent subset and the raw point forecast
+per fraction. To quantify risk we run a Monte-Carlo analysis over two sources of
+uncertainty: which agents fall silent (drawn at random) and the imputation error
+(the silent agents' estimates are perturbed by Gaussian residuals matched to the
+imputer's cross-validated error). For each fraction we draw many such
+realizations, re-solve the coordination, and record the distribution of the daily
+peak. Because the worst-of-day network metrics are monotone functions of that
+peak --- the transformer sees the whole aggregate regardless of spatial placement
+--- each realization's peak is mapped through a precomputed peak-to-loading curve,
+making the Monte-Carlo sweep inexpensive while reproducing the deterministic
+operating points exactly. We report the mean, a central band, and the probability
+that the transformer is in violation.

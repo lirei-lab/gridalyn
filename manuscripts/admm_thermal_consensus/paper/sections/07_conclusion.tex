@@ -3,31 +3,33 @@
 We presented a network-validated pipeline that coordinates cold-climate electric
 heating with sharing-ADMM, reconstructs non-responsive agents with a LightGBM
 imputer, and --- the closing contribution --- validates the coordinated aggregate
-on the IEEE 33-bus feeder with AC power flow. The closed loop turns abstract
+on a synthetic LV residential feeder of 74 all-electric homes behind a 400~kVA
+distribution transformer with AC power flow. The closed loop turns abstract
 flattening metrics into a feeder verdict: ideal coordination cuts the aggregate
-peak by 12.7\% and clears a 115\% thermal line overload down to 99.7\%, while
-lifting the worst minimum voltage from 0.905 to 0.918~p.u. The cleared state is
-resilient to communication failure through a non-responsive fraction of 0.6, and
-a finely-resolved sweep shows the protection then unwinds not as a sudden step
-but as a plateau followed by a roughly linear ramp: the worst line loading stays
-clamped near 99.7\% up to $\varrho \approx 0.55$, crosses the 100\% limit near
-$\varrho = 0.62$, and rises linearly to the uncoordinated 115\% as the last homes
-fall silent. A Monte-Carlo analysis over which agents fail and the forecast error
-reframes this critical fraction as a probabilistic risk threshold rather than a
-single deterministic point: the probability of a thermal violation stays at 0
-through $\varrho = 0.55$, jumps to 0.53 at $\varrho = 0.6$, and is certain by
-$\varrho = 0.65$, so the deterministic ``edge'' compliance at $\varrho = 0.6$
-understated the true risk. A secondary finding is that the ADMM iteration count
-explodes at the same knee (from 26 to 150 between $\varrho = 0.55$ and $0.6$, on
-to 280 by $0.8$) one sweep step \emph{before} the outcome degrades, offering an
+peak by 9.8\% and clears a 109.6\% transformer thermal overload down to 98.5\%,
+while LV voltage stays healthy ($\approx 0.96$~p.u., never approaching the
+0.95~p.u.\ limit), so the transformer is the unambiguous binding constraint. The
+cleared state is resilient to communication failure through a non-responsive
+fraction of about 0.70, and a finely-resolved sweep shows the protection then
+unwinds not as a sudden step but as a plateau followed by a roughly linear ramp:
+the worst transformer loading stays clamped near 98.5\% up to
+$\varrho \approx 0.70$, crosses the 100\% limit at $\varrho = 0.75$, and rises
+linearly to the uncoordinated 109.6\% as the last homes fall silent. A
+Monte-Carlo analysis over which agents fail and the forecast error reframes this
+critical fraction as a probabilistic risk threshold rather than a single
+deterministic point: the probability of a thermal violation stays at 0 through
+$\varrho = 0.65$, ticks to 0.04 at $\varrho = 0.70$, and reaches 0.96 by
+$\varrho = 0.75$, so the deterministic compliance at $\varrho = 0.70$ understated
+the true risk. A secondary finding is that the ADMM iteration count explodes at
+the same knee (from 65 to the 300-iteration cap between $\varrho = 0.70$ and
+$0.75$) one sweep step \emph{before} the outcome degrades, offering an
 early-warning signal.
 
-The study has clear limitations. It covers a single cold day and a single feeder;
-the communication-failure model is a stochastic non-responsive fraction rather
-than a protocol-level simulation of delays, drops, and retransmissions; and the
-\texttt{case33bw} voltage profile is inherently stressed, so voltage is reported
-as a severity measure rather than a compliance test. Future work will extend the
-loop to multiple feeders and days, study the spatial placement of agents on the
-feeder (which determines how much each contributes to the binding constraint),
-and couple the coordinator to a flexibility market so that the cleared headroom
-can be priced and settled.
+The study has clear limitations. It covers a single cold day and a single feeder,
+and the binding constraint is the distribution transformer's thermal loading; the
+communication-failure model is a stochastic non-responsive fraction rather than a
+protocol-level simulation of delays, drops, and retransmissions. Future work will
+extend the loop to multiple feeders and days, study the spatial placement of
+agents across the LV feeders (which determines how much each contributes to the
+binding constraint), and couple the coordinator to a flexibility market so that
+the cleared headroom can be priced and settled.

@@ -1,23 +1,25 @@
 \section{Case Study Setup}
+\label{sec:casestudy}
 
 The study runs on a single synthetic Trois-Rivi\`eres cold day with a minimum
 ambient temperature of $-21.9\,^{\circ}\mathrm{C}$, discretized at 15-minute
-resolution into $T = 96$ steps. We coordinate $N = 30$ electric-heating homes
+resolution into $T = 96$ steps. We coordinate $N = 74$ electric-heating homes
 with comfort band $\alpha = 0.5$, comfort weight $\lambda = 0.15$, flattening
 weight $\mu = 1.0$, and ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The
-communication-failure fraction is swept over
-$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$.
+communication-failure fraction is swept over the twelve points
+$\varrho \in \{0.0, 0.2, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0\}$.
 
 Energy cost is evaluated against a time-of-use tariff with an off-peak rate of
 0.078, a mid-peak rate of 0.128, and an evening-peak rate of 0.158~CAD/kWh.
-Physical feasibility uses the IEEE 33-bus feeder with all loads at a power factor
-of 0.95, with the aggregate scaled so the uncoordinated winter peak reaches the
-feeder and trunk ampacity calibrated to a 115\% uncoordinated overload. The
-software stack is pandapower~3.4.0 for power flow, scikit-learn~1.6.1 for the
-cross-validation harness, and LightGBM~4.6.0 for the imputer. Every input,
-intermediate, and reported figure is emitted as a governed artifact so the run
-is reproducible from its declarative configuration.
-Table~\ref{tab:params} collects the principal parameters.
+Physical feasibility uses a synthetic LV residential feeder of 74 literal homes
+behind a single 400~kVA MV/LV distribution transformer (25~kV / 0.4~kV) split
+across four parallel LV feeders, with all loads at a power factor of 0.95 and
+modeled one-for-one (no artificial scaling). The uncoordinated coincident peak
+loads the transformer to 109.6\%.
+The software stack is pandapower~3.4.0 for power flow, scikit-learn~1.6.1 for the
+cross-validation harness, and LightGBM~4.6.0 for the imputer.
+Table~\ref{tab:params} collects the principal parameters, and the reproducibility
+of the run is discussed below.
 
 \begin{table}[t]
 \centering
@@ -27,48 +29,46 @@ Table~\ref{tab:params} collects the principal parameters.
 \toprule
 Parameter & Value \\
 \midrule
-Homes $N$ & 30 \\
+Homes $N$ & 74 \\
 Horizon / resolution & 96 steps / 15 min \\
 Coldest-day min.\ temperature & $-21.9\,^{\circ}\mathrm{C}$ \\
 Comfort band $\alpha$ & 0.5 \\
 Comfort weight $\lambda$ & 0.15 \\
 Flattening weight $\mu$ & 1.0 \\
 ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
-Non-responsive fraction $\varrho$ & $\{0.0, 0.2, 0.4, 0.6, 0.8\}$ \\
+Non-responsive fraction $\varrho$ & $\{0.0, 0.2, 0.4, 0.5, 0.55, 0.6,$ \\
+ & $\;0.65, 0.7, 0.75, 0.8, 0.9, 1.0\}$ \\
 TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
-Feeder & IEEE 33-bus, 12.66 kV \\
+Feeder & Synthetic LV residential, 0.4 kV \\
+Transformer & 400 kVA MV/LV, 4 parallel LV feeders \\
 Power factor & 0.95 \\
-Uncoordinated worst-line loading & 115\% (calibrated) \\
+Uncoordinated transformer loading & 109.6\% \\
 Power flow & AC Newton-Raphson \\
 Software & pandapower 3.4.0, scikit-learn 1.6.1, LightGBM 4.6.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Reproducibility and governed artifacts}
-The study is fully declarative. A \texttt{project.yaml} (a \emph{StudyProject}
-contract) and a \texttt{workflow.yaml} (an eight-stage directed acyclic graph)
-drive the entire pipeline; no step depends on hand-edited intermediate state.
-The runner executes the stages in topological order --- synthetic cold-day
-weather and per-home baseline generation, ADMM coordination, LightGBM imputer
-training and cross-validation, the communication-failure sweep, power-flow
-validation, and reporting --- and each stage emits a governed JSON report
-following a fixed schema. Every report carries the same envelope fields
-(\texttt{report\_id}, \texttt{schema\_version}, \texttt{created\_at},
-\texttt{source\_domain}, \texttt{inputs}, \texttt{artifacts}, \texttt{summary},
-\texttt{validation}), and each recorded artifact stores its byte count and SHA-256
-digest, so every number in this paper is traceable to a specific file and run.
-A regression baseline pins the headline aggregate peaks, and the run is
-deterministic: fixed random seeds and a synthetic weather day remove any
-external data dependency, so a reader can re-run the study from its configuration
-and obtain baseline-matching results. We claim re-runnable, citable
-reproducibility on this single configuration --- not statistical generality
-across feeders or climates, which the limitations discuss. Table~\ref{tab:stages}
-lists the eight stages and their principal governed outputs.
+\subsection{Reproducibility}
+The study is designed to be reproduced exactly. It depends on no proprietary or
+field-measured data: the cold day, per-home thermal baselines, and background
+loads are all synthetic and generated from fixed random seeds, so the inputs are
+defined entirely by the parameters in Table~\ref{tab:params} and regenerate
+identically on any machine. The computation is a single automated pipeline
+(Table~\ref{tab:stages}) that runs end-to-end from that configuration without
+manual intervention, and it is built on open-source numerical libraries
+(pandapower for power flow, scikit-learn and LightGBM for the imputer), so no
+closed component stands between the configuration and the reported numbers. Each
+stage writes its outputs with an integrity digest, every figure and table in this
+paper is generated from those recorded outputs rather than transcribed by hand,
+and a regression check pins the headline quantities so that an accidental change
+is caught. The implementation and configuration are released with the paper. We
+claim re-runnable reproducibility on this configuration --- not statistical
+generality across feeders or climates, which the limitations discuss.
 
 \begin{table}[t]
 \centering
-\caption{Workflow stages and principal governed outputs.}
+\caption{Computational pipeline (principal stages).}
 \label{tab:stages}
 \begin{tabular}{@{}rll@{}}
 \toprule
@@ -78,10 +78,10 @@ lists the eight stages and their principal governed outputs.
 2 & Baseline heating        & Per-home $h_{i,t}$ profiles \\
 3 & Background load         & Fixed non-deferrable aggregate $B$ \\
 4 & ADMM coordination       & Ideal $x_{i,t}$, iteration count \\
-5 & Imputer training        & LightGBM model + CV metrics \\
+5 & Imputer training        & Estimator + cross-validation metrics \\
 6 & Communication sweep     & Per-$\varrho$ imputed aggregates \\
-7 & Power-flow validation   & $V_{\min}$, line loading, verdict \\
-8 & Reporting               & Figures, KPI tables, JSON report \\
+7 & Power-flow validation   & $V_{\min}$, transformer loading, verdict \\
+8 & Uncertainty + comparison& Violation probabilities, method ranking \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -45,20 +45,21 @@ signal-level study into a network-validated one. Our contributions are:
   the coordinator stay accurate as the non-responsive fraction grows, together
   with a comparison of four learned estimators against naive and no-imputation
   baselines under a realized-load model that isolates the value of imputation.
-  \item An AC power-flow validation stage on the IEEE 33-bus feeder in
-  pandapower that distributes the coordinated aggregate across load buses,
-  calibrates trunk ampacity to a realistic uncoordinated overload, and records
-  worst-of-day minimum voltage and maximum line loading --- closing the loop on
-  physical feasibility.
-  \item A fully reproducible, governed study driving the entire pipeline from a
-  declarative configuration, with every reported number traceable to a recorded
-  artifact.
+  \item An AC power-flow validation stage on a synthetic LV residential feeder of
+  74 literal all-electric homes behind a single 400~kVA MV/LV distribution
+  transformer in pandapower, in which the homes load the transformer directly and
+  one-for-one (no artificial scaling), and which records worst-of-day transformer
+  thermal loading and
+  minimum bus voltage --- closing the loop on physical feasibility.
+  \item A fully reproducible study --- deterministic, free of proprietary data,
+  and built on an open-source toolchain --- in which every reported number is
+  generated from the run rather than transcribed by hand.
 \end{itemize}
 
 The central finding is that coordination not only flattens the aggregate (a
-12.7\% peak cut) but \emph{clears} a 115\% thermal overload to 99.7\%, and that
-this cleared state holds under communication failure up to a non-responsive
-fraction of 0.6 before re-violating at 0.8. Throughout, we keep the
+9.8\% peak cut) but \emph{clears} a 109.6\% transformer thermal overload to
+98.5\%, and that this cleared state holds under communication failure up to a
+non-responsive fraction of about 0.70 before re-violating near 0.75. Throughout, we keep the
 communication-failure fraction (denoted $\varrho$) notationally distinct from the
 ADMM penalty ($\rho_{\mathrm{ADMM}}$) so the two roles of the symbol are never
 conflated; the Nomenclature collects all symbols. We also stress two honest

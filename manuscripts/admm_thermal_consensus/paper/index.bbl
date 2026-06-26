@@ -214,11 +214,6 @@ Z.-Q. Liu, Z.-W. Liu, L.~Ye, D.-X. He, and G.~Wen, ``Distributed framework for
   dynamic coordination of thermostatically controlled loads: A resilient
   consensus approach,'' \emph{Automatica}, vol. 189, p. 112974, 2026.
 
-\bibitem{baran1989network}
-M.~E. Baran and F.~F. Wu, ``Network reconfiguration in distribution systems for
-  loss reduction and load balancing,'' \emph{IEEE Transactions on Power
-  Delivery}, vol.~4, no.~2, pp. 1401--1407, 1989.
-
 \bibitem{thurner2018pandapower}
 L.~Thurner, A.~Scheidler, F.~Sch{\"a}fer, A.~Probst, C.~Spalthoff, M.~Pock
   \emph{et~al.}, ``pandapower--an open-source python tool for convenient

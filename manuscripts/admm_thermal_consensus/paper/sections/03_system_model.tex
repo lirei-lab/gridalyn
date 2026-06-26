@@ -1,7 +1,7 @@
 \section{System Model}
 
 \subsection{Agents and deferrable heating}
-We model $N = 30$ representative cold-climate electric-heating homes over a
+We model $N = 74$ representative cold-climate electric-heating homes over a
 single synthetic Trois-Rivi\`eres cold day at 15-minute resolution
 ($T = 96$ time steps). Each home $i$ has a thermostat-driven baseline heating
 profile $h_{i,t}$ produced by a behavioral model conditioned on the ambient
@@ -26,24 +26,24 @@ preserves daily heating energy. Background load is held fixed and is not subject
 to~\eqref{eq:agent}.
 
 \subsection{The feeder}
-Physical feasibility is assessed on the IEEE 33-bus radial test feeder
-\cite{baran1989network} as implemented in pandapower
-\cite{thurner2018pandapower} (the \texttt{case33bw} case): 33 buses, 32 lines,
-32 distributed loads, a single external-grid substation at the head, and a
-nominal voltage of 12.66~kV. The coordinated aggregate is allocated to the 32
-load buses in proportion to their native load shares and scaled so that the
-uncoordinated winter peak reaches the feeder. The trunk conductor ampacity is
-calibrated so that the uncoordinated peak loads the worst line to 115\% --- a
-realistic overload that motivates demand response in the first place. All loads
-use a power factor of 0.95.
+Physical feasibility is assessed on a synthetic low-voltage (LV) residential
+feeder modeled in pandapower \cite{thurner2018pandapower}. The 74 all-electric
+homes are connected as literal loads behind a single 400~kVA MV/LV distribution
+transformer (25~kV / 0.4~kV) and split across four parallel LV feeders. There is
+\emph{no} artificial scaling: the homes are modeled one-for-one and their
+aggregate heating loads the transformer directly. The binding constraint is therefore the
+transformer's thermal loading --- the classic residential winter-peak,
+cold-load-pickup limit --- with the uncoordinated coincident peak of 401.6~kW
+driving the 400~kVA transformer to 109.6\% loading. LV bus voltage is a
+secondary, healthy severity measure. All loads use a power factor of 0.95.
 
 \subsection{Communication-failure model}
 At coordination time a fraction $\varrho$ of the agents become non-responsive and
 report nothing to the coordinator. We use $\varrho$ for this
 communication-failure fraction throughout, kept notationally distinct from the
 ADMM penalty $\rho_{\mathrm{ADMM}}$ of Section~\ref{sec:methodology}. We sweep
-$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $6$, $12$, $18$,
-and $24$ silent homes out of $30$. For each non-responsive agent the coordinator
+$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $15$, $30$, $44$,
+and $59$ silent homes out of $74$. For each non-responsive agent the coordinator
 substitutes an imputed heating profile $\hat{x}_{i,t}$ produced by a trained
 regressor (Section~\ref{sec:methodology}) and proceeds as if it were the true
 contribution. The imputation error therefore propagates first into the

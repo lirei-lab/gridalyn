@@ -7,17 +7,18 @@ degrades in ways rarely quantified. Second, the coordinated aggregate is almost
 never checked against the physics of the feeder it is supposed to relieve. We
 close both gaps with a network-validated pipeline that combines a sharing-ADMM
 coordinator, a LightGBM imputer that reconstructs the heating of non-responsive
-agents, and an AC power-flow validation stage on the IEEE 33-bus feeder modeled
-in pandapower. On a synthetic Trois-Rivi\`eres cold day with 30 electric-heating
-homes, ideal coordination cuts the aggregate peak by 12.7\%, from 169.1 to
-147.7~kW, and drives the peak-to-average ratio from 1.146 to 1.001. On the
-feeder, coordination clears a 115\% thermal line overload down to 99.7\% and
-lifts the worst minimum voltage from 0.905 to 0.918~p.u. A finely-resolved sweep
-shows the cleared state holds on a plateau through a non-responsive fraction of
-about 0.55 and then degrades as a roughly linear ramp --- not a sudden step ---
-crossing the thermal limit near 0.62 as imputation can no longer offset the lost
-controllable flexibility. A Monte-Carlo analysis over which agents fail and the
-forecast error shows the violation onset is probabilistic, centered near a
-non-responsive fraction of 0.6 (53\% of realizations breach the thermal limit)
-and certain by 0.65. The result is a reproducible, governed study that ties
-coordination quality to measurable feeder feasibility.
+agents, and an AC power-flow validation stage on a synthetic low-voltage
+residential feeder of 74 all-electric homes behind a single 400~kVA MV/LV
+distribution transformer, modeled in pandapower. On a synthetic
+Trois-Rivi\`eres cold day, ideal coordination cuts the aggregate peak by 9.8\%,
+from 401.6 to 362.3~kW, and drives the peak-to-average ratio from 1.109 to
+1.000. On the feeder, coordination clears a 109.6\% transformer thermal overload
+down to 98.5\% loading; low-voltage levels stay healthy ($\approx 0.96$~p.u.,
+never approaching 0.95~p.u.), so the transformer is the binding constraint. A
+finely-resolved sweep shows the cleared state holds on a plateau through a
+non-responsive fraction of about 0.70 and then degrades as a roughly linear ramp
+--- not a sudden step --- crossing the thermal limit near 0.75. A Monte-Carlo
+analysis over which agents fail and the forecast error shows the violation onset
+is probabilistic, centered near 0.72 (96\% of realizations breach by 0.75) and
+certain by 0.80. The result is a fully reproducible study that ties coordination
+quality to measurable feeder feasibility.
