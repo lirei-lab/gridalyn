@@ -42,7 +42,9 @@ signal-level study into a network-validated one. Our contributions are:
   conservation constraint (load is shifted, never curtailed).
   \item A LightGBM imputer that reconstructs the heating of non-responsive
   agents from ambient temperature, time-of-day, and nameplate features, letting
-  the coordinator stay accurate as the non-responsive fraction grows.
+  the coordinator stay accurate as the non-responsive fraction grows, together
+  with a comparison of four learned estimators against naive and no-imputation
+  baselines under a realized-load model that isolates the value of imputation.
   \item An AC power-flow validation stage on the IEEE 33-bus feeder in
   pandapower that distributes the coordinated aggregate across load buses,
   calibrates trunk ampacity to a realistic uncoordinated overload, and records

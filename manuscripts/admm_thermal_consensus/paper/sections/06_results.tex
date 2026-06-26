@@ -143,6 +143,77 @@ cheap, purely software-side proxy for the harder-to-observe physical-feasibility
 margin, visible before any meter or power-flow check, because both respond to the
 same underlying quantity: the mismatch injected by imputation.
 
+\subsection{Imputation method comparison and the value of imputation}
+The results so far use a single imputer (LightGBM). Two questions remain: how
+much does imputation \emph{itself} buy, and how much does the \emph{choice} of
+method matter? To answer them fairly we adopt a stricter \emph{realized-load}
+model that separates belief from reality: a silent home physically draws its
+\emph{true} (uncontrolled, peaky) heating, while the coordinator sees only an
+\emph{estimate} and flattens the responsive homes against it; the feeder then
+experiences the realized aggregate --- responsive coordinated schedules plus the
+true silent load plus background. ``No imputation'' is the coordinator flattening
+the responsive subset \emph{blind} to the silent homes. We compare four learned
+estimators (LightGBM, random forest, ridge regression, $k$-nearest neighbours),
+a naive ``mean-level'' baseline (a flat profile at each silent home's known
+nameplate level --- correct energy, no shape), and the no-imputation case.
+
+Table~\ref{tab:imputers} reports both layers of metric. Intrinsically (5-fold
+leave-agents-out), ridge regression is the most accurate (RMSE 0.270~kW,
+$R^2 = 0.63$), slightly ahead of $k$-NN and LightGBM ($\approx 0.29$~kW) and the
+random forest (0.319~kW); with only 30 homes and four smooth features the linear
+model is hard to beat. Notably the naive mean-level baseline \emph{ties} LightGBM
+on RMSE (0.295~kW) --- because each home's heating is dominated by its mean level,
+which that baseline gets exactly right --- so intrinsic RMSE alone badly
+under-rates the importance of getting the \emph{timing} right.
+
+\begin{table}[t]
+\centering
+\caption{Imputation methods: intrinsic accuracy (leave-agents-out CV) versus
+realized feeder impact at $\varrho = 0.6$ (mean over 200 random silent subsets).
+Lower realized loading is better.}
+\label{tab:imputers}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Method & RMSE & MAE & $R^2$ & Peak & Load. \\
+ & (kW) & (kW) & & (kW) & (\%) \\
+\midrule
+Ridge              & 0.270 & 0.228 & 0.63 & 150.8 & 101.9 \\
+$k$-NN             & 0.292 & 0.248 & 0.59 & 151.0 & 102.0 \\
+LightGBM           & 0.294 & 0.247 & 0.59 & 151.9 & 102.7 \\
+Random forest      & 0.319 & 0.267 & 0.54 & 151.6 & 102.5 \\
+Mean-level (naive) & 0.295 & 0.258 & 0.55 & 154.0 & 104.2 \\
+No imputation      & ---   & ---   & ---  & 162.4 & 110.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The realized-impact columns and Figure~\ref{fig:comparison} tell the operational
+story. Without imputation the realized peak climbs steeply --- 162.4~kW (110\%
+loading) at $\varrho = 0.6$, with a wide $[158.8, 167.1]$~kW spread because the
+outcome depends entirely on \emph{which} uncontrolled homes fall silent. Any
+learned imputer holds the realized peak near 151~kW ($\approx 102\%$): imputation
+buys roughly an 11~kW reduction and halves the overshoot above the limit, and it
+also sharply reduces the variance. The naive mean-level baseline recovers part of
+this (154.0~kW) but trails the learned methods by $\approx 2$--3~kW --- direct
+evidence that reconstructing the \emph{shape}, not merely the energy, is what
+lets the responsive homes counter the silent peaks. Among the learned methods the
+downstream differences are small (under 1.5~kW) and track intrinsic accuracy
+(ridge best, random forest worst). The practical lesson is therefore twofold:
+\emph{using} an imputer matters far more than \emph{which} one, and a simple
+ridge model is a strong, cheap choice on data of this size --- LightGBM remains a
+robust default that scales to the larger populations a utility would face.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_imputer_comparison.pdf}
+\caption{Realized worst line loading versus the non-responsive fraction for each
+imputation method under the realized-load model. No imputation (red) diverges
+early; the learned methods cluster near the 100\% limit and are nearly
+indistinguishable; the naive mean-level baseline sits between them. All converge
+to the uncoordinated 115\% once every home is silent.}
+\label{fig:comparison}
+\end{figure}
+
 \subsection{Network validation}
 The closed-loop contribution is summarized in Figure~\ref{fig:network} and
 Table~\ref{tab:net}. The uncoordinated aggregate loads the worst trunk line to
