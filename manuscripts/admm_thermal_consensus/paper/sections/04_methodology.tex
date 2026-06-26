@@ -32,7 +32,7 @@ energy shift; because $G_i$ is more damped for high-thermal-mass homes, this ter
 steers re-timing toward homes that can absorb it. The first two terms keep each
 home close to its baseline in both energy and comfort; the third rewards a flat
 aggregate. Because daily energy is conserved, $c$ is a constant and the
-aggregate term is exactly the variance of the total load --- the scheme is
+aggregate term is exactly the variance of the total load; the scheme is
 valley-filling, not curtailment.
 
 Following the sharing form of ADMM \cite{boyd2011admm}, we introduce an
@@ -104,23 +104,23 @@ and the value of $\nu_i$ that restores $\mathbf{1}^{\top}x_i = \mathbf{1}^{\top}
 is found by a 1-D bisection on the scalar dual. Because the clipped sum is
 monotone non-decreasing in $\nu_i$, the bisection is exact and costs only a handful
 of evaluations, so the whole $x$-update is closed-form up to a scalar root-find.
-The subsequent $z$-update is fully separable per time step --- each component of
+The subsequent $z$-update is fully separable per time step (each component of
 $z$ is the average of the corresponding aggregate-plus-dual component driven toward
-the flat target $c$ --- and therefore also closed form. Both updates are
+the flat target $c$) and therefore also closed form. Both updates are
 vectorized across agents, so a full sweep remains inexpensive as the home
 population grows.
 
 \subsection{Imputation of non-responsive agents}
 When agent $i$ is non-responsive its baseline $h_i$ is unavailable to the
 coordinator, so we replace it with a learned estimate $\hat{h}_i$. We train a
-regressor that maps a small feature vector --- ambient temperature, the sine and
-cosine of the hour of day, and the agent's nameplate heating level --- to
+regressor that maps a small feature vector (ambient temperature, the sine and
+cosine of the hour of day, and the agent's nameplate heating level) to
 instantaneous heating power. The model is trained on the responsive population
 and applied to each silent agent, yielding $\hat{x}_{i,t}$ that the coordinator
 treats as the agent's contribution. We keep the estimator generic and compare
-three families of machine-learning regressors --- a regularized linear model
+three families of machine-learning regressors, namely a regularized linear model
 (ridge regression), tree ensembles (gradient boosting \cite{ke2017lightgbm} and
-random forests), and an instance-based model ($k$-nearest neighbours) --- against
+random forests), and an instance-based model ($k$-nearest neighbours), against
 naive and no-imputation baselines in Section~\ref{sec:results}, and report the
 most accurate. Generalization to unseen homes is assessed
 by leave-agents-out cross-validation, which holds out entire agents rather than
@@ -164,8 +164,8 @@ uncertainty: which agents fall silent (drawn at random) and the imputation error
 imputer's cross-validated error). For each fraction we draw many such
 realizations, re-solve the coordination, and record the distribution of the daily
 peak. Because the worst-of-day network metrics are monotone functions of that
-peak --- the transformer sees the whole aggregate regardless of spatial placement
---- each realization's peak is mapped through a precomputed peak-to-loading curve,
+peak (the transformer sees the whole aggregate regardless of spatial placement),
+each realization's peak is mapped through a precomputed peak-to-loading curve,
 making the Monte-Carlo sweep inexpensive while reproducing the deterministic
 operating points exactly. We report the mean, a central band, and the probability
 that the transformer is in violation.

@@ -22,8 +22,8 @@ The first gap is \emph{fragility to communication failures}. Multi-agent
 coordination implicitly assumes every agent reports on every iteration; when a
 fraction of agents fall silent, the aggregate the coordinator optimizes is no
 longer the aggregate that materializes on the wire. How badly the coordinated
-outcome degrades --- and how an operator might recover it by forecasting the
-missing contributions --- is rarely quantified end to end.
+outcome degrades, and how an operator might recover it by forecasting the
+missing contributions, is rarely quantified end to end.
 
 The second gap is \emph{physical validity}. The literature typically stops at
 the coordinated aggregate kilowatt signal and reports peak or peak-to-average
@@ -52,9 +52,9 @@ signal-level study into a network-validated one. Our contributions are:
   transformer in pandapower, in which the homes load the transformer directly and
   one-for-one (no artificial scaling), and which records worst-of-day transformer
   thermal loading and
-  minimum bus voltage --- closing the loop on physical feasibility.
-  \item A fully reproducible study --- deterministic, free of proprietary data,
-  and built on an open-source toolchain --- in which every reported number is
+  minimum bus voltage, closing the loop on physical feasibility.
+  \item A fully reproducible study (deterministic, free of proprietary data,
+  and built on an open-source toolchain) in which every reported number is
   generated from the run rather than transcribed by hand.
 \end{itemize}
 
@@ -70,7 +70,7 @@ caveats that the results section quantifies: the coordination respects thermal
 comfort as a \emph{modelled} indoor-temperature excursion (held to
 $\approx 1\,^{\circ}\mathrm{C}$ via an RC-coupled penalty, not merely re-timed
 energy), and because the objective targets a flat profile rather than the
-time-of-use price, the energy-bill saving is deliberately modest --- the value of
+time-of-use price, the energy-bill saving is deliberately modest: the value of
 this demand response is capacity relief, demonstrated here as restored feeder
 feasibility, not a cheaper bill.
 

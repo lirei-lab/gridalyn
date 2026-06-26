@@ -43,7 +43,7 @@ communication delay slows ADMM-based OPF \cite{Xu2019}, lossy links are handled
 by robust dispatch \cite{Wu2017} and relaxed asynchronous ADMM with convergence
 guarantees \cite{Bastianello2021}, and adversarial or non-responsive agents can
 be detected and isolated to preserve convergence \cite{Gusrialdi2023}. Learning
-has begun to enter the loop --- e.g.\ to warm-start consensus-ADMM OPF
+has begun to enter the loop, e.g.\ to warm-start consensus-ADMM OPF
 \cite{Lee2026}. This literature characterizes \emph{when} coordination breaks and
 offers robust-by-design or detect-and-isolate responses, but it rarely
 \emph{reconstructs} a silent agent's contribution, and never propagates that
@@ -59,12 +59,12 @@ gradient-boosted trees are competition-winning regressors
 \cite{BenTaieb2014,Lloyd2014}, one of the families we evaluate
 \cite{ke2017lightgbm} for imputing a silent home's heating from weather and
 calendar features. Crucially, in all of this work the imputer or forecaster is evaluated
-\emph{in isolation} --- by held-out RMSE --- and is never embedded in a
+\emph{in isolation}, by held-out RMSE, and is never embedded in a
 distributed coordinator nor propagated into a power-flow feasibility check.
 
 \subsection{Residential electric-heating flexibility}
-Finally, the resource we coordinate --- thermostatically controlled electric
-heating --- is itself well studied. Aggregate thermostatic flexibility can be
+Finally, the resource we coordinate, thermostatically controlled electric
+heating, is itself well studied. Aggregate thermostatic flexibility can be
 quantified for demand response \cite{Gasca2022}, direct electric space heating
 combined with partial thermal storage shifts load under comfort constraints via
 linear programming \cite{Ali2014}, heat-pump-plus-storage flexibility reduces
@@ -75,7 +75,7 @@ enable peak shaving \cite{Guzman2015}, and multi-unit residential flexibility an
 predictive heating control have been demonstrated in Qu\'ebec-style winter-peaking
 contexts \cite{Nagarsheth2024,Toquica2022}. The distributed-control variants
 closest to ours coordinate large TCL populations through asynchronous greedy
-\cite{Kaheni2023} or resilient-consensus \cite{Liu2026} schemes --- yet these
+\cite{Kaheni2023} or resilient-consensus \cite{Liu2026} schemes; yet these
 remain abstract control formulations without an AC feeder model, and the broader
 thermal-DR literature is overwhelmingly centralized and not network-validated.
 
@@ -84,13 +84,13 @@ Table~\ref{tab:related} positions representative prior work along the five
 capabilities our study requires together: distributed ADMM/consensus
 coordination, AC power-flow validation, an explicit communication-failure model,
 machine-learning imputation of the missing agents, and uncertainty
-quantification of the resulting risk. Every ingredient exists --- but only in
+quantification of the resulting risk. Every ingredient exists, but only in
 disjoint subsets. Distributed-ADMM coordinators assume perfect communication;
 network-aware and chance-constrained methods are centralized or assume complete
 reporting; resilience methods detect or tolerate failures rather than reconstruct
 the missing agents; imputation accuracy is studied standalone; and thermal-DR
 studies seldom touch the feeder at all. To our knowledge no prior work closes the
-full loop --- distributed ADMM coordination of cold-climate electric heating,
+full loop: distributed ADMM coordination of cold-climate electric heating,
 machine-learning imputation of communication-failed homes, AC power-flow
 validation on a distribution feeder, and Monte-Carlo quantification of the
 resulting violation probability under a swept non-responsive fraction. That

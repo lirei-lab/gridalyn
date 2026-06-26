@@ -2,7 +2,7 @@
 
 We presented a network-validated pipeline that coordinates cold-climate electric
 heating with comfort-aware sharing-ADMM, reconstructs non-responsive agents with a
-machine-learning imputer, and --- the closing contribution --- validates the
+machine-learning imputer, and, as the closing contribution, validates the
 coordinated aggregate on a synthetic LV residential feeder of 74 all-electric
 homes behind a 400~kVA distribution transformer with AC power flow. The closed
 loop turns abstract flattening metrics into a feeder verdict: ideal coordination
@@ -25,10 +25,10 @@ through $\varrho = 0.8$, rises to 0.20 at $\varrho = 0.85$ and 0.79 at
 $\varrho = 0.88$, and reaches certainty by $\varrho = 0.90$, so the deterministic
 compliance at $\varrho = 0.85$ understated the true risk. Comparing three families
 of ML regressors for the imputer, we found that a regularized linear model (ridge)
-was the most accurate and lowest-risk on this dataset --- a low-variance linear
+was the most accurate and lowest-risk on this dataset, because a low-variance linear
 model suits the small, smooth, near-linear relationship between heating and the
 weather/calendar/level features better than higher-variance tree ensembles or
-nearest neighbours --- but the decisive factor was imputing at all versus not, the
+nearest neighbours. The decisive factor, however, was imputing at all versus not, the
 choice of method being secondary once any reasonable imputer is in the loop. The
 distributed ADMM was validated against a centralized CVXPY solve (aggregate peak
 agreeing to within $0.05\%$).
