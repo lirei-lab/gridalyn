@@ -1,26 +1,53 @@
-\documentclass[border=2pt]{standalone}
+\documentclass[border=3pt]{standalone}
 \usepackage{amsmath}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta}
 \usetikzlibrary{positioning}
+\usetikzlibrary{fit}
+\usetikzlibrary{backgrounds}
 \begin{document}
-\begin{tikzpicture}[>=Latex,
-  box/.style={draw, rounded corners, align=center, minimum height=12mm,
-              text width=20mm, inner sep=2pt, font=\small},
-  data/.style={draw, align=center, minimum height=11mm, text width=17mm,
-               inner sep=2pt, font=\small, fill=black!4}]
-\node[box, fill=blue!5] (homes) {Residential\\homes};
-\node[box, fill=orange!12, right=9mm of homes] (imp) {ML imputer\\{\scriptsize $\hat{x}_i$ for silent homes}};
-\node[box, fill=blue!10, right=9mm of imp] (admm) {Sharing-ADMM\\coordinator\\{\scriptsize flatten + comfort}};
-\node[data, right=9mm of admm] (agg) {Coordinated\\aggregate};
-\node[box, fill=green!10, right=9mm of agg] (pf) {LV feeder \&\\transformer\\{\scriptsize AC power flow}};
-\node[data, right=9mm of pf] (ver) {Feasibility\\verdict};
-\draw[->,thick] (homes)--(imp) node[midway,above,font=\scriptsize]{$h_i$\,/\,silent};
-\draw[->,thick] (imp)--(admm);
-\draw[->,thick] (admm)--(agg);
-\draw[->,thick] (agg)--(pf);
-\draw[->,thick] (pf)--(ver);
-\draw[->,dashed] (imp.south) to[out=-35,in=-145]
-  node[below,midway,font=\scriptsize]{imputation error propagates into feeder violations} (pf.south);
+\begin{tikzpicture}[>=Latex, font=\small,
+  proc/.style={draw, thick, rounded corners, align=center, minimum height=12mm,
+               text width=22mm, inner sep=2pt},
+  agent/.style={draw, thick, rounded corners, align=center, minimum height=10mm,
+                text width=23mm, inner sep=2pt},
+  data/.style={draw, thick, align=center, minimum height=11mm,
+               text width=18mm, inner sep=2pt, fill=black!5},
+  verd/.style={draw, thick, double, rounded corners, align=center,
+               minimum height=11mm, text width=18mm, inner sep=2pt, fill=green!6},
+  zone/.style={draw=black!35, rounded corners, inner sep=3.6mm, fill=#1},
+  zlab/.style={font=\footnotesize\sffamily\bfseries, text=black!65}]
+
+% --- nodes ---
+\node[agent, fill=blue!9]  (resp)   at (0,1.25)    {Responsive homes\\{\scriptsize report $h_i$}};
+\node[agent, dashed, fill=black!6] (silent) at (0,-1.25) {Silent homes\\{\scriptsize fraction $\varrho$, no report}};
+\node[proc, fill=orange!16] (imp)  at (3.7,-1.25)  {ML imputer\\{\scriptsize estimate $\hat{x}_i$}};
+\node[proc, fill=blue!14]  (admm)  at (7.1,0)      {Sharing-ADMM\\coordinator\\{\scriptsize flatten + comfort}};
+\node[data]                (agg)   at (10.1,0)     {Coordinated\\aggregate};
+\node[proc, fill=green!14] (pf)    at (13.5,0)     {LV feeder \&\\transformer\\{\scriptsize AC power flow}};
+\node[verd]                (ver)   at (17.2,0)     {Feasibility\\verdict};
+
+% --- stage zones (drawn behind) ---
+\begin{scope}[on background layer]
+  \node[zone=blue!4,   fit=(resp)(silent)] (z1) {};
+  \node[zone=orange!4, fit=(imp)(admm)(agg)] (z2) {};
+  \node[zone=green!4,  fit=(pf)(ver)] (z3) {};
+\end{scope}
+\node[zlab, above=1.2mm of z1.north] {COORDINATION INPUTS};
+\node[zlab, above=1.2mm of z2.north] {DISTRIBUTED COORDINATION};
+\node[zlab, above=1.2mm of z3.north] {PHYSICAL VALIDATION};
+
+% --- flow ---
+\draw[->, thick] (resp.east)   -- node[above, font=\scriptsize, pos=0.55] {$h_i$} (admm.north west);
+\draw[->, thick] (silent.east) -- node[below, font=\scriptsize] {no report} (imp.west);
+\draw[->, thick] (imp.east)    -- node[below, font=\scriptsize, pos=0.55] {$\hat{x}_i$} (admm.south west);
+\draw[->, thick] (admm) -- (agg);
+\draw[->, thick] (agg)  -- node[above, font=\scriptsize] {total kW} (pf);
+\draw[->, thick] (pf)   -- node[above, font=\scriptsize] {loading \%} (ver);
+
+% --- error-propagation path ---
+\draw[->, dashed, thick, black!55] (imp.south) to[out=-40, in=-140]
+  node[below, font=\scriptsize, text=black!70]
+  {imputation error propagates into feeder violations} (pf.south);
 \end{tikzpicture}
 \end{document}
