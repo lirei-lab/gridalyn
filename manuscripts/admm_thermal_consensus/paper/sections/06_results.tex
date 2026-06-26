@@ -318,10 +318,26 @@ cleaner story than a benchmark that is stressed on voltage to begin with. The
 105\% short-duration loading limit gives an unambiguous binary verdict, and
 coordination is what moves the feeder across it from infeasible to feasible.
 
-\paragraph{Solver validation.} To rule out an artifact of the hand-rolled solver,
-the distributed ADMM was checked against a centralized CVXPY solve of the same
-convex program: the two agree on the aggregate peak to within $0.05\%$, so the
-reported feasibility verdicts reflect the optimization, not the implementation.
+\subsection{Solver validation}
+To rule out an artifact of the hand-rolled solver, the distributed ADMM was
+checked against a centralized CVXPY solve of the same convex program. The two
+agree on the aggregate peak --- the quantity the feasibility verdicts rest on ---
+to within $0.05\%$; the objective is reproduced exactly for the separable
+(energy-only) case and to within about $1\%$ for the temperature-coupled case.
+Figure~\ref{fig:convergence} shows the sharing-ADMM objective on the ideal
+coordination problem driving down to the CVXPY optimum within a few tens of
+iterations and settling at a $0.54\%$ relative gap (the small residual is the
+proximal temperature-coupled $x$-update, and it shrinks with the agent count). The
+reported verdicts therefore reflect the optimization, not the implementation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_convergence.pdf}
+\caption{Sharing-ADMM objective (log scale) versus iteration on the ideal
+coordination problem, converging to the CVXPY centralized optimum (dashed);
+final relative gap $0.54\%$.}
+\label{fig:convergence}
+\end{figure}
 
 \subsection{Forecast uncertainty quantification}
 The network verdict above rests on a single realization per non-responsive

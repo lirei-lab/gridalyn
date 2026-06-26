@@ -1,19 +1,18 @@
 \section{System Model}
+This section defines the model in general terms; the population size, horizon,
+weights, feeder ratings, tariff, and sweep used to instantiate it are collected in
+Section~\ref{sec:casestudy}.
 
 \subsection{Agents and deferrable heating}
-We model $N = 74$ representative cold-climate electric-heating homes over a
-single synthetic Trois-Rivi\`eres cold day at 15-minute resolution
-($T = 96$ time steps). Each home $i$ has a thermostat-driven baseline heating
-profile $h_{i,t}$ produced by a behavioral model conditioned on the ambient
-temperature, plus a fixed (non-deferrable) background load. The coldest-day
-minimum temperature is $-21.9\,^{\circ}\mathrm{C}$ (daily mean
-$-18.3\,^{\circ}\mathrm{C}$), which sets a demanding heating duty.
-
-Heating is treated as deferrable within a comfort band of $\pm 50\%$ of the
-baseline ($\alpha = 0.5$): the coordinator may shift \emph{when} a home heats but
-must conserve the home's total daily heating energy, so demand is shifted rather
-than curtailed. With $x_{i,t}$ the coordinated heating power of home $i$ at step
-$t$, each agent is constrained by
+We coordinate a population of $N$ representative cold-climate electric-heating
+homes over a single cold day discretized into $T$ sub-hourly steps. Each home $i$
+has a thermostat-driven baseline heating profile $h_{i,t}$ --- produced by a
+behavioral model conditioned on the ambient temperature --- plus a fixed,
+non-deferrable background load. Heating is deferrable within a comfort band of
+$\pm\alpha$ around the baseline: the coordinator may shift \emph{when} a home heats
+but conserves its total daily heating energy, so demand is shifted, not curtailed.
+With $x_{i,t}$ the coordinated heating power of home $i$ at step $t$, each agent is
+constrained by
 
 \begin{equation}
 (1-\alpha)\,h_{i,t} \le x_{i,t} \le (1+\alpha)\,h_{i,t},
@@ -22,39 +21,36 @@ $t$, each agent is constrained by
 \end{equation}
 
 The box bound limits the per-step re-timing and the equality plane conserves each
-home's daily heating energy, so demand is shifted, never curtailed. Thermal
-comfort itself, however, is not a per-step energy quantity but the resulting
-\emph{indoor-temperature excursion}: re-timing heat changes when a home is warm,
-and only a thermal model exposes that. We therefore model comfort physically. For
-home $i$ a first-order RC step-response $G_i$ maps a heating deviation
-$x_i - h_i$ to the home's indoor-temperature deviation from setpoint $G_i(x_i -
-h_i)$; high-thermal-mass homes have a more damped $G_i$ and can absorb re-timing
-with little temperature swing. This modelled excursion --- not the shifted energy
---- is the comfort quantity the coordinator controls (Section~\ref{sec:methodology})
-and that we report. Background load is held fixed and is not subject
-to~\eqref{eq:agent}.
+home's daily heating energy. Thermal comfort, however, is not a per-step energy
+quantity but the resulting \emph{indoor-temperature excursion}: re-timing heat
+changes when a home is warm, and only a thermal model exposes that. We therefore
+model comfort physically. For home $i$ a first-order RC step-response $G_i$ maps a
+heating deviation $x_i - h_i$ to the home's indoor-temperature deviation from
+setpoint, $G_i(x_i - h_i)$; a high-thermal-mass home has a more damped $G_i$ and
+can absorb re-timing with little temperature swing. This modelled excursion ---
+not the shifted energy --- is the comfort quantity the coordinator controls
+(Section~\ref{sec:methodology}) and that we report. Background load is held fixed
+and is not subject to~\eqref{eq:agent}.
 
 \subsection{The feeder}
 Physical feasibility is assessed on a synthetic low-voltage (LV) residential
-feeder modeled in pandapower \cite{thurner2018pandapower}. The 74 all-electric
-homes are connected as literal loads behind a single 400~kVA MV/LV distribution
-transformer (25~kV / 0.4~kV) and split across four parallel LV feeders. There is
-\emph{no} artificial scaling: the homes are modeled one-for-one and their
-aggregate heating loads the transformer directly. The binding constraint is therefore the
-transformer's thermal loading --- the classic residential winter-peak,
-cold-load-pickup limit --- with the uncoordinated coincident peak of 401.6~kW
-driving the 400~kVA transformer to 109.6\% loading. LV bus voltage is a
-secondary, healthy severity measure. All loads use a power factor of 0.95.
+feeder with an explicit MV/LV distribution transformer, modeled in pandapower
+\cite{thurner2018pandapower}. The homes are connected as \emph{literal} loads ---
+no aggregation and no artificial scaling --- behind the transformer and
+distributed across several parallel LV feeders, so their aggregate heating loads
+the transformer directly. The binding constraint is therefore the transformer's
+thermal loading, the classic residential winter-peak (cold-load-pickup) limit,
+assessed against a short-duration overload limit; LV bus voltage is reported as a
+secondary severity measure. All loads use a common lagging power factor.
 
 \subsection{Communication-failure model}
 At coordination time a fraction $\varrho$ of the agents become non-responsive and
-report nothing to the coordinator. We use $\varrho$ for this
-communication-failure fraction throughout, kept notationally distinct from the
-ADMM penalty $\rho_{\mathrm{ADMM}}$ of Section~\ref{sec:methodology}. We sweep
-$\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.8\}$, corresponding to $0$, $15$, $30$, $44$,
-and $59$ silent homes out of $74$. For each non-responsive agent the coordinator
+report nothing to the coordinator; we sweep $\varrho$ across the unit interval. We
+use $\varrho$ for this communication-failure fraction throughout, kept notationally
+distinct from the ADMM penalty $\rho_{\mathrm{ADMM}}$ of
+Section~\ref{sec:methodology}. For each non-responsive agent the coordinator
 substitutes an imputed heating profile $\hat{x}_{i,t}$ produced by a trained
 regressor (Section~\ref{sec:methodology}) and proceeds as if it were the true
-contribution. The imputation error therefore propagates first into the
-coordinated aggregate and ultimately into the feeder power flow, which is exactly
-the propagation path this study quantifies.
+contribution. The imputation error therefore propagates first into the coordinated
+aggregate and ultimately into the feeder power flow --- exactly the propagation
+path this study quantifies.

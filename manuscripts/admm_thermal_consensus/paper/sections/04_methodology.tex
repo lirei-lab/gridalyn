@@ -150,22 +150,8 @@ gives a conservative, instant-agnostic verdict.
 \subsection{Solver validation}
 Because the $x$-update, $z$-update, and projection are hand-rolled, we validate
 the distributed ADMM against an independent centralized solve of the same convex
-quadratic program in CVXPY. The two agree on the aggregate peak to within
-$0.05\%$; the objective is reproduced exactly for the separable (energy-only) case
-and to within about $1\%$ for the temperature-coupled case, confirming that the
-custom solver finds the same optimum as a general-purpose convex solver.
-Figure~\ref{fig:convergence} shows the sharing-ADMM objective on the study's
-ideal coordination problem driving down to the CVXPY optimum within a few tens of
-iterations, settling at a $0.54\%$ relative gap.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{fig_convergence.pdf}
-\caption{Sharing-ADMM objective (log scale) versus iteration on the ideal
-coordination problem, converging to the CVXPY centralized optimum (dashed). The
-final relative gap is $0.54\%$, from the proximal temperature-coupled $x$-update.}
-\label{fig:convergence}
-\end{figure}
+quadratic program with a general-purpose convex solver (CVXPY). The optimality gap
+of the distributed solver is reported in Section~\ref{sec:results}.
 
 \subsection{Uncertainty quantification}
 The deterministic sweep fixes one failing-agent subset and the raw point forecast
