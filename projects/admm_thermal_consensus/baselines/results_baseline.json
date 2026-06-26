@@ -34,6 +34,24 @@
       "par": 1.0011738244806345,
       "peak_kw": 147.75203286047451
     },
+    "imputed_rho_050": {
+      "energy_cost_cad": 364.87596798479905,
+      "imputation_rmse_kw": 0.2297629012118423,
+      "mean_kw": 147.5788012507429,
+      "n_non_responsive": 15,
+      "non_responsive_fraction": 0.5,
+      "par": 1.0013896655270849,
+      "peak_kw": 147.78388642336958
+    },
+    "imputed_rho_055": {
+      "energy_cost_cad": 364.8803043488509,
+      "imputation_rmse_kw": 0.234281008571408,
+      "mean_kw": 147.57880125074405,
+      "n_non_responsive": 16,
+      "non_responsive_fraction": 0.55,
+      "par": 1.0014683263461732,
+      "peak_kw": 147.79549509275716
+    },
     "imputed_rho_060": {
       "energy_cost_cad": 364.8949427017543,
       "imputation_rmse_kw": 0.25198924373156506,
@@ -43,6 +61,33 @@
       "par": 1.0035420255262872,
       "peak_kw": 148.1015291319115
     },
+    "imputed_rho_065": {
+      "energy_cost_cad": 365.0093412829136,
+      "imputation_rmse_kw": 0.242435612762888,
+      "mean_kw": 147.57880125074186,
+      "n_non_responsive": 20,
+      "non_responsive_fraction": 0.65,
+      "par": 1.0299414807771647,
+      "peak_kw": 151.99752909150797
+    },
+    "imputed_rho_070": {
+      "energy_cost_cad": 365.1425669899121,
+      "imputation_rmse_kw": 0.2368569603648069,
+      "mean_kw": 147.57880125074126,
+      "n_non_responsive": 21,
+      "non_responsive_fraction": 0.7,
+      "par": 1.041869868897988,
+      "peak_kw": 153.75790631123203
+    },
+    "imputed_rho_075": {
+      "energy_cost_cad": 365.3738355284961,
+      "imputation_rmse_kw": 0.2339418152431987,
+      "mean_kw": 147.57880125074024,
+      "n_non_responsive": 22,
+      "non_responsive_fraction": 0.75,
+      "par": 1.0532745772054175,
+      "peak_kw": 155.44099949185576
+    },
     "imputed_rho_080": {
       "energy_cost_cad": 366.23604442870567,
       "imputation_rmse_kw": 0.23412270301967186,
@@ -51,6 +96,24 @@
       "non_responsive_fraction": 0.8,
       "par": 1.0801751700133446,
       "peak_kw": 159.41095673138489
+    },
+    "imputed_rho_090": {
+      "energy_cost_cad": 368.3197808257838,
+      "imputation_rmse_kw": 0.23474301146533288,
+      "mean_kw": 147.57880125074118,
+      "n_non_responsive": 27,
+      "non_responsive_fraction": 0.9,
+      "par": 1.1112391725822865,
+      "peak_kw": 163.99534499255935
+    },
+    "imputed_rho_100": {
+      "energy_cost_cad": 370.99250589704855,
+      "imputation_rmse_kw": 0.2822022441457332,
+      "mean_kw": 147.57880125074118,
+      "n_non_responsive": 30,
+      "non_responsive_fraction": 1.0,
+      "par": 1.1460471143106374,
+      "peak_kw": 169.132259306835
     },
     "uncoordinated": {
       "energy_cost_cad": 370.98795570054966,
@@ -67,8 +130,15 @@
       0.0,
       0.2,
       0.4,
+      0.5,
+      0.55,
       0.6,
-      0.8
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.9,
+      1.0
     ],
     "target_feeder_peak_mw": 4.6
   },
@@ -130,6 +200,26 @@
       "worst_step": 72
     },
     {
+      "feeder_peak_mw": 4.020322421880354,
+      "line_violation": false,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_050",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 99.7527329673546,
+      "worst_min_voltage_pu": 0.917973306424411,
+      "worst_step": 72
+    },
+    {
+      "feeder_peak_mw": 4.0206382248745545,
+      "line_violation": false,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_055",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 99.7609717830469,
+      "worst_min_voltage_pu": 0.9179663540792116,
+      "worst_step": 75
+    },
+    {
       "feeder_peak_mw": 4.028963594705106,
       "line_violation": false,
       "nonconverged_steps": 0,
@@ -140,6 +230,36 @@
       "worst_step": 72
     },
     {
+      "feeder_peak_mw": 4.134950630046286,
+      "line_violation": true,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_065",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 102.7479753926694,
+      "worst_min_voltage_pu": 0.9154436466819178,
+      "worst_step": 72
+    },
+    {
+      "feeder_peak_mw": 4.18284004599485,
+      "line_violation": true,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_070",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 104.00217813115805,
+      "worst_min_voltage_pu": 0.9143831319844534,
+      "worst_step": 72
+    },
+    {
+      "feeder_peak_mw": 4.228627021936129,
+      "line_violation": true,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_075",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 105.20290130781098,
+      "worst_min_voltage_pu": 0.9133671340299094,
+      "worst_step": 72
+    },
+    {
       "feeder_peak_mw": 4.33662599591264,
       "line_violation": true,
       "nonconverged_steps": 0,
@@ -147,6 +267,26 @@
       "voltage_violation": true,
       "worst_max_line_loading_pct": 108.04125341295381,
       "worst_min_voltage_pu": 0.9109626965948383,
+      "worst_step": 72
+    },
+    {
+      "feeder_peak_mw": 4.461339991213891,
+      "line_violation": true,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_090",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 111.32980040355258,
+      "worst_min_voltage_pu": 0.9081720181928583,
+      "worst_step": 72
+    },
+    {
+      "feeder_peak_mw": 4.601084941064491,
+      "line_violation": true,
+      "nonconverged_steps": 0,
+      "scenario": "imputed_rho_100",
+      "voltage_violation": true,
+      "worst_max_line_loading_pct": 115.02877572164894,
+      "worst_min_voltage_pu": 0.9050267416862198,
       "worst_step": 72
     }
   ]

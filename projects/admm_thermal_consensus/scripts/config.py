@@ -34,7 +34,10 @@ ADMM_TOL = 1e-4         # on combined primal+dual residual
 DEFERRABILITY_ALPHA = 0.5  # heating may modulate +/-50% around baseline per step
 
 # ── Communication-failure sweep ────────────────────────────────────
-RHO_SWEEP = (0.0, 0.2, 0.4, 0.6, 0.8)  # fraction of non-responsive agents
+RHO_SWEEP = (
+    0.0, 0.2, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0
+)  # fraction of non-responsive agents; dense near the flexibility-exhaustion knee
+ILLUSTRATIVE_RHO = 0.8  # non-responsive fraction shown as the degraded-comms curve
 
 # ── Network (IEEE-33) ──────────────────────────────────────────────
 POWER_FACTOR = 0.95

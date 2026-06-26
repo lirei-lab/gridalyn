@@ -37,8 +37,8 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.plot(hours, profiles["uncoordinated"], label="Uncoordinated", lw=2)
     ax.plot(hours, profiles["coordinated_ideal"], label="ADMM (ideal comms)", lw=2)
-    worst_key = f"imputed_rho_{int(round(max(C.RHO_SWEEP) * 100)):03d}"
-    ax.plot(hours, profiles[worst_key], "--", label=f"ADMM (rho={max(C.RHO_SWEEP)})", lw=2)
+    worst_key = f"imputed_rho_{int(round(C.ILLUSTRATIVE_RHO * 100)):03d}"
+    ax.plot(hours, profiles[worst_key], "--", label=f"ADMM (rho={C.ILLUSTRATIVE_RHO})", lw=2)
     ax.set_xlabel("Hour of cold day")
     ax.set_ylabel("Aggregate load [kW]")
     ax.legend()
