@@ -151,6 +151,18 @@ quadratic program in CVXPY. The two agree on the aggregate peak to within
 $0.05\%$; the objective is reproduced exactly for the separable (energy-only) case
 and to within about $1\%$ for the temperature-coupled case, confirming that the
 custom solver finds the same optimum as a general-purpose convex solver.
+Figure~\ref{fig:convergence} shows the sharing-ADMM objective on the study's
+ideal coordination problem driving down to the CVXPY optimum within a few tens of
+iterations, settling at a $0.54\%$ relative gap.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_convergence.pdf}
+\caption{Sharing-ADMM objective (log scale) versus iteration on the ideal
+coordination problem, converging to the CVXPY centralized optimum (dashed). The
+final relative gap is $0.54\%$, from the proximal temperature-coupled $x$-update.}
+\label{fig:convergence}
+\end{figure}
 
 \subsection{Uncertainty quantification}
 The deterministic sweep fixes one failing-agent subset and the raw point forecast

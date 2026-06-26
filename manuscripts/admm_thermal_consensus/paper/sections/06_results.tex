@@ -130,18 +130,24 @@ nearly flat in $\varrho$ ($\approx 0.30$~kW) even as the aggregate degrades shar
 direct evidence that the damage past the knee comes from the loss of controllable
 agents, not from worsening forecasts.
 
-Figure~\ref{fig:peakpar} plots peak and PAR against $\varrho$ over the full
-12-point sweep. Both remain near the optimum through $\varrho \approx 0.8$
-and then rise toward the uncoordinated values at $\varrho = 1$
---- a plateau-and-ramp, not a gradual decay, with the ramp onset (knee near
-$\varrho \approx 0.87$) marking exhaustion of the responsive deferral budget.
+Figure~\ref{fig:peakpar} plots the coordinated peak against $\varrho$ over the
+full 12-point sweep. (We show the peak alone: because daily energy is conserved
+the mean load is constant, so the peak-to-average ratio is proportional to the
+peak and carries no additional information.) The peak stays near the optimum
+through $\varrho \approx 0.8$ and then rises toward the uncoordinated value at
+$\varrho = 1$ --- a plateau-and-ramp, not a gradual decay, with the ramp onset
+(knee near $\varrho \approx 0.87$) marking exhaustion of the responsive deferral
+budget. The curve crosses the transformer-limit-equivalent peak near
+$\varrho = 0.88$.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_peak_par_vs_rho.pdf}
-\caption{Aggregate peak and PAR versus the non-responsive fraction $\varrho$. The
-horizontal axis labelled ``rho'' in the plotted image denotes this fraction
-$\varrho$, not the ADMM penalty $\rho_{\mathrm{ADMM}}$.}
+\caption{Coordinated aggregate peak versus the non-responsive fraction $\varrho$,
+against the uncoordinated level and the peak that corresponds to the
+transformer thermal limit. The horizontal axis labelled ``rho'' in the plotted
+image denotes this fraction $\varrho$, not the ADMM penalty
+$\rho_{\mathrm{ADMM}}$.}
 \label{fig:peakpar}
 \end{figure}
 
