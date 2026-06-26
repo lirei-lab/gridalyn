@@ -1,29 +1,34 @@
 \section{Introduction}
 
 \IEEEPARstart{T}{he} electrification of heating in cold-climate regions concentrates
-distribution-system stress into a few winter hours. In the province of Qu\'ebec,
-where electric space heating is the dominant heating technology, the system
-peak is driven almost entirely by simultaneous resistive and heat-pump heating
-on the coldest mornings and evenings. As distributed energy resources (DERs)
-proliferate and heating loads grow, these synchronized peaks threaten thermal
-limits on feeder trunk conductors and depress voltages far from the substation.
-Because the flexibility lives behind thousands of meters and not at a single
-controllable node, centralized dispatch scales poorly; decentralized
-coordination, in which each home solves a small local problem and exchanges only
-an aggregate signal, is the natural fit.
+distribution-system stress into a few winter hours~\cite{Knittel2025}. In the
+province of Qu\'ebec, where electric space heating is the dominant heating
+technology, the system peak is driven almost entirely by simultaneous resistive
+and heat-pump heating on the coldest mornings and evenings, and field trials
+confirm that aggregated electric heating sharply raises coincident peak
+demand~\cite{Love2017}. As distributed energy resources (DERs) proliferate and
+heating loads grow, these synchronized peaks threaten thermal limits on feeder
+trunk conductors and depress voltages far from the substation, eroding the
+hosting capacity of low-voltage networks~\cite{Protopapadaki2017,Edmunds2021}.
+Demand response that shifts flexible loads to relieve these peaks is the
+established mitigation~\cite{Siano2014}. Because the flexibility lives behind
+thousands of meters and not at a single controllable node, centralized dispatch
+scales poorly; decentralized coordination, in which each home solves a small
+local problem and exchanges only an aggregate signal, is the natural fit.
 
 The alternating direction method of multipliers (ADMM) \cite{boyd2011admm} is a
 workhorse for this setting: its sharing form lets a coordinator flatten a common
 resource (here, total feeder load) while each agent retains private control of
-its own heating schedule. ADMM-based demand response is well studied, yet two
-gaps undermine its real-world credibility.
+its own heating schedule. ADMM-based demand response is well
+studied~\cite{Tsai2017,Nguyen2018}, yet two gaps undermine its real-world
+credibility.
 
 The first gap is \emph{fragility to communication failures}. Multi-agent
 coordination implicitly assumes every agent reports on every iteration; when a
 fraction of agents fall silent, the aggregate the coordinator optimizes is no
 longer the aggregate that materializes on the wire. How badly the coordinated
 outcome degrades, and how an operator might recover it by forecasting the
-missing contributions, is rarely quantified end to end.
+missing contributions, is rarely quantified end to end~\cite{Brown2017,Xu2019}.
 
 The second gap is \emph{physical validity}. The literature typically stops at
 the coordinated aggregate kilowatt signal and reports peak or peak-to-average
