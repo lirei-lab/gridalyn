@@ -32,37 +32,7 @@ from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
-
-
-def _build_peak_to_network_curve(
-    bus_weights: dict[int, float], scale: float, line_max_i_ka: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Precompute worst-of-day vmin and max line loading vs feeder peak (MW)."""
-    import pandapower as pp
-
-    from gridalyn.simulation.simulators.powerflow.artifacts import (
-        build_pandapower_summary,
-    )
-    from gridalyn.simulation.simulators.powerflow.benchmarks import (
-        build_ieee33_benchmark_feeder,
-    )
-
-    tan_phi = math.tan(math.acos(C.POWER_FACTOR))
-    peaks_mw = np.linspace(*C.UQ_PEAK_RANGE_MW, C.UQ_PEAK_GRID_N)
-    vmins = np.zeros_like(peaks_mw)
-    loadings = np.zeros_like(peaks_mw)
-    for k, peak_mw in enumerate(peaks_mw):
-        net = build_ieee33_benchmark_feeder()
-        net.line["max_i_ka"] = line_max_i_ka
-        for bus, w in bus_weights.items():
-            mask = net.load.bus == bus
-            net.load.loc[mask, "p_mw"] = peak_mw * w
-            net.load.loc[mask, "q_mvar"] = peak_mw * w * tan_phi
-        pp.runpp(net, algorithm="nr", init="auto")
-        summary = build_pandapower_summary(net, network="ieee_33_bus")
-        vmins[k] = summary["min_voltage_pu"]
-        loadings[k] = summary["max_line_loading_percent"]
-    return peaks_mw, vmins, loadings
+from projects.admm_thermal_consensus.scripts import lv_feeder
 
 
 def main() -> None:
@@ -84,23 +54,15 @@ def main() -> None:
         [imputer.predict_agent(temp, float(levels[i])) for i in range(C.N_AGENTS)]
     )
 
-    network_scale = json.loads((C.JSON_DIR / "network_scale.json").read_text())
-    scale = network_scale["scale_aggregate_kw_to_feeder_mw"]
-    line_max_i_ka = network_scale["line_max_i_ka"]
-    bus_weights = {
-        int(k): float(v)
-        for k, v in json.loads((C.JSON_DIR / "bus_weights.json").read_text()).items()
-    }
-
-    peaks_mw, vmins, loadings = _build_peak_to_network_curve(
-        bus_weights, scale, line_max_i_ka
+    uncoordinated_peak = float(params["uncoordinated_peak_kw"])
+    peaks_kw, vmins, loadings = lv_feeder.build_peak_curve(
+        C.UQ_PEAK_GRID_N, 0.75 * uncoordinated_peak, 1.05 * uncoordinated_peak
     )
 
     def map_peak_kw(peak_kw: float) -> tuple[float, float]:
-        peak_mw = peak_kw * scale
         return (
-            float(np.interp(peak_mw, peaks_mw, vmins)),
-            float(np.interp(peak_mw, peaks_mw, loadings)),
+            float(np.interp(peak_kw, peaks_kw, vmins)),
+            float(np.interp(peak_kw, peaks_kw, loadings)),
         )
 
     rng = np.random.default_rng(C.SEED)

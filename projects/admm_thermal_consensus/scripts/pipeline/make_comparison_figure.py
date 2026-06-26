@@ -40,7 +40,7 @@ def main() -> None:
     ax.axhline(C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6,
                label="100% thermal limit")
     ax.set_xlabel("Non-responsive fraction (silent homes)")
-    ax.set_ylabel("Realized worst line loading [%]")
+    ax.set_ylabel("Realized worst transformer loading [%]")
     ax.legend(fontsize=8, ncol=2)
     ax.grid(alpha=0.3)
 

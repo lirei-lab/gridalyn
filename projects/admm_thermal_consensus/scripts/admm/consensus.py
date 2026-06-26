@@ -52,6 +52,28 @@ def project_capped_energy(
     return np.clip(q + 0.5 * (lo_nu + hi_nu), lo, hi)
 
 
+def project_capped_energy_batch(
+    q: np.ndarray, lo: np.ndarray, hi: np.ndarray, totals: np.ndarray
+) -> np.ndarray:
+    """Row-wise projection onto ``{lo<=x<=hi, sum_t x = totals}`` (vectorized).
+
+    Equivalent to applying :func:`project_capped_energy` to each row of ``q``,
+    but solves all rows' scalar duals together with a batched bisection. Rows are
+    assumed feasible (``sum(lo) <= totals <= sum(hi)``), which holds here because
+    the box brackets each agent's baseline and ``totals`` is its baseline energy.
+    """
+    lo_nu = (lo - q).min(axis=1) - 1.0
+    hi_nu = (hi - q).max(axis=1) + 1.0
+    for _ in range(100):
+        mid = 0.5 * (lo_nu + hi_nu)
+        summed = np.clip(q + mid[:, None], lo, hi).sum(axis=1)
+        too_low = summed < totals
+        lo_nu = np.where(too_low, mid, lo_nu)
+        hi_nu = np.where(too_low, hi_nu, mid)
+    nu = 0.5 * (lo_nu + hi_nu)
+    return np.clip(q + nu[:, None], lo, hi)
+
+
 def solve_sharing_admm(
     *,
     heating: np.ndarray,
@@ -116,11 +138,10 @@ def solve_sharing_admm(
     iteration = 0
     for iteration in range(1, max_iters + 1):
         xbar = x.mean(axis=0)
-        # x-update for responsive agents only
-        for i in active:
-            center = x[i] - xbar + z - u
-            q = (lam * h[i] + rho * center) / (lam + rho)
-            x[i] = project_capped_energy(q, lo[i], hi[i], energy[i])
+        # x-update for responsive agents only (batched over agents)
+        centers = x[active] - xbar + (z - u)
+        q = (lam * h[active] + rho * centers) / (lam + rho)
+        x[active] = project_capped_energy_batch(q, lo[active], hi[active], energy[active])
         xbar_new = x.mean(axis=0)
         # z-update (closed form): minimize (mu/2)||N z + B - c||^2 + (N rho/2)||z-u-xbar||^2
         z_new = (rho * (u + xbar_new) - mu * (bg_total - c)) / (mu * n_agents + rho)

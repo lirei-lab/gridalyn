@@ -17,7 +17,7 @@ FIGURES_DIR = OUTPUTS_DIR / "figures"
 
 # ── Study dimensions ────────────────────────────────────────────────
 SEED = 42
-N_AGENTS = 30
+N_AGENTS = 74  # literal all-electric homes behind one 400 kVA LV transformer
 RESOLUTION_MINUTES = 15
 DURATION_HOURS = 24
 N_STEPS = DURATION_HOURS * 60 // RESOLUTION_MINUTES  # 96
@@ -39,12 +39,25 @@ RHO_SWEEP = (
 )  # fraction of non-responsive agents; dense near the flexibility-exhaustion knee
 ILLUSTRATIVE_RHO = 0.8  # non-responsive fraction shown as the degraded-comms curve
 
-# ── Network (IEEE-33) ──────────────────────────────────────────────
+# ── Network: synthetic LV residential feeder with a real distribution trafo ──
+# 80 literal homes hang off one MV/LV transformer; the uncoordinated winter peak
+# overloads it (~112%). No artificial scale factor: the home aggregate (kW) is
+# injected directly at LV buses and the transformer thermal loading is the
+# binding constraint (the classic residential winter-peak / CLPU limit).
 POWER_FACTOR = 0.95
-TARGET_FEEDER_PEAK_MW = 4.6  # uncoordinated peak is scaled to this on the feeder
+MV_KV = 25.0                # Quebec-style medium-voltage primary
+LV_KV = 0.4                 # balanced low-voltage secondary equivalent
+TRANSFORMER_KVA = 400.0     # MV/LV distribution transformer rating
+N_LV_FEEDERS = 4            # parallel LV feeders leaving the transformer busbar
+BUSES_PER_FEEDER = 2        # load buses along each feeder (home clusters)
+N_LV_SECTIONS = N_LV_FEEDERS * BUSES_PER_FEEDER  # total LV load buses
+LV_SECTION_KM = 0.05        # length of each LV cable section
+LV_R_OHM_KM = 0.206         # NAYY-style LV cable resistance
+LV_X_OHM_KM = 0.080         # LV cable reactance
+LV_MAX_I_KA = 0.275         # LV cable ampacity
 VOLTAGE_LOWER_PU = 0.95
-LINE_LOADING_LIMIT_PCT = 100.0
-TARGET_UNCOORD_LINE_LOADING_PCT = 115.0  # calibrate trunk ampacity to this at the uncoordinated peak
+TRANSFORMER_LOADING_LIMIT_PCT = 100.0
+LINE_LOADING_LIMIT_PCT = 100.0  # retained alias for the thermal limit
 
 # ── Forecast-uncertainty Monte Carlo ───────────────────────────────
 # For each non-responsive fraction we draw UQ_N_DRAWS random failing

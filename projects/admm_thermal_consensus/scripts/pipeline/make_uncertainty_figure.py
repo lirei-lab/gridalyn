@@ -30,12 +30,12 @@ def main() -> None:
         d["line_loading_pct_p95"],
         color="tab:red",
         alpha=0.2,
-        label="Line loading P5-P95",
+        label="Transformer loading P5-P95",
     )
-    ax1.plot(rho, d["line_loading_pct_mean"], "o-", color="tab:red", label="Line loading mean")
+    ax1.plot(rho, d["line_loading_pct_mean"], "o-", color="tab:red", label="Transformer loading mean")
     ax1.axhline(C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6, label="100% limit")
     ax1.set_xlabel("Non-responsive fraction (forecast-imputed)")
-    ax1.set_ylabel("Worst max line loading [%]")
+    ax1.set_ylabel("Worst transformer loading [%]")
 
     ax2 = ax1.twinx()
     ax2.bar(rho, d["prob_line_violation"], width=0.06, color="tab:blue", alpha=0.45,

@@ -35,9 +35,7 @@ from projects.admm_thermal_consensus.scripts.forecast.methods import (
     ESTIMATING_METHODS,
     fit_predict,
 )
-from projects.admm_thermal_consensus.scripts.pipeline.uncertainty_sweep import (
-    _build_peak_to_network_curve,
-)
+from projects.admm_thermal_consensus.scripts import lv_feeder
 
 METHODS = (*ESTIMATING_METHODS, "none")  # add the no-imputation baseline
 DISPLAY = {
@@ -121,19 +119,13 @@ def main() -> None:
     params = json.loads((C.JSON_DIR / "agent_params.json").read_text())
     temp = np.asarray(params["temperature_c"], dtype=float)
 
-    network_scale = json.loads((C.JSON_DIR / "network_scale.json").read_text())
-    scale = network_scale["scale_aggregate_kw_to_feeder_mw"]
-    line_max_i_ka = network_scale["line_max_i_ka"]
-    bus_weights = {
-        int(k): float(v)
-        for k, v in json.loads((C.JSON_DIR / "bus_weights.json").read_text()).items()
-    }
-    peaks_mw, _vmins, loadings = _build_peak_to_network_curve(
-        bus_weights, scale, line_max_i_ka
+    uncoordinated_peak = float(params["uncoordinated_peak_kw"])
+    peaks_kw, _vmins, loadings = lv_feeder.build_peak_curve(
+        C.UQ_PEAK_GRID_N, 0.75 * uncoordinated_peak, 1.05 * uncoordinated_peak
     )
 
     def loading_of(peak_kw: float) -> float:
-        return float(np.interp(peak_kw * scale, peaks_mw, loadings))
+        return float(np.interp(peak_kw, peaks_kw, loadings))
 
     intrinsic = _intrinsic_cv(heat, levels, temp)
 

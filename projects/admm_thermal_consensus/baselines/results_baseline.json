@@ -1,130 +1,130 @@
 {
   "aggregate_kpis": {
     "coordinated_ideal": {
-      "comfort_mae_kw": 0.29795122359289294,
-      "energy_cost_cad": 364.84545147127255,
-      "mean_kw": 147.57880125074095,
-      "par": 1.000723835898356,
-      "peak_kw": 147.68562408492258
+      "comfort_mae_kw": 0.2639905154069226,
+      "energy_cost_cad": 895.4291351373895,
+      "mean_kw": 362.2170909258671,
+      "par": 1.000219116001809,
+      "peak_kw": 362.29645848661767
     },
     "imputed_rho_000": {
-      "energy_cost_cad": 364.84545147127255,
+      "energy_cost_cad": 895.4291351373895,
       "imputation_rmse_kw": 0.0,
-      "mean_kw": 147.57880125074095,
+      "mean_kw": 362.2170909258671,
       "n_non_responsive": 0,
       "non_responsive_fraction": 0.0,
-      "par": 1.000723835898356,
-      "peak_kw": 147.68562408492258
+      "par": 1.000219116001809,
+      "peak_kw": 362.29645848661767
     },
     "imputed_rho_020": {
-      "energy_cost_cad": 364.85327178413746,
-      "imputation_rmse_kw": 0.17008675528100975,
-      "mean_kw": 147.57880125074465,
-      "n_non_responsive": 6,
+      "energy_cost_cad": 895.4366898339472,
+      "imputation_rmse_kw": 0.24298725290098044,
+      "mean_kw": 362.21709092586656,
+      "n_non_responsive": 15,
       "non_responsive_fraction": 0.2,
-      "par": 1.000899592626545,
-      "peak_kw": 147.71156205218415
+      "par": 1.0002728945165595,
+      "peak_kw": 362.31593798378435
     },
     "imputed_rho_040": {
-      "energy_cost_cad": 364.8656781673291,
-      "imputation_rmse_kw": 0.24198285519482116,
-      "mean_kw": 147.5788012507437,
-      "n_non_responsive": 12,
+      "energy_cost_cad": 895.44852817661,
+      "imputation_rmse_kw": 0.23118575376258346,
+      "mean_kw": 362.21709092586707,
+      "n_non_responsive": 30,
       "non_responsive_fraction": 0.4,
-      "par": 1.0011738244806345,
-      "peak_kw": 147.75203286047451
+      "par": 1.0003637154700882,
+      "peak_kw": 362.3488348853672
     },
     "imputed_rho_050": {
-      "energy_cost_cad": 364.87596798479905,
-      "imputation_rmse_kw": 0.2297629012118423,
-      "mean_kw": 147.5788012507429,
-      "n_non_responsive": 15,
+      "energy_cost_cad": 895.4570651952511,
+      "imputation_rmse_kw": 0.2557886743695074,
+      "mean_kw": 362.21709092586707,
+      "n_non_responsive": 37,
       "non_responsive_fraction": 0.5,
-      "par": 1.0013896655270849,
-      "peak_kw": 147.78388642336958
+      "par": 1.0004354693146014,
+      "peak_kw": 362.37482535418945
     },
     "imputed_rho_055": {
-      "energy_cost_cad": 364.8803043488509,
-      "imputation_rmse_kw": 0.234281008571408,
-      "mean_kw": 147.57880125074405,
-      "n_non_responsive": 16,
+      "energy_cost_cad": 895.4648894596809,
+      "imputation_rmse_kw": 0.25140278258511983,
+      "mean_kw": 362.2170909258664,
+      "n_non_responsive": 41,
       "non_responsive_fraction": 0.55,
-      "par": 1.0014683263461732,
-      "peak_kw": 147.79549509275716
+      "par": 1.0004949317349179,
+      "peak_kw": 362.39636365909524
     },
     "imputed_rho_060": {
-      "energy_cost_cad": 364.8949427017543,
-      "imputation_rmse_kw": 0.25198924373156506,
-      "mean_kw": 147.5788012507425,
-      "n_non_responsive": 18,
+      "energy_cost_cad": 895.4707420329928,
+      "imputation_rmse_kw": 0.2449674934090654,
+      "mean_kw": 362.217090925866,
+      "n_non_responsive": 44,
       "non_responsive_fraction": 0.6,
-      "par": 1.0035420255262872,
-      "peak_kw": 148.1015291319115
+      "par": 1.0005388268461408,
+      "peak_kw": 362.4122632185879
     },
     "imputed_rho_065": {
-      "energy_cost_cad": 365.0093412829136,
-      "imputation_rmse_kw": 0.242435612762888,
-      "mean_kw": 147.57880125074186,
-      "n_non_responsive": 20,
+      "energy_cost_cad": 895.482047074617,
+      "imputation_rmse_kw": 0.2443565159213625,
+      "mean_kw": 362.21709092586553,
+      "n_non_responsive": 48,
       "non_responsive_fraction": 0.65,
-      "par": 1.0299414807771647,
-      "peak_kw": 151.99752909150797
+      "par": 1.0006426363079461,
+      "peak_kw": 362.4498647798531
     },
     "imputed_rho_070": {
-      "energy_cost_cad": 365.1425669899121,
-      "imputation_rmse_kw": 0.2368569603648069,
-      "mean_kw": 147.57880125074126,
-      "n_non_responsive": 21,
+      "energy_cost_cad": 895.4990783891851,
+      "imputation_rmse_kw": 0.2403526071163965,
+      "mean_kw": 362.217090925866,
+      "n_non_responsive": 52,
       "non_responsive_fraction": 0.7,
-      "par": 1.041869868897988,
-      "peak_kw": 153.75790631123203
+      "par": 1.000954847891784,
+      "peak_kw": 362.5629531515047
     },
     "imputed_rho_075": {
-      "energy_cost_cad": 365.3738355284961,
-      "imputation_rmse_kw": 0.2339418152431987,
-      "mean_kw": 147.57880125074024,
-      "n_non_responsive": 22,
+      "energy_cost_cad": 895.8089430827097,
+      "imputation_rmse_kw": 0.23994910653122115,
+      "mean_kw": 362.2170909258659,
+      "n_non_responsive": 56,
       "non_responsive_fraction": 0.75,
-      "par": 1.0532745772054175,
-      "peak_kw": 155.44099949185576
+      "par": 1.017337021302139,
+      "peak_kw": 368.4968563472465
     },
     "imputed_rho_080": {
-      "energy_cost_cad": 366.23604442870567,
-      "imputation_rmse_kw": 0.23412270301967186,
-      "mean_kw": 147.57880125074112,
-      "n_non_responsive": 24,
+      "energy_cost_cad": 896.5591018753959,
+      "imputation_rmse_kw": 0.3668357986763404,
+      "mean_kw": 362.21709092586593,
+      "n_non_responsive": 59,
       "non_responsive_fraction": 0.8,
-      "par": 1.0801751700133446,
-      "peak_kw": 159.41095673138489
+      "par": 1.0352359574174128,
+      "peak_kw": 374.9801569175889
     },
     "imputed_rho_090": {
-      "energy_cost_cad": 368.3197808257838,
-      "imputation_rmse_kw": 0.23474301146533288,
-      "mean_kw": 147.57880125074118,
-      "n_non_responsive": 27,
+      "energy_cost_cad": 902.6169228798583,
+      "imputation_rmse_kw": 0.35225408282457865,
+      "mean_kw": 362.2170909258653,
+      "n_non_responsive": 67,
       "non_responsive_fraction": 0.9,
-      "par": 1.1112391725822865,
-      "peak_kw": 163.99534499255935
+      "par": 1.0756364485048244,
+      "peak_kw": 389.61390527124684
     },
     "imputed_rho_100": {
-      "energy_cost_cad": 370.99250589704855,
-      "imputation_rmse_kw": 0.2822022441457332,
-      "mean_kw": 147.57880125074118,
-      "n_non_responsive": 30,
+      "energy_cost_cad": 909.3773808777507,
+      "imputation_rmse_kw": 0.36302460629674177,
+      "mean_kw": 362.217090925865,
+      "n_non_responsive": 74,
       "non_responsive_fraction": 1.0,
-      "par": 1.1460471143106374,
-      "peak_kw": 169.132259306835
+      "par": 1.1095365487638973,
+      "peak_kw": 401.893100969183
     },
     "uncoordinated": {
-      "energy_cost_cad": 370.98795570054966,
-      "mean_kw": 147.57880125074269,
-      "par": 1.1457768750970305,
-      "peak_kw": 169.0923777276417
+      "energy_cost_cad": 909.5103838454539,
+      "mean_kw": 362.2170909258671,
+      "par": 1.1086010558671595,
+      "peak_kw": 401.5542494535472
     }
   },
   "config": {
     "deferrability_alpha": 0.5,
-    "n_agents": 30,
+    "n_agents": 74,
     "n_steps": 96,
     "rho_sweep": [
       0.0,
@@ -140,154 +140,154 @@
       0.9,
       1.0
     ],
-    "target_feeder_peak_mw": 4.6
+    "transformer_kva": 400.0
   },
   "forecast_cv": {
-    "cv_mae_kw_mean": 0.24697144020344597,
-    "cv_rmse_kw_mean": 0.2937472083628281,
-    "cv_rmse_kw_std": 0.18444464884825032,
-    "heating_std_kw": 0.5751428161897878
+    "cv_mae_kw_mean": 0.2547038326162355,
+    "cv_rmse_kw_mean": 0.30408137945969693,
+    "cv_rmse_kw_std": 0.27945013020654713,
+    "heating_std_kw": 0.7356201232495948
   },
   "network_feasibility": [
     {
-      "feeder_peak_mw": 4.6,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 401.5542494535472,
       "scenario": "uncoordinated",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 114.99999999999999,
-      "worst_min_voltage_pu": 0.9050512359190734,
-      "worst_step": 72
+      "transformer_violation": true,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9634044234582955,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 109.55219333972283
     },
     {
-      "feeder_peak_mw": 4.017649286858359,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.29645848661767,
       "scenario": "coordinated_ideal",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.68299786998068,
-      "worst_min_voltage_pu": 0.9180321512775808,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671621770971289,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.5062571417281
     },
     {
-      "feeder_peak_mw": 4.017649286858359,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.29645848661767,
       "scenario": "imputed_rho_000",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.68299786998068,
-      "worst_min_voltage_pu": 0.9180321512775808,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671621770971289,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.5062571417281
     },
     {
-      "feeder_peak_mw": 4.018354905000386,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.31593798378435,
       "scenario": "imputed_rho_020",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.70140509780259,
-      "worst_min_voltage_pu": 0.9180166188539478,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671603231624933,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.5117174238096
     },
     {
-      "feeder_peak_mw": 4.0194558754914125,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.3488348853672,
       "scenario": "imputed_rho_040",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.7301264725525,
-      "worst_min_voltage_pu": 0.917992382806975,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671571922208765,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.52093877376734
     },
     {
-      "feeder_peak_mw": 4.020322421880354,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.37482535418945,
       "scenario": "imputed_rho_050",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.7527329673546,
-      "worst_min_voltage_pu": 0.917973306424411,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671547185734701,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.52822421842686
     },
     {
-      "feeder_peak_mw": 4.0206382248745545,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.39636365909524,
       "scenario": "imputed_rho_055",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.7609717830469,
-      "worst_min_voltage_pu": 0.9179663540792116,
-      "worst_step": 75
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671526686474171,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.53426169476016
     },
     {
-      "feeder_peak_mw": 4.028963594705106,
-      "line_violation": false,
       "nonconverged_steps": 0,
+      "peak_kw": 362.4122632185879,
       "scenario": "imputed_rho_060",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 99.97819398819942,
-      "worst_min_voltage_pu": 0.9177830390211187,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671511553854262,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.53871857089904
     },
     {
-      "feeder_peak_mw": 4.134950630046286,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 362.4498647798531,
       "scenario": "imputed_rho_065",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 102.7479753926694,
-      "worst_min_voltage_pu": 0.9154436466819178,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671475765784249,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.5492588853831
     },
     {
-      "feeder_peak_mw": 4.18284004599485,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 362.5629531515047,
       "scenario": "imputed_rho_070",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 104.00217813115805,
-      "worst_min_voltage_pu": 0.9143831319844534,
-      "worst_step": 72
+      "transformer_violation": false,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9671368129216704,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 98.58095980709666
     },
     {
-      "feeder_peak_mw": 4.228627021936129,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 368.4968563472465,
       "scenario": "imputed_rho_075",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 105.20290130781098,
-      "worst_min_voltage_pu": 0.9133671340299094,
-      "worst_step": 72
+      "transformer_violation": true,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9665715331151944,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 100.24531269476485
     },
     {
-      "feeder_peak_mw": 4.33662599591264,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 374.9801569175889,
       "scenario": "imputed_rho_080",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 108.04125341295381,
-      "worst_min_voltage_pu": 0.9109626965948383,
-      "worst_step": 72
+      "transformer_violation": true,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9659528005444495,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 102.06592587931789
     },
     {
-      "feeder_peak_mw": 4.461339991213891,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 389.61390527124684,
       "scenario": "imputed_rho_090",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 111.32980040355258,
-      "worst_min_voltage_pu": 0.9081720181928583,
-      "worst_step": 72
+      "transformer_violation": true,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9645519223706965,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 106.18367611380779
     },
     {
-      "feeder_peak_mw": 4.601084941064491,
-      "line_violation": true,
       "nonconverged_steps": 0,
+      "peak_kw": 401.893100969183,
       "scenario": "imputed_rho_100",
-      "voltage_violation": true,
-      "worst_max_line_loading_pct": 115.02877572164894,
-      "worst_min_voltage_pu": 0.9050267416862198,
-      "worst_step": 72
+      "transformer_violation": true,
+      "voltage_violation": false,
+      "worst_min_voltage_pu": 0.9633718000974597,
+      "worst_step": 70,
+      "worst_transformer_loading_pct": 109.64790176687194
     }
   ]
 }

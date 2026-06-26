@@ -30,7 +30,7 @@ def main() -> None:
             "n_steps": C.N_STEPS,
             "rho_sweep": list(C.RHO_SWEEP),
             "deferrability_alpha": C.DEFERRABILITY_ALPHA,
-            "target_feeder_peak_mw": C.TARGET_FEEDER_PEAK_MW,
+            "transformer_kva": C.TRANSFORMER_KVA,
         },
     }
     C.JSON_DIR.mkdir(parents=True, exist_ok=True)
