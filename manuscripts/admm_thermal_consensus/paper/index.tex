@@ -42,22 +42,27 @@ ADMM, distributed optimization, demand response, thermal comfort, communication 
 \addcontentsline{toc}{section}{Nomenclature}
 \noindent
 \begin{description}[leftmargin=4.2em,labelwidth=3.6em,labelsep=0.6em,style=sameline,font=\normalfont]
-  \item[$N$] Number of heating agents (homes), $N=74$.
-  \item[$T$] Number of time steps over the day, $T=96$.
+  \item[$i$] Home (agent) index, $i = 1,\dots,N$.
+  \item[$t$] Time-step index, $t = 1,\dots,T$.
+  \item[$N$] Number of heating agents (homes).
+  \item[$T$] Number of time steps over the day.
   \item[$h_{i,t}$] Baseline (thermostat-driven) heating power of home~$i$ at step~$t$.
   \item[$x_{i,t}$] Coordinated heating power of home~$i$ at step~$t$.
   \item[$\hat{x}_{i,t}$] Imputed heating power of a non-responsive home~$i$.
   \item[$B_t$] Fixed (non-deferrable) background aggregate load at step~$t$.
   \item[$c$] Constant flat-aggregate target level (energy-conserving).
-  \item[$\alpha$] Per-step comfort deferrability band, $\alpha=0.5$.
-  \item[$\lambda$] Comfort-deviation (energy) weight, $\lambda=0.15$.
-  \item[$\gamma$] Indoor-temperature comfort weight, $\gamma=2$.
-  \item[$G_i$] First-order RC step-response mapping a heating deviation to home~$i$'s indoor-temperature deviation.
-  \item[$\mu$] Aggregate-flattening weight, $\mu=1.0$.
-  \item[$\rho_{\mathrm{ADMM}}$] ADMM penalty parameter, $\rho_{\mathrm{ADMM}}=1.0$.
+  \item[$\mathbf{1}$] All-ones vector.
+  \item[$\alpha$] Per-step comfort deferrability band.
+  \item[$\lambda$] Energy-deviation weight.
+  \item[$\gamma$] Indoor-temperature comfort weight.
+  \item[$\mu$] Aggregate-flattening weight.
+  \item[$\rho_{\mathrm{ADMM}}$] ADMM penalty parameter.
   \item[$\varrho$] Non-responsive (communication-failure) fraction of agents.
+  \item[$G_i$] First-order RC step-response mapping a heating deviation to home~$i$'s indoor-temperature deviation.
   \item[$z$] ADMM auxiliary shared-aggregate variable.
   \item[$u$] ADMM scaled dual variable.
+  \item[$a_i$] ADMM penalty anchor for home~$i$, $a_i = z - u$.
+  \item[$M_i$] Per-home proximal system matrix in the $x$-update.
   \item[$\nu_i$] Scalar dual of the daily-energy hyperplane in the projection.
   \item[$V_{\min}$] Worst-of-day minimum bus voltage (p.u.).
 \end{description}
