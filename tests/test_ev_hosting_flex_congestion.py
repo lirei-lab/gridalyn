@@ -356,98 +356,103 @@ def test_proxy_loading_rejects_nonpositive_elem_kw() -> None:
         proxy_loading(indicator, demand, np.array([0.0], dtype="float64"))
 
 
-# ─── End-to-end derive_congestion: re-calibrated firm = P(cong)<=tol + P95 (10.1) ─
-# The re-calibrated stage 4 reduces over the K-axis to firm = P(cong) <=
-# FIRM_PCONG_TOLERANCE (D-06) and reports P95 congestion metrics (D-07), asserting
-# the selected feeder is the ~6-home small LV unit (Pitfall 4).
+# ─── End-to-end derive_congestion: design-day transformer firm + risk (CONG-01/02/03) ─
+# The Phase-14 retargeted stage 4 loads the Phase-13 q_real.npy / ev_pool_design.npy,
+# pins firm = largest EV count with P(transformer loading > 1) <= FIRM_PCONG_TOLERANCE
+# over K (last-in-tolerance), and emits transformer_risk.parquet + p_overload_curve.json
+# + firm_hosting.json (5-key contract). The governed firm value is confirmed
+# EMPIRICALLY from the regenerated cache (RESEARCH A1 / Open Q1).
 
 from pathlib import Path  # noqa: E402
 
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     FIRM_PCONG_TOLERANCE,
+    POWER_FACTOR,
     PROJECT_CACHE_DIR,
     PROJECT_OUTPUTS_DIR,
-    TARGET_HOMES,
+    TRANSFORMER_KVA,
 )
 from projects.ev_hosting_flex.scripts.pipeline.compute_congestion import (  # noqa: E402
     derive_congestion,
 )
 
 _PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
+_PROJECT_JSON_DIR = PROJECT_OUTPUTS_DIR / "json"
+_RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)  # 71.25 (pf pinned)
 _REQUIRED_CACHE = [
-    "line_transformer_ratings_kw.json",
     "downstream_bus_map.json",
     "feeder_selection.json",
     "node_building_count.json",
-    "grid_cache_meta.json",
 ]
-_REQUIRED_PROFILES = [
-    "base_load_8760.parquet",
-    "ev_load_unit.parquet",
-    "ev_stack_K.npy",
+# The Phase-13 design-day MC artifacts the retargeted stage consumes (gitignored;
+# regenerate stages 2-3 in the MAIN tree per MEMORY.md — they skipif-skip in CI).
+_REQUIRED_NPY = [
+    "q_real.npy",
+    "ev_pool_design.npy",
 ]
 
 
 def _project_cache_ready() -> bool:
-    """True iff the stage-2/3 cache + profiles are present in the project outputs."""
+    """True iff the stage-2 cache + Phase-13 design-day .npy are present.
+
+    Extends the prior skip helper to check the new transformer-firm inputs
+    (q_real.npy / ev_pool_design.npy) instead of the retired annual profiles.
+    """
     if not all((PROJECT_CACHE_DIR / name).is_file() for name in _REQUIRED_CACHE):
         return False
-    return all((_PROJECT_DATA_DIR / name).is_file() for name in _REQUIRED_PROFILES)
+    return all((_PROJECT_DATA_DIR / name).is_file() for name in _REQUIRED_NPY)
 
 
 @pytest.mark.skipif(
     not _project_cache_ready(),
     reason=(
-        "ev_hosting_flex stage-2/3 cache + profiles not present; run "
-        "prepare_topology_cache.py + generate_annual_profiles.py first"
+        "ev_hosting_flex stage-2 cache + Phase-13 design-day .npy "
+        "(q_real.npy / ev_pool_design.npy) not present; run prepare_topology_cache.py "
+        "+ generate_design_day_mc.py in the MAIN tree first (gitignored cache)"
     ),
 )
-def test_derive_congestion_firm_pcong_and_p95(tmp_path: Path) -> None:
-    """End-to-end: firm = P(cong)<=tol over K + P95 metrics + ~6-home feeder.
+def test_derive_congestion_transformer_firm_and_risk(tmp_path: Path) -> None:
+    """End-to-end: design-day transformer firm + risk distribution + 5-key contract.
 
-    Runs the re-calibrated derive_congestion against the regenerated project cache +
-    stage-3 TMY/stochastic profiles and asserts the probabilistic firm gate, the P95
-    headline, and the ~6-home (25/0.4 kV) feeder assertion.
+    Runs the retargeted derive_congestion against the regenerated project cache +
+    Phase-13 design-day ensemble and asserts the non-degenerate firm gate, the
+    preserved 5-key firm_hosting.json contract, and the CONG-03 risk artifacts.
     """
     derived = derive_congestion(PROJECT_CACHE_DIR, _PROJECT_DATA_DIR, tmp_path)
     summary = derived["summary"]
 
-    # The firm gate is the probabilistic P(cong) <= FIRM_PCONG_TOLERANCE crossing.
-    assert 0.0 < summary["firm_penetration"] <= 2.0, summary
-    assert summary["firm_ev_count"] > 0, summary
-    assert summary["p_cong_at_firm"] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, summary
-    assert summary["state"] == "p95_firm"
+    # The firm gate is the non-degenerate transformer-overload crossing (1 <= firm <= 9).
+    assert 1 <= int(summary["firm_ev_count"]) <= 9, summary
+    assert summary["firm_penetration"] > 0.0, summary
+    assert summary["p_overload_at_firm"] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, summary
+    assert summary["threshold_convention"] == "strict_gt_rating"
+    assert summary["feeder_transformer_modeled_kw"] == _RATING_KW
 
-    # The P95 conservative headline is reported.
-    assert summary["p95_max_loading_percent"] > 0.0, summary
-
-    # The ~6-home (25/0.4 kV) feeder assertion passed against the regenerated cache.
-    feeder_assertion = summary["feeder_assertion"]
-    assert feeder_assertion["feeder_voltage_class"] == "25/0.4 kV"
-    assert abs(int(feeder_assertion["downstream_home_count"]) - int(TARGET_HOMES)) <= 3
-
-    # The firm_hosting.json carries the firm + p_cong vector + the feeder assertion.
+    # firm_hosting.json preserves the 5 downstream keys + the new transformer keys.
     firm_json = json.loads((tmp_path / "firm_hosting.json").read_text())
-    assert firm_json["firm_ev_count"] == summary["firm_ev_count"]
-    assert len(firm_json["p_cong"]) == len(firm_json["penetration_sweep"])
-    assert firm_json["p_cong_at_firm"] <= float(FIRM_PCONG_TOLERANCE) + 1e-9
-
-    # The metrics JSON carries the five CONG-02 metric names at the P95 state.
-    metrics_json = json.loads((tmp_path / "congestion_metrics.json").read_text())
-    for name in (
-        "max_line_loading_percent",
-        "n_congested_lines",
-        "congested_line_hours",
-        "congested_hours_per_year",
-        "peak_overload_kw",
+    for key in (
+        "firm_ev_count",
+        "firm_penetration",
+        "downstream_home_count",
+        "feeder_key",
+        "feeder_transformer_modeled_kw",
     ):
-        assert name in metrics_json, metrics_json
-    assert metrics_json["state"] == "p95_firm"
+        assert key in firm_json, firm_json
+    assert firm_json["firm_ev_count"] == summary["firm_ev_count"]
+    assert len(firm_json["p_overload_curve"]) == len(firm_json["ev_sweep"])
+    # Old unread keys must be gone.
+    for oldk in ("p_cong", "p_cong_at_firm", "penetration_sweep"):
+        assert oldk not in firm_json, firm_json
 
-    # Both loading parquets exist with matching shapes.
-    p95 = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_p95.parquet")
-    firm = pd.read_parquet(_PROJECT_DATA_DIR / "line_loading_firm.parquet")
-    assert p95.shape == firm.shape
+    # The P(overload) curve JSON carries {ev_count, ev_per_home, p_overload} rows.
+    curve = json.loads((tmp_path / "p_overload_curve.json").read_text())
+    assert len(curve) == len(firm_json["ev_sweep"])
+    assert set(curve[0]) == {"ev_count", "ev_per_home", "p_overload"}
+
+    # The risk distribution parquet carries per-realization peak %rating over K.
+    risk = pd.read_parquet(_PROJECT_DATA_DIR / "transformer_risk.parquet")
+    assert "peak_pct_rating" in risk.columns
+    assert risk.shape[0] == int(summary["k_realizations"])
 
 
 # ─── Phase-14 transformer-overload kernel (CONG-01/02) — cache-free fixtures ──
