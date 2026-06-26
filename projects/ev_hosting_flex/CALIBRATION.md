@@ -377,6 +377,87 @@ margin is correct**. The justified refinements are: **trim the per-home peak (�
 **lower EV power & energy toward the Canadian values**, and **cap/refine `EV_SWEEP`** to a
 plausible adoption range — all of which tighten the `hosting_expansion_percent` headline.
 
+## Generative-MC design-day seam (Phase 13)
+
+The v1.3 milestone replaces the project-local degree-day annual base with a
+**generative design-day Monte-Carlo seam** (`scripts/_generators.py`, GEN-01..04):
+the **SDK building agent** (`make_buildings` / `simulate_buildings`,
+`gridalyn.assets.datagen.agents`) — exactly as `flexibility_cls` uses it —
+recalibrated to the Québec all-electric archetype, plus the **project-local MDPI EV
+sampler** (kept `_stochastic._session` / the `_ev_day` draw order), run over the
+**binding cold design day** to emit the idx-62 transformer-load ensemble
+`Q_real (K, n_steps)` + the day-ahead forecast `Q_design`. The operating point below
+is **empirically locked** (2026-06-26 throwaway probes `exp_firmsweep.py` /
+`exp_genseam.py`); Phase 13 implements it byte-stably — it does **not** re-discover it.
+
+### SDK building agent ADOPTED (GEN-02)
+
+The SDK building agent replaces the project-local degree-day `tmy_base`. Its default
+calibration (`R_MEAN ≈ 11` °C/kW, `P_HEAT_MAX_KW ≤ 8` kW) **under-loads** the 7-home
+idx-62 unit to ~6.5 kW/home / ~60 % of the 71.25 kW rating. The **locked
+recalibration** overrides per `Building`:
+
+- `R = 7.0` °C/kW (`config.R_QUEBEC`)
+- `p_heat_max = 13.0` kW (`config.P_HEAT_QUEBEC`)
+
+**Anchors:** PMC/NCBI PMC11534675 Québec all-electric baseboard dwelling ~13 kW
+installed baseboard; HQ 10–15 kW/dwelling (§2 of this doc). At `R = 7.0` / baseboard
+13 the design-day EV-free feeder base lands at **~8.4 kW/home coincident / ~82–87 %
+of the 71.25 kW rating, firm = 3** (empirically verified at K=60 on the 1990-01-19
+design day; reproduced in the governed kernel at p50=82 % / p90=87 % / ~8.3 kW/home,
+pinned by `tests/test_ev_hosting_flex_generators.py`).
+
+**NO CLPU.** The heating recalibration is the dominant lever; CLPU *on top* of it
+overshoots to ~117 % / firm = 0 (congesting with zero EVs, unphysical for an HQ-sized
+unit) — so the Phase-10.3 `clpu_factor` is **dropped from the generative path**.
+`simulate_buildings` uses `ParametricArxGenerator` ONLY for the small non-HVAC
+**background** channel (which carries the morning/evening human-activity peaks; the
+feeder peaks ~18:00); the **heating** is each `Building`'s RC baseboard
+(winter-peaking), so the prior ARX-as-base rejection (quick 260625-ox4) does **not**
+apply here.
+
+### MDPI EV truth (GEN-03)
+
+EV truth = the **project-local MDPI sampler** calibrated to **Jonas, Daniels & Macht,
+*Energies* 2023, 16(4):1592** (Canada, >7000 stations): charger mix
+`{7.2:0.75, 9.6:0.20, 11.5:0.05}` kW, lognormal session energy (median 8 kWh, σ 0.5,
+floor 1 kWh), arrival `N(18, 1.5)` clipped to `(16, 22)`, plug-in probability 0.65.
+The per-EV **pinned draw order** (`rng.random` plug-in → `rng.choice` charger mix →
+`rng.lognormal` energy → `rng.normal` arrival) is the byte-stability contract. EV
+draws are **nested/cumulative** (`ev_nested_pool`): row *n* is the aggregate hourly
+draw for the first *n* EVs, so `P(overload)` is **monotonic in EV count** (adding an
+EV never removes load). The pool is drawn once per realization on a seed independent
+of the building seed and **exposed** alongside `Q_real` for the Phase-14 firm sweep
+(it is not summed into the `Q_real` building-base headline). The generic SDK EV
+session model is **not** adopted as truth; the SDK `EVCharger` **actuator** pattern
+(`dynamic_p_cap_kw` / `cls_active`) is reserved for the Phase-15 curtailment cap.
+
+### Design-day MC + forecast (GEN-01 / GEN-04)
+
+The binding cold day is selected via `select_peak_load_day` over the committed
+Trois-Rivières TMY (`config.TMY_INPUT_PATH`), empirically **1990-01-19** (occupied
+HDH proxy, −20.1 °C mean). `K` Monte-Carlo realizations (default `K_DESIGN = 60`),
+each re-seeding the SDK building agent and a smoothed day-ahead
+temperature-forecast-error offset from `SEED + r`, aggregate to
+`Q_real (K, n_steps)` at `DESIGN_DAY_RES_MINUTES = 60` (hourly → 24 steps; the
+building hourly aggregate worked in the probes). This is a **design-day generative
+statement**, not an annual 8760 h integrated risk (the latter is FUT-07).
+
+`Q_design` is the **day-ahead forecast** (`make_q_design`): a gaussian-smoothed macro
+shape of `Q_real`'s per-step mean plus a single temperature-forecast-error term
+(`config.SIGMA_DAILY` / `SIGMA_HOURLY`). It is strictly a **smoothing / forecast of
+`Q_real`'s predictable part** (corr ≥ 0.9, max deviation < 15 % of the mean peak) —
+**never** an independent load model (GEN-04).
+
+**Determinism (GEN-01, feeds SEAL-01).** A single seeded RNG from `config.SEED`
+covers the SDK building seed AND the MDPI EV draws; pinned draw order; float64
+throughout; round-before-write (`config.ROUND_DECIMALS`, callers round). Two calls
+with the same seed return byte-identical `Q_real` / `Q_design` / `ev_pool`. **No
+silent SDK fallback:** the building agent + `select_peak_load_day` are imported
+deferred in the governed path and the kernel **raises** (`ImportError`) if a required
+SDK symbol is missing — it never substitutes a hand-rolled base
+(`test_no_silent_sdk_fallback_in_source`, `test_select_design_day_raises_when_sdk_unavailable`).
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).

@@ -239,9 +239,7 @@ def building_realization(
     temp = design_day["temp_air"].astype(DTYPE)
     if t_offset is not None:
         temp = temp + np.asarray(t_offset, dtype=DTYPE)
-    results = simulate_buildings(
-        buildings, temp, burnin_hours=6, random_seed=int(seed)
-    )
+    results = simulate_buildings(buildings, temp, burnin_hours=6, random_seed=int(seed))
     agg = np.zeros(len(design_day), dtype=DTYPE)
     for uid in results:
         agg += results[uid]["p_total_kw"].to_numpy(dtype=DTYPE)
