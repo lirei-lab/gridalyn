@@ -21,8 +21,17 @@ $t$, each agent is constrained by
 \label{eq:agent}
 \end{equation}
 
-The box bound preserves thermal comfort at every step, and the equality plane
-preserves daily heating energy. Background load is held fixed and is not subject
+The box bound limits the per-step re-timing and the equality plane conserves each
+home's daily heating energy, so demand is shifted, never curtailed. Thermal
+comfort itself, however, is not a per-step energy quantity but the resulting
+\emph{indoor-temperature excursion}: re-timing heat changes when a home is warm,
+and only a thermal model exposes that. We therefore model comfort physically. For
+home $i$ a first-order RC step-response $G_i$ maps a heating deviation
+$x_i - h_i$ to the home's indoor-temperature deviation from setpoint $G_i(x_i -
+h_i)$; high-thermal-mass homes have a more damped $G_i$ and can absorb re-timing
+with little temperature swing. This modelled excursion --- not the shifted energy
+--- is the comfort quantity the coordinator controls (Section~\ref{sec:methodology})
+and that we report. Background load is held fixed and is not subject
 to~\eqref{eq:agent}.
 
 \subsection{The feeder}

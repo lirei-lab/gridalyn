@@ -1,24 +1,27 @@
 Decentralized coordination of flexible loads through the alternating direction
 method of multipliers (ADMM) is an established way to flatten the winter peaks
-that cold-climate electric heating imposes on distribution feeders. Two gaps
+that cold-climate electric heating imposes on distribution feeders. Three gaps
 limit its practical credibility. First, multi-agent schemes are fragile to
 communication failures: when agents stop responding, the coordinated aggregate
 degrades in ways rarely quantified. Second, the coordinated aggregate is almost
-never checked against the physics of the feeder it is supposed to relieve. We
-close both gaps with a network-validated pipeline that combines a sharing-ADMM
-coordinator, a LightGBM imputer that reconstructs the heating of non-responsive
-agents, and an AC power-flow validation stage on a synthetic low-voltage
-residential feeder of 74 all-electric homes behind a single 400~kVA MV/LV
-distribution transformer, modeled in pandapower. On a synthetic
-Trois-Rivi\`eres cold day, ideal coordination cuts the aggregate peak by 9.8\%,
-from 401.6 to 362.3~kW, and drives the peak-to-average ratio from 1.109 to
-1.000. On the feeder, coordination clears a 109.6\% transformer thermal overload
-down to 98.5\% loading; low-voltage levels stay healthy ($\approx 0.96$~p.u.,
-never approaching 0.95~p.u.), so the transformer is the binding constraint. A
-finely-resolved sweep shows the cleared state holds on a plateau through a
-non-responsive fraction of about 0.70 and then degrades as a roughly linear ramp
---- not a sudden step --- crossing the thermal limit near 0.75. A Monte-Carlo
-analysis over which agents fail and the forecast error shows the violation onset
-is probabilistic, centered near 0.72 (96\% of realizations breach by 0.75) and
-certain by 0.80. The result is a fully reproducible study that ties coordination
-quality to measurable feeder feasibility.
+never checked against the physics of the feeder it is supposed to relieve. Third,
+``comfort'' is usually a proxy on shifted energy rather than a check on modelled
+indoor temperature. We close all three with a network-validated pipeline that
+combines a comfort-aware sharing-ADMM coordinator, a machine-learning imputer
+that reconstructs the heating of non-responsive agents, and an AC power-flow
+validation stage on a synthetic low-voltage residential feeder of 74 all-electric
+homes behind a single 400~kVA MV/LV distribution transformer, modeled in
+pandapower. On a synthetic Trois-Rivi\`eres cold day, ideal coordination cuts the
+aggregate peak by 9.4\%, from 401.6 to 363.8~kW, and drives the peak-to-average
+ratio from 1.109 to 1.004. Crucially, the coordination respects thermal comfort:
+propagating the schedules through each home's RC thermal model holds the worst
+modelled indoor-temperature excursion to $\approx 1.0\,^{\circ}\mathrm{C}$,
+against $2.1\,^{\circ}\mathrm{C}$ for a naive energy-only flatten. On the feeder,
+coordination clears a 109.6\% transformer thermal overload down to 98.9\% loading
+under a 105\% IEEE~C57.91 short-duration winter limit; low-voltage levels stay
+healthy ($\approx 0.96$~p.u., never approaching 0.95~p.u.), so the transformer is
+the binding constraint. A finely-resolved sweep and a Monte-Carlo analysis show
+the cleared state is robust to communication failure through about 80\%
+non-responsive agents, with violation onset centered near a non-responsive
+fraction of 0.87. The result is a fully reproducible study that ties coordination
+quality, thermal comfort, and measurable feeder feasibility together.

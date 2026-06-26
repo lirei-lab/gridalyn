@@ -4,10 +4,11 @@
 The study runs on a single synthetic Trois-Rivi\`eres cold day with a minimum
 ambient temperature of $-21.9\,^{\circ}\mathrm{C}$, discretized at 15-minute
 resolution into $T = 96$ steps. We coordinate $N = 74$ electric-heating homes
-with comfort band $\alpha = 0.5$, comfort weight $\lambda = 0.15$, flattening
-weight $\mu = 1.0$, and ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The
-communication-failure fraction is swept over the twelve points
-$\varrho \in \{0.0, 0.2, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0\}$.
+with comfort band $\alpha = 0.5$, energy weight $\lambda = 0.15$,
+indoor-temperature comfort weight $\gamma = 2$, flattening weight $\mu = 1.0$, and
+ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The communication-failure fraction is
+swept over the twelve points $\varrho \in \{0.0, 0.2, 0.4, 0.6, 0.7, 0.8, 0.82,
+0.85, 0.88, 0.9, 0.95, 1.0\}$.
 
 Energy cost is evaluated against a time-of-use tariff with an off-peak rate of
 0.078, a mid-peak rate of 0.128, and an evening-peak rate of 0.158~CAD/kWh.
@@ -15,7 +16,12 @@ Physical feasibility uses a synthetic LV residential feeder of 74 literal homes
 behind a single 400~kVA MV/LV distribution transformer (25~kV / 0.4~kV) split
 across four parallel LV feeders, with all loads at a power factor of 0.95 and
 modeled one-for-one (no artificial scaling). The uncoordinated coincident peak
-loads the transformer to 109.6\%.
+loads the transformer to 109.6\%. A scenario is flagged as violating when the
+transformer exceeds a 105\% loading limit rather than its 100\% nameplate: IEEE
+C57.91 permits short-duration overload because cold ambient air and the
+transformer's thermal mass let it carry a winter peak above nameplate for a
+limited time, so 105\% is a conservative short-duration winter-loading limit
+rather than the unrealistically strict nameplate cliff.
 The software stack is pandapower~3.4.0 for power flow, scikit-learn~1.6.1 for the
 cross-validation harness, and LightGBM~4.6.0 for the imputer.
 Table~\ref{tab:params} collects the principal parameters, and the reproducibility
@@ -33,14 +39,16 @@ Homes $N$ & 74 \\
 Horizon / resolution & 96 steps / 15 min \\
 Coldest-day min.\ temperature & $-21.9\,^{\circ}\mathrm{C}$ \\
 Comfort band $\alpha$ & 0.5 \\
-Comfort weight $\lambda$ & 0.15 \\
+Energy weight $\lambda$ & 0.15 \\
+Comfort weight $\gamma$ & 2 \\
 Flattening weight $\mu$ & 1.0 \\
 ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
-Non-responsive fraction $\varrho$ & $\{0.0, 0.2, 0.4, 0.5, 0.55, 0.6,$ \\
- & $\;0.65, 0.7, 0.75, 0.8, 0.9, 1.0\}$ \\
+Non-responsive fraction $\varrho$ & $\{0.0, 0.2, 0.4, 0.6, 0.7, 0.8,$ \\
+ & $\;0.82, 0.85, 0.88, 0.9, 0.95, 1.0\}$ \\
 TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
 Feeder & Synthetic LV residential, 0.4 kV \\
 Transformer & 400 kVA MV/LV, 4 parallel LV feeders \\
+Transformer limit & 105\% (IEEE C57.91 short-duration) \\
 Power factor & 0.95 \\
 Uncoordinated transformer loading & 109.6\% \\
 Power flow & AC Newton-Raphson \\

@@ -33,7 +33,7 @@
 \end{abstract}
 
 \begin{IEEEkeywords}
-ADMM, distributed optimization, demand response, communication failures, machine learning imputation, power flow, low-voltage distribution feeder, distribution transformer, electric heating.
+ADMM, distributed optimization, demand response, thermal comfort, communication failures, machine learning imputation, power flow, low-voltage distribution feeder, distribution transformer, electric heating.
 \end{IEEEkeywords}
 
 \section*{Nomenclature}
@@ -48,7 +48,9 @@ ADMM, distributed optimization, demand response, communication failures, machine
   \item[$B_t$] Fixed (non-deferrable) background aggregate load at step~$t$.
   \item[$c$] Constant flat-aggregate target level (energy-conserving).
   \item[$\alpha$] Per-step comfort deferrability band, $\alpha=0.5$.
-  \item[$\lambda$] Comfort-deviation weight, $\lambda=0.15$.
+  \item[$\lambda$] Comfort-deviation (energy) weight, $\lambda=0.15$.
+  \item[$\gamma$] Indoor-temperature comfort weight, $\gamma=2$.
+  \item[$G_i$] First-order RC step-response mapping a heating deviation to home~$i$'s indoor-temperature deviation.
   \item[$\mu$] Aggregate-flattening weight, $\mu=1.0$.
   \item[$\rho_{\mathrm{ADMM}}$] ADMM penalty parameter, $\rho_{\mathrm{ADMM}}=1.0$.
   \item[$\varrho$] Non-responsive (communication-failure) fraction of agents.
