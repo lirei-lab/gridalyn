@@ -47,19 +47,16 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from projects.ev_hosting_flex.scripts._stochastic import _ev_day, _occ, clpu_factor
+from projects.ev_hosting_flex.scripts._stochastic import _ev_day
 from projects.ev_hosting_flex.scripts.config import (
-    BG_KW,
     C_ACTIVATE,
     C_RESERVE,
     CALENDAR_HOURS,
     DTYPE,
     EPS_SHOW,
-    N_SCENARIOS,
-    R_THERM,
+    K_DESIGN,
     SIGMA_DAILY,
     SIGMA_HOURLY,
-    T_BALANCE,
     TMY_INPUT_PATH,
     TWOSTAGE_SOLVER,
 )
@@ -131,6 +128,15 @@ def cold_day_temp(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return the 24h temperature + hour-of-day window at the annual coldest day.
 
+    RETIRED (Phase 15 RETIRE-02, D-07): the cold-day temperature + CLPU heating
+    base path is REMOVED from the re-anchored ``compose_scenarios`` — the two-stage
+    forecast ensemble is now anchored on the emitted ``Q_design`` building mean (a
+    kW trajectory), not a TMY cold-day temperature reconstruction. This function is
+    KEPT importable this plan because the stage-6 ``solve_twostage_program`` body
+    still references it until Plan 02 re-points stage 6 onto ``Q_design``; it is
+    physically deleted in Plan 02 when that last consumer migrates. Do NOT route the
+    re-anchored controller/program through this cold-day base.
+
     Reads the committed project-local TMY (network-free; never an auto/download
     source) and returns the day-aligned 24h slice containing the annual coldest
     hour, the cold winter day the day-ahead forecast ensemble perturbs (D-03).
@@ -177,59 +183,74 @@ def compose_scenarios(
     rng: np.random.Generator,
     *,
     n_ev: int,
-    n_homes: int,
     feeder_kw: float,
+    q_design: np.ndarray,
+    n_homes: int | None = None,
     eps: float | None = None,
     df: pd.DataFrame | None = None,
-    n_scenarios: int = N_SCENARIOS,
+    n_scenarios: int = K_DESIGN,
     sigma_daily: float = SIGMA_DAILY,
     sigma_hourly: float = SIGMA_HOURLY,
 ) -> np.ndarray:
-    """Return the composed ``required`` ensemble of shape ``(n_scenarios, 24)``.
+    """Return the composed ``required`` ensemble of shape ``(n_scenarios, n_steps)``.
 
-    Each scenario draws — on the SINGLE passed ``rng`` in a PINNED order (Pitfall
-    4) — a day-ahead temperature forecast error (``N(0, sigma_daily)`` offset →
-    ``N(0, sigma_hourly)`` per-hour noise), builds the heating base ``d = n_homes
-    · (BG_KW·_occ(hod) + max(0, T_BALANCE − temp)/R_THERM)`` (REUSING
-    ``_stochastic._occ`` and the locked 10.1 heating-degree form), draws the
+    RE-ANCHORED (Phase 15 RETIRE-02, D-07): the base is now the emitted
+    ``q_design`` building-mean trajectory (the governed day-ahead forecast from
+    ``_generators.make_q_design``), NOT the retired ``cold_day_temp`` + CLPU
+    heating reconstruction. Each scenario draws — on the SINGLE passed ``rng`` in
+    a PINNED order (Pitfall 4) — a day-ahead forecast-error perturbation applied in
+    **kW space** as a fractional multiplier on ``q_design``, then draws the
     stochastic EV day ``g = _ev_day(rng, n_ev)`` (REUSING the 10.1 EV physics —
-    never re-implemented), and forms ``required = (d + g − feeder_kw)⁺``. Ports
-    ``twostage_prototype.py:scenarios`` L92-106; the per-scenario draw order
-    (temperature offset → temperature hourly noise → EV) is load-bearing for
-    byte-stability.
+    never re-implemented), and forms ``required = (q_design·perturb + g −
+    feeder_kw)⁺``.
 
-    ``n_homes`` is the feeder's ``downstream_home_count`` (the caller sources it
-    from the selected feeder) — NOT the prototype-only ``N_HOMES`` constant (which
-    does NOT exist in ``config.py``) and NOT silently ``TARGET_HOMES`` (only the
-    manuscript rank target). ``feeder_kw`` is the feeder's MODELED kW rating (the
+    The kW-space perturbation MIRRORS ``_generators.make_q_design`` (the governed
+    forecast-error model) so the plan ensemble stays byte-consistent with the
+    emitted ``Q_design`` family (RESEARCH Open-Q2): with ``frac_per_degc = 0.03``,
+    ``perturb = 1 + frac_per_degc · (N(0, sigma_daily) +
+    gaussian_filter1d(N(0, sigma_hourly, n_steps), sigma=2))``. The temperature
+    forecast-error draws come BEFORE ``g = _ev_day(rng, n_ev)`` so the per-scenario
+    draw order (daily offset → hourly noise → EV) is preserved — the byte-stability
+    machinery (``SIGMA_DAILY``/``SIGMA_HOURLY``) is reused, only its target base
+    changed from temperature to the kW ``q_design`` trajectory.
+
+    ``feeder_kw`` is the feeder's MODELED kW rating (the
     ``feeder_transformer_modeled_kw`` / 71.25 kW = ``TRANSFORMER_KVA·POWER_FACTOR``
-    basis Stage 4/5 use) — supplied explicitly, never assumed.
+    basis Stage 4/5 use) — supplied explicitly, never assumed. ``n_homes`` is no
+    longer a base-load multiplier (the base is the per-feeder ``q_design`` already)
+    and is accepted only for call-site symmetry; it does not enter the kernel.
 
     Args:
         rng: A seeded ``np.random.Generator`` (NEVER the global ``np.random``).
         n_ev: EV count sampled per scenario (the penetration's feeder EV count).
-        n_homes: The feeder's downstream home count (the base-load multiplier).
         feeder_kw: The feeder's modeled kW rating ``S̄`` subtracted to form
             ``required``.
+        q_design: The ``(n_steps,)`` float64 day-ahead forecast trajectory (kW) —
+            the emitted ``Q_design`` building mean the ensemble is anchored on.
+        n_homes: Unused in the re-anchored kernel (kept for call-site symmetry);
+            when supplied it must be a positive integer.
         eps: Unused here (kept for call-site symmetry); the quantile level is
             applied by ``twostage_oracle`` / ``eps_frontier`` over the ensemble.
-        df: Optional pre-loaded TMY frame; when ``None`` the committed TMY is read.
-        n_scenarios: Monte-Carlo scenario count (default ``N_SCENARIOS``).
-        sigma_daily: Day-ahead per-day temperature-forecast offset std (°C).
-        sigma_hourly: Per-hour temperature-forecast noise std (°C).
+        df: Unused in the re-anchored kernel (kept for call-site symmetry; the base
+            is ``q_design``, no TMY read).
+        n_scenarios: Monte-Carlo scenario count (default ``K_DESIGN`` = 60).
+        sigma_daily: Day-ahead per-day forecast-error offset std (°C).
+        sigma_hourly: Per-hour forecast-error noise std (°C).
 
     Returns:
-        A ``(n_scenarios, 24)`` float64 ``required`` ensemble.
+        A ``(n_scenarios, n_steps)`` float64 ``required`` ensemble (``n_steps`` is
+        ``q_design.shape[0]``).
 
     Raises:
-        ValueError: If ``n_scenarios <= 0``, ``n_ev < 0``, ``n_homes <= 0``,
-            ``feeder_kw < 0``, or either sigma is negative (V5).
+        ValueError: If ``n_scenarios <= 0``, ``n_ev < 0``, ``feeder_kw < 0``,
+            either sigma is negative, ``q_design`` is not a 1-D positive-length
+            array, or ``n_homes`` (when supplied) is non-positive (V5).
     """
     if int(n_scenarios) <= 0:
         raise ValueError(
             f"compose_scenarios received n_scenarios={n_scenarios!r}; the "
             "Monte-Carlo scenario count must be a positive integer. Remediation: "
-            "pass N_SCENARIOS (default 4000) or another positive count."
+            "pass K_DESIGN (default 60) or another positive count."
         )
     if int(n_ev) < 0:
         raise ValueError(
@@ -237,11 +258,12 @@ def compose_scenarios(
             "must be a non-negative integer. Remediation: pass round(penetration "
             "* downstream_home_count)."
         )
-    if int(n_homes) <= 0:
+    if n_homes is not None and int(n_homes) <= 0:
         raise ValueError(
-            f"compose_scenarios received n_homes={n_homes!r}; the feeder home "
-            "count (base-load multiplier) must be a positive integer. "
-            "Remediation: pass the selected feeder's downstream_home_count."
+            f"compose_scenarios received n_homes={n_homes!r}; when supplied the "
+            "feeder home count must be a positive integer. Remediation: pass the "
+            "selected feeder's downstream_home_count or omit it (the re-anchored "
+            "kernel takes its base from q_design)."
         )
     if float(feeder_kw) < 0.0:
         raise ValueError(
@@ -255,25 +277,32 @@ def compose_scenarios(
             f"sigma_hourly={sigma_hourly!r}; forecast-error standard deviations "
             "must be non-negative. Remediation: pass SIGMA_DAILY / SIGMA_HOURLY."
         )
-    t0, hod = cold_day_temp(df=df)
-    occ = _occ(hod)  # (24,) reused 10.1 occupancy shape
-    req = np.zeros((int(n_scenarios), 24), dtype=DTYPE)
+    q0 = np.ascontiguousarray(q_design, dtype=DTYPE)
+    if q0.ndim != 1 or q0.shape[0] <= 0:
+        raise ValueError(
+            "compose_scenarios received a q_design with shape "
+            f"{q0.shape}; it must be a 1-D (n_steps,) day-ahead forecast "
+            "trajectory in kW. Remediation: pass the emitted q_design.npy "
+            "(make_q_design / make_design_day_ensemble['Q_design'])."
+        )
+    n_steps = int(q0.shape[0])
+    # Deferred SDK-free import (scipy is a base numeric dep); mirrors make_q_design.
+    from scipy.ndimage import gaussian_filter1d
+
+    # kW-space fractional forecast-error sensitivity (mirrors make_q_design, D-07).
+    frac_per_degc = 0.03
+    req = np.zeros((int(n_scenarios), n_steps), dtype=DTYPE)
     for w in range(int(n_scenarios)):
         # PINNED draw order (Pitfall 4): daily offset -> hourly noise -> EV day.
-        toff = rng.normal(0.0, sigma_daily) + rng.normal(0.0, sigma_hourly, 24)
-        temp = t0 + toff
-        # Cold-load pickup (260625-pwz): the per-scenario cold-day heating term gets
-        # the SAME deterministic ``clpu_factor(hod, temp)`` as the annual base
-        # (``_stochastic.tmy_base``) so the two-stage scenario ensemble stays
-        # consistent with the CLPU-lifted base. Keyed off the per-scenario PERTURBED
-        # temp + the cold-day hod. HEATING term only — the BG_KW background and the EV
-        # day ``g`` below are NOT amplified. ``clpu_factor`` is RNG-free, so the pinned
-        # per-scenario draw order is untouched and CLPU_PEAK=1.0 reproduces the
-        # pre-CLPU ``required`` ensemble bit-for-bit (the reproducibility guard).
-        d = int(n_homes) * (
-            BG_KW * occ
-            + np.maximum(0.0, T_BALANCE - temp) / R_THERM * clpu_factor(hod, temp)
-        )
+        daily_offset = float(rng.normal(0.0, float(sigma_daily)))
+        hourly_noise = rng.normal(0.0, float(sigma_hourly), n_steps)
+        smooth_hourly = gaussian_filter1d(hourly_noise, sigma=2.0, mode="nearest")
+        # kW-space fractional perturbation on the q_design base (heating-dominated
+        # ~3 %/degC sensitivity), reproducing the forecast-error model of the
+        # emitted Q_design family; the EV day below is drawn AFTER so the order
+        # (and byte-stability) is preserved.
+        perturb = 1.0 + frac_per_degc * (daily_offset + smooth_hourly)
+        d = q0 * perturb  # (n_steps,) re-anchored base trajectory
         g = _ev_day(rng, int(n_ev))  # reused 10.1 EV physics (never re-implemented)
         req[w] = np.maximum(0.0, d + g - float(feeder_kw))
     return req
@@ -440,6 +469,16 @@ def annual_twostage_headline(
     flexible_ev_count: int,
 ) -> dict[str, Any]:
     """Return the optimal annual hosting headline, streaming per day (D-09, Pitfall 3).
+
+    RETIRED (Phase 15 RETIRE-02, D-07): the annual 8760h two-stage headline is
+    REMOVED from the new design-day pipeline path — Phase 15 derives the hosting
+    headline from the design-day controller (``apply_flexibility_contracts`` on the
+    emitted ``Q_design``/``Q_real`` ensemble, Plan 03) and stage 6 keeps only the
+    eps-frontier + cvxpy↔oracle proof (Plan 02). This function is KEPT importable
+    this plan because the stage-6 ``solve_twostage_program`` body still references
+    it until Plan 02 re-points stage 6; it is physically deleted in Plan 02 when
+    that last consumer migrates. Do NOT route the new pipeline through this annual
+    headline.
 
     STREAMS per day over the full annual 8760h — NEVER materializing the
     ``(365, n_scen, 24)`` cube (Pitfall 3). For each of the 365 days it builds the
