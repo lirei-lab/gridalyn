@@ -1,0 +1,189 @@
+{
+  "project": "ev_hosting_flex",
+  "metric_tolerance": {
+    "absolute": 1e-06
+  },
+  "metrics": [
+    {
+      "expected": 3,
+      "id": "firm.firm_ev_count",
+      "json_path": [
+        "firm_ev_count"
+      ],
+      "source": "outputs/json/firm_hosting.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.428571,
+      "id": "firm.firm_penetration",
+      "json_path": [
+        "firm_penetration"
+      ],
+      "source": "outputs/json/firm_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 7,
+      "id": "firm.downstream_home_count",
+      "json_path": [
+        "downstream_home_count"
+      ],
+      "source": "outputs/json/firm_hosting.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 71.25,
+      "id": "firm.feeder_transformer_modeled_kw",
+      "json_path": [
+        "feeder_transformer_modeled_kw"
+      ],
+      "source": "outputs/json/firm_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.3,
+      "id": "firm.p_overload_curve_at_5ev",
+      "json_path": [
+        "p_overload_curve",
+        5
+      ],
+      "source": "outputs/json/firm_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2,
+      "id": "flex.flexible_ev_count",
+      "json_path": [
+        "flexible_ev_count"
+      ],
+      "source": "outputs/json/flexible_hosting.json",
+      "tolerance": 0
+    },
+    {
+      "expected": -0.333333,
+      "id": "flex.hosting_expansion_percent",
+      "json_path": [
+        "hosting_expansion_percent"
+      ],
+      "source": "outputs/json/flexible_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.05,
+      "id": "flex.eps",
+      "json_path": [
+        "eps"
+      ],
+      "source": "outputs/json/flexible_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.016667,
+      "id": "flex.realized_p_overload_at_flexible",
+      "json_path": [
+        "realized_p_overload_at_flexible"
+      ],
+      "source": "outputs/json/flexible_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 57.290978,
+      "id": "flex.q_design_peak_kw",
+      "json_path": [
+        "q_design_peak_kw"
+      ],
+      "source": "outputs/json/flexible_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 6,
+      "id": "econ.deferral_flexible_ev_count",
+      "json_path": [
+        "deferral_flexible_ev_count"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1.0,
+      "id": "econ.deferral_hosting_expansion_percent",
+      "json_path": [
+        "deferral_hosting_expansion_percent"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.0,
+      "id": "econ.hosting_expansion_percent",
+      "json_path": [
+        "hosting_expansion_percent"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2.6,
+      "id": "econ.breakeven_penetration_at_base_c_r",
+      "json_path": [
+        "breakeven_penetration_at_base_c_r"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.065051,
+      "id": "econ.crf",
+      "json_path": [
+        "crf"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2267.357289,
+      "id": "econ.deferral_npv_base",
+      "json_path": [
+        "deferral_npv_base"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 6.060391,
+      "id": "econ.sum_r_headline_kw",
+      "json_path": [
+        "sum_r_headline_kw"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.393592,
+      "id": "econ.e_sum_a_headline_kwh",
+      "json_path": [
+        "e_sum_a_headline_kwh"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.3,
+      "id": "econ.enrollment_fraction",
+      "json_path": [
+        "enrollment_fraction"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2,
+      "id": "econ.reserve_caveat_flexible_ev_count",
+      "json_path": [
+        "reserve_caveat_flexible_ev_count"
+      ],
+      "source": "outputs/json/nonwires_economics.json",
+      "tolerance": 0
+    }
+  ]
+}
