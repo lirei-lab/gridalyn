@@ -133,6 +133,7 @@ def solve_sharing_admm(
     responsive: np.ndarray | None = None,
     forecast: np.ndarray | None = None,
     comfort_prox_inverse: np.ndarray | None = None,
+    relax: float = 1.0,
 ) -> AdmmResult:
     """Coordinate per-agent heating to flatten total load via sharing ADMM.
 
@@ -154,6 +155,8 @@ def solve_sharing_admm(
             penalizes each home's modelled indoor-temperature excursion (not just
             its energy deviation), steering re-timing toward high-thermal-mass
             homes. When ``None`` the original closed-form prox is used.
+        relax: ADMM over-relaxation factor (``1.0`` recovers plain ADMM; a value
+            in ``[1.5, 1.8]`` accelerates consensus).
 
     Returns:
         AdmmResult with coordinated heating and convergence diagnostics.
@@ -202,12 +205,15 @@ def solve_sharing_admm(
             q = h[active] + dev
         x[active] = project_capped_energy_batch(q, lo[active], hi[active], energy[active])
         xbar_new = x.mean(axis=0)
+        # over-relaxation (Boyd 2011, 3.4.3): blend the new primal mean with the
+        # previous z before the z/u updates; relax=1 recovers plain ADMM.
+        xbar_or = relax * xbar_new + (1.0 - relax) * z
         # z-update (closed form): minimize (mu/2)||N z + B - c||^2 + (N rho/2)||z-u-xbar||^2
-        z_new = (rho * (u + xbar_new) - mu * (bg_total - c)) / (mu * n_agents + rho)
+        z_new = (rho * (u + xbar_or) - mu * (bg_total - c)) / (mu * n_agents + rho)
         # u-update
-        u = u + xbar_new - z_new
+        u = u + xbar_or - z_new
 
-        primal_res = float(np.linalg.norm(xbar_new - z_new))
+        primal_res = float(np.linalg.norm(xbar_or - z_new))
         dual_res = float(rho * np.linalg.norm(z_new - z))
         z = z_new
 

@@ -21,7 +21,7 @@ it near $\varrho = 0.87$, and rises to the uncoordinated 109.6\% as the last hom
 fall silent. A Monte-Carlo analysis over which agents fail and the forecast error
 reframes this critical fraction as a probabilistic risk threshold rather than a
 single deterministic point: the probability of a thermal violation stays near 0
-through $\varrho = 0.8$, rises to 0.20 at $\varrho = 0.85$ and 0.79 at
+through $\varrho = 0.8$, rises to 0.21 at $\varrho = 0.85$ and 0.81 at
 $\varrho = 0.88$, and reaches certainty by $\varrho = 0.90$, so the deterministic
 compliance at $\varrho = 0.85$ understated the true risk. Comparing three families
 of ML regressors for the imputer, we found that a regularized linear model (ridge)
@@ -33,14 +33,20 @@ choice of method being secondary once any reasonable imputer is in the loop. The
 distributed ADMM was validated against a centralized CVXPY solve (aggregate peak
 agreeing to within $0.05\%$).
 
-The study has clear limitations. It covers a single cold day and a single feeder,
-and the binding constraint is the distribution transformer's thermal loading;
-thermal comfort is enforced through a modelled RC penalty rather than a hard
-indoor-temperature constraint, and the comfort term slows ADMM convergence
-(iterations rise from $\approx 8$ to $\approx 100$ and beyond); the
-communication-failure model is a stochastic non-responsive fraction rather than a
-protocol-level simulation of delays, drops, and retransmissions. Future work will
-extend the loop to multiple feeders and days, study the spatial placement of
-agents across the LV feeders (which determines how much each contributes to the
-binding constraint), and couple the coordinator to a flexibility market so that
-the cleared headroom can be priced and settled.
+The study has clear limitations that bound its claims. It covers a single
+synthetic cold day on a single synthetic feeder, so the quantitative thresholds
+(the critical non-responsive fraction and the cleared loading margin) are specific
+to this configuration rather than statistically general across climates, feeder
+topologies, and load mixes. Thermal comfort is enforced as a soft penalty on a
+first-order RC model of each home rather than as a hard indoor-temperature
+constraint on a validated building model, so the reported excursions are modelled,
+not measured. The communication-failure model is a stochastic non-responsive
+fraction applied at coordination time, not a protocol-level simulation of delays,
+dropped packets, and retransmissions. The inputs are synthetic by design, which
+makes the study fully reproducible but leaves it uncalibrated to field
+measurements. Future work will extend the loop to multiple feeders, climates, and
+days; replace the stochastic failure model with a protocol-level communication
+simulation; study the spatial placement of agents across the LV feeders, which
+determines how much each contributes to the binding constraint; and couple the
+coordinator to a flexibility market so the cleared headroom can be priced and
+settled.

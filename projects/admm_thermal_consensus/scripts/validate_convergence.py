@@ -72,8 +72,9 @@ def main() -> None:
         q = heat + rho * np.einsum("itj,ij->it", prox, centers - heat)
         x = project_capped_energy_batch(q, lo, hi, energy)
         xbar2 = x.mean(axis=0)
-        z = (rho * (u + xbar2) - mu * (bg_total - c)) / (mu * n + rho)
-        u = u + xbar2 - z
+        xbar_or = C.ADMM_RELAX * xbar2 + (1.0 - C.ADMM_RELAX) * z
+        z = (rho * (u + xbar_or) - mu * (bg_total - c)) / (mu * n + rho)
+        u = u + xbar_or - z
         history.append(full_objective(x))
     history = np.asarray(history)
 

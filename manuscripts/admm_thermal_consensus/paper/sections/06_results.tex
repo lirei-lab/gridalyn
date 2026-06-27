@@ -44,7 +44,7 @@ that requires the physical comfort model, not an energy proxy. We validate it by
 propagating each home's coordinated schedule through its RC thermal model and
 recording the worst modelled indoor-temperature excursion from setpoint
 (Figure~\ref{fig:comfort}). The comfort-aware coordination ($\gamma = 2$) holds
-the worst excursion across all 74 homes to $1.03\,^{\circ}\mathrm{C}$, with a
+the worst excursion across all 74 homes to $1.01\,^{\circ}\mathrm{C}$, with a
 median of only $0.70\,^{\circ}\mathrm{C}$, inside a $1\,^{\circ}\mathrm{C}$
 comfort band and comparable to a thermostat's own deadband. An energy-only
 flatten that ignores the temperature term, by contrast, pushes the worst
@@ -68,7 +68,7 @@ percentage point of peak shaving.
 \caption{Per-home worst modelled indoor-temperature excursion from setpoint,
 comfort-aware coordination ($\gamma = 2$) versus a naive energy-only flatten,
 propagated through each home's RC thermal model. The comfort-aware worst is
-$1.03\,^{\circ}\mathrm{C}$ (median $0.70\,^{\circ}\mathrm{C}$) against
+$1.01\,^{\circ}\mathrm{C}$ (median $0.70\,^{\circ}\mathrm{C}$) against
 $2.11\,^{\circ}\mathrm{C}$ for the energy-only case; the $1\,^{\circ}\mathrm{C}$
 comfort band and the $0.4\,^{\circ}\mathrm{C}$ thermostat deadband are marked.}
 \label{fig:comfort}
@@ -152,15 +152,16 @@ $\rho_{\mathrm{ADMM}}$.}
 \label{fig:peakpar}
 \end{figure}
 
-The temperature-coupling term comes at a tractability cost: it couples the time
-steps of each home's prox through $G_i^{\top}G_i$, so consensus is slower to
-reach. ADMM iterations rise from $\approx 8$ for the energy-only scheme to
-$\approx 98$ for the comfort-aware ideal case and reach the solver cap
-($\approx 500$) at high non-responsive fractions. Because iterations are high
-throughout once the comfort term is active, the iteration count is \emph{no
-longer} a clean early indicator of impending feeder violation; we report it only
-as a cost of the physical comfort model, not as an operational early-warning
-signal.
+The temperature-coupling term raises the conditioning of each home's $x$-update,
+since it couples the time steps of the local prox through $G_i^{\top}G_i$. Left
+unaddressed this would slow consensus, so we tune the ADMM penalty
+$\rho_{\mathrm{ADMM}}$ and apply over-relaxation \cite{boyd2011admm} to the primal
+update. With these, the comfort-coupled solver stays fast: the energy-only scheme
+converges in $\approx 21$ sweeps and the comfort-aware ideal case in $\approx 30$,
+rising monotonically to $\approx 99$ at the highest non-responsive fractions but
+always reaching the residual tolerance well within the iteration cap. The
+iteration count therefore grows only mildly with the non-responsive fraction; we
+report it as a tractability diagnostic, not an operational early-warning signal.
 
 \subsection{Imputation method comparison and the value of imputation}
 The sweeps so far use one representative ML imputer. Two questions remain: how
@@ -324,10 +325,10 @@ To rule out an artifact of the hand-rolled solver, the distributed ADMM was
 checked against a centralized CVXPY solve of the same convex program. The two
 agree on the aggregate peak, the quantity the feasibility verdicts rest on,
 to within $0.05\%$; the objective is reproduced exactly for the separable
-(energy-only) case and to within about $1\%$ for the temperature-coupled case.
+(energy-only) case and to within about $0.2\%$ for the temperature-coupled case.
 Figure~\ref{fig:convergence} shows the sharing-ADMM objective on the ideal
 coordination problem driving down to the CVXPY optimum within a few tens of
-iterations and settling at a $0.54\%$ relative gap (the small residual is the
+iterations and settling at a $0.18\%$ relative gap (the small residual is the
 proximal temperature-coupled $x$-update, and it shrinks with the agent count). The
 reported verdicts therefore reflect the optimization, not the implementation.
 
@@ -336,7 +337,7 @@ reported verdicts therefore reflect the optimization, not the implementation.
 \includegraphics[width=\columnwidth]{fig_convergence.pdf}
 \caption{Sharing-ADMM objective (log scale) versus iteration on the ideal
 coordination problem, converging to the CVXPY centralized optimum (dashed);
-final relative gap $0.54\%$.}
+final relative gap $0.18\%$.}
 \label{fig:convergence}
 \end{figure}
 
@@ -351,7 +352,7 @@ the worst-of-day transformer loading.
 Figure~\ref{fig:uncertainty} and Table~\ref{tab:uncertainty} report the result
 (mean with [P5, P95] band). The probability of a thermal violation of the 105\%
 limit stays at 0 through $\varrho = 0.8$, ticks to 0.01 at $\varrho = 0.82$, rises
-to 0.20 at $\varrho = 0.85$ and 0.79 at $\varrho = 0.88$, and is 1.00 for
+to 0.21 at $\varrho = 0.85$ and 0.81 at $\varrho = 0.88$, and is 1.00 for
 $\varrho \ge 0.90$. The single-realization analysis reported $\varrho = 0.85$ as
 compliant (104.3\% loading), but once the uncertainty in which agents fail and in
 the forecast is accounted for, that operating point already breaches in 20\% of

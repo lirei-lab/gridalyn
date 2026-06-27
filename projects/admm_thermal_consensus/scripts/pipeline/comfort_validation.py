@@ -45,7 +45,7 @@ def main() -> None:
 
     base_kwargs = dict(
         heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
+        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
     )
     prox = comfort.prox_inverse()

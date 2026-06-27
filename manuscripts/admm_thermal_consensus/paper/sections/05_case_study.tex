@@ -6,7 +6,9 @@ ambient temperature of $-21.9\,^{\circ}\mathrm{C}$, discretized at 15-minute
 resolution into $T = 96$ steps. We coordinate $N = 74$ electric-heating homes
 with comfort band $\alpha = 0.5$, energy weight $\lambda = 0.15$,
 indoor-temperature comfort weight $\gamma = 2$, flattening weight $\mu = 1.0$, and
-ADMM penalty $\rho_{\mathrm{ADMM}} = 1.0$. The communication-failure fraction is
+ADMM penalty $\rho_{\mathrm{ADMM}} = 5$ with over-relaxation factor $1.7$ (tuned so
+the comfort-coupled solver converges in well under one hundred sweeps). The
+communication-failure fraction is
 swept from $\varrho = 0$ to $\varrho = 1.0$ over twelve points,
 $\varrho \in \{0, 0.2, 0.4, 0.6, 0.7, 0.8,$ $0.82, 0.85, 0.88, 0.9, 0.95, 1.0\}$,
 sampled densely near the feasibility knee at $\varrho \approx 0.85$.
@@ -47,7 +49,8 @@ Comfort band $\alpha$ & 0.5 \\
 Energy weight $\lambda$ & 0.15 \\
 Comfort weight $\gamma$ & 2 \\
 Flattening weight $\mu$ & 1.0 \\
-ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
+ADMM penalty $\rho_{\mathrm{ADMM}}$ & 5 \\
+ADMM over-relaxation & 1.7 \\
 Non-responsive fraction $\varrho$ & $0$ to $1.0$, 12 points (dense near $0.85$) \\
 TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
 Feeder & Synthetic LV residential, 120/208~V \\

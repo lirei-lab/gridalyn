@@ -26,10 +26,11 @@ WEATHER_SOURCE = "synthetic"
 GENERATOR = "thermodynamic"  # exposes per-home heating vs background split
 
 # ── ADMM ────────────────────────────────────────────────────────────
-ADMM_RHO = 1.0          # penalty parameter
+ADMM_RHO = 5.0          # penalty parameter (tuned for the comfort-coupled prox)
+ADMM_RELAX = 1.7        # over-relaxation factor (Boyd 3.4.3) to speed consensus
 ADMM_LAMBDA = 0.15      # comfort weight (stay near thermostat baseline)
 ADMM_MU = 1.0           # aggregate flattening weight
-ADMM_MAX_ITERS = 500   # comfort-coupled x-update needs more sweeps than the plain solver
+ADMM_MAX_ITERS = 500    # generous cap; tuned rho+relax converges in <~100 sweeps
 ADMM_TOL = 1e-4         # on combined primal+dual residual
 DEFERRABILITY_ALPHA = 0.5  # heating may modulate +/-50% around baseline per step
 COMFORT_GAMMA = 2.0   # weight on the modelled indoor-temperature excursion (~+/-1 C)

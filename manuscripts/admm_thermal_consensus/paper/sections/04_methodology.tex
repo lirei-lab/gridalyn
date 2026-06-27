@@ -42,7 +42,9 @@ each home's local problem in parallel: a comfort-plus-penalty proximal step
 followed by projection of the result onto the box-and-energy-plane feasible set
 of~\eqref{eq:agent}. The \textbf{$z$-update} is the closed-form average that
 drives the shared aggregate toward the flat target. The \textbf{$u$-update} is
-the standard scaled dual ascent on the sharing residual. Algorithm~\ref{alg:admm}
+the standard scaled dual ascent on the sharing residual. We tune the penalty
+$\rho_{\mathrm{ADMM}}$ and apply over-relaxation \cite{boyd2011admm} to the primal
+update, which keeps the comfort-coupled iteration count low. Algorithm~\ref{alg:admm}
 summarizes one full sweep.
 
 \begin{algorithm}[t]

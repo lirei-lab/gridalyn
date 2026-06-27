@@ -49,7 +49,7 @@ def _admm_responsive(heating, background, prox_subset):
     """Flatten a (responsive) subset and return its coordinated schedules."""
     res = solve_sharing_admm(
         heating=heating, background=background, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
+        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
         comfort_prox_inverse=prox_subset,
     )
@@ -76,7 +76,7 @@ def _realized_peak(method, heat, bg, levels, temp, silent, seed, prox):
     forecast[silent] = estimate
     res = solve_sharing_admm(
         heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
+        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
         responsive=resp, forecast=forecast,
         comfort_prox_inverse=prox,

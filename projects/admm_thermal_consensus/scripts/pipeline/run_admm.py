@@ -60,7 +60,7 @@ def main() -> None:
     # 2) coordinated ideal
     res = solve_sharing_admm(
         heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
+        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
         max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
         comfort_prox_inverse=prox,
     )
@@ -88,7 +88,7 @@ def main() -> None:
         responsive[drop_order[:n_down]] = False
         res = solve_sharing_admm(
             heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-            rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU,
+            rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
             max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
             responsive=responsive, forecast=forecast,
             comfort_prox_inverse=prox,
