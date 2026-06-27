@@ -33,15 +33,18 @@ def main() -> None:
         label="Transformer loading P5-P95",
     )
     ax1.plot(rho, d["line_loading_pct_mean"], "o-", color="tab:red", label="Transformer loading mean")
-    ax1.axhline(C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6, label="100% limit")
+    ax1.axhline(
+        C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6,
+        label=f"{C.LINE_LOADING_LIMIT_PCT:.0f}% limit",
+    )
     ax1.set_xlabel("Non-responsive fraction (forecast-imputed)")
     ax1.set_ylabel("Worst transformer loading [%]")
 
     ax2 = ax1.twinx()
-    ax2.bar(rho, d["prob_line_violation"], width=0.06, color="tab:blue", alpha=0.45,
-            label="P(line violation)")
-    ax2.set_ylabel("P(line violation)")
-    ax2.set_ylim(0, 1.05)
+    ax2.plot(rho, d["prob_line_violation"], "s--", color="tab:blue", alpha=0.85,
+             markersize=5, label="P(transformer violation)")
+    ax2.set_ylabel("P(transformer violation)")
+    ax2.set_ylim(-0.02, 1.05)
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()

@@ -201,10 +201,10 @@ better.}
 Method & RMSE & $R^2$ & Peak & Load. & $P_{\mathrm{viol}}$ \\
  & (kW) & & (kW) & (\%) & \\
 \midrule
-Ridge              & 0.280 & 0.70 & 374.9 & 102.1 & 0.00 \\
-$k$-NN             & 0.308 & 0.67 & 375.0 & 102.1 & 0.00 \\
-LightGBM           & 0.304 & 0.67 & 378.8 & 103.2 & 0.15 \\
-Random forest      & 0.342 & 0.62 & 378.1 & 103.0 & 0.09 \\
+Ridge              & 0.280 & 0.70 & 374.8 & 102.1 & 0.00 \\
+$k$-NN             & 0.308 & 0.67 & 374.9 & 102.1 & 0.00 \\
+LightGBM           & 0.304 & 0.67 & 378.0 & 102.9 & 0.10 \\
+Random forest      & 0.342 & 0.62 & 377.4 & 102.8 & 0.09 \\
 Mean-level (naive) & 0.312 & 0.65 & 374.7 & 102.0 & 0.00 \\
 No imputation      & ---   & ---  & 395.8 & 107.9 & 1.00 \\
 \bottomrule
@@ -217,17 +217,17 @@ realized peak climbs to 395.8~kW (107.9\% loading) at $\varrho = 0.8$ and the
 transformer violates the 105\% limit in \emph{every} draw
 ($P_{\mathrm{viol}} = 1.00$), because the outcome depends entirely on \emph{which}
 uncontrolled homes fall silent. \emph{Every} imputer, by contrast, holds the
-feeder cleared: the realized peak stays near 375--379~kW ($\approx 102$--103\%)
-and the violation probability collapses to at most 0.15 (LightGBM) and to 0.00 for
+feeder cleared: the realized peak stays near 375--378~kW ($\approx 102$--103\%)
+and the violation probability collapses to at most 0.10 (LightGBM) and to 0.00 for
 ridge, $k$-NN, and the naive mean-level baseline. The dominant gap is therefore
-imputation versus none, roughly a 17--21~kW reduction (396 to 375--379~kW) that
+imputation versus none, roughly an 18--21~kW reduction (396 to 375--378~kW) that
 turns a certain violation into a cleared feeder, and the \emph{choice} of method
 is secondary at this fraction. Among the methods the ranking still tracks
 intrinsic accuracy: the regularized linear model (ridge) is best both
-intrinsically (RMSE 0.280~kW, $R^2 = 0.70$) and on realized loading (102.0\%,
+intrinsically (RMSE 0.280~kW, $R^2 = 0.70$) and on realized loading (102.1\%,
 $P_{\mathrm{viol}} = 0.00$), ahead of the instance-based and tree-ensemble
 methods, with the gradient-boosted model the only one carrying non-trivial
-residual risk (0.15). Ridge wins for a physically intuitive reason. A home's
+residual risk (0.10). Ridge wins for a physically intuitive reason. A home's
 heating is, to first order, a \emph{linear} function of these features:
 steady-state demand scales with the indoor--outdoor temperature gap and with the
 home's nameplate level, with only a mild diurnal term, so the target is smooth
@@ -354,12 +354,12 @@ Figure~\ref{fig:uncertainty} and Table~\ref{tab:uncertainty} report the result
 limit stays at 0 through $\varrho = 0.8$, ticks to 0.01 at $\varrho = 0.82$, rises
 to 0.21 at $\varrho = 0.85$ and 0.81 at $\varrho = 0.88$, and is 1.00 for
 $\varrho \ge 0.90$. The single-realization analysis reported $\varrho = 0.85$ as
-compliant (104.3\% loading), but once the uncertainty in which agents fail and in
-the forecast is accounted for, that operating point already breaches in 20\% of
-draws, rising to 79\% by $\varrho = 0.88$: the deterministic estimate understated
+compliant (104.4\% loading), but once the uncertainty in which agents fail and in
+the forecast is accounted for, that operating point already breaches in 21\% of
+draws, rising to 81\% by $\varrho = 0.88$: the deterministic estimate understated
 how abruptly the risk rises. The [P5, P95] band is tight on the plateau
 (forecast errors average out across a large responsive population) and widens at
-the knee ($[103.5, 105.5]\%$ at $\varrho = 0.85$, $[104.7, 106.5]\%$ at
+the knee ($[103.6, 105.5]\%$ at $\varrho = 0.85$, $[104.7, 106.5]\%$ at
 $\varrho = 0.88$) before riding the ramp upward. This reframes the operator
 takeaway: the critical transition is not a single deterministic fraction but a
 probabilistic risk threshold centered near $\varrho = 0.87$, where the breach
@@ -371,7 +371,7 @@ probability swings from near zero to near certainty across the sweep.
 \caption{Monte-Carlo forecast-uncertainty sweep (200 draws per fraction). Worst
 maximum transformer loading mean with its P5--P95 band versus the non-responsive
 fraction $\varrho$ (left axis, with the 105\% short-duration limit), and the probability
-of a transformer violation as bars (right axis). The image's ``rho'' axis is the
+of a transformer violation (dashed line, right axis). The image's ``rho'' axis is the
 non-responsive fraction $\varrho$.}
 \label{fig:uncertainty}
 \end{figure}
@@ -385,12 +385,12 @@ non-responsive fraction $\varrho$.}
 \toprule
 $\varrho$ & Loading (\%) [P5, P95] & $P(\text{violation})$ \\
 \midrule
-0.70 & 99.8 [99.6, 100.0]   & 0.00 \\
-0.80 & 102.5 [101.6, 103.5] & 0.00 \\
-0.85 & 104.5 [103.5, 105.5] & 0.20 \\
-0.88 & 105.5 [104.7, 106.5] & 0.79 \\
-0.90 & 106.6 [105.7, 107.6] & 1.00 \\
-1.00 & 110.1 [109.2, 111.0] & 1.00 \\
+0.70 & 99.8 [99.6, 100.1]   & 0.00 \\
+0.80 & 102.6 [101.7, 103.5] & 0.00 \\
+0.85 & 104.6 [103.6, 105.5] & 0.21 \\
+0.88 & 105.5 [104.7, 106.5] & 0.81 \\
+0.90 & 106.6 [105.8, 107.6] & 1.00 \\
+1.00 & 110.2 [109.4, 111.2] & 1.00 \\
 \bottomrule
 \end{tabular}
 \end{table}

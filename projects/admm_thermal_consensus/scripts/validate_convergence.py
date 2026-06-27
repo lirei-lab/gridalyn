@@ -99,6 +99,8 @@ def main() -> None:
     ax.set_xlabel("ADMM iteration")
     ax.set_ylabel("Objective")
     ax.set_yscale("log")
+    # the ideal problem converges in a few tens of sweeps; show that window
+    ax.set_xlim(0, 50)
     ax.legend()
     ax.grid(alpha=0.3, which="both")
     ax.set_title(f"Final relative gap: {gap * 100:.2f}%")
