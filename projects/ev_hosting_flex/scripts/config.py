@@ -528,15 +528,18 @@ C_RESERVE = 0.5
 The optimal policy (``r* = Q_{1−ε}``, ``a* = min``) is PRICE-INDEPENDENT as long
 as ``C_ACTIVATE > 0`` — this price only SCALES the separately-reported, clearly
 illustrative cost frontier, it does not move the hosting headline or the
-reliability guarantee. Prototype ``C_R``. The break-even phase's different prices
-(``breakeven_nonwires.py``) are NOT used here (RESEARCH A5)."""
+reliability guarantee. Prototype ``C_R``. The break-even / deferral prices are now
+the governed ECON-02 constants ``C_R_BASE`` / ``C_A`` (Phase 16, D-16-4);
+``C_RESERVE`` remains the two-stage frontier-scaling price and is distinct from
+them."""
 
 C_ACTIVATE = 2.0
 """ILLUSTRATIVE labelled activation price per kW·h activated in real time (D-06).
 As with ``C_RESERVE``, illustrative-only: the optimum is price-independent for any
 ``C_ACTIVATE > 0`` and this merely scales the reported frontier. Prototype
-``C_A``. Real economic crossing vs reinforcement CAPEX is deferred to the
-break-even phase (D-01) with its own prices."""
+``C_A``. The real economic crossing vs reinforcement CAPEX is the governed ECON-02
+constants ``C_A`` / ``CAPEX_UPGRADE`` (Phase 16, D-16-4); ``C_ACTIVATE`` remains the
+two-stage frontier-scaling price and is distinct from them."""
 
 TWOSTAGE_SOLVER = "CLARABEL"
 """Single pinned deterministic cvxpy solver for the gated two-stage solve (D-08).
