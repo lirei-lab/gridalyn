@@ -141,6 +141,32 @@ spec:
         - projects/ev_hosting_flex/outputs/data/reserve_activation_coldday.parquet
         - projects/ev_hosting_flex/outputs/reports/twostage_program_report.json
 
+    # ── Stage 6.5: non-wires economics (ECON-01 wiring / ECON-03 ledger) ──
+    - id: compute_nonwires_economics
+      needs: [apply_flexibility_contracts, solve_twostage_program]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_nonwires_economics.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/compute_nonwires_economics.py
+        - projects/ev_hosting_flex/scripts/_economics.py
+        - projects/ev_hosting_flex/scripts/_generators.py
+        - projects/ev_hosting_flex/scripts/_congestion.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/data/q_real.npy
+        - projects/ev_hosting_flex/outputs/data/q_design.npy
+        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
+        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
+        - projects/ev_hosting_flex/outputs/json/flexible_hosting.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/data/nonwires_economics_breakeven.csv
+        - projects/ev_hosting_flex/outputs/data/nonwires_economics_sensitivity.csv
+        - projects/ev_hosting_flex/outputs/data/nonwires_economics_npv.csv
+        - projects/ev_hosting_flex/outputs/json/nonwires_economics.json
+        - projects/ev_hosting_flex/outputs/figures/breakeven_nonwires.png
+        - projects/ev_hosting_flex/outputs/figures/breakeven_nonwires.pdf
+        - projects/ev_hosting_flex/outputs/figures/nonwires_economics.png
+        - projects/ev_hosting_flex/outputs/figures/nonwires_economics.pdf
+        - projects/ev_hosting_flex/outputs/reports/nonwires_economics_report.json
+
     # ── Stage 7: pandapower AC peak-hour validation (stubbed — Phase 11) ─
     - id: validate_powerflow
       needs: [compute_congestion, solve_twostage_program]
