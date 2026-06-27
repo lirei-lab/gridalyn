@@ -13,13 +13,18 @@ constants — never the manuscript's self-contained Monte-Carlo:
   ceiling (``DEFERRAL_CHARGER_KW_CEILING`` = 7.2 kW) — both governed constants are LIVE
   (no longer dead config). Daytime hours outside the window contribute ZERO deferrable
   headroom (the EVs are physically absent). The un-enrolled EVs charge naturally and a
-  residual peak over rating is a HARD overload gate (``is_overloaded``). The gate is the
-  EV energy that does NOT fit under the windowed/ceilinged envelope (the truly-
-  undeliverable / non-deferrable energy) — **energy-preserving**, NOT curtailed energy.
-  The flexible count is the last-in-tolerance EV count whose undeliverable fraction
-  stays ≤ ``tol_fraction`` (mirrors ``firm_transformer_count``, NO early break). The
-  count is bounded by the governed ``DEFERRAL_ENROLLMENT_FRACTION`` (D-16-2a: enrollment
-  0.30 → flex 6, +100% vs firm 3) — enrollment is the single binding lever.
+  residual peak over rating is a HARD overload gate (``is_overloaded``). The undeliverable
+  channel is the EV energy that does NOT fit under the windowed/ceilinged envelope (the
+  truly-undeliverable / non-deferrable energy) — **energy-preserving**, NOT curtailed
+  energy. The flexible count is gated on the FIRM-CONSISTENT reliability basis (the
+  gate-basis correction): the last-in-tolerance EV count whose per-realization
+  infeasibility probability ``P(resid_peak > rating OR undeliverable > ε) ≤
+  FIRM_PCONG_TOLERANCE`` (0.10) — the SAME 10% reliability tail as
+  ``firm_transformer_count``'s ``P(overload) ≤ FIRM_PCONG_TOLERANCE``, so firm-vs-flex is
+  apples-to-apples (NO early break). ``TOL_FRACTION`` (0.05) is kept only as a reported
+  undeliverable-fraction feasibility-ceiling diagnostic, NOT the binding gate. The count
+  is bounded by the governed ``DEFERRAL_ENROLLMENT_FRACTION`` (D-16-2a: enrollment 0.30 →
+  flex 6, +100% vs firm 3; 0.50 → 8, 0.60 → 13) — enrollment is the single binding lever.
 
 * **Non-wires economics ledger (ECON-01):** the two manuscript figure scripts'
   economics (``nonwires_economics.py`` + ``breakeven_nonwires.py``) ported onto the
@@ -66,6 +71,7 @@ from projects.ev_hosting_flex.scripts.config import (
     DEFERRAL_PLUGIN_WINDOW,
     DISCOUNT_RATE,
     DTYPE,
+    FIRM_PCONG_TOLERANCE,
     LIFE_YEARS,
     P0_ADOPT,
     PMAX_ADOPT,
@@ -194,6 +200,104 @@ def headroom_envelope(q_real: np.ndarray, rating_kw: float) -> np.ndarray:
     return np.clip(float(rating_kw) - q, 0.0, None)
 
 
+def _deferral_realization_arrays(
+    q_real: np.ndarray,
+    ev_pool: np.ndarray,
+    n_ev: int,
+    rating_kw: float,
+    res_minutes: int,
+    *,
+    enrollment_fraction: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return per-realization ``(undeliverable_kwh, residual_peak_kw)`` arrays (D-16-1).
+
+    The shared per-realization core of the windowed/ceilinged/residual-peak-gated
+    deferral model. Both the scalar ``undeliverable_energy`` (mean over ``K``) and the
+    firm-consistent ``deferral_hosting_count`` infeasibility gate consume THIS helper so
+    the deferral mechanics live in exactly one place. The two governed bounding constants
+    ``DEFERRAL_PLUGIN_WINDOW`` and ``DEFERRAL_CHARGER_KW_CEILING`` are applied here; the
+    ``> rating`` overload convention routes through ``transformer_loading`` /
+    ``is_overloaded`` (the single source of truth). See ``undeliverable_energy`` for the
+    full model narrative.
+
+    Args:
+        q_real: ``(K, n_steps)`` float64 EV-free building-base ensemble (kW).
+        ev_pool: ``(K, ev_max + 1, n_steps)`` float64 nested cumulative EV pool (kW).
+        n_ev: The EV count to overlay (indexes the EV-pool middle axis).
+        rating_kw: The modeled usable transformer rating in kW (> 0).
+        res_minutes: The aggregation resolution in minutes (kWh = kW · res/60).
+        enrollment_fraction: The fraction of EVs enrolled in deferred charging (only
+            enrolled EVs defer); must lie in (0, 1].
+
+    Returns:
+        A tuple ``(undeliverable, residual_peak)`` of ``(K,)`` float64 arrays: the
+        per-realization truly-undeliverable EV energy (kWh) and the per-realization
+        residual (``Q + unenrolled``) peak (kW). With a zero EV pool both are all-zero.
+
+    Raises:
+        ValueError: If ``rating_kw`` <= 0, ``enrollment_fraction`` is outside (0, 1],
+            ``n_ev`` is outside ``[0, ev_max]``, or ``n_steps`` is not 24.
+    """
+    _validate_rating(rating_kw)
+    _validate_enrollment(enrollment_fraction)
+    q = np.asarray(q_real, dtype=DTYPE)
+    pool = np.asarray(ev_pool, dtype=DTYPE)
+    ev_max = int(pool.shape[1]) - 1
+    _validate_n_ev(n_ev, ev_max)
+    res_h = float(res_minutes) / 60.0
+    k = int(q.shape[0])
+
+    ev = pool[:, int(n_ev), :]  # (K, n_steps) cumulative demand of the first n_ev EVs
+    if int(n_ev) == 0:
+        zeros = np.zeros(k, dtype=DTYPE)
+        return zeros, q.max(axis=1).astype(DTYPE)
+
+    n_steps = int(ev.shape[1])
+    window = _plugin_window_mask(n_steps)  # (n_steps,) bool plug-in availability
+
+    # Integer enrolled/un-enrolled charger counts so the per-charger ceiling is concrete
+    # (the reference run_realistic uses n_enr = round(f · n)); split the aggregate row by
+    # the corresponding shares so total EV energy is conserved.
+    n_enrolled = int(round(float(enrollment_fraction) * int(n_ev)))
+    n_unenrolled = int(n_ev) - n_enrolled
+    enrolled = ev * (float(n_enrolled) / float(int(n_ev)))
+    unenrolled = ev * (float(n_unenrolled) / float(int(n_ev)))
+
+    # The un-enrolled EVs charge naturally on top of the building base; the enrolled EV
+    # energy is shifted into the windowed/ceilinged off-peak headroom of THAT residual.
+    residual = q + unenrolled  # (K, n_steps)
+    residual_peak = residual.max(axis=1)  # (K,) hard-overload basis
+    # Headroom of the residual (single > rating convention via transformer_loading).
+    residual_loading = transformer_loading(residual, rating_kw)  # fraction
+    headroom = np.clip(
+        float(rating_kw) * (1.0 - residual_loading), 0.0, None
+    )  # (K, n_steps) kW, 0 where the residual already overloads
+    # Window mask: daytime hours outside the plug-in window contribute ZERO headroom.
+    headroom = np.where(window[None, :], headroom, 0.0)
+    # Per-charger power ceiling: usable headroom is capped at n_enrolled · ceiling.
+    cap_kw = float(max(n_enrolled, 0)) * float(DEFERRAL_CHARGER_KW_CEILING)
+    headroom = np.minimum(headroom, cap_kw)  # (K, n_steps)
+
+    # Energy bookkeeping (kWh), per realization (sum over steps).
+    enrolled_energy = enrolled.sum(axis=1) * res_h  # (K,)
+    headroom_cap = headroom.sum(axis=1) * res_h  # (K,)
+    # Enrolled energy that does NOT fit under the windowed/ceilinged envelope.
+    enrolled_undeliverable = np.clip(enrolled_energy - headroom_cap, 0.0, None)  # (K,)
+
+    # Un-enrolled residual peak is a HARD overload gate: its over-rating energy is
+    # undeliverable (the un-enrolled chargers are not managed and the residual peak
+    # exceeds rating). Routed through is_overloaded (the single > rating convention).
+    unenrolled_overload = np.where(
+        is_overloaded(residual, rating_kw),
+        residual - float(rating_kw),
+        0.0,
+    )  # (K, n_steps) kW over rating attributable to the un-enrolled residual
+    unenrolled_undeliverable = unenrolled_overload.sum(axis=1) * res_h  # (K,)
+
+    undeliverable = enrolled_undeliverable + unenrolled_undeliverable  # (K,)
+    return undeliverable.astype(DTYPE), residual_peak.astype(DTYPE)
+
+
 def undeliverable_energy(
     q_real: np.ndarray,
     ev_pool: np.ndarray,
@@ -254,60 +358,14 @@ def undeliverable_energy(
             ``n_ev`` is outside ``[0, ev_max]``, or ``n_steps`` is not 24 (the governed
             hour-of-day plug-in window requires the 24-step design day).
     """
-    _validate_rating(rating_kw)
-    _validate_enrollment(enrollment_fraction)
-    q = np.asarray(q_real, dtype=DTYPE)
-    pool = np.asarray(ev_pool, dtype=DTYPE)
-    ev_max = int(pool.shape[1]) - 1
-    _validate_n_ev(n_ev, ev_max)
-    res_h = float(res_minutes) / 60.0
-
-    ev = pool[:, int(n_ev), :]  # (K, n_steps) cumulative demand of the first n_ev EVs
-    if int(n_ev) == 0:
-        return 0.0
-
-    n_steps = int(ev.shape[1])
-    window = _plugin_window_mask(n_steps)  # (n_steps,) bool plug-in availability
-
-    # Integer enrolled/un-enrolled charger counts so the per-charger ceiling is concrete
-    # (the reference run_realistic uses n_enr = round(f · n)); split the aggregate row by
-    # the corresponding shares so total EV energy is conserved.
-    n_enrolled = int(round(float(enrollment_fraction) * int(n_ev)))
-    n_unenrolled = int(n_ev) - n_enrolled
-    enrolled = ev * (float(n_enrolled) / float(int(n_ev)))
-    unenrolled = ev * (float(n_unenrolled) / float(int(n_ev)))
-
-    # The un-enrolled EVs charge naturally on top of the building base; the enrolled EV
-    # energy is shifted into the windowed/ceilinged off-peak headroom of THAT residual.
-    residual = q + unenrolled  # (K, n_steps)
-    # Headroom of the residual (single > rating convention via transformer_loading).
-    residual_loading = transformer_loading(residual, rating_kw)  # fraction
-    headroom = np.clip(
-        float(rating_kw) * (1.0 - residual_loading), 0.0, None
-    )  # (K, n_steps) kW, 0 where the residual already overloads
-    # Window mask: daytime hours outside the plug-in window contribute ZERO headroom.
-    headroom = np.where(window[None, :], headroom, 0.0)
-    # Per-charger power ceiling: usable headroom is capped at n_enrolled · ceiling.
-    cap_kw = float(max(n_enrolled, 0)) * float(DEFERRAL_CHARGER_KW_CEILING)
-    headroom = np.minimum(headroom, cap_kw)  # (K, n_steps)
-
-    # Energy bookkeeping (kWh), per realization (sum over steps).
-    enrolled_energy = enrolled.sum(axis=1) * res_h  # (K,)
-    headroom_cap = headroom.sum(axis=1) * res_h  # (K,)
-    # Enrolled energy that does NOT fit under the windowed/ceilinged envelope.
-    enrolled_undeliverable = np.clip(enrolled_energy - headroom_cap, 0.0, None)  # (K,)
-
-    # Un-enrolled residual peak is a HARD overload gate: its over-rating energy is
-    # undeliverable (the un-enrolled chargers are not managed and the residual peak
-    # exceeds rating). Routed through is_overloaded (the single > rating convention).
-    unenrolled_overload = np.where(
-        is_overloaded(residual, rating_kw),
-        residual - float(rating_kw),
-        0.0,
-    )  # (K, n_steps) kW over rating attributable to the un-enrolled residual
-    unenrolled_undeliverable = unenrolled_overload.sum(axis=1) * res_h  # (K,)
-
-    undeliverable = enrolled_undeliverable + unenrolled_undeliverable  # (K,)
+    undeliverable, _ = _deferral_realization_arrays(
+        q_real,
+        ev_pool,
+        n_ev,
+        rating_kw,
+        res_minutes,
+        enrollment_fraction=enrollment_fraction,
+    )
     return float(undeliverable.mean())  # over K
 
 
@@ -339,65 +397,90 @@ def deferral_hosting_count(
     res_minutes: int,
     *,
     enrollment_fraction: float = DEFERRAL_ENROLLMENT_FRACTION,
+    pcong_tolerance: float = FIRM_PCONG_TOLERANCE,
 ) -> dict[str, Any]:
-    """Return the flexible hosting count via the last-in-tolerance deferral sweep.
+    """Return the flexible hosting count via the firm-consistent reliability sweep.
 
-    The hosting count WITH flexibility (D-16-1/D-16-2). Sweeps integer EV counts ``n``
-    in ``range(ev_max + 1)``, accumulating the undeliverable FRACTION
-    ``undeliverable_energy(n) / total_ev_energy(n)`` into a curve, and assigns
-    ``flexible = n`` for EVERY count whose undeliverable fraction ``<= tol_fraction`` —
-    a LAST-IN-TOLERANCE accumulation with NO early break (mirrors
-    ``firm_transformer_count``, NOT the retired first-overload break). The deferral
-    undeliverable fraction is monotone non-decreasing in ``n`` over the nested
-    cumulative pool, so "largest with frac ≤ tol" is the well-defined flexible count.
-    The ``n = 0`` step has zero EV energy ⇒ zero undeliverable ⇒ in tolerance.
+    The hosting count WITH flexibility (D-16-1/D-16-2a). Gated on the SAME reliability
+    basis as the firm count (the gate-basis correction): a flexible count is acceptable
+    when its per-realization infeasibility probability ``P(infeasible) <= pcong_tolerance``
+    (``FIRM_PCONG_TOLERANCE`` = 0.10), exactly mirroring ``firm_transformer_count``'s
+    ``P(overload) <= FIRM_PCONG_TOLERANCE`` gate. This makes firm-vs-flex apples-to-apples
+    (both gated on a 10% reliability tail) and reproduces the locked governed headline
+    (enrollment 0.30 -> flex 6, +100% vs firm 3, D-16-2a) and the full governed enrollment
+    curve (0.50 -> 8, 0.60 -> 13). Enrollment is the single binding lever.
+
+    For each EV count ``n`` in ``range(ev_max + 1)``:
+
+    * Compute the PER-REALIZATION truly-undeliverable energy and the residual
+      (``Q + unenrolled``) peak via the shared windowed/ceilinged deferral core.
+    * ``infeasible_k = (residual_peak_k > rating_kw) OR (undeliverable_k > eps)`` — the
+      residual-peak overload test uses the strict ``> rating`` convention (single source
+      of truth) and ``eps`` is a small undeliverable-energy floor (1e-6 kWh).
+    * ``P_infeasible(n) = mean_k(infeasible_k)``; assign ``flexible = n`` for EVERY ``n``
+      with ``P_infeasible(n) <= pcong_tolerance`` — a LAST-IN-TOLERANCE accumulation with
+      NO early break (mirrors ``firm_transformer_count``). ``n = 0`` has no EV ⇒ zero
+      undeliverable and a residual peak == the EV-free base, so it is in tolerance by
+      construction.
+
+    ``tol_fraction`` (``TOL_FRACTION`` = 0.05) is NO LONGER the binding gate; it is kept
+    only to compute the ``undeliverable_fraction_curve`` reported as a feasibility-ceiling
+    DIAGNOSTIC alongside the binding ``p_infeasible_curve``.
 
     Args:
         q_real: ``(K, n_steps)`` float64 EV-free building-base ensemble (kW).
         ev_pool: ``(K, ev_max + 1, n_steps)`` float64 nested cumulative EV pool (kW).
         rating_kw: The modeled usable transformer rating in kW (> 0).
-        tol_fraction: The deferral feasibility tolerance on the undeliverable fraction
-            (``TOL_FRACTION``).
+        tol_fraction: The reported undeliverable-fraction feasibility-ceiling diagnostic
+            level (``TOL_FRACTION``); NOT the binding gate.
         ev_max: The maximum EV count (the EV-pool middle axis is ``ev_max + 1``).
         res_minutes: The aggregation resolution in minutes (kWh = kW · res/60).
         enrollment_fraction: The fraction of EVs enrolled in deferred charging (the
             single binding lever, D-16-2a). Default ``DEFERRAL_ENROLLMENT_FRACTION``.
+        pcong_tolerance: The firm-consistent infeasibility-probability tolerance the
+            flexible count is gated on. Default ``FIRM_PCONG_TOLERANCE`` (0.10).
 
     Returns:
-        ``{flexible_ev_count (int), undeliverable_fraction_curve (list[float]),
-        ev_sweep (list[int]), enrollment_fraction (float),
-        threshold_convention ("undeliverable_le_tol")}``.
+        ``{flexible_ev_count (int), p_infeasible_curve (list[float]),
+        undeliverable_fraction_curve (list[float]), ev_sweep (list[int]),
+        enrollment_fraction (float), pcong_tolerance (float),
+        threshold_convention ("p_infeasible_le_firmtol")}``.
 
     Raises:
         ValueError: If ``rating_kw`` <= 0 or ``enrollment_fraction`` is outside (0, 1].
     """
     _validate_rating(rating_kw)
     _validate_enrollment(enrollment_fraction)
+    eps = 1.0e-6  # undeliverable-energy floor (kWh): below this ⇒ feasible
     flexible = 0
+    p_curve: list[float] = []
     frac_curve: list[float] = []
     for n in range(int(ev_max) + 1):
+        undeliverable, residual_peak = _deferral_realization_arrays(
+            q_real,
+            ev_pool,
+            n,
+            rating_kw,
+            res_minutes,
+            enrollment_fraction=enrollment_fraction,
+        )
+        infeasible = is_overloaded(residual_peak, rating_kw) | (undeliverable > eps)
+        p_infeasible = float(infeasible.mean())  # over K
+        p_curve.append(p_infeasible)
+        # Diagnostic feasibility-ceiling fraction (NOT the binding gate).
         ev_energy = total_ev_energy(ev_pool, n, res_minutes)
-        if ev_energy <= 0.0:
-            frac = 0.0  # no EV energy ⇒ nothing undeliverable
-        else:
-            undeliverable = undeliverable_energy(
-                q_real,
-                ev_pool,
-                n,
-                rating_kw,
-                res_minutes,
-                enrollment_fraction=enrollment_fraction,
-            )
-            frac = undeliverable / ev_energy
+        frac = 0.0 if ev_energy <= 0.0 else float(undeliverable.mean()) / ev_energy
         frac_curve.append(float(frac))
-        if frac <= float(tol_fraction):
-            flexible = n  # last-in-tolerance: keep updating, NO break (D-16-1)
+        if p_infeasible <= float(pcong_tolerance):
+            flexible = n  # last-in-tolerance: keep updating, NO break (D-16-2a)
     return {
         "flexible_ev_count": int(flexible),
+        "p_infeasible_curve": [float(v) for v in p_curve],
         "undeliverable_fraction_curve": [float(v) for v in frac_curve],
         "ev_sweep": list(range(int(ev_max) + 1)),
         "enrollment_fraction": float(enrollment_fraction),
-        "threshold_convention": "undeliverable_le_tol",
+        "pcong_tolerance": float(pcong_tolerance),
+        "threshold_convention": "p_infeasible_le_firmtol",
     }
 
 

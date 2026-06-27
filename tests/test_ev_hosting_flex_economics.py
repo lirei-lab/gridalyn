@@ -32,10 +32,35 @@ from projects.ev_hosting_flex.scripts.config import (
     C_A,
     C_R_BASE,
     CAPEX_UPGRADE,
+    DEFERRAL_ENROLLMENT_FRACTION,
+    DESIGN_DAY_RES_MINUTES,
     DISCOUNT_RATE,
+    FIRM_PCONG_TOLERANCE,
     LIFE_YEARS,
+    POWER_FACTOR,
+    PROJECT_OUTPUTS_DIR,
     TOL_FRACTION,
+    TRANSFORMER_KVA,
 )
+
+# ─── Governed seed-42 design-day ensemble (gitignored cache; skipif in CI) ───
+# The deferral headline is pinned against the SAME on-disk q_real.npy /
+# ev_pool_design.npy the firm count is pinned against (test_ev_hosting_flex_congestion
+# ::test_governed_ensemble_firm_three). The cache is gitignored (MEMORY: regenerate in
+# the MAIN tree; skipif-skips in CI) — reuse the sibling cache-ready skip pattern.
+_PROJECT_DATA_DIR = PROJECT_OUTPUTS_DIR / "data"
+_RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)  # 71.25 (pf pinned)
+_REQUIRED_NPY = ["q_real.npy", "ev_pool_design.npy"]
+
+
+def _project_cache_ready() -> bool:
+    """True iff the Phase-13 design-day .npy ensemble is present on disk.
+
+    Mirrors the sibling ``test_ev_hosting_flex_congestion._project_cache_ready`` cache
+    guard so the governed regression runs locally on the regenerated cache and skips
+    cleanly in CI (the cache is gitignored).
+    """
+    return all((_PROJECT_DATA_DIR / name).is_file() for name in _REQUIRED_NPY)
 
 
 def _toy_pool(k: int = 4, ev_max: int = 6, n_steps: int = 24) -> np.ndarray:
@@ -250,10 +275,20 @@ def test_byte_stability() -> None:
     out_a = deferral_hosting_count(q, pool, 18.0, TOL_FRACTION, 6, 60, **args)
     out_b = deferral_hosting_count(q, pool, 18.0, TOL_FRACTION, 6, 60, **args)
     assert out_a["flexible_ev_count"] == out_b["flexible_ev_count"]
+    # The flexible count is gated on the firm-consistent infeasibility tolerance
+    # (P(infeasible) <= FIRM_PCONG_TOLERANCE), NOT the undeliverable fraction.
+    assert out_a["threshold_convention"] == "p_infeasible_le_firmtol"
+    assert out_a["pcong_tolerance"] == pytest.approx(float(FIRM_PCONG_TOLERANCE))
+    # The binding P(infeasible) curve is byte-stable and monotone non-decreasing over
+    # the nested cumulative pool (each added EV can only raise the infeasibility tail).
+    p_a = np.asarray(out_a["p_infeasible_curve"], dtype="float64")
+    p_b = np.asarray(out_b["p_infeasible_curve"], dtype="float64")
+    np.testing.assert_array_equal(p_a, p_b)
+    assert bool(np.all(np.diff(p_a) >= -1e-12))
+    # The reported feasibility-ceiling diagnostic (undeliverable fraction) is also stable.
     curve_a = np.asarray(out_a["undeliverable_fraction_curve"], dtype="float64")
     curve_b = np.asarray(out_b["undeliverable_fraction_curve"], dtype="float64")
     np.testing.assert_array_equal(curve_a, curve_b)
-    # The curve is monotone non-decreasing over the nested cumulative pool.
     assert bool(np.all(np.diff(curve_a) >= -1e-12))
 
 
@@ -270,3 +305,56 @@ def test_located_valueerror() -> None:
         undeliverable_energy(q, pool, 4, 50.0, 60, enrollment_fraction=1.5)
     with pytest.raises(ValueError, match="discount_rate"):
         crf(0.0, LIFE_YEARS)
+
+
+# ─── Task 2: governed-ensemble headline (enrollment 0.30 -> flex 6, +100%) ───
+
+
+@pytest.mark.skipif(
+    not _project_cache_ready(),
+    reason=(
+        "ev_hosting_flex Phase-13 design-day .npy (q_real.npy / ev_pool_design.npy) "
+        "not present; run generate_design_day_mc.py in the MAIN tree first (gitignored "
+        "cache, skipif-skips in CI)"
+    ),
+)
+def test_governed_headline_flex_6() -> None:
+    """Governed reproduce-and-pin: deferral flex == 6 at enrollment 0.30 (+100% vs firm 3).
+
+    Loads the SAME governed seed-42 K=60 design-day ensemble the firm count (= 3) is
+    pinned against and asserts the D-16-2a headline: at the governed
+    ``DEFERRAL_ENROLLMENT_FRACTION`` the firm-consistent deferral gate
+    (``P(infeasible) <= FIRM_PCONG_TOLERANCE``, the gate-basis correction) lands the
+    flexible count at exactly 6 EVs — firm 3 -> flex 6, +100%. Enrollment is the single
+    binding lever (spike provenance: 0.30 -> 6, 0.50 -> 8, 0.60 -> 13). Uses config
+    constants (no magic literals): ``TRANSFORMER_KVA``/``POWER_FACTOR`` (71.25 rating),
+    ``TOL_FRACTION`` (reported diagnostic), ``FIRM_PCONG_TOLERANCE`` (the binding gate),
+    ``DEFERRAL_ENROLLMENT_FRACTION``.
+    """
+    q_real = np.load(_PROJECT_DATA_DIR / "q_real.npy").astype("float64")
+    ev_pool = np.load(_PROJECT_DATA_DIR / "ev_pool_design.npy").astype("float64")
+    ev_max = int(ev_pool.shape[1] - 1)
+
+    out = deferral_hosting_count(
+        q_real,
+        ev_pool,
+        _RATING_KW,
+        TOL_FRACTION,
+        ev_max,
+        DESIGN_DAY_RES_MINUTES,
+        enrollment_fraction=DEFERRAL_ENROLLMENT_FRACTION,
+    )
+
+    assert out["threshold_convention"] == "p_infeasible_le_firmtol"
+    assert out["pcong_tolerance"] == pytest.approx(float(FIRM_PCONG_TOLERANCE))
+    # The locked D-16-2a headline: firm 3 -> flex 6 (+100%).
+    assert out["flexible_ev_count"] == 6, (
+        f"governed deferral flex={out['flexible_ev_count']} (expected 6 at enrollment "
+        f"{DEFERRAL_ENROLLMENT_FRACTION}); the firm-consistent infeasibility gate "
+        "reproduces +100% — do NOT weaken the assertion or re-tune the calibration"
+    )
+    # Gate self-consistency: P(infeasible) at the firm count is within tolerance and the
+    # next count exceeds it (the binding crossing sits between flex 6 and 7).
+    p_curve = out["p_infeasible_curve"]
+    assert p_curve[6] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, p_curve
+    assert p_curve[7] > float(FIRM_PCONG_TOLERANCE), p_curve
