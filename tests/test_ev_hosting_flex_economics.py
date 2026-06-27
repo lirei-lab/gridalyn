@@ -71,9 +71,7 @@ def test_ledger_no_double_count() -> None:
     expect = float(C_R_BASE) * kw_days + float(C_A) * activated
     np.testing.assert_allclose(got, expect, atol=1e-12)
     # Spot-check one element against hand math (no double-count of either term).
-    assert float(got[1]) == pytest.approx(
-        float(C_R_BASE) * 2.5 + float(C_A) * 25.0
-    )
+    assert float(got[1]) == pytest.approx(float(C_R_BASE) * 2.5 + float(C_A) * 25.0)
 
 
 # ─── ECON-03: break-even monotonic in a c_r sweep ────────────────────────────
@@ -154,6 +152,91 @@ def test_deferral_energy_preserving() -> None:
         _toy_q_real(base=10.0), pool, 6, 11.0, res_minutes, enrollment_fraction=0.30
     )
     assert tight > 0.0
+
+
+# ─── Task 1: windowed / ceilinged / residual-peak-gated deferral (D-16-1) ────
+
+
+def test_daytime_headroom_does_not_count() -> None:
+    """Daytime headroom contributes ZERO deferrable budget (window mask).
+
+    The governed plug-in window DEFERRAL_PLUGIN_WINDOW (18..07) excludes daytime hours
+    (08..15). If ALL transformer slack sits in the daytime (the base is at rating
+    overnight, with slack only at noon), enrolled EV energy cannot be deferred — the
+    window mask zeroes the daytime headroom even though it is numerically generous.
+    """
+    k, n_steps = 4, 24
+    rating = 100.0
+    res_minutes = 60
+    # Row-1 EV adds 6 kWh in-window (hour 2, inside 18..07).
+    pool = np.zeros((k, 2, n_steps), dtype="float64")
+    pool[:, 1, 2] = 6.0
+    # Base is AT rating every in-window hour (zero overnight headroom) and far below
+    # rating only at noon (out of window) — the only slack is daytime, hence masked.
+    q = np.full((k, n_steps), rating, dtype="float64")
+    q[:, 12] = 10.0  # generous slack, but daytime ⇒ masked to zero headroom
+    out = undeliverable_energy(q, pool, 1, rating, res_minutes, enrollment_fraction=1.0)
+    # All 6 kWh enrolled is undeliverable: the only headroom is masked-out daytime slack.
+    assert out == pytest.approx(6.0)
+
+
+def test_per_charger_ceiling_binds() -> None:
+    """Deliverable energy is capped at n_enrolled · ceiling · window-hours · res/60.
+
+    When the per-charger ceiling × n_enrolled is smaller than the windowed headroom the
+    ceiling binds: only n_enrolled · DEFERRAL_CHARGER_KW_CEILING kW can flow per step.
+    """
+    k, n_steps = 4, 24
+    rating = 1000.0  # enormous headroom so ONLY the per-charger ceiling can bind
+    res_minutes = 60
+    # n_ev = 1, full enrollment ⇒ n_enrolled = 1; demand 100 kWh in one in-window hour.
+    pool = np.zeros((k, 2, n_steps), dtype="float64")
+    pool[:, 1, 2] = 100.0  # hour 2 is inside the 18..07 plug-in window
+    q = np.full((k, n_steps), 10.0, dtype="float64")
+    out = undeliverable_energy(q, pool, 1, rating, res_minutes, enrollment_fraction=1.0)
+    # Deliverable is capped at 1 · 7.2 kW over 14 window-hours = 100.8 kWh >= 100 ⇒ 0.
+    # Make the ceiling bind by demanding more than the windowed ceiling budget can pass.
+    pool[:, 1, 2] = 200.0  # 200 kWh; ceiling budget = 7.2 · 14 = 100.8 kWh
+    out_bind = undeliverable_energy(
+        q, pool, 1, rating, res_minutes, enrollment_fraction=1.0
+    )
+    assert out == pytest.approx(0.0)
+    assert out_bind == pytest.approx(200.0 - 7.2 * 14)
+
+
+def test_residual_peak_is_hard_gate() -> None:
+    """A residual (Q + un-enrolled EV) peak over rating is a hard infeasibility gate.
+
+    Even with generous off-peak headroom, an un-enrolled EV that pushes the residual
+    peak above rating contributes its over-rating energy to the undeliverable total
+    (the un-enrolled chargers are not managed / cannot be power-limited).
+    """
+    k, n_steps = 4, 24
+    rating = 20.0
+    res_minutes = 60
+    # n_ev = 4, enrollment 0.30 ⇒ n_enrolled = round(1.2) = 1, n_unenrolled = 3.
+    pool = np.zeros((k, 5, n_steps), dtype="float64")
+    for n in range(1, 5):
+        block = np.zeros(n_steps, dtype="float64")
+        block[20] = 10.0 * n  # cumulative: n EVs each 10 kW at hour 20 (in window)
+        pool[:, n, :] = block[None, :]
+    q = np.full((k, n_steps), 5.0, dtype="float64")
+    out = undeliverable_energy(
+        q, pool, 4, rating, res_minutes, enrollment_fraction=0.30
+    )
+    # Residual peak = 5 (base) + (3/4)·40 = 35 kW > 20 rating ⇒ 15 kW over-rating energy
+    # enters the undeliverable total ⇒ strictly positive.
+    assert out > 0.0
+
+
+def test_sub_hourly_grid_located_valueerror() -> None:
+    """A non-24-step grid raises a located ValueError (hour-of-day window misalign)."""
+    k, n_steps = 4, 48  # sub-hourly ⇒ step index != hour-of-day
+    pool = np.zeros((k, 2, n_steps), dtype="float64")
+    pool[:, 1, 0] = 2.0
+    q = np.full((k, n_steps), 10.0, dtype="float64")
+    with pytest.raises(ValueError, match="n_steps"):
+        undeliverable_energy(q, pool, 1, 50.0, 30, enrollment_fraction=0.30)
 
 
 # ─── ECON-03: pinned-seed byte-stability of the deferral count ───────────────

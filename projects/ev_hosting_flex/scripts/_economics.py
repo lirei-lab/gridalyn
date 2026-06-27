@@ -6,16 +6,20 @@ both pure-numpy at module scope, both consuming the GOVERNED design-day ensemble
 constants — never the manuscript's self-contained Monte-Carlo:
 
 * **Deferral hosting (D-16-1/D-16-2):** the hosting count WITH flexibility under the
-  manuscript / deck / Phase-10 model — **power-limiting with deferral**. Participating
-  chargers are power-limited at the congested evening peak and that EV energy is
-  shifted into the off-peak overnight headroom envelope. The gate is the EV energy
-  that does NOT fit under the headroom envelope (the truly-undeliverable /
-  non-deferrable energy) — **energy-preserving**, NOT curtailed energy and NOT a
-  per-hour reserve-reliability test. The flexible count is the last-in-tolerance EV
-  count whose undeliverable fraction stays ≤ ``tol_fraction`` (mirrors
-  ``firm_transformer_count``, NO early break). The realistic count is bounded by the
-  governed ``DEFERRAL_ENROLLMENT_FRACTION`` (D-16-2a: enrollment 0.30 → flex 6,
-  +100% vs firm 3) — enrollment is the single binding lever.
+  manuscript / deck / Phase-10 model — **windowed + per-charger-capped + residual-peak-
+  gated power-limiting with deferral** (the validated ``run_realistic`` model). Only the
+  ENROLLED chargers defer, within the governed overnight plug-in window
+  (``DEFERRAL_PLUGIN_WINDOW``, hour 18..07) and capped at the per-charger Level-2 power
+  ceiling (``DEFERRAL_CHARGER_KW_CEILING`` = 7.2 kW) — both governed constants are LIVE
+  (no longer dead config). Daytime hours outside the window contribute ZERO deferrable
+  headroom (the EVs are physically absent). The un-enrolled EVs charge naturally and a
+  residual peak over rating is a HARD overload gate (``is_overloaded``). The gate is the
+  EV energy that does NOT fit under the windowed/ceilinged envelope (the truly-
+  undeliverable / non-deferrable energy) — **energy-preserving**, NOT curtailed energy.
+  The flexible count is the last-in-tolerance EV count whose undeliverable fraction
+  stays ≤ ``tol_fraction`` (mirrors ``firm_transformer_count``, NO early break). The
+  count is bounded by the governed ``DEFERRAL_ENROLLMENT_FRACTION`` (D-16-2a: enrollment
+  0.30 → flex 6, +100% vs firm 3) — enrollment is the single binding lever.
 
 * **Non-wires economics ledger (ECON-01):** the two manuscript figure scripts'
   economics (``nonwires_economics.py`` + ``breakeven_nonwires.py``) ported onto the
@@ -26,10 +30,11 @@ constants — never the manuscript's self-contained Monte-Carlo:
   deferral NPV.
 
 GUARD-02: NO module-scope ``import pandapower`` / ``geopandas`` / ``lightsim2grid``.
-``numpy`` is the sole numeric core; the chosen deferral model is a pure-numpy FLUID
-headroom-fill so NO ``cvxpy`` gate is needed. (If a windowed-LP variant were ever
-chosen it would be deferred + ``require_capabilities("ops")`` exactly like
-``solve_twostage_cvxpy`` — but the chosen model is numpy.) The overload / headroom
+``numpy`` is the sole numeric core; the chosen deferral model is a pure-numpy windowed/
+ceilinged headroom-fill (the closed-form ``run_realistic`` model) so NO ``cvxpy`` gate is
+needed. (If a windowed-LP variant were ever chosen it would be deferred +
+``require_capabilities("ops")`` exactly like ``solve_twostage_cvxpy`` — but the chosen
+model is numpy.) The overload / headroom
 feasibility gate routes through ``_congestion.is_overloaded`` / ``transformer_loading``
 — the SINGLE source of truth for the ``> rating`` convention (strict ``>``), never
 re-implemented here.
@@ -56,7 +61,9 @@ from projects.ev_hosting_flex.scripts.config import (
     C_A,
     C_R_BASE,
     CAPEX_UPGRADE,
+    DEFERRAL_CHARGER_KW_CEILING,
     DEFERRAL_ENROLLMENT_FRACTION,
+    DEFERRAL_PLUGIN_WINDOW,
     DISCOUNT_RATE,
     DTYPE,
     LIFE_YEARS,
@@ -64,6 +71,42 @@ from projects.ev_hosting_flex.scripts.config import (
     PMAX_ADOPT,
     TOL_FRACTION,
 )
+
+
+def _plugin_window_mask(n_steps: int) -> np.ndarray:
+    """Return the length-``n_steps`` boolean plug-in availability mask (D-16-1).
+
+    The governed overnight plug-in window ``DEFERRAL_PLUGIN_WINDOW`` is a tuple of
+    hour-of-day indices (18..23, 0..7). Because the governed design day runs at
+    ``DESIGN_DAY_RES_MINUTES = 60`` the step index equals the hour-of-day, so the
+    tuple indexes the mask directly. Daytime hours outside the window are ``False``
+    and therefore contribute ZERO deferrable headroom (the enrolled EVs are physically
+    absent from the home charger during the day).
+
+    Args:
+        n_steps: The number of design-day steps; must be 24 (the governed 60-minute
+            design day) so the hour-of-day window aligns with the step index.
+
+    Returns:
+        A length-``n_steps`` boolean array, ``True`` at the plug-in hours.
+
+    Raises:
+        ValueError: If ``n_steps`` is not 24 (a sub-hourly grid would misalign the
+            hour-of-day window with the raw step index).
+    """
+    if int(n_steps) != 24:
+        raise ValueError(
+            f"deferral kernel received n_steps={n_steps!r}; the governed plug-in "
+            "window DEFERRAL_PLUGIN_WINDOW is hour-of-day and the governed design day "
+            "is 24 hourly steps (DESIGN_DAY_RES_MINUTES=60) so step index == "
+            "hour-of-day. Remediation: pass the 24-step governed design-day ensemble, "
+            "or derive the mask from hour-of-day (not raw step index) before adopting "
+            "a sub-hourly grid."
+        )
+    mask = np.zeros(int(n_steps), dtype=bool)
+    for hour in DEFERRAL_PLUGIN_WINDOW:
+        mask[int(hour)] = True
+    return mask
 
 
 def _validate_rating(rating_kw: float) -> None:
@@ -123,12 +166,18 @@ def _validate_n_ev(n_ev: int, ev_max: int) -> None:
 
 
 def headroom_envelope(q_real: np.ndarray, rating_kw: float) -> np.ndarray:
-    """Return the per-step off-peak headroom envelope ``(rating - base)⁺``.
+    """Return the UNWINDOWED off-peak headroom envelope ``(rating - base)⁺``.
 
     The available transformer headroom under the EV-free building base, clipped at
     zero (a step where the base alone overloads has 0 headroom — it cannot absorb any
-    deferred EV energy). This is the fluid off-peak envelope the deferred EV energy is
-    filled into (D-16-1). Float64, same shape as ``q_real``.
+    deferred EV energy). Float64, same shape as ``q_real``.
+
+    DEPRECATED as a feasibility envelope: this is the UNWINDOWED reference envelope over
+    all 24 hours — NOT the governed feasibility envelope. The governed deferral model
+    (``undeliverable_energy``) is windowed (``DEFERRAL_PLUGIN_WINDOW``), per-charger
+    capped (``DEFERRAL_CHARGER_KW_CEILING``), and residual-peak gated; daytime hours
+    contribute ZERO deferrable headroom there. Use ``undeliverable_energy`` for the
+    governed model — this helper is retained only as the unwindowed reference envelope.
 
     Args:
         q_real: ``(K, n_steps)`` float64 EV-free building-base ensemble (kW).
@@ -156,24 +205,35 @@ def undeliverable_energy(
 ) -> float:
     """Return the mean truly-undeliverable EV energy (kWh) after deferral (D-16-1).
 
-    Energy-preserving power-limiting-with-deferral. For each realization:
+    Windowed + per-charger-capped + residual-peak-gated power-limiting-with-deferral
+    (the validated ``run_realistic`` model, D-16-1/D-16-2a). The two governed bounding
+    constants ``DEFERRAL_PLUGIN_WINDOW`` and ``DEFERRAL_CHARGER_KW_CEILING`` (ECON-02)
+    are LIVE here — enrollment is the single binding lever. For each realization:
 
-    * The enrolled fraction of the cumulative EV demand ``ev_pool[:, n_ev, :]`` is
-      deferrable; the un-enrolled remainder charges naturally (it stays on the base
-      and is not power-limited).
+    * Split the cumulative EV demand ``ev_pool[:, n_ev, :]`` into enrolled (deferrable)
+      and un-enrolled (natural) by an INTEGER charger count
+      ``n_enrolled = round(enrollment_fraction · n_ev)`` so the per-charger ceiling has
+      a concrete charger count; the enrolled/un-enrolled arrays are the
+      ``n_enrolled/n_ev`` and ``n_unenrolled/n_ev`` shares of the aggregate (energy
+      conserved).
     * Form the residual load ``Q_real + unenrolled_EV``; the off-peak headroom of THAT
-      residual (``(rating - residual)⁺``) is the envelope the enrolled EV energy can be
-      shifted into. The headroom gate routes through ``transformer_loading`` /
-      ``is_overloaded`` (the single ``> rating`` convention).
-    * The enrolled EV energy that does NOT fit under the residual headroom envelope is
-      the truly-undeliverable (non-deferrable) energy. Deferred energy is energy-
-      preserving (it is NOT counted as undeliverable); only the genuine surplus is
-      gated. The un-enrolled EV that pushes the residual over rating contributes its
-      over-rating energy to the undeliverable total (it cannot be power-limited).
+      residual (``(rating - residual)⁺``, routed through ``transformer_loading`` /
+      ``is_overloaded`` — the single ``> rating`` convention) is the envelope the
+      enrolled EV energy can be shifted into.
+    * MASK the headroom to the plug-in window: daytime hours outside
+      ``DEFERRAL_PLUGIN_WINDOW`` contribute ZERO deferrable headroom (the enrolled EVs
+      are physically absent). CAP the per-step usable headroom at
+      ``n_enrolled · DEFERRAL_CHARGER_KW_CEILING`` (Level-2 EVSE power ceiling).
+    * The enrolled EV energy that does NOT fit under the windowed/ceilinged envelope is
+      the truly-undeliverable (non-deferrable) energy (energy-preserving — deferred
+      energy is NOT counted). The un-enrolled residual peak is a HARD overload gate
+      (``is_overloaded``): a realization whose residual peak exceeds rating contributes
+      its over-rating energy to the undeliverable total (the un-enrolled chargers are
+      not managed and cannot be power-limited).
 
     Returns a plain ``float`` mean over the ``K`` realizations. With a zero EV pool the
-    result is 0.0 (no EV ⇒ nothing to defer ⇒ nothing undeliverable). When the off-peak
-    headroom envelope can absorb all enrolled EV energy AND the residual never overloads
+    result is 0.0 (no EV ⇒ nothing to defer ⇒ nothing undeliverable). When the windowed
+    off-peak headroom can absorb all enrolled EV energy AND the residual never overloads
     the result is 0.0 (energy fits ⇒ fully deferrable, energy-preserving).
 
     Args:
@@ -191,7 +251,8 @@ def undeliverable_energy(
 
     Raises:
         ValueError: If ``rating_kw`` <= 0, ``enrollment_fraction`` is outside (0, 1],
-            or ``n_ev`` is outside ``[0, ev_max]``.
+            ``n_ev`` is outside ``[0, ev_max]``, or ``n_steps`` is not 24 (the governed
+            hour-of-day plug-in window requires the 24-step design day).
     """
     _validate_rating(rating_kw)
     _validate_enrollment(enrollment_fraction)
@@ -205,27 +266,40 @@ def undeliverable_energy(
     if int(n_ev) == 0:
         return 0.0
 
-    # Split the aggregate EV demand into enrolled (deferrable) + un-enrolled (natural).
-    enrolled = ev * float(enrollment_fraction)
-    unenrolled = ev * (1.0 - float(enrollment_fraction))
+    n_steps = int(ev.shape[1])
+    window = _plugin_window_mask(n_steps)  # (n_steps,) bool plug-in availability
+
+    # Integer enrolled/un-enrolled charger counts so the per-charger ceiling is concrete
+    # (the reference run_realistic uses n_enr = round(f · n)); split the aggregate row by
+    # the corresponding shares so total EV energy is conserved.
+    n_enrolled = int(round(float(enrollment_fraction) * int(n_ev)))
+    n_unenrolled = int(n_ev) - n_enrolled
+    enrolled = ev * (float(n_enrolled) / float(int(n_ev)))
+    unenrolled = ev * (float(n_unenrolled) / float(int(n_ev)))
 
     # The un-enrolled EVs charge naturally on top of the building base; the enrolled EV
-    # energy is shifted into the off-peak headroom of THAT residual load.
+    # energy is shifted into the windowed/ceilinged off-peak headroom of THAT residual.
     residual = q + unenrolled  # (K, n_steps)
     # Headroom of the residual (single > rating convention via transformer_loading).
     residual_loading = transformer_loading(residual, rating_kw)  # fraction
     headroom = np.clip(
         float(rating_kw) * (1.0 - residual_loading), 0.0, None
     )  # (K, n_steps) kW, 0 where the residual already overloads
+    # Window mask: daytime hours outside the plug-in window contribute ZERO headroom.
+    headroom = np.where(window[None, :], headroom, 0.0)
+    # Per-charger power ceiling: usable headroom is capped at n_enrolled · ceiling.
+    cap_kw = float(max(n_enrolled, 0)) * float(DEFERRAL_CHARGER_KW_CEILING)
+    headroom = np.minimum(headroom, cap_kw)  # (K, n_steps)
 
     # Energy bookkeeping (kWh), per realization (sum over steps).
     enrolled_energy = enrolled.sum(axis=1) * res_h  # (K,)
     headroom_cap = headroom.sum(axis=1) * res_h  # (K,)
-    # Enrolled energy that does NOT fit under the off-peak envelope (energy-preserving).
+    # Enrolled energy that does NOT fit under the windowed/ceilinged envelope.
     enrolled_undeliverable = np.clip(enrolled_energy - headroom_cap, 0.0, None)  # (K,)
 
-    # Un-enrolled EVs cannot be power-limited: their over-rating energy is undeliverable
-    # (it overloads the residual and the un-enrolled chargers are not managed).
+    # Un-enrolled residual peak is a HARD overload gate: its over-rating energy is
+    # undeliverable (the un-enrolled chargers are not managed and the residual peak
+    # exceeds rating). Routed through is_overloaded (the single > rating convention).
     unenrolled_overload = np.where(
         is_overloaded(residual, rating_kw),
         residual - float(rating_kw),
