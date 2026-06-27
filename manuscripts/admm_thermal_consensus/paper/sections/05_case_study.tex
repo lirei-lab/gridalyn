@@ -13,10 +13,14 @@ sampled densely near the feasibility knee at $\varrho \approx 0.85$.
 
 Energy cost is evaluated against a time-of-use tariff with an off-peak rate of
 0.078, a mid-peak rate of 0.128, and an evening-peak rate of 0.158~CAD/kWh.
-Physical feasibility uses a synthetic LV residential feeder of 74 literal homes
-behind a single 400~kVA MV/LV distribution transformer (25~kV / 0.4~kV) split
-across four parallel LV feeders, with all loads at a power factor of 0.95 and
-modeled one-for-one (no artificial scaling). The uncoordinated coincident peak
+Physical feasibility uses a synthetic North-American LV residential feeder of 74
+literal all-electric dwellings behind a single 400~kVA MV/LV network transformer,
+stepping the Hydro-Qu\'ebec 25~kV (14.4/24.94~kV) primary down to the
+North-American 120/208~V three-phase secondary ($0.208$~kV), split across four
+parallel LV feeders, with all loads at a power factor of 0.95 and modeled
+one-for-one (no artificial scaling). This single-transformer service represents a
+dense multi-unit residential cluster rather than detached homes on individual
+split-phase transformers. The uncoordinated coincident peak
 loads the transformer to 109.6\%. A scenario is flagged as violating when the
 transformer exceeds a 105\% loading limit rather than its 100\% nameplate: IEEE
 C57.91 permits short-duration overload because cold ambient air and the
@@ -46,8 +50,9 @@ Flattening weight $\mu$ & 1.0 \\
 ADMM penalty $\rho_{\mathrm{ADMM}}$ & 1.0 \\
 Non-responsive fraction $\varrho$ & $0$ to $1.0$, 12 points (dense near $0.85$) \\
 TOU off / mid / peak (CAD/kWh) & 0.078 / 0.128 / 0.158 \\
-Feeder & Synthetic LV residential, 0.4~kV \\
-Transformer & 400~kVA MV/LV, 4 parallel LV feeders \\
+Feeder & Synthetic LV residential, 120/208~V \\
+Transformer & 400~kVA MV/LV network (25~kV/0.208~kV) \\
+LV feeders & 4 parallel \\
 Transformer limit & 105\% (IEEE C57.91 short-duration) \\
 Power factor & 0.95 \\
 Uncoordinated transformer loading & 109.6\% \\

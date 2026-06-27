@@ -42,21 +42,24 @@ RHO_SWEEP = (
 ILLUSTRATIVE_RHO = 0.9  # non-responsive fraction shown as the degraded-comms curve
 
 # ── Network: synthetic LV residential feeder with a real distribution trafo ──
-# 80 literal homes hang off one MV/LV transformer; the uncoordinated winter peak
-# overloads it (~112%). No artificial scale factor: the home aggregate (kW) is
-# injected directly at LV buses and the transformer thermal loading is the
-# binding constraint (the classic residential winter-peak / CLPU limit).
+# 74 literal dwelling units hang off one MV/LV network transformer (a dense
+# multi-unit residential service), Quebec/North-American style. The uncoordinated
+# winter peak overloads the transformer (~110%). No artificial scale factor: the
+# aggregate (kW) is injected directly at the LV buses and the transformer thermal
+# loading is the binding constraint (the classic residential winter-peak / CLPU
+# limit). Hydro-Quebec primary is 25 kV (14.4/24.94 kV); the secondary is the
+# North-American 120/208 V three-phase wye network voltage, not European 400 V.
 POWER_FACTOR = 0.95
-MV_KV = 25.0                # Quebec-style medium-voltage primary
-LV_KV = 0.4                 # balanced low-voltage secondary equivalent
-TRANSFORMER_KVA = 400.0     # MV/LV distribution transformer rating
+MV_KV = 25.0                # Hydro-Quebec medium-voltage primary (14.4/24.94 kV)
+LV_KV = 0.208               # North-American 120/208 V three-phase wye secondary
+TRANSFORMER_KVA = 400.0     # MV/LV network distribution transformer rating
 N_LV_FEEDERS = 4            # parallel LV feeders leaving the transformer busbar
-BUSES_PER_FEEDER = 2        # load buses along each feeder (home clusters)
+BUSES_PER_FEEDER = 2        # load buses along each feeder (unit clusters)
 N_LV_SECTIONS = N_LV_FEEDERS * BUSES_PER_FEEDER  # total LV load buses
-LV_SECTION_KM = 0.05        # length of each LV cable section
-LV_R_OHM_KM = 0.206         # NAYY-style LV cable resistance
-LV_X_OHM_KM = 0.080         # LV cable reactance
-LV_MAX_I_KA = 0.275         # LV cable ampacity
+LV_SECTION_KM = 0.014       # length of each LV secondary section (short in-building runs)
+LV_R_OHM_KM = 0.206         # LV feeder resistance
+LV_X_OHM_KM = 0.080         # LV feeder reactance
+LV_MAX_I_KA = 0.6           # LV feeder / bus-duct ampacity (208 V building service)
 VOLTAGE_LOWER_PU = 0.95
 # Short-duration winter overload limit (IEEE C57.91): nameplate (100%) is not a
 # hard cliff -- cold ambient and thermal mass let a distribution transformer

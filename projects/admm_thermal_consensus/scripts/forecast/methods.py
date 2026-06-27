@@ -30,6 +30,7 @@ def make_estimator(method: str, seed: int):
         return LGBMRegressor(
             n_estimators=300, learning_rate=0.05, num_leaves=31,
             min_child_samples=20, random_state=seed, verbose=-1,
+            n_jobs=1, deterministic=True, force_row_wise=True,
         )
     if method == "random_forest":
         return RandomForestRegressor(

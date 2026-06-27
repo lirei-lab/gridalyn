@@ -62,6 +62,9 @@ class HeatingImputer:
             min_child_samples=20,
             random_state=self.random_seed,
             verbose=-1,
+            n_jobs=1,
+            deterministic=True,
+            force_row_wise=True,
         )
         self.model.fit(x, y)
         return self

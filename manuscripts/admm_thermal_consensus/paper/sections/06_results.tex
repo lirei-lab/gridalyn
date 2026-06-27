@@ -78,15 +78,15 @@ comfort band and the $0.4\,^{\circ}\mathrm{C}$ thermostat deadband are marked.}
 Swept finely (Table~\ref{tab:agg}), the degradation of coordination with the
 non-responsive fraction is not a smooth decay but a \emph{plateau followed by a
 ramp}. From $\varrho = 0$ to $\varrho \approx 0.7$ the coordinated peak stays
-near the ideal optimum (363.8--367.3~kW); beyond a knee near $\varrho = 0.87$ it
+near the ideal optimum (363.8--367.2~kW); beyond a knee near $\varrho = 0.87$ it
 rises toward the uncoordinated peak, reaching 375.0, 383.1, 385.9, 389.6, and
 finally 401.9~kW at $\varrho = 0.8, 0.85, 0.88, 0.9$, and $1.0$. This shape is the
 signature of a \emph{flexibility-budget} mechanism, and it has two causes. First,
 an imputed home is pinned to its forecast, which reproduces its \emph{natural},
 peaky heating shape, not a flattened one, so it leaves the coordination pool;
 degradation is therefore driven mainly by the \emph{loss of controllable
-flexibility}, not by raw forecast error (which stays small, RMSE $\approx 0.3$~kW,
-last column). Second, the remaining responsive homes flatten the total only up to
+flexibility}, not by raw forecast error: the per-scenario imputation RMSE stays
+small (0.23--0.37~kW, last column) and rises far more slowly than the peak excess. Second, the remaining responsive homes flatten the total only up to
 their collective $\pm 50\%$ deferral budget: as long as that budget exceeds the
 peakiness injected by the pinned population, the peak is held near the
 optimum (the plateau); once it is exhausted, around $\varrho \approx 0.87$,
@@ -106,14 +106,14 @@ Scenario & Peak (kW) & PAR & Cost (CAD) & RMSE (kW) \\
 \midrule
 Uncoordinated      & 401.6 & 1.109 & 909.5 & ---   \\
 Coordinated ideal  & 363.8 & 1.004 & 896.1 & ---   \\
-$\varrho{=}0.4$  & 364.9 & ---   & ---   & 0.305 \\
-$\varrho{=}0.6$  & 365.9 & ---   & ---   & 0.304 \\
-$\varrho{=}0.7$  & 367.3 & ---   & ---   & 0.301 \\
-$\varrho{=}0.8$  & 375.0 & ---   & ---   & 0.304 \\
-$\varrho{=}0.85$ & 383.1 & ---   & ---   & 0.305 \\
-$\varrho{=}0.88$ & 385.9 & ---   & ---   & 0.304 \\
-$\varrho{=}0.9$  & 389.6 & ---   & ---   & 0.303 \\
-$\varrho{=}1.0$  & 401.9 & ---   & ---   & 0.304 \\
+$\varrho{=}0.4$  & 364.9 & ---   & ---   & 0.231 \\
+$\varrho{=}0.6$  & 365.9 & ---   & ---   & 0.245 \\
+$\varrho{=}0.7$  & 367.2 & ---   & ---   & 0.240 \\
+$\varrho{=}0.8$  & 375.0 & ---   & ---   & 0.367 \\
+$\varrho{=}0.85$ & 383.1 & ---   & ---   & 0.360 \\
+$\varrho{=}0.88$ & 385.9 & ---   & ---   & 0.355 \\
+$\varrho{=}0.9$  & 389.6 & ---   & ---   & 0.352 \\
+$\varrho{=}1.0$  & 401.9 & ---   & ---   & 0.363 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -125,10 +125,11 @@ MAE of 0.255~kW, against a heating standard deviation of 0.736~kW. At roughly
 41\% of the natural variability, the imputer is clearly better than predicting
 the mean and is accurate enough that the coordinated aggregate barely moves for
 non-responsive fractions below the flexibility knee, as seen in the per-scenario
-RMSE column of Table~\ref{tab:agg}. Notably the per-scenario imputation RMSE is
-nearly flat in $\varrho$ ($\approx 0.30$~kW) even as the aggregate degrades sharply:
-direct evidence that the damage past the knee comes from the loss of controllable
-agents, not from worsening forecasts.
+RMSE column of Table~\ref{tab:agg}. Notably the per-scenario imputation RMSE stays
+small across the sweep (0.23--0.37~kW, well under the 0.736~kW heating spread) and
+rises only modestly even as the aggregate peak degrades sharply past the knee:
+direct evidence that the damage comes from the loss of controllable agents, not
+from worsening forecasts.
 
 Figure~\ref{fig:peakpar} plots the coordinated peak against $\varrho$ over the
 full 12-point sweep. (We show the peak alone: because daily energy is conserved
@@ -199,10 +200,10 @@ better.}
 Method & RMSE & $R^2$ & Peak & Load. & $P_{\mathrm{viol}}$ \\
  & (kW) & & (kW) & (\%) & \\
 \midrule
-Ridge              & 0.280 & 0.70 & 374.9 & 102.0 & 0.00 \\
+Ridge              & 0.280 & 0.70 & 374.9 & 102.1 & 0.00 \\
 $k$-NN             & 0.308 & 0.67 & 375.0 & 102.1 & 0.00 \\
-LightGBM           & 0.304 & 0.67 & 378.8 & 103.1 & 0.15 \\
-Random forest      & 0.342 & 0.62 & 378.1 & 102.9 & 0.09 \\
+LightGBM           & 0.304 & 0.67 & 378.8 & 103.2 & 0.15 \\
+Random forest      & 0.342 & 0.62 & 378.1 & 103.0 & 0.09 \\
 Mean-level (naive) & 0.312 & 0.65 & 374.7 & 102.0 & 0.00 \\
 No imputation      & ---   & ---  & 395.8 & 107.9 & 1.00 \\
 \bottomrule
@@ -255,10 +256,10 @@ the knee. All converge to the uncoordinated 109.6\% once every home is silent.}
 The closed-loop contribution is summarized in Figure~\ref{fig:network} and
 Table~\ref{tab:net}. The uncoordinated aggregate loads the 400~kVA transformer to
 109.6\% (past the 105\% short-duration limit, a thermal violation), while the
-worst minimum voltage sits at a healthy 0.962~p.u. Ideal coordination
-\emph{clears} the overload: maximum transformer loading falls to 98.9\% (no
+worst minimum voltage sits at a healthy 0.963~p.u. Ideal coordination
+\emph{clears} the overload: maximum transformer loading falls to 99.0\% (no
 violation, a healthy $\approx 6$-point margin below the 105\% limit) and the worst
-minimum voltage stays healthy at 0.966~p.u. This is the core result: flattening
+minimum voltage stays healthy at 0.967~p.u. This is the core result: flattening
 the aggregate is not merely a statistical improvement, it restores feeder
 feasibility.
 
@@ -284,34 +285,34 @@ worst-of-day loading.}
 \toprule
 Scenario & Peak (kW) & $V_{\min}$ (p.u.) & Loading (\%) & Violation \\
 \midrule
-Uncoordinated      & 401.6 & 0.962 & 109.6 & yes \\
-Coordinated ideal  & 363.8 & 0.966 &  98.9 & no \\
-$\varrho{=}0.4$  & 364.9 & 0.966 &  99.2 & no \\
-$\varrho{=}0.6$  & 365.9 & 0.966 &  99.5 & no \\
-$\varrho{=}0.7$  & 367.3 & 0.966 &  99.9 & no \\
-$\varrho{=}0.8$  & 375.0 & 0.965 & 102.1 & no \\
-$\varrho{=}0.85$ & 383.1 & 0.964 & 104.3 & no \\
-$\varrho{=}0.88$ & 385.9 & 0.964 & 105.1 & yes \\
+Uncoordinated      & 401.6 & 0.963 & 109.6 & yes \\
+Coordinated ideal  & 363.8 & 0.967 &  99.0 & no \\
+$\varrho{=}0.4$  & 364.9 & 0.967 &  99.3 & no \\
+$\varrho{=}0.6$  & 365.9 & 0.966 &  99.6 & no \\
+$\varrho{=}0.7$  & 367.2 & 0.966 &  99.9 & no \\
+$\varrho{=}0.8$  & 375.0 & 0.966 & 102.1 & no \\
+$\varrho{=}0.85$ & 383.1 & 0.965 & 104.4 & no \\
+$\varrho{=}0.88$ & 385.9 & 0.964 & 105.2 & yes \\
 $\varrho{=}0.9$  & 389.6 & 0.964 & 106.2 & yes \\
-$\varrho{=}1.0$  & 401.9 & 0.962 & 109.6 & yes \\
+$\varrho{=}1.0$  & 401.9 & 0.963 & 109.7 & yes \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The cleared state is resilient to communication failure through $\varrho = 0.8$,
 where the transformer holds at 102.1\% loading and does not violate the 105\%
-limit. The deterministic crossing falls between $\varrho = 0.85$ (104.3\%,
-cleared) and $\varrho = 0.88$ (105.1\%, violated), a critical fraction of
-$\approx 0.87$; beyond it the loading ramps (106.2\%) back to the
+limit. The deterministic crossing falls between $\varrho = 0.85$ (104.4\%,
+cleared) and $\varrho = 0.88$ (105.2\%, violated), a critical fraction of
+$\approx 0.87$; beyond it the loading ramps (106.2\%) back toward the
 uncoordinated 109.6\% once every home is imputed at $\varrho = 1$. The story is
-therefore $109.6\% \rightarrow 98.9\% \rightarrow 109.6\%$: coordination clears
+therefore $109.6\% \rightarrow 99.0\% \rightarrow 109.6\%$: coordination clears
 the overload, the clearance survives heavy non-responsiveness, and then the
 protection unwinds as the controllable population vanishes. This pins the critical
 non-responsive fraction, beyond which imputation can no longer protect the
 transformer, to a narrow band around $\varrho = 0.87$.
 
 \paragraph{Voltage stays healthy.} Across every scenario the worst minimum LV bus
-voltage stays in a comfortable $0.962$--$0.966$~p.u.\ band and never approaches
+voltage stays in a comfortable $0.963$--$0.967$~p.u.\ band and never approaches
 the 0.95~p.u.\ limit, so the feeder is voltage-comfortable throughout and the
 \emph{transformer thermal loading} is the unambiguous binding constraint, a
 cleaner story than a benchmark that is stressed on voltage to begin with. The
@@ -402,7 +403,7 @@ the transformer cleared, so all three stay benign on the plateau and degrade
 together as that budget is exhausted past the knee near $\varrho = 0.87$. Second,
 the network result is not a restatement of the aggregate result: a 9.4\% peak cut
 is a statistical improvement, but \emph{clearing a 109.6\% transformer overload to
-98.9\%} under the 105\% short-duration limit is an operational state change from
+99.0\%} under the 105\% short-duration limit is an operational state change from
 infeasible to feasible, and the two need not coincide on a different feeder or load
 allocation. Third, the unwinding past the knee is graceful rather than catastrophic
 (the loading ramps to 109.6\% and the power flow always converges, never
