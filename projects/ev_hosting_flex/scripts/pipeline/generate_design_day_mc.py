@@ -42,10 +42,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
-import numpy as np
+# Pitfall 2 (SEAL-01): cap the BLAS thread pool BEFORE numpy spins it up so the
+# per-realization quantile/sum reductions stay deterministic and avoid
+# thread-reordering float drift below 1e-6. This MUST precede ``import numpy``
+# (do NOT mirror the other stages, which set the cap AFTER the numpy import).
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
+import numpy as np  # noqa: E402
 
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))

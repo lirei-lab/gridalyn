@@ -23,15 +23,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import sys
 from pathlib import Path
 
+# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top, BEFORE any import
+# that pulls numpy transitively (``_topology`` / the simulation facade) spins up
+# its thread pool — defense-in-depth so cache derivation stays deterministic.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.simulation import prepare_synthetic_topology_cache
-from projects.ev_hosting_flex.scripts.config import (
+from gridalyn.simulation import prepare_synthetic_topology_cache  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     FEEDER_ID,
     GRID_CONFIG,
     POWER_FACTOR,
