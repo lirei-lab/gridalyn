@@ -822,3 +822,89 @@ ADV_SEED_OFFSET = 20000
 ``Q_real`` ensemble is drawn from ``SEED + ADV_SEED_OFFSET + r`` — a third disjoint
 block distinct from both ``SEED`` (plan) and ``SEED + OOS_SEED_OFFSET`` (the
 in-band validation set) — so the three ensembles stay byte-independent."""
+
+# ─── Phase-16 (ECON-02 / D-16-4): non-wires economics governed constants ─────
+# APPEND-ONLY block below the Phase-15 out-of-sample knobs (everything above is
+# byte-frozen — do NOT edit any constant above; in particular do NOT redefine
+# SEED, DTYPE, ROUND_DECIMALS, K_DESIGN, TRANSFORMER_KVA or POWER_FACTOR — the
+# config warns against redefinition). These promote the manuscript's previously
+# "illustrative" non-wires economics prices/CAPEX/discount/life/adoption ramp/
+# deferral-feasibility constants to GOVERNED constants with labelled provenance.
+# The ECON-01 kernel (`_economics.py`, Plan 02) and the new economics stage
+# (Plan 03) import these. Each value is a plain float/int literal — the CRF and
+# annualized-reinforcement figures are kernel-DERIVED (Plan 02), not computed
+# here. Provenance: manuscripts/ev_hosting_flex/scripts/figures/
+# nonwires_economics.py and breakeven_nonwires.py (the two scripts agree on the
+# shared prices C_R_BASE/C_A/CAPEX_UPGRADE/DISCOUNT/LIFE_YEARS/TOL_FRACTION).
+
+C_R_BASE = 2.0
+"""Baseline reservation price, $/kW per reservation-day (ECON-02 / D-16-4).
+Promotes the manuscript's previously illustrative per-reservation availability fee
+to a governed constant. Provenance: ``nonwires_economics.py`` ``C_R_BASE`` and
+``breakeven_nonwires.py`` ``C_R_EVENT`` (both = 2.0). Scales the reported cost
+frontier; does NOT move the hosting headline (distinct from the ``C_RESERVE``
+two-stage frontier-scaling price above)."""
+
+C_A = 0.30
+"""Activation price, $/kWh shifted/activated in real time (ECON-02 / D-16-4).
+Promotes the manuscript's illustrative DR-like energy-shift price to a governed
+constant. Provenance: ``nonwires_economics.py`` / ``breakeven_nonwires.py`` ``C_A``
+(both = 0.30)."""
+
+CAPEX_UPGRADE = 8000.0
+"""Reinforcement capital cost, $ (ECON-02 / D-16-4). Installed cost to replace the
+50 → 100 kVA residential transformer (HQ residential). The annualized
+capital-recovery figure (CRF · CAPEX) is kernel-derived in Plan 02, not here.
+Provenance: ``nonwires_economics.py`` and ``breakeven_nonwires.py``
+``CAPEX_UPGRADE`` (both = 8000.0)."""
+
+DISCOUNT_RATE = 0.05
+"""Annual discount rate for the capital-recovery factor (ECON-02 / D-16-4). Named
+``DISCOUNT_RATE`` (NOT ``DISCOUNT``) so it is unambiguous and self-documenting; the
+Plan-02 CRF formula consumes ``DISCOUNT_RATE``. Provenance: ``nonwires_economics.py``
+and ``breakeven_nonwires.py`` ``DISCOUNT`` (both = 0.05)."""
+
+LIFE_YEARS = 30
+"""Asset life in years for the capital-recovery factor (ECON-02 / D-16-4).
+Provenance: ``nonwires_economics.py`` and ``breakeven_nonwires.py`` ``LIFE_YEARS``
+(both = 30)."""
+
+P0_ADOPT = 0.5
+"""Today's EV penetration, EV/home, for the adoption ramp (ECON-02 / D-16-4).
+Provenance: ``nonwires_economics.py`` ``P0_ADOPT`` (= 0.5)."""
+
+PMAX_ADOPT = 4.0
+"""Adoption target, EV/home (ECON-02 / D-16-4). The terminal penetration the
+adoption ramp climbs toward. Provenance: ``nonwires_economics.py`` ``PMAX_ADOPT``
+(= 4.0)."""
+
+ADOPT_YEARS_BASE = 15
+"""Baseline years-to-``PMAX_ADOPT`` for the deferral-NPV headline (ECON-02 /
+D-16-4). Provenance: ``nonwires_economics.py`` ``ADOPT_YEARS_BASE`` (= 15)."""
+
+TOL_FRACTION = 0.05
+"""Deferral feasibility ceiling = undeliverable / EV-energy fraction (ECON-02 /
+D-16-4). The annual-curtailed-over-EV-energy ratio above which the deferral is
+declared infeasible. Provenance: ``nonwires_economics.py`` and
+``breakeven_nonwires.py`` ``TOL_FRACTION`` (both = 0.05)."""
+
+DEFERRAL_ENROLLMENT_FRACTION = 0.30
+"""Fraction of EVs enrolled in managed/deferred charging — the GOVERNING flex
+headline knob (ECON-02 / D-16-4, D-16-2a). The single binding lever on the
+deferral-model flex count. Provenance: the manuscript's conservative +100% / flex 6
+end, reconciled with the Phase-16 sensitivity spike (D-16-2a): 25–30% → 6, 50% → 8,
+60% → 13, ≥70% → pool-capped. Pinned at the 0.30 conservative headline value."""
+
+DEFERRAL_PLUGIN_WINDOW = (18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7)
+"""Overnight plug-in / availability window, hour-of-day (ECON-02 / D-16-4,
+D-16-1/D-16-2a). Arrival ~18:00 → departure ~07:00 (14 hours). Revives the
+Phase-15-retired ``PLUGIN_WINDOW`` for the deferral model; governed for faithfulness
+but NON-BINDING per the Phase-16 spike (the overnight window comfortably accommodates
+the shiftable EV energy). Provenance: the manuscript deferral model's overnight
+availability assumption."""
+
+DEFERRAL_CHARGER_KW_CEILING = 7.2
+"""Per-charger power ceiling, kW (Level-2 EVSE) (ECON-02 / D-16-4). Governed for
+completeness but NON-BINDING per the Phase-16 spike — 3.7–11 kW all give the same
+deferral count because the overnight window, not the charger power, is the binding
+constraint. Provenance: standard Level-2 residential EVSE rating."""
