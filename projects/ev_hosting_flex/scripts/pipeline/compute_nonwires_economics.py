@@ -78,8 +78,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     EPS_HEADLINE,
     K_DESIGN,
     LIFE_YEARS,
-    POWER_FACTOR,
     PMAX_ADOPT,
+    POWER_FACTOR,
     PROJECT_CACHE_DIR,
     ROUND_DECIMALS,
     SEED,
@@ -99,9 +99,58 @@ _FEEDER_TRANSFORMER_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 # (PEN_GRID = arange(0.4, 4.01, 0.2); C_R_GRID = arange(0.5, 8.01, 0.25);
 # ADOPT_GRID = arange(5, 31, 1)). The penetration grid spans the firm basis up to
 # PMAX_ADOPT so the break-even / NPV crossings are interior.
+#
+# WARNING (review WR) HONEST POOL-CEILING TRUNCATION: per_penetration_quantities maps
+# each penetration p to n_ev = round(p * n_homes) and CLIPS it to the EV-pool ceiling
+# ev_max = DESIGN_DAY_EV_MAX (=18). For the governed 7-home basis every penetration
+# p >= ~2.71 EV/home (round(p*7) > 18) silently SATURATES at the same n_ev=18,
+# flattening kw_days/activated/undeliverable_fraction and corrupting feasibility_ceiling
+# / breakeven_sweep / deferral_npv on the upper third of the raw grid. The stage
+# TRUNCATES PEN_GRID at runtime (``_truncate_pen_grid``) to the largest penetration
+# whose round(p*n_homes) <= ev_max so every grid point maps to a DISTINCT, real n_ev —
+# the manuscript-faithful interior (the ~2.4 EV/home break-even crossing and the firm
+# basis stay interior; only the flat saturated tail is dropped, never silently kept).
 PEN_GRID = np.round(np.arange(0.4, float(PMAX_ADOPT) + 0.01, 0.2), 2).tolist()
 C_R_GRID = np.round(np.arange(0.5, 8.01, 0.25), 2).tolist()
 ADOPT_GRID = [int(v) for v in np.arange(5, 31, 1)]
+
+
+def _truncate_pen_grid(pen_grid: list[float], n_homes: int, ev_max: int) -> list[float]:
+    """Return ``pen_grid`` truncated to the EV-pool ceiling (review WR, honest fix).
+
+    ``per_penetration_quantities`` clips ``n_ev = round(p * n_homes)`` to the EV-pool
+    ceiling ``ev_max``, so every penetration whose raw ``round(p * n_homes)`` exceeds
+    ``ev_max`` silently saturates at the SAME ``n_ev = ev_max`` — flattening the upper
+    grid and corrupting the break-even / NPV crossings. This drops those saturated
+    penetrations so each retained grid point maps to a DISTINCT, real EV count
+    (``round(p * n_homes) <= ev_max``). The ascending prefix is kept verbatim; the flat
+    saturated tail is never silently retained.
+
+    Args:
+        pen_grid: The ascending EV-per-home penetration grid.
+        n_homes: The downstream-home count (the EV-count denominator).
+        ev_max: The EV-pool ceiling (``DESIGN_DAY_EV_MAX``).
+
+    Returns:
+        The largest ascending prefix of ``pen_grid`` whose ``round(p * n_homes)`` does
+        not exceed ``ev_max`` (always non-empty: the lowest grid point is retained).
+
+    Raises:
+        ValueError: If no penetration maps within ``ev_max`` (the grid's lowest point
+            already exceeds the pool ceiling — a degenerate basis).
+    """
+    kept = [
+        float(p) for p in pen_grid if int(round(float(p) * int(n_homes))) <= int(ev_max)
+    ]
+    if not kept:
+        raise ValueError(
+            "ev_hosting_flex stage compute_nonwires_economics: no penetration in "
+            f"PEN_GRID maps within the EV-pool ceiling ev_max={int(ev_max)} for "
+            f"n_homes={int(n_homes)} (the lowest grid point already saturates). "
+            "Remediation: raise DESIGN_DAY_EV_MAX or lower the PEN_GRID floor so "
+            "round(p * n_homes) <= ev_max for at least the lowest penetration."
+        )
+    return kept
 
 
 def _load_json(path: Path) -> dict:
@@ -251,23 +300,61 @@ def _render_figures(
 
     # ── Figure 1: non-wires break-even + deferral feasibility (breakeven_nonwires) ──
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.3))
-    ax1.plot(pen, flex_total, color="#1A2B3C", lw=2.4, marker="o", ms=4,
-             label="flexibility (total)")
-    ax1.plot(pen, res_cost, color="#2E6FB7", lw=1.6, ls="--", marker="s", ms=3,
-             label="  reservation")
-    ax1.plot(pen, act_cost, color="#2AA198", lw=1.6, ls="--", marker="^", ms=3,
-             label="  activation")
-    ax1.axhline(reinf_annual, color="#C0392B", lw=2.0,
-                label=f"reinforce (50$\\to$100 kVA), ${reinf_annual:.0f}/yr")
+    ax1.plot(
+        pen,
+        flex_total,
+        color="#1A2B3C",
+        lw=2.4,
+        marker="o",
+        ms=4,
+        label="flexibility (total)",
+    )
+    ax1.plot(
+        pen,
+        res_cost,
+        color="#2E6FB7",
+        lw=1.6,
+        ls="--",
+        marker="s",
+        ms=3,
+        label="  reservation",
+    )
+    ax1.plot(
+        pen,
+        act_cost,
+        color="#2AA198",
+        lw=1.6,
+        ls="--",
+        marker="^",
+        ms=3,
+        label="  activation",
+    )
+    ax1.axhline(
+        reinf_annual,
+        color="#C0392B",
+        lw=2.0,
+        label=f"reinforce (50$\\to$100 kVA), ${reinf_annual:.0f}/yr",
+    )
     ax1.set_xlabel("EV per home", fontsize=10)
     ax1.set_ylabel("annual cost ($/yr)", fontsize=10)
     ax1.set_title("Non-wires break-even", fontsize=11, fontweight="bold")
     ax1.legend(frameon=True, fontsize=7.5, loc="upper left")
 
-    ax2.plot(pen, np.asarray(undeliverable_fraction, dtype=DTYPE) * 100,
-             color="#E08A1E", lw=2.4, marker="o", ms=4)
-    ax2.axhline(float(TOL_FRACTION) * 100, color="#C0392B", lw=1.6, ls="--",
-                label=f"deferral ceiling ({float(TOL_FRACTION) * 100:.0f}%)")
+    ax2.plot(
+        pen,
+        np.asarray(undeliverable_fraction, dtype=DTYPE) * 100,
+        color="#E08A1E",
+        lw=2.4,
+        marker="o",
+        ms=4,
+    )
+    ax2.axhline(
+        float(TOL_FRACTION) * 100,
+        color="#C0392B",
+        lw=1.6,
+        ls="--",
+        label=f"deferral ceiling ({float(TOL_FRACTION) * 100:.0f}%)",
+    )
     ax2.set_xlabel("EV per home", fontsize=10)
     ax2.set_ylabel("undeliverable energy (% of EV)", fontsize=10)
     ax2.set_title("Deferral feasibility", fontsize=11, fontweight="bold")
@@ -287,10 +374,16 @@ def _render_figures(
 
     # ── Figure 2: break-even sensitivity + deferral NPV vs adoption (nonwires_econ) ──
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.3))
-    ax1.plot(c_r_grid, p_star, color="#1A2B3C", lw=2.4,
-             label="cost break-even $p^*(c_r)$")
-    ax1.axhline(p_feas, color="#E08A1E", lw=1.8, ls="--",
-                label=f"feasibility ceiling ($\\sim${p_feas:.1f})")
+    ax1.plot(
+        c_r_grid, p_star, color="#1A2B3C", lw=2.4, label="cost break-even $p^*(c_r)$"
+    )
+    ax1.axhline(
+        p_feas,
+        color="#E08A1E",
+        lw=1.8,
+        ls="--",
+        label=f"feasibility ceiling ($\\sim${p_feas:.1f})",
+    )
     ax1.axvline(float(C_R_BASE), color="#7F8C8D", lw=1.0, ls=":")
     ax1.set_xlabel("reservation price $c_r$ ($/kW per reservation-day)", fontsize=9.5)
     ax1.set_ylabel("break-even penetration (EV/home)", fontsize=10)
@@ -362,11 +455,28 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
             "Remediation: re-run stage 4 (compute_congestion.py)."
         )
 
+    # ── The Phase-15 two-stage reserve-scheme caveat (CR-02 / D-16-6): READ the ──
+    # reserve flexible_ev_count + harder_truth + divergence_note from the governed
+    # flexible_hosting.json (workflow.yaml:158) — a declared input the report must
+    # CONSUME, not assert. _load_json fails loudly if the gitignored cache is absent
+    # (no silent fallback). The deferral count below is the hosting headline; this
+    # reserve count is RETAINED additively (D-16-6 additive-nondestructive), never the
+    # headline and never overwritten.
+    flexible = _load_json(json_dir / "flexible_hosting.json")
+    reserve_flexible_ev_count = int(flexible["flexible_ev_count"])
+    reserve_harder_truth = str(flexible["harder_truth"])
+    reserve_divergence_note = str(flexible["divergence_note"])
+
     res_minutes = int(DESIGN_DAY_RES_MINUTES)
     q_real, ev_pool = _load_or_regenerate_ensemble(
         data_dir, downstream_home_count, res_minutes
     )
     ev_max = int(ev_pool.shape[1]) - 1
+
+    # ── Honest pool-ceiling truncation (review WR): drop the penetrations whose ──
+    # round(p * n_homes) exceeds ev_max so each retained grid point maps to a DISTINCT
+    # n_ev (the saturated flat tail is never silently kept).
+    pen_grid = _truncate_pen_grid(PEN_GRID, downstream_home_count, ev_max)
 
     # ── Deferral hosting count WITH flexibility (D-16-1/D-16-2, the headline). ──
     deferral = deferral_hosting_count(
@@ -379,8 +489,8 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
         enrollment_fraction=float(DEFERRAL_ENROLLMENT_FRACTION),
     )
     flexible_ev_count = int(deferral["flexible_ev_count"])
-    hosting_expansion_percent = (
-        float(flexible_ev_count - firm_ev_count) / float(firm_ev_count)
+    hosting_expansion_percent = float(flexible_ev_count - firm_ev_count) / float(
+        firm_ev_count
     )
 
     # ── Per-penetration quantities on the GOVERNED firm basis (p_firm, NOT 1.0). ──
@@ -391,7 +501,7 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
         feeder_kw,
         float(EPS_HEADLINE),
         res_minutes,
-        PEN_GRID,
+        pen_grid,
         downstream_home_count,
         enrollment_fraction=float(DEFERRAL_ENROLLMENT_FRACTION),
     )
@@ -404,17 +514,17 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
     crf_val = crf(float(DISCOUNT_RATE), int(LIFE_YEARS))
     reinf_annual = reinforcement_annual(crf_val, float(CAPEX_UPGRADE))
     breakeven_rows = breakeven_sweep(
-        PEN_GRID, kw_days, activated, C_R_GRID, float(C_A), reinf_annual
+        pen_grid, kw_days, activated, C_R_GRID, float(C_A), reinf_annual
     )
     p_star = np.asarray([row["p_star"] for row in breakeven_rows], dtype=DTYPE)
     p_feas = feasibility_ceiling(
-        undeliverable_fraction, PEN_GRID, float(TOL_FRACTION), pmax=float(PMAX_ADOPT)
+        undeliverable_fraction, pen_grid, float(TOL_FRACTION), pmax=float(PMAX_ADOPT)
     )
 
     # ── Adoption-ramp deferral NPV (governed firm basis p_firm, NOT 1.0). ──
     npv_rows = deferral_npv_sweep(
         ADOPT_GRID,
-        PEN_GRID,
+        pen_grid,
         kw_days,
         activated,
         c_r=float(C_R_BASE),
@@ -428,7 +538,7 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
     npv = np.asarray([row["deferral_npv"] for row in npv_rows], dtype=DTYPE)
     npv_base = deferral_npv(
         float(ADOPT_YEARS_BASE),
-        PEN_GRID,
+        pen_grid,
         kw_days,
         activated,
         c_r=float(C_R_BASE),
@@ -480,16 +590,19 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
 
     # ── D-16-6 coexistence (additive-nondestructive): the deferral count is the ──
     # hosting headline; the Phase-15 two-stage flexible_ev_count is the OOS caveat.
+    # CR-02: the reserve count is READ from flexible_hosting.json (not hard-coded) so a
+    # re-baselined upstream reserve count cannot leave this governed report stale.
     headline_model = "deferral_power_limiting"
     coexistence_note = (
         "D-16-6 (additive-nondestructive): the deferral power-limiting count "
         f"(flexible_ev_count={flexible_ev_count}, +"
         f"{hosting_expansion_percent * 100:.0f}% vs firm {firm_ev_count}) is the "
         "hosting headline (headline_model=deferral_power_limiting). The Phase-15 "
-        "two-stage reserve-scheme count (flexible_ev_count=2 < firm 3, the OOS "
-        "forecast-blindness finding) is RETAINED as the reserve-scheme caveat in "
-        "flexible_hosting.json (harder_truth / divergence_note preserved verbatim) — "
-        "it is NOT the hosting headline and is not overwritten."
+        "two-stage reserve-scheme count "
+        f"(flexible_ev_count={reserve_flexible_ev_count} < firm {firm_ev_count}, the "
+        "OOS forecast-blindness finding) is RETAINED as the reserve-scheme caveat "
+        "READ from flexible_hosting.json (harder_truth / divergence_note preserved "
+        "verbatim) — it is NOT the hosting headline and is not overwritten."
     )
 
     # ── Write the three CSVs. ──
@@ -503,9 +616,9 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
             "reservation_cost": np.round(
                 float(C_R_BASE) * kw_days, ROUND_DECIMALS
             ).astype("float64"),
-            "activation_cost": np.round(
-                float(C_A) * activated, ROUND_DECIMALS
-            ).astype("float64"),
+            "activation_cost": np.round(float(C_A) * activated, ROUND_DECIMALS).astype(
+                "float64"
+            ),
             "flex_cost": np.round(
                 float(C_R_BASE) * kw_days + float(C_A) * activated, ROUND_DECIMALS
             ).astype("float64"),
@@ -541,6 +654,11 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
         "firm_ev_count": firm_ev_count,
         "hosting_expansion_percent": _r(hosting_expansion_percent),
         "deferral_hosting_expansion_percent": _r(hosting_expansion_percent),
+        # CR-02 / D-16-6: the Phase-15 reserve-scheme caveat READ (not hard-coded) from
+        # flexible_hosting.json and carried verbatim so the coexistence is SOURCED.
+        "reserve_caveat_flexible_ev_count": reserve_flexible_ev_count,
+        "reserve_harder_truth": reserve_harder_truth,
+        "reserve_divergence_note": reserve_divergence_note,
         "enrollment_fraction": _r(float(DEFERRAL_ENROLLMENT_FRACTION)),
         "downstream_home_count": downstream_home_count,
         "firm_penetration": _r(p_firm),
@@ -571,9 +689,7 @@ def derive_economics(cache_dir: Path, data_dir: Path, json_dir: Path) -> dict:
         "threshold_convention": str(deferral["threshold_convention"]),
         "content_sha256": content_sha256,
     }
-    economics_path = _write_json(
-        json_dir / "nonwires_economics.json", economics_block
-    )
+    economics_path = _write_json(json_dir / "nonwires_economics.json", economics_block)
 
     # ── Regenerate the two manuscript figures (Agg; outputs/figures only). ──
     figure_paths = _render_figures(
@@ -660,6 +776,9 @@ def run_stage(
 
     inputs = [
         script.file_reference(json_dir / "firm_hosting.json"),
+        # CR-02: CONSUME the declared flexible_hosting.json provenance (workflow.yaml:158)
+        # the report previously asserted but never recorded (sha256 + bytes captured).
+        script.file_reference(json_dir / "flexible_hosting.json"),
         script.file_reference(effective_data_dir / "q_real.npy"),
         script.file_reference(effective_data_dir / "ev_pool_design.npy"),
     ]
