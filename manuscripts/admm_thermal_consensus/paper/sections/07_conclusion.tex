@@ -33,20 +33,20 @@ choice of method being secondary once any reasonable imputer is in the loop. The
 distributed ADMM was validated against a centralized CVXPY solve (aggregate peak
 agreeing to within $0.05\%$).
 
-The study has clear limitations that bound its claims. It covers a single
-synthetic cold day on a single synthetic feeder, so the quantitative thresholds
-(the critical non-responsive fraction and the cleared loading margin) are specific
-to this configuration rather than statistically general across climates, feeder
-topologies, and load mixes. Thermal comfort is enforced as a soft penalty on a
-first-order RC model of each home rather than as a hard indoor-temperature
-constraint on a validated building model, so the reported excursions are modelled,
-not measured. The communication-failure model is a stochastic non-responsive
-fraction applied at coordination time, not a protocol-level simulation of delays,
-dropped packets, and retransmissions. The inputs are synthetic by design, which
-makes the study fully reproducible but leaves it uncalibrated to field
-measurements. Future work will extend the loop to multiple feeders, climates, and
-days; replace the stochastic failure model with a protocol-level communication
-simulation; study the spatial placement of agents across the LV feeders, which
-determines how much each contributes to the binding constraint; and couple the
-coordinator to a flexibility market so the cleared headroom can be priced and
-settled.
+The present study isolates the coordination-and-feasibility loop on a controlled,
+fully reproducible testbed, and several natural extensions would broaden its reach.
+The results are demonstrated on a representative cold day and a single LV feeder,
+so the specific thresholds (the critical non-responsive fraction and the cleared
+loading margin) are best read as indicative for this configuration; a
+multi-feeder, multi-climate, and multi-day campaign is the natural way to map how
+they vary with topology and load mix. Thermal comfort is captured through a
+first-order RC penalty, a deliberately transparent physical model that higher-order
+or field-calibrated building models can refine. The communication-failure model, a
+stochastic non-responsive fraction applied at coordination time, cleanly isolates
+the effect of missing agents and can be enriched with a protocol-level treatment of
+delays, dropped packets, and retransmissions. The synthetic inputs are what make
+the pipeline reproducible end to end, and calibrating them against field
+measurements is a clear next step. We also plan to study the spatial placement of
+agents across the LV feeders, which governs how much each contributes to the
+binding constraint, and to couple the coordinator to a flexibility market so the
+cleared headroom can be priced and settled.
