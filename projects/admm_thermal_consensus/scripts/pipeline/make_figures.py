@@ -66,7 +66,7 @@ def main() -> None:
     ax1.axhline(unc_peak, ls=":", color="gray", label=f"Uncoordinated peak ({unc_peak:.0f} kW)")
     ax1.axhline(peak_at_limit, ls="--", color="black",
                 label=f"Transformer limit ({C.TRANSFORMER_LOADING_LIMIT_PCT:.0f}%)")
-    ax1.set_xlabel("Non-responsive fraction rho")
+    ax1.set_xlabel(r"Non-responsive fraction $\varrho$")
     ax1.set_ylabel("Coordinated aggregate peak [kW]")
     ax1.legend(loc="upper left", fontsize=8)
     ax1.grid(alpha=0.3)
@@ -80,7 +80,7 @@ def main() -> None:
     fig, ax1 = plt.subplots(figsize=(7, 4))
     ax1.plot(imp["rho"], imp["worst_min_voltage_pu"], "o-", color="tab:green", label="Min voltage [p.u.]")
     ax1.axhline(C.VOLTAGE_LOWER_PU, ls=":", color="gray", label=f"{C.VOLTAGE_LOWER_PU} p.u. limit")
-    ax1.set_xlabel("Non-responsive fraction rho")
+    ax1.set_xlabel(r"Non-responsive fraction $\varrho$")
     ax1.set_ylabel("Worst min voltage [p.u.]")
     ax2 = ax1.twinx()
     ax2.plot(imp["rho"], imp["worst_transformer_loading_pct"], "s--", color="tab:red", label="Transformer loading [%]")

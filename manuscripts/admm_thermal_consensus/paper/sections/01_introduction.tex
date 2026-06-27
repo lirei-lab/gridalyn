@@ -36,10 +36,12 @@ reductions. It almost never asks the operational question that matters: is the
 coordinated aggregate actually feasible on the feeder? A flatter aggregate is
 worthless if it still overloads a trunk line or sags a remote bus below limits.
 
-This paper closes the loop between coordination and feeder physics. We adapt the
-sharing-ADMM-plus-imputation methodology from a prior multi-agent thesis and
-\emph{extend} it with an AC power-flow validation stage, turning a purely
-signal-level study into a network-validated one. Our contributions are:
+This paper closes the loop between coordination and feeder physics. Building on the
+established sharing-ADMM paradigm for multi-agent demand response
+\cite{boyd2011admm,Nguyen2018}, we pair it with machine-learning imputation of
+non-responsive agents and \emph{extend} the pipeline with an AC power-flow
+validation stage, turning a purely signal-level study into a network-validated one.
+Our contributions are:
 
 \begin{itemize}
   \item A comfort-aware sharing-ADMM coordinator for deferrable cold-climate

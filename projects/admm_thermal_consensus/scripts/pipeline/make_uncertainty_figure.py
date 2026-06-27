@@ -37,7 +37,7 @@ def main() -> None:
         C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6,
         label=f"{C.LINE_LOADING_LIMIT_PCT:.0f}% limit",
     )
-    ax1.set_xlabel("Non-responsive fraction (forecast-imputed)")
+    ax1.set_xlabel(r"Non-responsive fraction $\varrho$ (forecast-imputed)")
     ax1.set_ylabel("Worst transformer loading [%]")
 
     ax2 = ax1.twinx()
