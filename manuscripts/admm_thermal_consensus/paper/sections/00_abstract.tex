@@ -9,22 +9,15 @@ never checked against the physics of the feeder it is supposed to relieve. Third
 indoor temperature. We close all three with a network-validated pipeline that
 combines a comfort-aware sharing-ADMM coordinator, a machine-learning imputer
 that reconstructs the heating of non-responsive agents, and an AC power-flow
-validation stage on a synthetic low-voltage residential feeder of 74 all-electric
-homes behind a single 400~kVA MV/LV distribution transformer, modeled in
-pandapower. On a synthetic Trois-Rivi\`eres cold day, ideal coordination cuts the
-aggregate peak by 9.4\%, from 401.6 to 363.8~kW, and drives the peak-to-average
-ratio from 1.109 to 1.004. Crucially, the coordination respects thermal comfort:
-propagating the schedules through each home's RC thermal model holds the worst
-modelled indoor-temperature excursion to $\approx 1.0\,^{\circ}\mathrm{C}$,
-against $2.1\,^{\circ}\mathrm{C}$ for a naive energy-only flatten. On the feeder,
-coordination clears a 109.6\% transformer thermal overload down to 99.0\% loading
-under a 105\% IEEE~C57.91 short-duration winter limit; low-voltage levels stay
-healthy ($\approx 0.96$~p.u., never approaching 0.95~p.u.), so the transformer is
-the binding constraint. A finely-resolved sweep and a Monte-Carlo analysis show
-the cleared state is robust to communication failure through about 80\%
-non-responsive agents, with violation onset centered near a non-responsive
-fraction of 0.87. Comparing three families of ML regressors, we find that on this
-small, smooth dataset a regularized linear model is the most accurate and
-lowest-risk imputer; the decisive factor, however, is whether one imputes at all,
-not which method. The result is a fully reproducible study that ties
-coordination quality, thermal comfort, and measurable feeder feasibility together.
+validation stage on a synthetic North-American low-voltage residential feeder
+behind an explicit distribution transformer. On a synthetic Trois-Rivi\`eres cold
+day, the coordination flattens the aggregate peak while holding the worst modelled
+indoor-temperature excursion to about $1\,^{\circ}\mathrm{C}$, roughly half that of
+a naive energy-only flatten. Crucially, the flattened aggregate \emph{clears} a
+transformer thermal overload and restores feeder feasibility rather than merely
+lowering a statistical peak, and the cleared state stays feasible under heavy
+communication failure before re-violating at a sharp knee. Comparing three
+families of machine-learning regressors, we find that whether one imputes at all
+matters far more than which method. The result is a fully reproducible study that
+ties coordination quality, thermal comfort, and measurable feeder feasibility
+together.
