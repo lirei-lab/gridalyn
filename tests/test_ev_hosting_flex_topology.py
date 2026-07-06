@@ -94,7 +94,7 @@ def _radial_fixture() -> _FakeNet:
 
 
 def _closest_homes_fixture() -> _FakeNet:
-    """Two MV/LV (25/0.4) distribution trafos; trafo 1 sits closest to TARGET_HOMES.
+    """Two MV/LV (25/0.24) distribution trafos; trafo 1 sits closest to TARGET_HOMES.
 
     Phase-10.1 re-points ``select_feeder`` to the transformer whose downstream
     HOME count is closest to ``TARGET_HOMES`` (D-01/D-03), NOT the max-load one.
@@ -108,10 +108,11 @@ def _closest_homes_fixture() -> _FakeNet:
     would have picked idx 2).
     """
     bus = pd.DataFrame(
-        {"vn_kv": [120.0, 25.0, 0.4, 0.4]},
+        {"vn_kv": [120.0, 25.0, 0.24, 0.24]},
         index=[0, 1, 2, 3],
     )
-    # HV/MV head trafo (120/25) + two distribution trafos (25/0.4).
+    # HV/MV head trafo (120/25) + two distribution trafos (25/0.24, the Québec
+    # 240 V secondary the project grid config pins since 2026-07-06).
     trafo = pd.DataFrame(
         {
             "hv_bus": [0, 1, 1],
@@ -151,14 +152,14 @@ def _closest_homes_fixture() -> _FakeNet:
 
 
 def _no_near_target_fixture() -> _FakeNet:
-    """One MV/LV (25/0.4) trafo whose home count is FAR from TARGET_HOMES.
+    """One MV/LV (25/0.24) trafo whose home count is FAR from TARGET_HOMES.
 
     A single distribution trafo feeding 20 homes (distance |20-6|=14 > tolerance
     2). Proves ``select_feeder`` raises the located+remediating ValueError when no
     transformer sits near ``TARGET_HOMES`` (Pitfall 4 — fail loudly, not silently).
     """
     bus = pd.DataFrame(
-        {"vn_kv": [120.0, 25.0, 0.4]},
+        {"vn_kv": [120.0, 25.0, 0.24]},
         index=[0, 1, 2],
     )
     trafo = pd.DataFrame(

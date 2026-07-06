@@ -44,6 +44,7 @@ from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_START_WEEKDAY,
     DAILY_PATTERN,
     FEEDER_ID,
+    GRID_CONFIG,
     POWER_FACTOR,
     SUMMER_TROUGH_FACTOR,
     TARGET_HOMES,
@@ -123,7 +124,12 @@ def _weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
 _TARGET_HOMES_TOLERANCE = 2
 
 # MV/LV distribution-transformer voltage signature (kV) used for feeder ranking.
-_MV_LV_VOLTAGE = (25.0, 0.4)
+# Derived from the project grid config (single source of truth) so a nominal-
+# voltage change (e.g. the 2026-07-06 Québec 240 V secondary) cannot drift it.
+_MV_LV_VOLTAGE = (
+    float(GRID_CONFIG["buses"]["mv"]["voltage_kv"]),
+    float(GRID_CONFIG["buses"]["lv"]["voltage_kv"]),
+)
 
 
 def line_rating_kw(net: Any, pf: float = POWER_FACTOR) -> np.ndarray:
@@ -427,7 +433,8 @@ def select_feeder(
 
     if not candidates:
         raise ValueError(
-            "ev_hosting_flex feeder selection found no MV/LV (25/0.4 kV) "
+            "ev_hosting_flex feeder selection found no MV/LV "
+            f"({_MV_LV_VOLTAGE[0]:g}/{_MV_LV_VOLTAGE[1]:g} kV) "
             "distribution transformer in the net. Remediation: verify the topology "
             "cache was built from the expected radial twin, or set FEEDER_ID in "
             "config.py to the intended transformer index."
@@ -439,7 +446,8 @@ def select_feeder(
 
     if distance > _TARGET_HOMES_TOLERANCE:
         raise ValueError(
-            "ev_hosting_flex feeder selection found no MV/LV (25/0.4 kV) "
+            "ev_hosting_flex feeder selection found no MV/LV "
+            f"({_MV_LV_VOLTAGE[0]:g}/{_MV_LV_VOLTAGE[1]:g} kV) "
             f"transformer within {_TARGET_HOMES_TOLERANCE} homes of "
             f"TARGET_HOMES={int(TARGET_HOMES)}: the closest is transformer "
             f"{selected_idx} with {home_count} downstream home(s) (distance "
