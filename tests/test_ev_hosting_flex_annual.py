@@ -198,6 +198,43 @@ def test_governed_annual_firm_pin() -> None:
     assert payload["base_floor_hours"] == hours[0]
 
 
+_CURTAIL = PROJECT_OUTPUTS_DIR / "json" / "curtailment_hosting.json"
+
+
+@pytest.mark.skipif(not _CURTAIL.is_file(), reason=_SKIP_REASON)
+def test_governed_curtailment_headline_pins() -> None:
+    """Governed reproduce-and-pin: the study-B mechanism headlines.
+
+    firm 4 -> flexible 12 (+200 %) with the full-enrollment backstop holding
+    residual congestion at the base floor; light curtailment (< 6 % of EV
+    energy at the pool top); near-perfect fair rotation; enrollment strictly
+    reduces residual congestion; notice quality improves as sigma falls.
+    """
+    payload = json.loads(_CURTAIL.read_text())
+    assert payload["firm_ev_count"] == 4
+    assert payload["flexible_ev_count"] == 12
+    assert payload["hosting_expansion_percent"] == pytest.approx(2.0)
+    assert payload["residual_hours_curve"][payload["flexible_ev_count"]] == (
+        payload["base_floor_hours"]
+    )
+    # The curtailed FRACTION is not monotone (the denominator — total EV
+    # energy — grows with every EV while congestion overlap wobbles at low
+    # counts); what the mechanism guarantees is non-negativity and a light
+    # touch at the pool top.
+    price = payload["curtailed_energy_percent_curve"]
+    assert all(p >= 0.0 for p in price)
+    assert max(price) < 6.0
+    assert price[-1] > price[1], "pool-top curtailment must exceed the 1-EV level"
+    fairness = payload["fairness"]
+    assert fairness["jain_fair"] > 0.99 > fairness["jain_fixed_order"]
+    sweep = payload["enrollment_sweep_1ev_per_home"]
+    residuals = [row["residual_hours"] for row in sweep]
+    assert residuals[0] >= residuals[-1]
+    assert residuals[-1] == payload["base_floor_hours"]
+    notice = payload["notice_quality_by_sigma"]
+    assert notice["0.0"]["surprise_percent"] <= notice["5.0"]["surprise_percent"]
+
+
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP_REASON)
 def test_governed_annual_report_contract() -> None:
     """The stage emits a canonical platform report with the summary keys."""

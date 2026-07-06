@@ -70,6 +70,21 @@ spec:
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
         - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
 
+    # ── Stage 5b: study-B curtailment contracts (live, F3 of the migration) ─
+    - id: apply_curtailment_contracts
+      needs: [compute_congestion_annual]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+        - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
+        - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
+
     # ── Stage 3: design-day Monte-Carlo generation seam (live, GEN-01..04) ─
     # Phase-13 RETIRE-01: replaces the retired `generate_annual_profiles`
     # annual 8760h degree-day stage. Emits the design-day transformer-load

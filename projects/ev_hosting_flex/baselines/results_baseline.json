@@ -289,6 +289,44 @@
       ],
       "source": "outputs/json/firm_hosting_annual.json",
       "tolerance": 0
+    },
+    {
+      "expected": 12,
+      "id": "annual.flexible_ev_count",
+      "json_path": [
+        "flexible_ev_count"
+      ],
+      "source": "outputs/json/curtailment_hosting.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 2.0,
+      "id": "annual.hosting_expansion_percent",
+      "json_path": [
+        "hosting_expansion_percent"
+      ],
+      "source": "outputs/json/curtailment_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 4.360796,
+      "id": "annual.curtailed_pct_at_pool_top",
+      "json_path": [
+        "curtailed_energy_percent_curve",
+        -1
+      ],
+      "source": "outputs/json/curtailment_hosting.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.999219,
+      "id": "annual.jain_fair",
+      "json_path": [
+        "fairness",
+        "jain_fair"
+      ],
+      "source": "outputs/json/curtailment_hosting.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
