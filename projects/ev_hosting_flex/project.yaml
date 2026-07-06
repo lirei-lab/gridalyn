@@ -57,3 +57,4 @@ spec:
       - projects/ev_hosting_flex/outputs/reports/flexibility_contracts_report.json
       - projects/ev_hosting_flex/outputs/reports/twostage_program_report.json
       - projects/ev_hosting_flex/outputs/reports/nonwires_economics_report.json
+      - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json

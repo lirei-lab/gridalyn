@@ -167,10 +167,37 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/nonwires_economics.pdf
         - projects/ev_hosting_flex/outputs/reports/nonwires_economics_report.json
 
-    # ── Stage 7: pandapower AC peak-hour validation (stubbed — Phase 11) ─
+    # ── Stage 7: pandapower AC design-day validation (live, 2026-07-06) ──
+    # Before/after-EV network behavior: 24 hourly AC power flows per scenario
+    # (network-wide adoption family + the governed feeder family driven by
+    # Q_design / ev_pool p50 / the firm & deferral headline counts), emitting
+    # bus-voltage / line-loading / trafo-loading parquet + the CSA C235 and
+    # thermal violations summary + before/after figures.
     - id: validate_powerflow
-      needs: [compute_congestion, solve_twostage_program]
-      command: echo "STUB validate_powerflow — implemented in Phase 11"
+      needs: [compute_congestion, compute_nonwires_economics]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/_generators.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/data/q_design.npy
+        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
+        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
+        - projects/ev_hosting_flex/outputs/json/nonwires_economics.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/data/powerflow_bus_voltage.parquet
+        - projects/ev_hosting_flex/outputs/data/powerflow_line_loading.parquet
+        - projects/ev_hosting_flex/outputs/data/powerflow_trafo_loading.parquet
+        - projects/ev_hosting_flex/outputs/json/powerflow_violations.json
+        - projects/ev_hosting_flex/outputs/figures/powerflow_lv_voltage_bands.png
+        - projects/ev_hosting_flex/outputs/figures/powerflow_trafo_loading_hist.png
+        - projects/ev_hosting_flex/outputs/figures/powerflow_feeder_profile.png
+        - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json
 
     # ── Stage 7: canonical reports + baseline (stubbed — Phase 12) ───────
     - id: build_study_reports

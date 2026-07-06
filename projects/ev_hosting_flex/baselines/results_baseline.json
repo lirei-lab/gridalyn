@@ -183,6 +183,50 @@
       ],
       "source": "outputs/json/nonwires_economics.json",
       "tolerance": 0
+    },
+    {
+      "expected": 0.925195,
+      "id": "pf.pre_ev_min_lv_vm_pu",
+      "json_path": [
+        "scenarios",
+        "network_pen_0.0",
+        "min_lv_vm_pu"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 7,
+      "id": "pf.pre_ev_n_trafos_over_100",
+      "json_path": [
+        "scenarios",
+        "network_pen_0.0",
+        "n_trafos_over_100"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 215,
+      "id": "pf.post_ev_1p5_n_trafos_over_100",
+      "json_path": [
+        "scenarios",
+        "network_pen_1.5",
+        "n_trafos_over_100"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.846713,
+      "id": "pf.post_ev_1p5_min_lv_vm_pu",
+      "json_path": [
+        "scenarios",
+        "network_pen_1.5",
+        "min_lv_vm_pu"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"

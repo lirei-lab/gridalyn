@@ -913,3 +913,30 @@ DEFERRAL_CHARGER_KW_CEILING = 7.2
 completeness but NON-BINDING per the Phase-16 spike — 3.7–11 kW all give the same
 deferral count because the overnight window, not the charger power, is the binding
 constraint. Provenance: standard Level-2 residential EVSE rating."""
+
+# ─── AC power-flow validation (2026-07-06, validate_powerflow stage) ─────────
+# APPEND-ONLY block below the Phase-16 economics constants (everything above is
+# byte-frozen — do NOT edit any constant above). These pin the network-level AC
+# validation layer added after the option-B physical twin (75 kVA / 240 V
+# secondary): a deterministic design-day power flow per EV scenario, emitting
+# governed bus-voltage / line-loading / transformer-loading artifacts.
+
+SLACK_VM_PU = 1.04
+"""Substation slack (LTC-regulated 25 kV bus) voltage setpoint in pu for the AC
+validation power flows. HQ substation LTCs hold distribution feeders slightly
+above nominal; empirically verified on this twin (2026-07-06 session probes):
+1.03 pu leaves 2/3775 LV buses below the CSA C235 110 V normal-range floor at
+the ADMD winter peak, 1.05 pu leaves none — 1.04 is the mid setpoint. Consumed
+only by the validate_powerflow stage; the kW-proxy congestion chain (stages
+3-6) never reads it."""
+
+VOLTAGE_LIMITS_PU = {"normal_low": 0.917, "extreme_low": 0.883, "normal_high": 1.042}
+"""CSA C235 service-voltage bands on the 120 V base, in pu (normal range
+110-125 V -> 0.917-1.042; extreme low 106 V -> 0.883). The violation counters in
+the validate_powerflow stage classify LV bus voltages against these bands."""
+
+NETWORK_PENETRATION_SCENARIOS = (0.0, 0.5, 1.0, 1.5)
+"""Network-wide uniform EV adoption levels (EV/home) for the AC validation's
+"before vs after" scenario family. Every one of the 3235 homes receives the
+diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
+(2.52 kW/EV) inside ``CHARGING_WINDOW``; 0.0 is the pre-EV reference network."""
