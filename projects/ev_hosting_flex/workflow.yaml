@@ -186,6 +186,7 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/data/q_design.npy
+        - projects/ev_hosting_flex/outputs/data/q_real.npy
         - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting.json
         - projects/ev_hosting_flex/outputs/json/nonwires_economics.json

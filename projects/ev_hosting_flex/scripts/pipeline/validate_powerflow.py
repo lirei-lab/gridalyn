@@ -144,11 +144,31 @@ def build_scenario_profiles(
         q_design + ev_flex
     )
 
+    # ── Tail scenarios: the ensemble realizations where the risk lives ─────
+    # The p50 trajectories above never overload BY CONSTRUCTION of the firm
+    # gate (P(overload) <= 10% means the median case is safe; the risk is in
+    # the cold tail). Two REAL MC realizations make that tail visible in AC:
+    # the p95-peak realization at the firm count (brushes the rating), and the
+    # worst-peak realization at the deferral count WITHOUT the clip (the
+    # unmanaged "after" the flexibility mechanism prevents).
+    q_real = np.load(data_dir / "q_real.npy").astype(DTYPE)  # (K, 24) MC base
+    tot_firm = q_real + ev_pool[:, firm, :]
+    tot_unmanaged = q_real + ev_pool[:, deferral, :]
+    order_firm = np.argsort(tot_firm.max(axis=1), kind="stable")
+    r_p95 = int(order_firm[int(round(0.95 * (len(order_firm) - 1)))])
+    r_worst = int(np.argsort(tot_unmanaged.max(axis=1), kind="stable")[-1])
+    profiles[f"feeder_tail_p95_{firm}ev"] = _feeder_scenario(tot_firm[r_p95])
+    profiles[f"feeder_tail_worst_{deferral}ev_unmanaged"] = _feeder_scenario(
+        tot_unmanaged[r_worst]
+    )
+
     meta = {
         "feeder_transformer_idx": feeder_idx,
         "n_feeder_homes": n_feeder_homes,
         "firm_ev_count": firm,
         "deferral_ev_count": deferral,
+        "tail_p95_realization": r_p95,
+        "tail_worst_realization": r_worst,
         "feeder_rating_kw": round(_FEEDER_RATING_KW, ROUND_DECIMALS),
         "design_day_mean_temp_c": round(float(temps.mean()), ROUND_DECIMALS),
         "base_peak_per_home_kw": round(float(base_home.max()), ROUND_DECIMALS),
@@ -225,10 +245,12 @@ def _figures(
     ax.set_title("Transformer loading before vs after EVs")
     _save(fig, "powerflow_trafo_loading_hist")
 
-    # 3. Study-feeder hourly profile: base vs firm vs clipped-flex vs rating.
+    # 3. Study-feeder hourly profile: p50 family (solid) vs the MC tail
+    # realizations (dashed) vs the rating — median calm, tail bites, clip cuts.
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     feeder_idx = meta["feeder_transformer_idx"]
-    for name, color in zip(feeder_names, ("C0", "C1", "C2")):
+    palette = [f"C{i}" for i in range(10)]
+    for name, color in zip(feeder_names, palette):
         trafo = scenario_results[name]["trafo_loading"]
         prof = (
             trafo[trafo["trafo"] == feeder_idx]
@@ -237,9 +259,16 @@ def _figures(
             / 100.0
             * meta["feeder_rating_kw"]
         )
-        ax.step(range(N_DESIGN_HOURS), prof, where="mid", color=color, label=name)
+        style = "--" if "_tail_" in name else "-"
+        ax.step(
+            range(N_DESIGN_HOURS), prof, style, where="mid", color=color, label=name
+        )
     ax.axhline(
-        meta["feeder_rating_kw"], color="C3", ls="--", lw=1, label="rating 71.25 kW"
+        meta["feeder_rating_kw"],
+        color="k",
+        ls=":",
+        lw=1.5,
+        label=f"rating {meta['feeder_rating_kw']:.2f} kW",
     )
     ax.set_xlabel("Design-day hour")
     ax.set_ylabel("Feeder transformer load (kW)")
