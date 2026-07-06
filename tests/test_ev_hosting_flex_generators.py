@@ -85,10 +85,14 @@ def test_design_day_is_1990_01_19() -> None:
 
 
 def test_building_base_lands_at_locked_rating() -> None:
-    """EV-free building base p50 peak in [80,90]% rating, per-home in [7.5,10] kW.
+    """EV-free building base p50 peak in [65,80]% rating, per-home in [7.5,10] kW.
 
-    The locked GEN-02 operating point (R=7.0/p_heat_max=13.0 on the 7-home idx-62
-    unit, the firm-region anchor from exp_firmsweep). K=_TEST_K (documented above).
+    The per-home GEN-02 physics anchor (R=7.0/p_heat_max=13.0, ~8.5 kW/home
+    coincident) is unchanged. Option B (2026-07-06): the twin unit is now
+    PHYSICALLY 75 kVA with 6 downstream homes (``N_HOMES_FALLBACK = 6``), so the
+    %-of-rating band is a consequence of the home count (6 x [7.5, 10] kW /
+    71.25 kW -> [63, 84]%), no longer the 7-home idx-62 [80, 90] anchor.
+    K=_TEST_K (documented above).
     """
     res = make_design_day_ensemble(
         n_homes=N_HOMES_FALLBACK, k=_TEST_K, res_minutes=DESIGN_DAY_RES_MINUTES
@@ -97,7 +101,7 @@ def test_building_base_lands_at_locked_rating() -> None:
     assert q_real.shape == (_TEST_K, 24)
     base_peak = q_real.max(axis=1)  # (K,) per-realization feeder base peak (kW)
     p50_pct = float(np.percentile(base_peak, 50)) / _RATING_KW * 100.0
-    assert 80.0 <= p50_pct <= 90.0, f"base p50={p50_pct:.1f}% rating (want [80,90])"
+    assert 65.0 <= p50_pct <= 80.0, f"base p50={p50_pct:.1f}% rating (want [65,80])"
     per_home_p50 = float(np.percentile(base_peak, 50)) / N_HOMES_FALLBACK
     assert (
         7.5 <= per_home_p50 <= 10.0

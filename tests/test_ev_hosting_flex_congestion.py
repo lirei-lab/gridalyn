@@ -489,13 +489,15 @@ def test_governed_ensemble_firm_three() -> None:
 
     # Non-degenerate (neither 0 nor pinned at the ev_max ceiling).
     assert 1 <= firm <= 9, result
-    # The locked-calibration headline. If the governed ensemble shifts +/-1 this is
-    # the documented framing shift (RESEARCH A1) — update this pin to the empirical
-    # value and record the rationale in the SUMMARY; never re-tune the calibration.
-    assert firm == 3, (
-        f"governed firm={firm} (expected 3 at the locked calibration); if this is a "
-        "non-degenerate +/-1 framing shift, update the pin + record it in the "
-        "SUMMARY / divergence_note — do NOT re-tune R_QUEBEC / P_HEAT_QUEBEC"
+    # The locked-calibration headline. Option-B re-pin (2026-07-06): the twin is
+    # now PHYSICALLY 75 kVA / 6 homes (was the decoupled 7-home idx-62 unit,
+    # firm=3); with one fewer home the base sits at ~71.6% rating and the governed
+    # ensemble lands firm=6 (exactly 1.0 EV/home). Calibration (R_QUEBEC /
+    # P_HEAT_QUEBEC) untouched, per this test's own re-pin procedure.
+    assert firm == 6, (
+        f"governed firm={firm} (expected 6 on the physical 75 kVA / 6-home twin); "
+        "if this is a non-degenerate +/-1 framing shift, update the pin + record "
+        "it in the SUMMARY / divergence_note — do NOT re-tune R_QUEBEC / P_HEAT_QUEBEC"
     )
     # P(overload) at firm must be within tolerance; the next count must exceed it.
     p_curve = result["p_overload_curve"]

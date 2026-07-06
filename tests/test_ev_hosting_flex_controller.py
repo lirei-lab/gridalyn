@@ -243,12 +243,14 @@ def test_controller_stage_end_to_end() -> None:
     finally:
         os.chdir(cwd)
     summary = report["summary"]
-    assert summary["firm_ev_count"] == 3  # read, never re-run
+    # Option-B re-pin (2026-07-06): physical 75 kVA / 6-home twin -> firm 6,
+    # flexible 5 (-1/6). The honest negative finding persists at the new scale.
+    assert summary["firm_ev_count"] == 6  # read, never re-run
     # The honest finding (Option-A): flexible < firm, negative hosting expansion.
-    assert summary["flexible_ev_count"] == 2
+    assert summary["flexible_ev_count"] == 5
     assert summary["flexible_ev_count"] < summary["firm_ev_count"]
     assert summary["hosting_expansion_percent"] < 0.0
-    assert summary["hosting_expansion_percent"] == pytest.approx(-1.0 / 3.0, abs=1e-5)
+    assert summary["hosting_expansion_percent"] == pytest.approx(-1.0 / 6.0, abs=1e-5)
     # The reliability gate still holds AT the (smaller) flexible count.
     assert summary["realized_p_overload_at_flexible"] <= EPS_HEADLINE
     # adversarial degrades above the non-adversarial realized value (reported).

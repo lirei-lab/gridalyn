@@ -95,9 +95,13 @@ def test_artifacts_emitted_with_expected_shapes(tmp_path: Path) -> None:
     assert ev_pool.shape == (K_DESIGN, DESIGN_DAY_EV_MAX + 1, n_steps)
     assert ev_pool.dtype == np.float64
 
-    # The locked operating point: 1990-01-19, EV-free base p50 in [80, 90]% rating.
+    # The option-B operating point (2026-07-06): 1990-01-19, EV-free base p50 in
+    # [65, 80]% rating. The per-home physics (R_QUEBEC/P_HEAT_QUEBEC, ~8.5 kW/home
+    # coincident) is unchanged; the % of the 71.25 kW rating is now a CONSEQUENCE
+    # of the physically 75 kVA / 6-home twin unit (6 x [7.5, 10] kW -> [63, 84]%),
+    # measured p50 ~71.6% — no longer the 7-home idx-62 [80, 90] anchor.
     assert summary["design_date"] == "1990-01-19"
-    assert 80.0 <= summary["base_peak_pct_rating_p50"] <= 90.0
+    assert 65.0 <= summary["base_peak_pct_rating_p50"] <= 80.0
     # The nested-EV pool is monotonic in count (row n >= row n-1, GEN-03) + row0 == 0.
     assert np.allclose(ev_pool[:, 0, :], 0.0)
     assert np.all(np.diff(ev_pool, axis=1) >= -1e-9)

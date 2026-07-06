@@ -772,13 +772,15 @@ empirically verified on the 1990-01-19 design day (``exp_firmsweep.py`` /
 the 7-home / 24-step kernel inside the unit-test budget (< 60 s). Part of the
 reproducibility contract with ``SEED``; the Phase-14 firm pin re-uses this K."""
 
-N_HOMES_FALLBACK = 7
+N_HOMES_FALLBACK = 6
 """Downstream-home count used by the design-day kernel when the topology cache's
-idx-62 home count is unavailable (e.g. cache-free unit tests). The committed twin's
-idx-62 transformer subtree carries 7 all-electric homes (``TARGET_HOMES = 6``, the
-closest unit is idx-62 → 7); the governed stage passes the cache value, the unit
-tests pass this fallback so they stay cache-free (CONTEXT: the gitignored cache
-lives only in the main tree)."""
+selected-feeder home count is unavailable (e.g. cache-free unit tests). Option B
+(2026-07-06): the twin's LV transformers are now PHYSICALLY 75 kVA, the clustering
+lands ~6 homes/unit, and ``select_feeder`` picks an exact ``TARGET_HOMES = 6``
+unit (idx-10 in the regenerated twin; the pre-option-B twin's closest unit was
+idx-62 → 7). The governed stage passes the cache value, the unit tests pass this
+fallback so they stay cache-free (CONTEXT: the gitignored cache lives only in the
+main tree)."""
 
 DESIGN_DAY_EV_MAX = 18
 """Nested-EV pool ceiling for the design-day MC sweep (GEN-03). ``ev_nested_pool``

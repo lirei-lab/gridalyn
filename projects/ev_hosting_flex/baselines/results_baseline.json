@@ -1,11 +1,10 @@
 {
-  "project": "ev_hosting_flex",
   "metric_tolerance": {
     "absolute": 1e-06
   },
   "metrics": [
     {
-      "expected": 3,
+      "expected": 6,
       "id": "firm.firm_ev_count",
       "json_path": [
         "firm_ev_count"
@@ -14,7 +13,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.428571,
+      "expected": 1.0,
       "id": "firm.firm_penetration",
       "json_path": [
         "firm_penetration"
@@ -23,7 +22,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 7,
+      "expected": 6,
       "id": "firm.downstream_home_count",
       "json_path": [
         "downstream_home_count"
@@ -41,7 +40,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.3,
+      "expected": 0.033333,
       "id": "firm.p_overload_curve_at_5ev",
       "json_path": [
         "p_overload_curve",
@@ -51,7 +50,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2,
+      "expected": 5,
       "id": "flex.flexible_ev_count",
       "json_path": [
         "flexible_ev_count"
@@ -60,7 +59,7 @@
       "tolerance": 0
     },
     {
-      "expected": -0.333333,
+      "expected": -0.166667,
       "id": "flex.hosting_expansion_percent",
       "json_path": [
         "hosting_expansion_percent"
@@ -78,7 +77,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.016667,
+      "expected": 0.033333,
       "id": "flex.realized_p_overload_at_flexible",
       "json_path": [
         "realized_p_overload_at_flexible"
@@ -87,7 +86,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 57.290978,
+      "expected": 49.576052,
       "id": "flex.q_design_peak_kw",
       "json_path": [
         "q_design_peak_kw"
@@ -96,7 +95,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 6,
+      "expected": 12,
       "id": "econ.deferral_flexible_ev_count",
       "json_path": [
         "deferral_flexible_ev_count"
@@ -123,7 +122,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2.6,
+      "expected": 3.0,
       "id": "econ.breakeven_penetration_at_base_c_r",
       "json_path": [
         "breakeven_penetration_at_base_c_r"
@@ -141,7 +140,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2267.357289,
+      "expected": 6718.088986,
       "id": "econ.deferral_npv_base",
       "json_path": [
         "deferral_npv_base"
@@ -150,7 +149,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 6.060391,
+      "expected": 9.746675,
       "id": "econ.sum_r_headline_kw",
       "json_path": [
         "sum_r_headline_kw"
@@ -159,7 +158,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.393592,
+      "expected": 2.527245,
       "id": "econ.e_sum_a_headline_kwh",
       "json_path": [
         "e_sum_a_headline_kwh"
@@ -177,7 +176,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2,
+      "expected": 5,
       "id": "econ.reserve_caveat_flexible_ev_count",
       "json_path": [
         "reserve_caveat_flexible_ev_count"
@@ -185,5 +184,6 @@
       "source": "outputs/json/nonwires_economics.json",
       "tolerance": 0
     }
-  ]
+  ],
+  "project": "ev_hosting_flex"
 }

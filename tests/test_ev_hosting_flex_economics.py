@@ -347,14 +347,16 @@ def test_governed_headline_flex_6() -> None:
 
     assert out["threshold_convention"] == "p_infeasible_le_firmtol"
     assert out["pcong_tolerance"] == pytest.approx(float(FIRM_PCONG_TOLERANCE))
-    # The locked D-16-2a headline: firm 3 -> flex 6 (+100%).
-    assert out["flexible_ev_count"] == 6, (
-        f"governed deferral flex={out['flexible_ev_count']} (expected 6 at enrollment "
+    # The D-16-2a headline, option-B re-pin (2026-07-06): on the physical 75 kVA /
+    # 6-home twin the governed firm is 6 and the deferral gate lands flex 12 —
+    # the +100% headline ratio is unchanged (was firm 3 -> flex 6).
+    assert out["flexible_ev_count"] == 12, (
+        f"governed deferral flex={out['flexible_ev_count']} (expected 12 at enrollment "
         f"{DEFERRAL_ENROLLMENT_FRACTION}); the firm-consistent infeasibility gate "
         "reproduces +100% — do NOT weaken the assertion or re-tune the calibration"
     )
-    # Gate self-consistency: P(infeasible) at the firm count is within tolerance and the
-    # next count exceeds it (the binding crossing sits between flex 6 and 7).
+    # Gate self-consistency: P(infeasible) at the flex count is within tolerance and
+    # the next count exceeds it (the binding crossing sits between flex 12 and 13).
     p_curve = out["p_infeasible_curve"]
-    assert p_curve[6] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, p_curve
-    assert p_curve[7] > float(FIRM_PCONG_TOLERANCE), p_curve
+    assert p_curve[12] <= float(FIRM_PCONG_TOLERANCE) + 1e-9, p_curve
+    assert p_curve[13] > float(FIRM_PCONG_TOLERANCE), p_curve
