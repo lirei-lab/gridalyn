@@ -226,13 +226,14 @@ def test_governed_violations_monotonic_in_penetration() -> None:
 
 
 @pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
-def test_governed_feeder_clip_respects_rating() -> None:
-    """The deferral-clipped feeder scenario stays at/below the physical rating.
+def test_governed_feeder_backstop_removes_overload_depth() -> None:
+    """On the year's binding day the backstop caps the feeder near its rating.
 
-    The AC loading is apparent-power based (kW / PF plus losses), so the cap is
-    the rating in kVA terms — loading ≤ 100%, strictly above the firm scenario
-    (12 clipped EVs draw more than 6 unclipped ones) which itself sits above
-    the EV-free base.
+    The peak day is the accepted tail of the P95 firm rule, so even the firm
+    count may exceed 100 % there; what the mechanism guarantees is ORDER (base
+    < unmanaged, curtailed < unmanaged) and that the backstop-held load stays
+    inside the kW-rating AC envelope (~rating/PF + losses, < 110 %) instead of
+    the unmanaged depth.
     """
     trafo = pd.read_parquet(
         PROJECT_OUTPUTS_DIR / "data" / "powerflow_trafo_loading.parquet"
@@ -245,38 +246,46 @@ def test_governed_feeder_clip_respects_rating() -> None:
         .max()
     )
     base = float(peaks["feeder_base_0ev"])
-    firm = float(peaks[[k for k in peaks.index if k.startswith("feeder_firm_")][0]])
-    flex = float(peaks[[k for k in peaks.index if k.startswith("feeder_flex_")][0]])
-    assert base < firm < flex <= 100.0 + 1e-9
+    firm = float(
+        peaks[[k for k in peaks.index if k.startswith("feeder_firm_")][0]]
+    )
+    unmanaged = float(
+        peaks[[k for k in peaks.index if k.startswith("feeder_unmanaged_")][0]]
+    )
+    curtailed = float(
+        peaks[[k for k in peaks.index if k.startswith("feeder_curtailed_")][0]]
+    )
+    assert base < firm < unmanaged
+    assert curtailed < unmanaged
+    assert curtailed < 110.0  # the kW-rating AC envelope (losses + reactive)
 
 
 @pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
 def test_governed_mc_sampling_shows_tail_overloads() -> None:
-    """The sampled AC ensemble makes the overload tail visible and ordered.
+    """The cold-day AC sampling makes the overload tail visible and ordered.
 
-    Base never overloads; the firm count overloads with small-but-nonzero
-    probability (the tail the P(overload) <= 10% kW gate accepts, AMPLIFIED in
-    AC by losses/reactive flow — the reported AC-vs-proxy gap); unmanaged is
-    strictly worse than firm; the clip removes the overload DEPTH (max peak
-    well below unmanaged) even though it enforces the kW rating, which in AC
-    sits a few % above 100.
+    Base never overloads; the firm count overloads on a small fraction of cold
+    days (the tail the P95 kW rule accepts, AMPLIFIED in AC by losses/reactive
+    flow — the reported AC-vs-kW gap); unmanaged is strictly worse than firm;
+    the backstop removes the overload DEPTH (max peak well below unmanaged)
+    even though it enforces the kW rating, which in AC sits a few % above 100.
     """
     payload = json.loads(_VIOLATIONS_PATH.read_text())
     mc = payload["feeder_mc"]
     by_prefix = {
         name.split("_")[1]: stats for name, stats in mc.items()
-    }  # base / firm / unmanaged / clipped
+    }  # base / firm / unmanaged / curtailed
     assert by_prefix["base"]["p_overload_ac"] == 0.0
     assert 0.0 < by_prefix["firm"]["p_overload_ac"] < 0.5
     assert (
         by_prefix["firm"]["p_overload_ac"] <= by_prefix["unmanaged"]["p_overload_ac"]
     )
     assert (
-        by_prefix["clipped"]["peak_loading_max"]
+        by_prefix["curtailed"]["peak_loading_max"]
         < by_prefix["unmanaged"]["peak_loading_max"]
     )
-    # The clip binds AT the kW rating: AC peaks sit just above 100%, never deep.
-    assert by_prefix["clipped"]["peak_loading_max"] < 110.0
+    # The backstop binds AT the kW rating: AC peaks just above 100%, never deep.
+    assert by_prefix["curtailed"]["peak_loading_max"] < 110.0
 
 
 @pytest.mark.skipif(not _REPORT_PATH.is_file(), reason=_SKIP_REASON)

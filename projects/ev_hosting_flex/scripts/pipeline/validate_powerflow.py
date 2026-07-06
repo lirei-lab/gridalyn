@@ -1,20 +1,19 @@
 """AC power-flow validation of the twin before and after adding EVs (stage 7).
 
-Materializes the previously stubbed ``validate_powerflow`` workflow stage: runs
-the cached pandapower twin through 24 deterministic hourly AC power flows per
-scenario and emits the governed bus-voltage / line-loading / transformer-loading
-artifacts plus a CSA C235 + thermal violations summary.
+F5 of the study-B annual migration: every scenario is now driven by the ANNUAL
+artifacts (SDK-agent base, cold-coupled EV pool, curtailment backstop) — the
+design-day inputs are gone. Two deterministic full-net families on the year's
+binding peak day plus a sampled cold-day Monte-Carlo on the feeder subnet:
 
-Two scenario families share the same kernel (``_powerflow.py``):
-
-* ``network_pen_*`` — the "before vs after" system picture: every one of the
-  3235 homes carries the deterministic heating-degree design-day base plus the
-  diversified coincident EV overlay at a uniform adoption level
-  (``NETWORK_PENETRATION_SCENARIOS``; 0.0 is the pre-EV reference).
-* ``feeder_*`` — the study unit (the governed feeder transformer) driven by the
-  study's own artifacts: the day-ahead ``Q_design`` base, plus the MC EV pool's
-  p50 aggregate at the governed ``firm_ev_count``, plus the deferral count
-  clipped to the transformer headroom (the flexibility-mechanism envelope).
+* ``network_pen_*`` — the "before vs after" system picture on the peak day:
+  every one of the 3235 homes carries the per-home SDK base profile plus the
+  cold-coupled pool overlay at a uniform adoption level.
+* ``feeder_*`` — the study unit on the same day: base, the governed firm
+  count, the full pool unmanaged, and the full pool under the curtailment
+  backstop (the served post-contract profile).
+* ``mc_*`` — the SAMPLED picture: every cold day of the year solved in AC on
+  the extracted feeder subtree per variant; ``p_overload_ac`` = fraction of
+  cold days whose AC peak loading exceeds 100 %.
 
 GUARD-02: no module-scope ``import pandapower`` — the net is read via pickle
 and the solver import is deferred inside the kernel.
@@ -43,20 +42,19 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+    simulate_curtailment,
+)
 from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     N_DESIGN_HOURS,
-    base_profile_per_home_kw,
-    clip_to_headroom,
     count_violations,
-    design_day_hourly_temps,
-    ev_profile_per_home_kw,
     extract_feeder_subnet,
     run_design_day_powerflow,
     run_feeder_mc,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    COLD_DAY_TMEAN_C,
     DTYPE,
-    FIRM_PCONG_TOLERANCE,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
@@ -76,34 +74,44 @@ def _load_net(cache_dir: Path) -> Any:
         return pickle.load(handle)
 
 
+def _day_slice(annual: np.ndarray, day: int) -> np.ndarray:
+    """Return the (24,) hourly slice of an (8760,) annual array for ``day``."""
+    return np.asarray(annual, dtype=DTYPE)[day * 24 : (day + 1) * 24]
+
+
 def build_scenario_profiles(
     net: Any, cache_dir: Path, data_dir: Path, json_dir: Path
-) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
-    """Assemble the ``(n_load, 24)`` kW profile per scenario.
+) -> tuple[dict[str, np.ndarray], dict[str, Any], dict[str, Any]]:
+    """Assemble the ``(n_load, 24)`` kW profile per scenario from the annual seam.
 
     Args:
         net: Loaded pandapower net (read-only here).
         cache_dir: Stage-2 topology cache directory.
-        data_dir: Stage-3 data directory (``q_design.npy`` / ``ev_pool_design.npy``).
-        json_dir: Governed JSON directory (firm / deferral headline counts).
+        data_dir: F1 annual artifact directory.
+        json_dir: Governed JSON directory (F2 firm + F3 curtailment headline).
 
     Returns:
         A tuple ``(profiles, meta, mc_inputs)``: scenario name → per-load
-        profile matrix, a metadata dict (feeder index, counts, basis notes),
-        and the Monte-Carlo sampling inputs (per-realization variant
-        aggregates + the feeder's downstream bus list).
+        profile matrix, a metadata dict, and the cold-day Monte-Carlo inputs
+        (per-day variant aggregates + the feeder's downstream bus list).
     """
-    n_load = len(net.load)
-    temps = design_day_hourly_temps()
-    base_home = base_profile_per_home_kw(temps)
-    base_all = np.tile(base_home, (n_load, 1)).astype(DTYPE)
+    base_annual = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
+    pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
+    tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
+    firm = int(
+        json.loads((json_dir / "firm_hosting_annual.json").read_text())["firm_ev_count"]
+    )
+    flexible = int(
+        json.loads((json_dir / "curtailment_hosting.json").read_text())[
+            "flexible_ev_count"
+        ]
+    )
+    n_homes = int(
+        json.loads(
+            (PROJECT_OUTPUTS_DIR / "reports" / "annual_mc_report.json").read_text()
+        )["summary"]["n_homes"]
+    )
 
-    profiles: dict[str, np.ndarray] = {}
-    for pen in NETWORK_PENETRATION_SCENARIOS:
-        overlay = ev_profile_per_home_kw(pen)
-        profiles[f"network_pen_{pen:.1f}"] = (base_all + overlay).astype(DTYPE)
-
-    # ── Feeder family: the governed study unit on its own artifacts ────────
     feeder_sel = json.loads((cache_dir / "feeder_selection.json").read_text())
     feeder_idx = int(feeder_sel["feeder_transformer_idx"])
     downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())[
@@ -118,22 +126,29 @@ def build_scenario_profiles(
             "(prepare_topology_cache.py) so feeder_selection.json matches the net."
         )
 
-    q_design = np.load(data_dir / "q_design.npy").astype(DTYPE)
-    ev_pool = np.load(data_dir / "ev_pool_design.npy").astype(DTYPE)
-    pool_p50 = np.percentile(ev_pool, 50, axis=0).astype(DTYPE)  # (n_ev+1, 24)
+    # The year's binding day: peak hour of base + the full unmanaged pool.
+    pool_flex = pool[:flexible].sum(axis=0)
+    peak_day = int(np.argmax(base_annual + pool_flex) // 24)
 
-    firm = int(json.loads((json_dir / "firm_hosting.json").read_text())["firm_ev_count"])
-    deferral = int(
-        json.loads((json_dir / "nonwires_economics.json").read_text())[
-            "deferral_flexible_ev_count"
-        ]
+    # The curtailment backstop's served EV profile (full pool, all enrolled).
+    backstop = simulate_curtailment(
+        base_annual, pool[:flexible], np.ones(flexible, bool), _FEEDER_RATING_KW
     )
-    ev_max = pool_p50.shape[0] - 1
-    if not (0 <= firm <= ev_max and 0 <= deferral <= ev_max):
-        raise ValueError(
-            f"validate_powerflow needs firm={firm} and deferral={deferral} inside "
-            f"the EV pool ceiling [0, {ev_max}]. Remediation: re-run stages 3-6 "
-            "so the headline counts and ev_pool_design.npy agree."
+    served = backstop["served_ev_kw"]
+
+    base_day = _day_slice(base_annual, peak_day)
+    per_home_base = base_day / float(n_homes)
+    n_load = len(net.load)
+    base_all = np.tile(per_home_base, (n_load, 1)).astype(DTYPE)
+
+    profiles: dict[str, np.ndarray] = {}
+    for pen in NETWORK_PENETRATION_SCENARIOS:
+        n_evs = int(round(pen * n_homes))
+        overlay_per_home = _day_slice(pool[:n_evs].sum(axis=0), peak_day) / float(
+            n_homes
+        )
+        profiles[f"network_pen_{pen:.1f}"] = (base_all + overlay_per_home).astype(
+            DTYPE
         )
 
     def _feeder_scenario(feeder_agg_kw: np.ndarray) -> np.ndarray:
@@ -141,64 +156,53 @@ def build_scenario_profiles(
         matrix[feeder_load_mask, :] = feeder_agg_kw / float(n_feeder_homes)
         return matrix.astype(DTYPE)
 
-    ev_firm = pool_p50[firm]
-    ev_flex = clip_to_headroom(pool_p50[deferral], q_design, _FEEDER_RATING_KW)
-    profiles["feeder_base_0ev"] = _feeder_scenario(q_design)
-    profiles[f"feeder_firm_{firm}ev"] = _feeder_scenario(q_design + ev_firm)
-    profiles[f"feeder_flex_{deferral}ev_clipped"] = _feeder_scenario(
-        q_design + ev_flex
+    ev_firm_day = _day_slice(pool[:firm].sum(axis=0), peak_day)
+    ev_flex_day = _day_slice(pool_flex, peak_day)
+    ev_served_day = _day_slice(served, peak_day)
+    profiles["feeder_base_0ev"] = _feeder_scenario(base_day)
+    profiles[f"feeder_firm_{firm}ev"] = _feeder_scenario(base_day + ev_firm_day)
+    profiles[f"feeder_unmanaged_{flexible}ev"] = _feeder_scenario(
+        base_day + ev_flex_day
     )
-
-    # ── Tail scenarios: the ensemble realizations where the risk lives ─────
-    # The p50 trajectories above never overload BY CONSTRUCTION of the firm
-    # gate (P(overload) <= 10% means the median case is safe; the risk is in
-    # the cold tail). Two REAL MC realizations make that tail visible in AC:
-    # the p95-peak realization at the firm count (brushes the rating), and the
-    # worst-peak realization at the deferral count WITHOUT the clip (the
-    # unmanaged "after" the flexibility mechanism prevents).
-    q_real = np.load(data_dir / "q_real.npy").astype(DTYPE)  # (K, 24) MC base
-    tot_firm = q_real + ev_pool[:, firm, :]
-    tot_unmanaged = q_real + ev_pool[:, deferral, :]
-    order_firm = np.argsort(tot_firm.max(axis=1), kind="stable")
-    r_p95 = int(order_firm[int(round(0.95 * (len(order_firm) - 1)))])
-    r_worst = int(np.argsort(tot_unmanaged.max(axis=1), kind="stable")[-1])
-    profiles[f"feeder_tail_p95_{firm}ev"] = _feeder_scenario(tot_firm[r_p95])
-    profiles[f"feeder_tail_worst_{deferral}ev_unmanaged"] = _feeder_scenario(
-        tot_unmanaged[r_worst]
+    profiles[f"feeder_curtailed_{flexible}ev"] = _feeder_scenario(
+        base_day + ev_served_day
     )
 
     meta = {
         "feeder_transformer_idx": feeder_idx,
         "n_feeder_homes": n_feeder_homes,
+        "n_homes": n_homes,
         "firm_ev_count": firm,
-        "deferral_ev_count": deferral,
-        "tail_p95_realization": r_p95,
-        "tail_worst_realization": r_worst,
+        "flexible_ev_count": flexible,
+        "peak_day": peak_day,
         "feeder_rating_kw": round(_FEEDER_RATING_KW, ROUND_DECIMALS),
-        "design_day_mean_temp_c": round(float(temps.mean()), ROUND_DECIMALS),
-        "base_peak_per_home_kw": round(float(base_home.max()), ROUND_DECIMALS),
-        "network_basis": "deterministic heating-degree design day (T_BALANCE/R_THERM/BG_KW)",
-        "feeder_basis": "Q_design + MC ev_pool p50 (firm) / headroom-clipped (deferral)",
+        "basis": "study-B annual seam (SDK base + cold-coupled pool + backstop)",
     }
 
-    # ── Full ensemble MC variants for the subnet sampling layer ────────────
-    # Per-realization aggregates (K, 24): the SAMPLED feeder trajectories the
-    # user-facing "does it exceed?" question is really about. The clipped
-    # variant applies the headroom clip PER REALIZATION (each cold night is
-    # managed against its own base), not to the median.
-    ev_clip_per_r = np.stack(
-        [
-            clip_to_headroom(ev_pool[r, deferral, :], q_real[r], _FEEDER_RATING_KW)
-            for r in range(q_real.shape[0])
-        ]
-    )
+    # ── Cold-day Monte-Carlo variants for the subnet sampling layer ────────
+    cold_days = np.where(tday < float(COLD_DAY_TMEAN_C))[0]
+    if cold_days.size == 0:
+        raise ValueError(
+            "validate_powerflow found no cold days (Tday < "
+            f"{COLD_DAY_TMEAN_C} °C). Remediation: verify tday_mean_c.npy."
+        )
+
+    def _cold_matrix(annual: np.ndarray) -> np.ndarray:
+        daily = np.asarray(annual, dtype=DTYPE)[: len(tday) * 24].reshape(-1, 24)
+        return daily[cold_days]
+
     mc_variants = {
-        "mc_base_0ev": q_real,
-        f"mc_firm_{firm}ev": tot_firm,
-        f"mc_unmanaged_{deferral}ev": tot_unmanaged,
-        f"mc_clipped_{deferral}ev": q_real + ev_clip_per_r,
+        "mc_base_0ev": _cold_matrix(base_annual),
+        f"mc_firm_{firm}ev": _cold_matrix(base_annual + pool[:firm].sum(axis=0)),
+        f"mc_unmanaged_{flexible}ev": _cold_matrix(base_annual + pool_flex),
+        f"mc_curtailed_{flexible}ev": _cold_matrix(base_annual + served),
     }
-    mc_inputs = {"variants": mc_variants, "downstream_buses": downstream}
+    mc_inputs = {
+        "variants": mc_variants,
+        "downstream_buses": downstream,
+        "n_cold_days": int(cold_days.size),
+    }
+    meta["n_cold_days"] = int(cold_days.size)
     return profiles, meta, mc_inputs
 
 
@@ -253,7 +257,7 @@ def _figures(
     ax.set_xticklabels(
         [n.replace("network_pen_", "") + " EV/home" for n in network_names]
     )
-    ax.set_ylabel("LV bus voltage (pu, all 24 h)")
+    ax.set_ylabel("LV bus voltage (pu, peak day)")
     ax.set_title("LV voltage distribution vs network-wide EV adoption")
     _save(fig, "powerflow_lv_voltage_bands")
 
@@ -264,14 +268,14 @@ def _figures(
         per_max = trafo.groupby("trafo")["loading_percent"].max()
         ax.hist(per_max, bins=40, alpha=0.55, color=color, label=name)
     ax.axvline(100.0, color="k", ls="--", lw=1)
-    ax.set_xlabel("Transformer max loading over the design day (%)")
+    ax.set_xlabel("Transformer max loading over the peak day (%)")
     ax.set_ylabel("Transformers")
     ax.legend()
     ax.set_title("Transformer loading before vs after EVs")
     _save(fig, "powerflow_trafo_loading_hist")
 
-    # 3. Study-feeder hourly profile: p50 family (solid) vs the MC tail
-    # realizations (dashed) vs the rating — median calm, tail bites, clip cuts.
+    # 3. Study-feeder hourly profile on the peak day: base / firm / unmanaged /
+    # curtailed vs the rating — the mechanism in one panel.
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     feeder_idx = meta["feeder_transformer_idx"]
     palette = [f"C{i}" for i in range(10)]
@@ -284,7 +288,7 @@ def _figures(
             / 100.0
             * meta["feeder_rating_kw"]
         )
-        style = "--" if "_tail_" in name else "-"
+        style = "--" if "unmanaged" in name else "-"
         ax.step(
             range(N_DESIGN_HOURS), prof, style, where="mid", color=color, label=name
         )
@@ -295,14 +299,13 @@ def _figures(
         lw=1.5,
         label=f"rating {meta['feeder_rating_kw']:.2f} kW",
     )
-    ax.set_xlabel("Design-day hour")
+    ax.set_xlabel(f"Peak-day hour (day {meta['peak_day']})")
     ax.set_ylabel("Feeder transformer load (kW)")
     ax.legend(fontsize=8)
     ax.set_title(f"Study feeder (trafo {feeder_idx}) before/after EVs")
     _save(fig, "powerflow_feeder_profile")
 
-    # 4. The SAMPLED picture: ECDF of per-realization AC peak loading per MC
-    # variant — where the overload probability is visible, not just the median.
+    # 4. The SAMPLED picture: ECDF of per-cold-day AC peak loading per variant.
     if mc is not None and not mc.empty:
         fig, ax = plt.subplots(figsize=(7.2, 4.2))
         peaks_by_variant = mc.groupby(["variant", "realization"])[
@@ -323,10 +326,10 @@ def _figures(
                 label=f"{variant} (P(overload)={over:.0%})",
             )
         ax.axvline(100.0, color="k", ls=":", lw=1.5, label="rating (100%)")
-        ax.set_xlabel("Per-realization AC peak transformer loading (%)")
-        ax.set_ylabel("ECDF over the MC ensemble")
+        ax.set_xlabel("Per-cold-day AC peak transformer loading (%)")
+        ax.set_ylabel("ECDF over the cold days of the year")
         ax.legend(fontsize=8)
-        ax.set_title("Sampled feeder overload distribution (K realizations, AC)")
+        ax.set_title("Sampled feeder overload distribution (cold days, AC)")
         _save(fig, "powerflow_feeder_mc_ecdf")
 
     return paths
@@ -361,10 +364,7 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         scenario_results[name] = results
         violations[name] = count_violations(results, lv_bus_ids)
 
-    # ── Monte-Carlo AC sampling on the extracted feeder subnet ────────────
-    # The full ensemble (K realizations × 24 h × 4 variants) solved in AC on
-    # the ~10-bus feeder subtree; the upstream 25 kV boundary voltage is the
-    # full-net pre-EV hourly solve at the feeder's MV bus.
+    # ── Cold-day Monte-Carlo AC sampling on the extracted feeder subnet ────
     feeder_idx = int(meta["feeder_transformer_idx"])
     subnet, _, _ = extract_feeder_subnet(
         net, feeder_idx, [int(b) for b in mc_inputs["downstream_buses"]]
@@ -440,8 +440,8 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     pre = violations["network_pen_0.0"]
     post = violations[f"network_pen_{NETWORK_PENETRATION_SCENARIOS[-1]:.1f}"]
     firm_variant = f"mc_firm_{meta['firm_ev_count']}ev"
-    unmanaged_variant = f"mc_unmanaged_{meta['deferral_ev_count']}ev"
-    clipped_variant = f"mc_clipped_{meta['deferral_ev_count']}ev"
+    unmanaged_variant = f"mc_unmanaged_{meta['flexible_ev_count']}ev"
+    curtailed_variant = f"mc_curtailed_{meta['flexible_ev_count']}ev"
     summary = {
         "n_scenarios": len(profiles),
         "n_powerflows": len(profiles) * N_DESIGN_HOURS,
@@ -451,9 +451,10 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         **{f"post_ev_{k}": v for k, v in post.items()},
         "mc_p_overload_ac_at_firm": mc_summary[firm_variant]["p_overload_ac"],
         "mc_p_overload_ac_unmanaged": mc_summary[unmanaged_variant]["p_overload_ac"],
-        "mc_p_overload_ac_clipped": mc_summary[clipped_variant]["p_overload_ac"],
+        "mc_p_overload_ac_curtailed": mc_summary[curtailed_variant]["p_overload_ac"],
         **meta,
     }
+
     warnings = []
     if pre["n_trafos_over_100"]:
         warnings.append(
@@ -461,26 +462,18 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
             "BEFORE any EV (the oversubscribed 10-12-home tail clusters of "
             "the physical twin) — pre-existing hot spots, surfaced not hidden."
         )
-    if mc_summary[firm_variant]["p_overload_ac"] > float(FIRM_PCONG_TOLERANCE):
+    if mc_summary[curtailed_variant]["p_overload_ac"] > 0.0:
         warnings.append(
-            "AC-vs-proxy GAP: the sampled AC P(overload) at the governed firm "
-            f"count is {mc_summary[firm_variant]['p_overload_ac']:.3f} > the "
-            f"{float(FIRM_PCONG_TOLERANCE):.2f} firm gate, while the kW proxy "
-            "reports it as passing. The proxy rating (TRANSFORMER_KVA x PF = "
-            f"{round(_FEEDER_RATING_KW, 2)} kW) ignores transformer/line losses "
-            "and reactive flow — at that P the AC apparent power is ~3-4% above "
-            "sn. An AC-consistent kW rating (or an AC-based firm re-derivation) "
-            "is a deliberate study decision, reported here, not silently applied."
-        )
-    if mc_summary[clipped_variant]["p_overload_ac"] > 0.0:
-        warnings.append(
-            "The headroom clip enforces the kW rating, so clipped realizations "
-            "land at ~"
-            f"{mc_summary[clipped_variant]['peak_loading_p95']:.0f}% AC loading "
-            "(the same losses/PF gap): the clip removes the overload DEPTH "
-            f"(unmanaged max {mc_summary[unmanaged_variant]['peak_loading_max']:.0f}% "
-            f"-> clipped max {mc_summary[clipped_variant]['peak_loading_max']:.0f}%) "
-            "but not the S-threshold crossing."
+            "AC-vs-kW rating gap: the curtailment backstop enforces the kW "
+            f"rating ({round(_FEEDER_RATING_KW, 2)} kW), so backstop-held cold "
+            "days land at ~"
+            f"{mc_summary[curtailed_variant]['peak_loading_p95']:.0f}% AC "
+            "loading (losses + reactive flow, ~3-4% of sn). The backstop still "
+            "removes the overload depth (unmanaged max "
+            f"{mc_summary[unmanaged_variant]['peak_loading_max']:.0f}% -> "
+            f"curtailed max {mc_summary[curtailed_variant]['peak_loading_max']:.0f}%). "
+            "An AC-consistent kW rating is a deliberate study decision, "
+            "reported here, not silently applied."
         )
     validation = {"valid": True, "errors": [], "warnings": warnings}
     summary = {
@@ -505,12 +498,14 @@ def main() -> None:
     summary = report.get("summary", {})
     print(
         "Validated AC power flow + report: "
-        f"{summary.get('n_powerflows')} power flows over {summary.get('n_scenarios')} scenarios | "
-        f"pre-EV min LV V={summary.get('pre_ev_min_lv_vm_pu')} pu, "
-        f"trafos>100%={summary.get('pre_ev_n_trafos_over_100')} | "
-        f"post-EV ({NETWORK_PENETRATION_SCENARIOS[-1]} EV/home) min LV V="
-        f"{summary.get('post_ev_min_lv_vm_pu')} pu, "
-        f"trafos>100%={summary.get('post_ev_n_trafos_over_100')}"
+        f"{summary.get('n_powerflows')} full-net + {summary.get('n_mc_powerflows')} "
+        f"cold-day MC power flows | peak day {summary.get('peak_day')} | "
+        f"pre-EV trafos>100%={summary.get('pre_ev_n_trafos_over_100')} | "
+        f"post-EV ({NETWORK_PENETRATION_SCENARIOS[-1]} EV/home) "
+        f"trafos>100%={summary.get('post_ev_n_trafos_over_100')} | "
+        f"MC P(overload): firm={summary.get('mc_p_overload_ac_at_firm')}, "
+        f"unmanaged={summary.get('mc_p_overload_ac_unmanaged')}, "
+        f"curtailed={summary.get('mc_p_overload_ac_curtailed')}"
     )
 
 

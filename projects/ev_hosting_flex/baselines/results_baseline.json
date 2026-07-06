@@ -185,7 +185,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.925195,
+      "expected": 0.845568,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -196,7 +196,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 7,
+      "expected": 215,
       "id": "pf.pre_ev_n_trafos_over_100",
       "json_path": [
         "scenarios",
@@ -207,7 +207,7 @@
       "tolerance": 0
     },
     {
-      "expected": 215,
+      "expected": 493,
       "id": "pf.post_ev_1p5_n_trafos_over_100",
       "json_path": [
         "scenarios",
@@ -218,45 +218,12 @@
       "tolerance": 0
     },
     {
-      "expected": 0.846713,
+      "expected": 0.640927,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
         "network_pen_1.5",
         "min_lv_vm_pu"
-      ],
-      "source": "outputs/json/powerflow_violations.json",
-      "tolerance": 1e-06
-    },
-    {
-      "expected": 0.133333,
-      "id": "pf.mc_p_overload_ac_at_firm",
-      "json_path": [
-        "feeder_mc",
-        "mc_firm_6ev",
-        "p_overload_ac"
-      ],
-      "source": "outputs/json/powerflow_violations.json",
-      "tolerance": 1e-06
-    },
-    {
-      "expected": 0.6,
-      "id": "pf.mc_p_overload_ac_unmanaged",
-      "json_path": [
-        "feeder_mc",
-        "mc_unmanaged_12ev",
-        "p_overload_ac"
-      ],
-      "source": "outputs/json/powerflow_violations.json",
-      "tolerance": 1e-06
-    },
-    {
-      "expected": 104.886485,
-      "id": "pf.mc_clipped_peak_loading_max",
-      "json_path": [
-        "feeder_mc",
-        "mc_clipped_12ev",
-        "peak_loading_max"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
@@ -344,6 +311,39 @@
         "reinforcement_annual_yr"
       ],
       "source": "outputs/json/curtailment_economics.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.110429,
+      "id": "pf.mc_p_overload_ac_at_firm",
+      "json_path": [
+        "feeder_mc",
+        "mc_firm_4ev",
+        "p_overload_ac"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.539877,
+      "id": "pf.mc_p_overload_ac_unmanaged",
+      "json_path": [
+        "feeder_mc",
+        "mc_unmanaged_12ev",
+        "p_overload_ac"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 107.664888,
+      "id": "pf.mc_curtailed_peak_loading_max",
+      "json_path": [
+        "feeder_mc",
+        "mc_curtailed_12ev",
+        "peak_loading_max"
+      ],
+      "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     }
   ],

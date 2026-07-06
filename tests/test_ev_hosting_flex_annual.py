@@ -91,6 +91,10 @@ def test_simulate_curtailment_backstop_and_residual() -> None:
     assert out["residual_hours"] == 1
     assert out["curtailed_hours"][10] and not out["curtailed_hours"][20]
     assert out["base_floor_hours"] == 0
+    # Served profile: enrolled hour clipped to the 2 kW headroom; non-enrolled
+    # hour untouched (5 kW through, congestion and all).
+    assert out["served_ev_kw"][10] == pytest.approx(2.0)
+    assert out["served_ev_kw"][20] == pytest.approx(5.0)
 
 
 def test_simulate_curtailment_fair_rotation_equalizes() -> None:

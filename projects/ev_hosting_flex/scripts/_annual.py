@@ -242,7 +242,9 @@ def simulate_curtailment(
     Returns:
         Dict with ``curtailed_kwh_by_ev (n_evs,)``, ``events_by_ev (n_evs,)``,
         ``curtailed_hours (8760,) bool``, ``residual_hours`` (int, non-enrolled
-        congestion), ``base_floor_hours`` (int, base alone above rating).
+        congestion), ``base_floor_hours`` (int, base alone above rating), and
+        ``served_ev_kw (horizon,)`` — the post-backstop aggregate EV draw (the
+        AC validation's "with contract" hourly profile).
     """
     base = np.asarray(base, dtype=DTYPE)
     demand = np.asarray(ev_demand, dtype=DTYPE)
@@ -259,6 +261,7 @@ def simulate_curtailment(
     curtailed_hours = np.zeros(horizon, dtype=bool)
     residual = 0
     free_draw = demand[~enrolled, :].sum(axis=0)
+    served_ev_kw = demand.sum(axis=0).astype(DTYPE)  # curtailments subtract below
     for t in range(horizon):
         headroom = float(rating_kw) - (base[t] + free_draw[t])
         if base[t] <= rating_kw and (base[t] + free_draw[t]) > rating_kw:
@@ -279,12 +282,14 @@ def simulate_curtailment(
             if cut > 1e-9:
                 curtailed[ev] += cut
                 events[ev] += 1
+                served_ev_kw[t] -= cut
     return {
         "curtailed_kwh_by_ev": curtailed,
         "events_by_ev": events,
         "curtailed_hours": curtailed_hours,
         "residual_hours": int(residual),
         "base_floor_hours": int((base > float(rating_kw)).sum()),
+        "served_ev_kw": served_ev_kw,
     }
 
 
