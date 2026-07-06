@@ -222,6 +222,152 @@ def run_design_day_powerflow(
     return {key: pd.concat(parts, ignore_index=True) for key, parts in frames.items()}
 
 
+def extract_feeder_subnet(
+    net: Any, feeder_idx: int, downstream_buses: list[int]
+) -> tuple[Any, list[int], int]:
+    """Extract the study feeder's subtree as a standalone pandapower net.
+
+    Copies the feeder transformer, every LV line whose two ends live inside
+    the downstream set, and the home loads into a fresh small net with an
+    external grid at the transformer's MV bus. This is the Monte-Carlo AC
+    workhorse: the ensemble only varies the FEEDER load, so the K×24-hour
+    sampling runs on this ~10-bus net in seconds instead of ~half an hour on
+    the 4000-bus twin, while the upstream boundary voltage is imposed from the
+    full-net solve.
+
+    Args:
+        net: Loaded full pandapower net (read-only).
+        feeder_idx: Study feeder transformer index in ``net.trafo``.
+        downstream_buses: LV bus ids downstream of the feeder transformer.
+
+    Returns:
+        A tuple ``(subnet, load_bus_order, n_homes)``: the new net, the ORIGINAL
+        bus id of each subnet load row (in subnet load order), and the home
+        count.
+
+    Raises:
+        ValueError: If the feeder has no downstream loads to sample.
+    """
+    import pandapower as pp
+
+    trafo = net.trafo.loc[feeder_idx]
+    downstream = {int(b) for b in downstream_buses}
+
+    subnet = pp.create_empty_network()
+    bus_map: dict[int, int] = {}
+    for old in [int(trafo.hv_bus)] + sorted(downstream):
+        bus_map[old] = pp.create_bus(subnet, vn_kv=float(net.bus.loc[old, "vn_kv"]))
+
+    pp.create_ext_grid(subnet, bus=bus_map[int(trafo.hv_bus)], vm_pu=1.0)
+    pp.create_transformer_from_parameters(
+        subnet,
+        hv_bus=bus_map[int(trafo.hv_bus)],
+        lv_bus=bus_map[int(trafo.lv_bus)],
+        sn_mva=float(trafo.sn_mva),
+        vn_hv_kv=float(trafo.vn_hv_kv),
+        vn_lv_kv=float(trafo.vn_lv_kv),
+        vk_percent=float(trafo.vk_percent),
+        vkr_percent=float(trafo.vkr_percent),
+        pfe_kw=float(trafo.pfe_kw),
+        i0_percent=float(trafo.i0_percent),
+        shift_degree=float(trafo.shift_degree),
+    )
+    subtree_lines = net.line[
+        net.line["from_bus"].isin(downstream) & net.line["to_bus"].isin(downstream)
+    ]
+    for _, row in subtree_lines.iterrows():
+        pp.create_line_from_parameters(
+            subnet,
+            from_bus=bus_map[int(row.from_bus)],
+            to_bus=bus_map[int(row.to_bus)],
+            length_km=float(row.length_km),
+            r_ohm_per_km=float(row.r_ohm_per_km),
+            x_ohm_per_km=float(row.x_ohm_per_km),
+            c_nf_per_km=float(row.c_nf_per_km),
+            max_i_ka=float(row.max_i_ka),
+        )
+    home_loads = net.load[net.load["bus"].isin(downstream)]
+    if home_loads.empty:
+        raise ValueError(
+            f"extract_feeder_subnet found no loads downstream of transformer:"
+            f"{feeder_idx}. Remediation: regenerate the topology cache so the "
+            "downstream map matches the net."
+        )
+    load_bus_order: list[int] = []
+    for _, row in home_loads.sort_index().iterrows():
+        pp.create_load(subnet, bus=bus_map[int(row.bus)], p_mw=0.0)
+        load_bus_order.append(int(row.bus))
+    return subnet, load_bus_order, len(load_bus_order)
+
+
+def run_feeder_mc(
+    subnet: Any,
+    agg_kw_by_variant: Mapping[str, np.ndarray],
+    mv_vm_pu_hourly: np.ndarray,
+    *,
+    power_factor: float = POWER_FACTOR,
+) -> pd.DataFrame:
+    """Run the Monte-Carlo AC sampling on the feeder subnet.
+
+    For every variant and every ensemble realization the (K, 24) AGGREGATE
+    feeder profile is split equally across the home loads and solved hour by
+    hour; the upstream boundary is the hourly MV voltage imposed via the
+    external grid (frozen from the full-net pre-EV solve — the feeder's own
+    load does not move its 25 kV bus materially).
+
+    Args:
+        subnet: Output net of :func:`extract_feeder_subnet`.
+        agg_kw_by_variant: Variant name → ``(K, 24)`` aggregate kW profiles.
+        mv_vm_pu_hourly: ``(24,)`` boundary voltage profile in pu.
+        power_factor: Constant lagging power factor for the Q injection.
+
+    Returns:
+        A long DataFrame with one row per (variant, realization, hour):
+        ``trafo_loading_percent`` and ``min_home_vm_pu``.
+    """
+    import pandapower as pp
+
+    mv_vm = np.asarray(mv_vm_pu_hourly, dtype=DTYPE)
+    if mv_vm.shape != (N_DESIGN_HOURS,):
+        raise ValueError(
+            f"run_feeder_mc received mv_vm_pu_hourly {mv_vm.shape}, expected "
+            f"({N_DESIGN_HOURS},) — one boundary voltage per design-day hour."
+        )
+    n_homes = len(subnet.load)
+    q_factor = float(np.tan(np.arccos(float(power_factor))))
+    load_bus_ids = subnet.load["bus"].to_numpy()
+
+    records: list[dict[str, Any]] = []
+    for variant, agg_kw in agg_kw_by_variant.items():
+        agg = np.asarray(agg_kw, dtype=DTYPE)
+        if agg.ndim != 2 or agg.shape[1] != N_DESIGN_HOURS:
+            raise ValueError(
+                f"run_feeder_mc variant {variant!r} has shape {agg.shape}, "
+                f"expected (K, {N_DESIGN_HOURS}) aggregate kW profiles."
+            )
+        for realization in range(agg.shape[0]):
+            per_home_mw = agg[realization] / float(n_homes) / 1000.0
+            for hour in range(N_DESIGN_HOURS):
+                subnet.ext_grid["vm_pu"] = float(mv_vm[hour])
+                subnet.load["p_mw"] = per_home_mw[hour]
+                subnet.load["q_mvar"] = per_home_mw[hour] * q_factor
+                pp.runpp(subnet, numba=True)
+                records.append(
+                    {
+                        "variant": variant,
+                        "realization": realization,
+                        "hour": hour,
+                        "trafo_loading_percent": float(
+                            subnet.res_trafo["loading_percent"].iloc[0]
+                        ),
+                        "min_home_vm_pu": float(
+                            subnet.res_bus.loc[load_bus_ids, "vm_pu"].min()
+                        ),
+                    }
+                )
+    return pd.DataFrame.from_records(records)
+
+
 def count_violations(
     results: Mapping[str, pd.DataFrame],
     lv_bus_ids: np.ndarray,

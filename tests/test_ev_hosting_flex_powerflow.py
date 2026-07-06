@@ -27,7 +27,9 @@ from projects.ev_hosting_flex.scripts._powerflow import (
     clip_to_headroom,
     count_violations,
     ev_profile_per_home_kw,
+    extract_feeder_subnet,
     run_design_day_powerflow,
+    run_feeder_mc,
 )
 from projects.ev_hosting_flex.scripts.config import (
     BG_KW,
@@ -164,6 +166,48 @@ def test_run_design_day_powerflow_mini_net() -> None:
         run_design_day_powerflow(net, np.zeros((2, N_DESIGN_HOURS)))
 
 
+def test_extract_feeder_subnet_and_mc_mini_net() -> None:
+    """Subnet extraction + MC runner on a hand-built 4-bus feeder subtree."""
+    import pandapower as pp
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    b_lv = pp.create_bus(net, vn_kv=0.24)
+    b_h1 = pp.create_bus(net, vn_kv=0.24)
+    b_h2 = pp.create_bus(net, vn_kv=0.24)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.0)
+    trafo_idx = pp.create_transformer_from_parameters(
+        net, hv_bus=b_mv, lv_bus=b_lv, sn_mva=0.075, vn_hv_kv=25.0,
+        vn_lv_kv=0.24, vk_percent=2.0, vkr_percent=1.2, pfe_kw=0.25,
+        i0_percent=0.4,
+    )
+    for b in (b_h1, b_h2):
+        pp.create_line_from_parameters(
+            net, from_bus=b_lv, to_bus=b, length_km=0.02,
+            r_ohm_per_km=0.3, x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.2,
+        )
+        pp.create_load(net, bus=b, p_mw=0.0)
+
+    subnet, load_buses, n_homes = extract_feeder_subnet(
+        net, trafo_idx, [b_lv, b_h1, b_h2]
+    )
+    assert n_homes == 2
+    assert sorted(load_buses) == [b_h1, b_h2]
+    assert len(subnet.trafo) == 1 and len(subnet.line) == 2
+
+    k = 3
+    variants = {
+        "flat_30kw": np.full((k, N_DESIGN_HOURS), 30.0),
+        "flat_80kw": np.full((k, N_DESIGN_HOURS), 80.0),  # over the 71.25 kW
+    }
+    mc = run_feeder_mc(subnet, variants, np.full(N_DESIGN_HOURS, 1.0))
+    assert len(mc) == 2 * k * N_DESIGN_HOURS
+    peak = mc.groupby("variant")["trafo_loading_percent"].max()
+    assert peak["flat_30kw"] < 100.0 < peak["flat_80kw"]
+    with pytest.raises(ValueError, match="mv_vm_pu_hourly"):
+        run_feeder_mc(subnet, variants, np.ones(3))
+
+
 # ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
 
 
@@ -204,6 +248,35 @@ def test_governed_feeder_clip_respects_rating() -> None:
     firm = float(peaks[[k for k in peaks.index if k.startswith("feeder_firm_")][0]])
     flex = float(peaks[[k for k in peaks.index if k.startswith("feeder_flex_")][0]])
     assert base < firm < flex <= 100.0 + 1e-9
+
+
+@pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
+def test_governed_mc_sampling_shows_tail_overloads() -> None:
+    """The sampled AC ensemble makes the overload tail visible and ordered.
+
+    Base never overloads; the firm count overloads with small-but-nonzero
+    probability (the tail the P(overload) <= 10% kW gate accepts, AMPLIFIED in
+    AC by losses/reactive flow — the reported AC-vs-proxy gap); unmanaged is
+    strictly worse than firm; the clip removes the overload DEPTH (max peak
+    well below unmanaged) even though it enforces the kW rating, which in AC
+    sits a few % above 100.
+    """
+    payload = json.loads(_VIOLATIONS_PATH.read_text())
+    mc = payload["feeder_mc"]
+    by_prefix = {
+        name.split("_")[1]: stats for name, stats in mc.items()
+    }  # base / firm / unmanaged / clipped
+    assert by_prefix["base"]["p_overload_ac"] == 0.0
+    assert 0.0 < by_prefix["firm"]["p_overload_ac"] < 0.5
+    assert (
+        by_prefix["firm"]["p_overload_ac"] <= by_prefix["unmanaged"]["p_overload_ac"]
+    )
+    assert (
+        by_prefix["clipped"]["peak_loading_max"]
+        < by_prefix["unmanaged"]["peak_loading_max"]
+    )
+    # The clip binds AT the kW rating: AC peaks sit just above 100%, never deep.
+    assert by_prefix["clipped"]["peak_loading_max"] < 110.0
 
 
 @pytest.mark.skipif(not _REPORT_PATH.is_file(), reason=_SKIP_REASON)

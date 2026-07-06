@@ -194,7 +194,9 @@ spec:
         - projects/ev_hosting_flex/outputs/data/powerflow_bus_voltage.parquet
         - projects/ev_hosting_flex/outputs/data/powerflow_line_loading.parquet
         - projects/ev_hosting_flex/outputs/data/powerflow_trafo_loading.parquet
+        - projects/ev_hosting_flex/outputs/data/powerflow_feeder_mc.parquet
         - projects/ev_hosting_flex/outputs/json/powerflow_violations.json
+        - projects/ev_hosting_flex/outputs/figures/powerflow_feeder_mc_ecdf.png
         - projects/ev_hosting_flex/outputs/figures/powerflow_lv_voltage_bands.png
         - projects/ev_hosting_flex/outputs/figures/powerflow_trafo_loading_hist.png
         - projects/ev_hosting_flex/outputs/figures/powerflow_feeder_profile.png

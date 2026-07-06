@@ -50,10 +50,13 @@ from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     count_violations,
     design_day_hourly_temps,
     ev_profile_per_home_kw,
+    extract_feeder_subnet,
     run_design_day_powerflow,
+    run_feeder_mc,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
+    FIRM_PCONG_TOLERANCE,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
@@ -85,8 +88,10 @@ def build_scenario_profiles(
         json_dir: Governed JSON directory (firm / deferral headline counts).
 
     Returns:
-        A tuple ``(profiles, meta)``: scenario name → per-load profile matrix,
-        and a metadata dict (feeder index, counts, per-family basis notes).
+        A tuple ``(profiles, meta, mc_inputs)``: scenario name → per-load
+        profile matrix, a metadata dict (feeder index, counts, basis notes),
+        and the Monte-Carlo sampling inputs (per-realization variant
+        aggregates + the feeder's downstream bus list).
     """
     n_load = len(net.load)
     temps = design_day_hourly_temps()
@@ -175,7 +180,26 @@ def build_scenario_profiles(
         "network_basis": "deterministic heating-degree design day (T_BALANCE/R_THERM/BG_KW)",
         "feeder_basis": "Q_design + MC ev_pool p50 (firm) / headroom-clipped (deferral)",
     }
-    return profiles, meta
+
+    # ── Full ensemble MC variants for the subnet sampling layer ────────────
+    # Per-realization aggregates (K, 24): the SAMPLED feeder trajectories the
+    # user-facing "does it exceed?" question is really about. The clipped
+    # variant applies the headroom clip PER REALIZATION (each cold night is
+    # managed against its own base), not to the median.
+    ev_clip_per_r = np.stack(
+        [
+            clip_to_headroom(ev_pool[r, deferral, :], q_real[r], _FEEDER_RATING_KW)
+            for r in range(q_real.shape[0])
+        ]
+    )
+    mc_variants = {
+        "mc_base_0ev": q_real,
+        f"mc_firm_{firm}ev": tot_firm,
+        f"mc_unmanaged_{deferral}ev": tot_unmanaged,
+        f"mc_clipped_{deferral}ev": q_real + ev_clip_per_r,
+    }
+    mc_inputs = {"variants": mc_variants, "downstream_buses": downstream}
+    return profiles, meta, mc_inputs
 
 
 def _write_parquet(frame: pd.DataFrame, path: Path) -> Path:
@@ -193,6 +217,7 @@ def _figures(
     lv_bus_ids: np.ndarray,
     meta: dict[str, Any],
     figures_dir: Path,
+    mc: pd.DataFrame | None = None,
 ) -> list[Path]:
     """Render the before/after figures (Agg backend; PNG + PDF each)."""
     import matplotlib
@@ -276,6 +301,34 @@ def _figures(
     ax.set_title(f"Study feeder (trafo {feeder_idx}) before/after EVs")
     _save(fig, "powerflow_feeder_profile")
 
+    # 4. The SAMPLED picture: ECDF of per-realization AC peak loading per MC
+    # variant — where the overload probability is visible, not just the median.
+    if mc is not None and not mc.empty:
+        fig, ax = plt.subplots(figsize=(7.2, 4.2))
+        peaks_by_variant = mc.groupby(["variant", "realization"])[
+            "trafo_loading_percent"
+        ].max()
+        for variant, color in zip(
+            peaks_by_variant.index.get_level_values(0).unique(),
+            (f"C{i}" for i in range(10)),
+        ):
+            peaks = np.sort(peaks_by_variant.loc[variant].to_numpy())
+            ecdf = np.arange(1, len(peaks) + 1) / len(peaks)
+            over = float((peaks > 100.0).mean())
+            ax.step(
+                peaks,
+                ecdf,
+                where="post",
+                color=color,
+                label=f"{variant} (P(overload)={over:.0%})",
+            )
+        ax.axvline(100.0, color="k", ls=":", lw=1.5, label="rating (100%)")
+        ax.set_xlabel("Per-realization AC peak transformer loading (%)")
+        ax.set_ylabel("ECDF over the MC ensemble")
+        ax.legend(fontsize=8)
+        ax.set_title("Sampled feeder overload distribution (K realizations, AC)")
+        _save(fig, "powerflow_feeder_mc_ecdf")
+
     return paths
 
 
@@ -297,7 +350,9 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
 
     net = _load_net(effective_cache)
     lv_bus_ids = net.bus.index[net.bus["vn_kv"] < 1.0].to_numpy()
-    profiles, meta = build_scenario_profiles(net, effective_cache, data_dir, json_dir)
+    profiles, meta, mc_inputs = build_scenario_profiles(
+        net, effective_cache, data_dir, json_dir
+    )
 
     scenario_results: dict[str, dict[str, pd.DataFrame]] = {}
     violations: dict[str, dict[str, Any]] = {}
@@ -305,6 +360,41 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         results = run_design_day_powerflow(net, p_kw)
         scenario_results[name] = results
         violations[name] = count_violations(results, lv_bus_ids)
+
+    # ── Monte-Carlo AC sampling on the extracted feeder subnet ────────────
+    # The full ensemble (K realizations × 24 h × 4 variants) solved in AC on
+    # the ~10-bus feeder subtree; the upstream 25 kV boundary voltage is the
+    # full-net pre-EV hourly solve at the feeder's MV bus.
+    feeder_idx = int(meta["feeder_transformer_idx"])
+    subnet, _, _ = extract_feeder_subnet(
+        net, feeder_idx, [int(b) for b in mc_inputs["downstream_buses"]]
+    )
+    hv_bus = int(net.trafo.loc[feeder_idx, "hv_bus"])
+    base_volt = scenario_results["feeder_base_0ev"]["bus_voltage"]
+    mv_vm_hourly = (
+        base_volt[base_volt["bus"] == hv_bus]
+        .sort_values("hour")["vm_pu"]
+        .to_numpy(dtype=DTYPE)
+    )
+    mc = run_feeder_mc(subnet, mc_inputs["variants"], mv_vm_hourly)
+
+    mc_peaks = mc.groupby(["variant", "realization"])["trafo_loading_percent"].max()
+    mc_summary: dict[str, dict[str, Any]] = {}
+    for variant in mc_inputs["variants"]:
+        peaks = mc_peaks.loc[variant]
+        min_v = (
+            mc[mc["variant"] == variant]
+            .groupby("realization")["min_home_vm_pu"]
+            .min()
+        )
+        mc_summary[variant] = {
+            "p_overload_ac": round(float((peaks > 100.0).mean()), ROUND_DECIMALS),
+            "peak_loading_p50": round(float(peaks.quantile(0.50)), ROUND_DECIMALS),
+            "peak_loading_p95": round(float(peaks.quantile(0.95)), ROUND_DECIMALS),
+            "peak_loading_max": round(float(peaks.max()), ROUND_DECIMALS),
+            "min_home_vm_pu": round(float(min_v.min()), ROUND_DECIMALS),
+            "n_realizations": int(len(peaks)),
+        }
 
     long_frames = {
         key: pd.concat(
@@ -320,6 +410,7 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         _write_parquet(long_frames["bus_voltage"], data_dir / "powerflow_bus_voltage.parquet"),
         _write_parquet(long_frames["line_loading"], data_dir / "powerflow_line_loading.parquet"),
         _write_parquet(long_frames["trafo_loading"], data_dir / "powerflow_trafo_loading.parquet"),
+        _write_parquet(mc, data_dir / "powerflow_feeder_mc.parquet"),
     ]
 
     violations_payload = {
@@ -332,6 +423,7 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
             }
             for name, scenario_violations in sorted(violations.items())
         },
+        "feeder_mc": mc_summary,
         **meta,
     }
     violations_path = json_dir / "powerflow_violations.json"
@@ -342,32 +434,55 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     artifact_paths.append(violations_path)
 
     artifact_paths.extend(
-        _figures(scenario_results, lv_bus_ids, meta, script.figures_dir)
+        _figures(scenario_results, lv_bus_ids, meta, script.figures_dir, mc=mc)
     )
 
     pre = violations["network_pen_0.0"]
     post = violations[f"network_pen_{NETWORK_PENETRATION_SCENARIOS[-1]:.1f}"]
+    firm_variant = f"mc_firm_{meta['firm_ev_count']}ev"
+    unmanaged_variant = f"mc_unmanaged_{meta['deferral_ev_count']}ev"
+    clipped_variant = f"mc_clipped_{meta['deferral_ev_count']}ev"
     summary = {
         "n_scenarios": len(profiles),
         "n_powerflows": len(profiles) * N_DESIGN_HOURS,
+        "n_mc_powerflows": int(len(mc)),
         "slack_vm_pu": SLACK_VM_PU,
         **{f"pre_ev_{k}": v for k, v in pre.items()},
         **{f"post_ev_{k}": v for k, v in post.items()},
+        "mc_p_overload_ac_at_firm": mc_summary[firm_variant]["p_overload_ac"],
+        "mc_p_overload_ac_unmanaged": mc_summary[unmanaged_variant]["p_overload_ac"],
+        "mc_p_overload_ac_clipped": mc_summary[clipped_variant]["p_overload_ac"],
         **meta,
     }
-    validation = {
-        "valid": True,
-        "errors": [],
-        "warnings": (
-            [
-                f"{pre['n_trafos_over_100']} transformer(s) exceed 100% loading "
-                "BEFORE any EV (the oversubscribed 10-12-home tail clusters of "
-                "the physical twin) — pre-existing hot spots, surfaced not hidden."
-            ]
-            if pre["n_trafos_over_100"]
-            else []
-        ),
-    }
+    warnings = []
+    if pre["n_trafos_over_100"]:
+        warnings.append(
+            f"{pre['n_trafos_over_100']} transformer(s) exceed 100% loading "
+            "BEFORE any EV (the oversubscribed 10-12-home tail clusters of "
+            "the physical twin) — pre-existing hot spots, surfaced not hidden."
+        )
+    if mc_summary[firm_variant]["p_overload_ac"] > float(FIRM_PCONG_TOLERANCE):
+        warnings.append(
+            "AC-vs-proxy GAP: the sampled AC P(overload) at the governed firm "
+            f"count is {mc_summary[firm_variant]['p_overload_ac']:.3f} > the "
+            f"{float(FIRM_PCONG_TOLERANCE):.2f} firm gate, while the kW proxy "
+            "reports it as passing. The proxy rating (TRANSFORMER_KVA x PF = "
+            f"{round(_FEEDER_RATING_KW, 2)} kW) ignores transformer/line losses "
+            "and reactive flow — at that P the AC apparent power is ~3-4% above "
+            "sn. An AC-consistent kW rating (or an AC-based firm re-derivation) "
+            "is a deliberate study decision, reported here, not silently applied."
+        )
+    if mc_summary[clipped_variant]["p_overload_ac"] > 0.0:
+        warnings.append(
+            "The headroom clip enforces the kW rating, so clipped realizations "
+            "land at ~"
+            f"{mc_summary[clipped_variant]['peak_loading_p95']:.0f}% AC loading "
+            "(the same losses/PF gap): the clip removes the overload DEPTH "
+            f"(unmanaged max {mc_summary[unmanaged_variant]['peak_loading_max']:.0f}% "
+            f"-> clipped max {mc_summary[clipped_variant]['peak_loading_max']:.0f}%) "
+            "but not the S-threshold crossing."
+        )
+    validation = {"valid": True, "errors": [], "warnings": warnings}
     summary = {
         key: (round(val, ROUND_DECIMALS) if isinstance(val, float) else val)
         for key, val in summary.items()
