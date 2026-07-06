@@ -260,6 +260,35 @@
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 4,
+      "id": "annual.firm_ev_count",
+      "json_path": [
+        "firm_ev_count"
+      ],
+      "source": "outputs/json/firm_hosting_annual.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 79.88595,
+      "id": "annual.base_p95_cold_evening",
+      "json_path": [
+        "p95_cold_evening_curve",
+        0
+      ],
+      "source": "outputs/json/firm_hosting_annual.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 146,
+      "id": "annual.congested_hours_at_pool_top",
+      "json_path": [
+        "congested_hours_per_year_curve",
+        -1
+      ],
+      "source": "outputs/json/firm_hosting_annual.json",
+      "tolerance": 0
     }
   ],
   "project": "ev_hosting_flex"

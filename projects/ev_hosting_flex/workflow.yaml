@@ -55,6 +55,21 @@ spec:
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
         - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
 
+    # ── Stage 4b: study-B annual firm hosting (live, F2 of the migration) ──
+    - id: compute_congestion_annual
+      needs: [generate_annual_mc]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+        - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
+        - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
+
     # ── Stage 3: design-day Monte-Carlo generation seam (live, GEN-01..04) ─
     # Phase-13 RETIRE-01: replaces the retired `generate_annual_profiles`
     # annual 8760h degree-day stage. Emits the design-day transformer-load

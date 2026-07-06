@@ -175,6 +175,29 @@ def test_governed_annual_artifacts_shapes_and_band() -> None:
     assert 10.0 <= peak / n_homes <= 15.0
 
 
+_FIRM_ANNUAL = PROJECT_OUTPUTS_DIR / "json" / "firm_hosting_annual.json"
+
+
+@pytest.mark.skipif(not _FIRM_ANNUAL.is_file(), reason=_SKIP_REASON)
+def test_governed_annual_firm_pin() -> None:
+    """Governed reproduce-and-pin: annual firm = 4 on the 6-home stressed base.
+
+    The study-B rule (P95 cold-day evening loading ≤ 100 %) crosses between 4
+    and 5 EVs on the F1 artifacts. If a deliberate recalibration shifts this,
+    update the pin with rationale — never weaken the crossing assertions.
+    """
+    payload = json.loads(_FIRM_ANNUAL.read_text())
+    firm = int(payload["firm_ev_count"])
+    curve = payload["p95_cold_evening_curve"]
+    limit = float(payload["p95_limit_percent"])
+    assert firm == 4, payload
+    assert curve == sorted(curve), "P95 must be monotone in the EV count"
+    assert curve[firm] <= limit < curve[firm + 1]
+    hours = payload["congested_hours_per_year_curve"]
+    assert hours == sorted(hours), "congested hours must be monotone"
+    assert payload["base_floor_hours"] == hours[0]
+
+
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP_REASON)
 def test_governed_annual_report_contract() -> None:
     """The stage emits a canonical platform report with the summary keys."""
