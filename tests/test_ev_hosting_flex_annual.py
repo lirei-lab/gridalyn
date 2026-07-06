@@ -235,6 +235,30 @@ def test_governed_curtailment_headline_pins() -> None:
     assert notice["0.0"]["surprise_percent"] <= notice["5.0"]["surprise_percent"]
 
 
+_ECON = PROJECT_OUTPUTS_DIR / "json" / "curtailment_economics.json"
+
+
+@pytest.mark.skipif(not _ECON.is_file(), reason=_SKIP_REASON)
+def test_governed_curtailment_economics_pins() -> None:
+    """Governed reproduce-and-pin: contract-vs-reinforcement economics.
+
+    Reinforcement = 8000 × CRF(5%, 30y) ≈ $520.41/yr; the two-part contract
+    beats it up to 5 EVs (83% adoption on 6 homes); the zone of agreement
+    (ceiling ≥ pay) closes at the same count; contract cost grows with n.
+    """
+    payload = json.loads(_ECON.read_text())
+    assert payload["crf"] == pytest.approx(0.065051, abs=1e-6)
+    assert payload["reinforcement_annual_yr"] == pytest.approx(520.411481, abs=1e-3)
+    assert payload["breakeven_ev_count"] == 5
+    curve = payload["curve"]
+    costs = [row["contract_cost_yr"] for row in curve]
+    assert costs == sorted(costs), "contract cost must grow with the EV count"
+    for row in curve:
+        beats = row["contract_beats_reinforcement"]
+        assert beats == (row["n_evs"] <= payload["breakeven_ev_count"])
+        assert row["household_floor_per_ev_yr"] <= row["pay_per_ev_yr"]
+
+
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP_REASON)
 def test_governed_annual_report_contract() -> None:
     """The stage emits a canonical platform report with the summary keys."""

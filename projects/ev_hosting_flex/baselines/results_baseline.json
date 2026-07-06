@@ -327,6 +327,24 @@
       ],
       "source": "outputs/json/curtailment_hosting.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 5,
+      "id": "annual.econ_breakeven_ev_count",
+      "json_path": [
+        "breakeven_ev_count"
+      ],
+      "source": "outputs/json/curtailment_economics.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 520.411481,
+      "id": "annual.econ_reinforcement_annual",
+      "json_path": [
+        "reinforcement_annual_yr"
+      ],
+      "source": "outputs/json/curtailment_economics.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
