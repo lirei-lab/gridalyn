@@ -33,6 +33,28 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/building_footprint_validation_report.json
         - projects/ev_hosting_flex/outputs/cache/topology_cache_manifest.json
 
+    # ── Stage 3b: study-B annual Monte-Carlo seam (live, F1 of the annual
+    # migration — docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-
+    # annual-migration.md). Runs ALONGSIDE the design-day seam until F6 retires
+    # it: SDK-agent annual base (R_STUDY_B), day-ahead forecast bases, and the
+    # cold-coupled nested EV pool.
+    - id: generate_annual_mc
+      needs: [prepare_topology_cache]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+        - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
+        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+
     # ── Stage 3: design-day Monte-Carlo generation seam (live, GEN-01..04) ─
     # Phase-13 RETIRE-01: replaces the retired `generate_annual_profiles`
     # annual 8760h degree-day stage. Emits the design-day transformer-load

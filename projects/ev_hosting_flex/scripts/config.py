@@ -940,3 +940,109 @@ NETWORK_PENETRATION_SCENARIOS = (0.0, 0.5, 1.0, 1.5)
 "before vs after" scenario family. Every one of the 3235 homes receives the
 diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
 (2.52 kW/EV) inside ``CHARGING_WINDOW``; 0.0 is the pre-EV reference network."""
+
+# ─── STUDY-B annual migration (2026-07-06, Option A — D-B1..D-B7) ────────────
+# APPEND-ONLY block below the AC power-flow validation constants (everything
+# above is byte-frozen — do NOT edit any constant above). These pin the study-B
+# annual model the pipeline is being re-founded on (see docs/superpowers/specs/
+# 2026-07-06-ev-hosting-flex-study-b-annual-migration.md): pure Monte-Carlo over
+# the full TMY year with ONLY the SDK stochastic generators, cold-coupled EVs,
+# and the curtailment-with-notice mechanism. Provenance: manuscripts/
+# ev_hosting_flex/scripts/study_b/{generate_sdk_base,curtailment_study_refined}.py
+# (the authoritative sandbox). Reuses the locked SEED, DTYPE, ROUND_DECIMALS,
+# TRANSFORMER_KVA, POWER_FACTOR, TMY_INPUT_PATH, CHARGER_MIX, CAPEX_UPGRADE,
+# DISCOUNT_RATE, LIFE_YEARS (do NOT redefine them).
+
+R_STUDY_B = 5.0
+"""Per-home thermal envelope resistance (°C/kW) of the SDK building agent for
+the study-B stressed Québec all-electric calibration (D-B1). Provenance:
+``generate_sdk_base.py`` ``R_VALUE = 5.0`` — loads the feeder base toward the
+CALIBRATION.md 10–15 kW/home winter band so congestion is rare but real.
+Supersedes ``R_QUEBEC = 7.0`` (design-day seam) for the annual path."""
+
+K_ANNUAL = 1
+"""Annual SDK base realization count (D-B2). Study-B faithful default 1 (the
+within-year day-to-day thermostat/AR(1)/weather variation is the sampling
+axis); the plumbing accepts K > 1 (seeds ``SEED + r``) for ensemble tails."""
+
+FC_SIGMAS = (0.0, 1.5, 3.0, 5.0)
+"""Day-ahead temperature-forecast error sigmas (°C) for the notice-quality
+forecast bases (D-B3). Provenance: ``generate_sdk_base.py`` ``FC_SIGMAS``."""
+
+SEED_FC_OFFSETS = 7
+"""RNG seed of the per-day N(0, σ) forecast-offset draws (D-B3). Provenance:
+``generate_sdk_base.py`` ``rng = default_rng(7)``."""
+
+POOL_MAX_ANNUAL = 12
+"""Nested annual EV pool ceiling (D-B4). One governed pool
+``(POOL_MAX_ANNUAL, 8760)`` drawn from ``default_rng(SEED)``; every sweep
+(hosting, enrollment, economics) uses row prefixes. DEVIATION from study_b's
+two ad-hoc pools (seeds 1 and 8 EVs / 7 and 9 EVs): one pinned pool, sized to
+2 EV/home on the 6-home twin unit."""
+
+E_TREF_C = 15.0
+"""Cold-intensity reference temperature (°C) (D-B4): ``cp = max(0, E_TREF_C −
+Tday)`` drives BOTH the session-energy and plug-in cold penalties. Provenance:
+``curtailment_study_refined.py`` ``E_TREF``."""
+
+EV_KWH_BASE = 8.0
+"""Mild-day median session energy (kWh) (D-B4). Provenance: ``E_BASE = 8.0``
+(consistent with the Phase-10.1 ``EV_KWH_MEDIAN``)."""
+
+EV_KWH_KCOLD = 0.0125
+"""Session-energy cold slope (per °C of cold intensity) (D-B4): median =
+``EV_KWH_BASE·(1 + EV_KWH_KCOLD·cp)`` → +50 % at −25 °C (cp = 40). Cold cuts EV
+range ~40–50 % so sessions deepen exactly on the critical evenings. Provenance:
+``E_KCOLD = 0.0125``."""
+
+PLUGIN_BASE = 0.60
+"""Mild-day plug-in probability (D-B4). Provenance: ``PLUG_BASE = 0.60``."""
+
+PLUGIN_KCOLD = 0.006
+"""Plug-in probability cold slope (per °C of cold intensity) (D-B4):
+``min(PLUGIN_MAX, PLUGIN_BASE + PLUGIN_KCOLD·cp)`` — range anxiety +
+preconditioning + everyone-home raise evening plug-ins with cold. Provenance:
+``PLUG_KCOLD = 0.006``."""
+
+PLUGIN_MAX = 0.85
+"""Plug-in probability ceiling on the coldest days (D-B4). Provenance:
+``PLUG_MAX = 0.85``."""
+
+EV_SIGMA_LOG = 0.5
+"""Lognormal sigma (log-space) of the session energy (D-B4; same value as the
+Phase-10.1 ``EV_KWH_SIGMA``, restated here as the annual-path contract)."""
+
+ARRIVAL_MEAN_ANNUAL_H = 18.0
+"""Evening arrival mean hour (D-B4). Provenance: ``rng.normal(18.0, 1.5)``."""
+
+ARRIVAL_STD_ANNUAL_H = 1.5
+"""Evening arrival std (hours) (D-B4)."""
+
+ARRIVAL_CLIP_ANNUAL = (16.0, 22.0)
+"""Arrival clip window (hours) (D-B4). Provenance: ``np.clip(s, 16.0, 22.0)``."""
+
+COLD_DAY_TMEAN_C = 5.0
+"""Cold-day classifier (D-B5): days with mean temperature below this (°C) form
+the cold-day set of the firm P95-evening rule. Provenance:
+``curtailment_study_refined.py`` ``tday < 5.0``."""
+
+EVENING_WINDOW_ANNUAL = (16, 23)
+"""Evening hours-of-day window (end-exclusive) of the firm rule (D-B5): firm =
+largest n with ``P95(cold-day max evening loading) ≤ 100 %``. Provenance:
+``[:, 16:23].max(1)``."""
+
+FIRM_P95_LIMIT_PERCENT = 100.0
+"""Firm-rule loading threshold (%) on the P95 cold-day evening peak (D-B5)."""
+
+C_AVAIL_EV_YR = 80.0
+"""Curtailment-contract availability payment ($/EV/yr) (D-B6). Provenance:
+``C_AVAIL = 80.0``."""
+
+C_A_CURTAIL = 0.5
+"""Curtailment-contract activation price ($/kWh curtailed) (D-B6). Provenance:
+``curtailment_study_refined.py`` ``C_A = 0.5`` (~5× retail; distinct from the
+governed deferral ``C_A = 0.30``)."""
+
+C_RETAIL_KWH = 0.10
+"""Retail energy value ($/kWh) of the foregone charging energy — the household
+floor of the zone-of-agreement panel (D-B6). Provenance: ``C_RETAIL = 0.10``."""
