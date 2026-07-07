@@ -72,13 +72,35 @@ def load_annual_tmy() -> pd.Series:
             "full committed PVGIS TMY."
         )
     out = df.iloc[:CALENDAR_HOURS].copy()
-    out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
+    # Parse in UTC (a proper DatetimeIndex), then convert back to the file's
+    # LOCAL fixed offset read from the first raw timestamp string: the phase
+    # anchor below must be the LOCAL hour — the committed TMY starts at 19:00
+    # local (00:00 UTC), and anchoring to UTC misplaces the evening EV sessions
+    # to local midday (the 2026-07-07 phase-bug fix).
+    stamps = pd.to_datetime(out["timestamp"], utc=True)
+    raw0 = str(out["timestamp"].iloc[0])
+    offset = pd.Timestamp(raw0).utcoffset()
+    if offset is None:
+        raise ValueError(
+            f"load_annual_tmy needs tz-offset timestamps (got {raw0!r}); the "
+            "LOCAL phase anchor cannot be derived. Remediation: re-copy the "
+            "committed PVGIS TMY with ISO offsets."
+        )
+    from datetime import timezone as _tz
+
+    out["timestamp"] = stamps.dt.tz_convert(_tz(offset))
     return out.set_index("timestamp")["temp_air"].astype(float)
 
 
 def tmy_hour_of_day(temp_hourly: pd.Series) -> int:
-    """Return the hour-of-day of the TMY's first row (the phase anchor)."""
-    return int(temp_hourly.index[0].tz_convert(None).hour)
+    """Return the LOCAL hour-of-day of the TMY's first row (the phase anchor).
+
+    Array position ``p`` of every annual artifact corresponds to local clock
+    hour ``(hod0 + p) % 24``; the EV sampler and the evening-window firm rule
+    both consume this anchor so sessions and windows land at the intended
+    LOCAL hours (study-B's ``_HOD0`` convention).
+    """
+    return int(temp_hourly.index[0].hour)
 
 
 def day_mean_temps(temp_hourly: pd.Series) -> np.ndarray:
@@ -294,18 +316,25 @@ def simulate_curtailment(
 
 
 def p95_cold_evening_loading(
-    load_kw: np.ndarray, rating_kw: float, tday_mean_c: np.ndarray
+    load_kw: np.ndarray,
+    rating_kw: float,
+    tday_mean_c: np.ndarray,
+    *,
+    hod0: int = 0,
 ) -> float:
     """Return the P95 over cold days of the max evening loading (%).
 
     The study-B firm statistic (D-B5): reshape the annual load to (365, 24),
     keep the cold days (``Tday < COLD_DAY_TMEAN_C``), take each day's max over
-    the evening window, and return the 95th percentile in % of the rating.
+    the LOCAL-hour evening window, and return the 95th percentile in % of the
+    rating. Array position ``p`` maps to local hour ``(hod0 + p) % 24`` —
+    the window is selected in LOCAL hours (2026-07-07 phase-bug fix).
 
     Args:
         load_kw: ``(8760,)`` feeder load in kW.
         rating_kw: Usable rating in kW.
         tday_mean_c: ``(365,)`` per-day mean temperatures.
+        hod0: LOCAL hour-of-day of array position 0 (:func:`tmy_hour_of_day`).
 
     Returns:
         The P95 cold-day evening peak loading in percent.
@@ -322,8 +351,10 @@ def p95_cold_evening_loading(
             "verify the committed TMY is the Trois-Rivières annual file."
         )
     start, end = EVENING_WINDOW_ANNUAL
+    local_hour = (np.arange(24) + int(hod0)) % 24
+    window = (local_hour >= start) & (local_hour < end)
     daily = np.asarray(load_kw, dtype=DTYPE)[: N_DAYS * 24].reshape(N_DAYS, 24)
-    evening_peaks = daily[cold_days, start:end].max(axis=1)
+    evening_peaks = daily[cold_days][:, window].max(axis=1)
     return float(np.percentile(evening_peaks / float(rating_kw) * 100.0, 95))
 
 
@@ -332,6 +363,8 @@ def firm_annual(
     ev_pool: np.ndarray,
     rating_kw: float,
     tday_mean_c: np.ndarray,
+    *,
+    hod0: int = 0,
 ) -> dict[str, Any]:
     """Return the study-B firm hosting count and its P95 curve.
 
@@ -343,21 +376,29 @@ def firm_annual(
         ev_pool: ``(pool, 8760)`` per-EV demand pool (prefix sweeps).
         rating_kw: Usable rating in kW.
         tday_mean_c: ``(365,)`` per-day mean temperatures.
+        hod0: LOCAL hour-of-day of array position 0 (:func:`tmy_hour_of_day`).
 
     Returns:
         Dict with ``firm_ev_count`` (int), ``p95_curve`` (list, index = EV
-        count 0..pool) and ``limit_percent``.
+        count 0..pool), ``limit_percent`` and ``hod0``.
     """
     pool = np.asarray(ev_pool, dtype=DTYPE)
     curve: list[float] = []
     cumulative = np.zeros(pool.shape[1], dtype=DTYPE)
-    curve.append(p95_cold_evening_loading(base, rating_kw, tday_mean_c))
+    curve.append(
+        p95_cold_evening_loading(base, rating_kw, tday_mean_c, hod0=hod0)
+    )
     for ev in range(pool.shape[0]):
         cumulative = cumulative + pool[ev]
-        curve.append(p95_cold_evening_loading(base + cumulative, rating_kw, tday_mean_c))
+        curve.append(
+            p95_cold_evening_loading(
+                base + cumulative, rating_kw, tday_mean_c, hod0=hod0
+            )
+        )
     passing = [n for n, p95 in enumerate(curve) if p95 <= float(FIRM_P95_LIMIT_PERCENT)]
     return {
         "firm_ev_count": int(passing[-1]) if passing else 0,
         "p95_curve": [round(float(v), 6) for v in curve],
         "limit_percent": float(FIRM_P95_LIMIT_PERCENT),
+        "hod0": int(hod0),
     }

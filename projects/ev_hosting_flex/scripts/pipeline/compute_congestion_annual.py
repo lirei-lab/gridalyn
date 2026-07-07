@@ -30,7 +30,9 @@ import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     firm_annual,
+    load_annual_tmy,
     p95_cold_evening_loading,
+    tmy_hour_of_day,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
@@ -56,8 +58,11 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
+    # LOCAL phase anchor of array position 0 (the 2026-07-07 phase-bug fix):
+    # the evening window is selected in local hours, not array positions.
+    hod0 = tmy_hour_of_day(load_annual_tmy())
 
-    firm = firm_annual(base, pool, _RATING_KW, tday)
+    firm = firm_annual(base, pool, _RATING_KW, tday, hod0=hod0)
     firm_n = int(firm["firm_ev_count"])
     n_homes_pool = pool.shape[0]
 
@@ -98,7 +103,8 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "congested_hours_at_pool_top": congested_hours[-1],
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "p95_base_check": round(
-            p95_cold_evening_loading(base, _RATING_KW, tday), ROUND_DECIMALS
+            p95_cold_evening_loading(base, _RATING_KW, tday, hod0=hod0),
+            ROUND_DECIMALS,
         ),
     }
     return {"artifact_paths": [firm_path], "summary": summary}

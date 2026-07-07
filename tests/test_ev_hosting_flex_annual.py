@@ -184,17 +184,19 @@ _FIRM_ANNUAL = PROJECT_OUTPUTS_DIR / "json" / "firm_hosting_annual.json"
 
 @pytest.mark.skipif(not _FIRM_ANNUAL.is_file(), reason=_SKIP_REASON)
 def test_governed_annual_firm_pin() -> None:
-    """Governed reproduce-and-pin: annual firm = 4 on the 6-home stressed base.
+    """Governed reproduce-and-pin: annual firm = 3 on the 6-home stressed base.
 
-    The study-B rule (P95 cold-day evening loading ≤ 100 %) crosses between 4
-    and 5 EVs on the F1 artifacts. If a deliberate recalibration shifts this,
-    update the pin with rationale — never weaken the crossing assertions.
+    The study-B rule (P95 cold-day LOCAL-evening loading ≤ 100 %) crosses
+    between 3 and 4 EVs after the 2026-07-07 phase fix (hod0 local anchor: EV
+    sessions land at local 16-23h against the true evening base). If a
+    deliberate recalibration shifts this, update the pin with rationale —
+    never weaken the crossing assertions.
     """
     payload = json.loads(_FIRM_ANNUAL.read_text())
     firm = int(payload["firm_ev_count"])
     curve = payload["p95_cold_evening_curve"]
     limit = float(payload["p95_limit_percent"])
-    assert firm == 4, payload
+    assert firm == 3, payload
     assert curve == sorted(curve), "P95 must be monotone in the EV count"
     assert curve[firm] <= limit < curve[firm + 1]
     hours = payload["congested_hours_per_year_curve"]
@@ -209,15 +211,15 @@ _CURTAIL = PROJECT_OUTPUTS_DIR / "json" / "curtailment_hosting.json"
 def test_governed_curtailment_headline_pins() -> None:
     """Governed reproduce-and-pin: the study-B mechanism headlines.
 
-    firm 4 -> flexible 12 (+200 %) with the full-enrollment backstop holding
+    firm 3 -> flexible 12 (+300 %) with the full-enrollment backstop holding
     residual congestion at the base floor; light curtailment (< 6 % of EV
     energy at the pool top); near-perfect fair rotation; enrollment strictly
     reduces residual congestion; notice quality improves as sigma falls.
     """
     payload = json.loads(_CURTAIL.read_text())
-    assert payload["firm_ev_count"] == 4
+    assert payload["firm_ev_count"] == 3
     assert payload["flexible_ev_count"] == 12
-    assert payload["hosting_expansion_percent"] == pytest.approx(2.0)
+    assert payload["hosting_expansion_percent"] == pytest.approx(3.0)
     assert payload["residual_hours_curve"][payload["flexible_ev_count"]] == (
         payload["base_floor_hours"]
     )

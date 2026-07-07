@@ -43,7 +43,9 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+    load_annual_tmy,
     simulate_curtailment,
+    tmy_hour_of_day,
 )
 from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     N_DESIGN_HOURS,
@@ -74,9 +76,15 @@ def _load_net(cache_dir: Path) -> Any:
         return pickle.load(handle)
 
 
-def _day_slice(annual: np.ndarray, day: int) -> np.ndarray:
-    """Return the (24,) hourly slice of an (8760,) annual array for ``day``."""
-    return np.asarray(annual, dtype=DTYPE)[day * 24 : (day + 1) * 24]
+def _day_slice(annual: np.ndarray, day: int, hod0: int) -> np.ndarray:
+    """Return the (24,) LOCAL-midnight-anchored slice of day ``day``.
+
+    The annual arrays are TMY-phase-anchored (position 0 = local ``hod0``);
+    rolling by ``hod0`` re-labels the axis so index h = local clock hour h
+    (2026-07-07 phase fix — same day-block approximation as study-B).
+    """
+    block = np.asarray(annual, dtype=DTYPE)[day * 24 : (day + 1) * 24]
+    return np.roll(block, int(hod0))
 
 
 def build_scenario_profiles(
@@ -112,6 +120,8 @@ def build_scenario_profiles(
         )["summary"]["n_homes"]
     )
 
+    hod0 = tmy_hour_of_day(load_annual_tmy())
+
     feeder_sel = json.loads((cache_dir / "feeder_selection.json").read_text())
     feeder_idx = int(feeder_sel["feeder_transformer_idx"])
     downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())[
@@ -136,7 +146,7 @@ def build_scenario_profiles(
     )
     served = backstop["served_ev_kw"]
 
-    base_day = _day_slice(base_annual, peak_day)
+    base_day = _day_slice(base_annual, peak_day, hod0)
     per_home_base = base_day / float(n_homes)
     n_load = len(net.load)
     base_all = np.tile(per_home_base, (n_load, 1)).astype(DTYPE)
@@ -144,7 +154,7 @@ def build_scenario_profiles(
     profiles: dict[str, np.ndarray] = {}
     for pen in NETWORK_PENETRATION_SCENARIOS:
         n_evs = int(round(pen * n_homes))
-        overlay_per_home = _day_slice(pool[:n_evs].sum(axis=0), peak_day) / float(
+        overlay_per_home = _day_slice(pool[:n_evs].sum(axis=0), peak_day, hod0) / float(
             n_homes
         )
         profiles[f"network_pen_{pen:.1f}"] = (base_all + overlay_per_home).astype(
@@ -156,9 +166,9 @@ def build_scenario_profiles(
         matrix[feeder_load_mask, :] = feeder_agg_kw / float(n_feeder_homes)
         return matrix.astype(DTYPE)
 
-    ev_firm_day = _day_slice(pool[:firm].sum(axis=0), peak_day)
-    ev_flex_day = _day_slice(pool_flex, peak_day)
-    ev_served_day = _day_slice(served, peak_day)
+    ev_firm_day = _day_slice(pool[:firm].sum(axis=0), peak_day, hod0)
+    ev_flex_day = _day_slice(pool_flex, peak_day, hod0)
+    ev_served_day = _day_slice(served, peak_day, hod0)
     profiles["feeder_base_0ev"] = _feeder_scenario(base_day)
     profiles[f"feeder_firm_{firm}ev"] = _feeder_scenario(base_day + ev_firm_day)
     profiles[f"feeder_unmanaged_{flexible}ev"] = _feeder_scenario(
@@ -175,6 +185,7 @@ def build_scenario_profiles(
         "firm_ev_count": firm,
         "flexible_ev_count": flexible,
         "peak_day": peak_day,
+        "hod0": hod0,
         "feeder_rating_kw": round(_FEEDER_RATING_KW, ROUND_DECIMALS),
         "basis": "study-B annual seam (SDK base + cold-coupled pool + backstop)",
     }
@@ -189,7 +200,7 @@ def build_scenario_profiles(
 
     def _cold_matrix(annual: np.ndarray) -> np.ndarray:
         daily = np.asarray(annual, dtype=DTYPE)[: len(tday) * 24].reshape(-1, 24)
-        return daily[cold_days]
+        return np.roll(daily[cold_days], int(hod0), axis=1)
 
     mc_variants = {
         "mc_base_0ev": _cold_matrix(base_annual),

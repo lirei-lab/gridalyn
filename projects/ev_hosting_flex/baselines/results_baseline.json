@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.845568,
+      "expected": 0.845234,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.640927,
+      "expected": 0.630447,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -48,7 +48,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4,
+      "expected": 3,
       "id": "annual.firm_ev_count",
       "json_path": [
         "firm_ev_count"
@@ -57,7 +57,7 @@
       "tolerance": 0
     },
     {
-      "expected": 79.88595,
+      "expected": 82.770377,
       "id": "annual.base_p95_cold_evening",
       "json_path": [
         "p95_cold_evening_curve",
@@ -67,7 +67,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 146,
+      "expected": 175,
       "id": "annual.congested_hours_at_pool_top",
       "json_path": [
         "congested_hours_per_year_curve",
@@ -86,7 +86,7 @@
       "tolerance": 0
     },
     {
-      "expected": 2.0,
+      "expected": 3.0,
       "id": "annual.hosting_expansion_percent",
       "json_path": [
         "hosting_expansion_percent"
@@ -95,7 +95,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4.360796,
+      "expected": 5.396979,
       "id": "annual.curtailed_pct_at_pool_top",
       "json_path": [
         "curtailed_energy_percent_curve",
@@ -105,7 +105,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.999219,
+      "expected": 0.999606,
       "id": "annual.jain_fair",
       "json_path": [
         "fairness",
@@ -133,18 +133,18 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.110429,
+      "expected": 0.104294,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
-        "mc_firm_4ev",
+        "mc_firm_3ev",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 0.539877,
+      "expected": 0.588957,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 107.664888,
+      "expected": 107.676375,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",
