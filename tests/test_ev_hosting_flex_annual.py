@@ -56,23 +56,41 @@ def test_ev_fleet_cold_coupling_and_determinism() -> None:
     """A cold year draws MORE EV energy than a mild one; same seed → same pool."""
     cold_year = np.full(N_DAYS, -15.0)
     mild_year = np.full(N_DAYS, 20.0)
-    pool_cold = ev_fleet_annual(np.random.default_rng(SEED), 2, cold_year, hod0=0)
-    pool_mild = ev_fleet_annual(np.random.default_rng(SEED), 2, mild_year, hod0=0)
+    # res=60 keeps this a compact hourly hand-check (8760 columns).
+    pool_cold = ev_fleet_annual(
+        np.random.default_rng(SEED), 2, cold_year, hod0=0, res_minutes=60
+    )
+    pool_mild = ev_fleet_annual(
+        np.random.default_rng(SEED), 2, mild_year, hod0=0, res_minutes=60
+    )
     assert pool_cold.shape == (2, CALENDAR_HOURS)
     # Cold raises BOTH plug-in probability and session energy.
     assert pool_cold.sum() > pool_mild.sum() * 1.3
-    again = ev_fleet_annual(np.random.default_rng(SEED), 2, cold_year, hod0=0)
+    again = ev_fleet_annual(
+        np.random.default_rng(SEED), 2, cold_year, hod0=0, res_minutes=60
+    )
     assert np.array_equal(pool_cold, again)
 
 
 def test_ev_fleet_respects_hod_phase() -> None:
     """With hod0=0 the charging lands in the evening hours of each day."""
     tday = np.full(N_DAYS, 0.0)
-    pool = ev_fleet_annual(np.random.default_rng(SEED), 1, tday, hod0=0)
+    pool = ev_fleet_annual(
+        np.random.default_rng(SEED), 1, tday, hod0=0, res_minutes=60
+    )
     by_hour = pool[0].reshape(N_DAYS, 24).sum(axis=0)
     # Arrival N(18, 1.5) clipped [16, 22]: essentially all energy in hours 16-23.
     evening = by_hour[16:24].sum()
     assert evening / by_hour.sum() > 0.95
+
+
+def test_ev_fleet_energy_resolution_invariant() -> None:
+    """Annual EV energy (kW·h) is identical at 15- and 60-min (the res contract)."""
+    tday = np.full(N_DAYS, -10.0)
+    p15 = ev_fleet_annual(np.random.default_rng(SEED), 3, tday, hod0=19, res_minutes=15)
+    p60 = ev_fleet_annual(np.random.default_rng(SEED), 3, tday, hod0=19, res_minutes=60)
+    assert p15.shape[1] == N_DAYS * 96
+    assert float(p15.sum()) * 15 / 60 == pytest.approx(float(p60.sum()) * 60 / 60)
 
 
 def test_simulate_curtailment_backstop_and_residual() -> None:
@@ -84,13 +102,13 @@ def test_simulate_curtailment_backstop_and_residual() -> None:
     demand[0, 10] = 5.0  # enrolled: needs 5, headroom is 2 -> curtail 3
     demand[1, 20] = 5.0  # NON-enrolled: congests freely -> residual hour
     enrolled = np.array([True, False])
-    out = simulate_curtailment(base, demand, enrolled, rating)
+    out = simulate_curtailment(base, demand, enrolled, rating)  # res=60 default
     assert out["curtailed_kwh_by_ev"][0] == pytest.approx(3.0)
     assert out["curtailed_kwh_by_ev"][1] == 0.0
     assert out["events_by_ev"][0] == 1
-    assert out["residual_hours"] == 1
-    assert out["curtailed_hours"][10] and not out["curtailed_hours"][20]
-    assert out["base_floor_hours"] == 0
+    assert out["residual_hours"] == pytest.approx(1.0)
+    assert out["curtailed_steps"][10] and not out["curtailed_steps"][20]
+    assert out["base_floor_hours"] == pytest.approx(0.0)
     # Served profile: enrolled hour clipped to the 2 kW headroom; non-enrolled
     # hour untouched (5 kW through, congestion and all).
     assert out["served_ev_kw"][10] == pytest.approx(2.0)
@@ -167,8 +185,9 @@ def test_governed_annual_artifacts_shapes_and_band() -> None:
     base = np.load(_DATA / "base_annual.npy")
     pool = np.load(_DATA / "ev_fleet_annual.npy")
     tday = np.load(_DATA / "tday_mean_c.npy")
-    assert base.shape == (K_ANNUAL, CALENDAR_HOURS)
-    assert pool.shape == (POOL_MAX_ANNUAL, CALENDAR_HOURS)
+    n_steps = N_DAYS * 96  # 15-min governed resolution
+    assert base.shape == (K_ANNUAL, n_steps)
+    assert pool.shape == (POOL_MAX_ANNUAL, n_steps)
     assert tday.shape == (N_DAYS,)
     # Stressed calibration (R_STUDY_B): base peak in (80, 100)% of the rating
     # and per-home peak inside the CALIBRATION.md 10-15 kW band.
@@ -184,24 +203,25 @@ _FIRM_ANNUAL = PROJECT_OUTPUTS_DIR / "json" / "firm_hosting_annual.json"
 
 @pytest.mark.skipif(not _FIRM_ANNUAL.is_file(), reason=_SKIP_REASON)
 def test_governed_annual_firm_pin() -> None:
-    """Governed reproduce-and-pin: annual firm = 3 on the 6-home stressed base.
+    """Governed reproduce-and-pin: annual firm = 2 on the 6-home stressed base.
 
     The study-B rule (P95 cold-day LOCAL-evening loading ≤ 100 %) crosses
-    between 3 and 4 EVs after the 2026-07-07 phase fix (hod0 local anchor: EV
-    sessions land at local 16-23h against the true evening base). If a
-    deliberate recalibration shifts this, update the pin with rationale —
-    never weaken the crossing assertions.
+    between 2 and 3 EVs at the governed 15-min resolution (2026-07-07
+    granularity fix — hourly means understated the sub-hourly baseboard + EV
+    coincidence, so firm dropped 3 → 2). If a deliberate recalibration shifts
+    this, update the pin with rationale — never weaken the crossing assertions.
     """
     payload = json.loads(_FIRM_ANNUAL.read_text())
     firm = int(payload["firm_ev_count"])
     curve = payload["p95_cold_evening_curve"]
     limit = float(payload["p95_limit_percent"])
-    assert firm == 3, payload
+    assert firm == 2, payload
     assert curve == sorted(curve), "P95 must be monotone in the EV count"
     assert curve[firm] <= limit < curve[firm + 1]
     hours = payload["congested_hours_per_year_curve"]
     assert hours == sorted(hours), "congested hours must be monotone"
     assert payload["base_floor_hours"] == hours[0]
+    assert payload["res_minutes"] == 15
 
 
 _CURTAIL = PROJECT_OUTPUTS_DIR / "json" / "curtailment_hosting.json"
@@ -211,15 +231,16 @@ _CURTAIL = PROJECT_OUTPUTS_DIR / "json" / "curtailment_hosting.json"
 def test_governed_curtailment_headline_pins() -> None:
     """Governed reproduce-and-pin: the study-B mechanism headlines.
 
-    firm 3 -> flexible 12 (+300 %) with the full-enrollment backstop holding
-    residual congestion at the base floor; light curtailment (< 6 % of EV
+    firm 2 -> flexible 12 (+500 %) with the full-enrollment backstop holding
+    residual congestion at the base floor; light curtailment (< 8 % of EV
     energy at the pool top); near-perfect fair rotation; enrollment strictly
     reduces residual congestion; notice quality improves as sigma falls.
+    (Firm dropped 3 → 2 at the governed 15-min resolution.)
     """
     payload = json.loads(_CURTAIL.read_text())
-    assert payload["firm_ev_count"] == 3
+    assert payload["firm_ev_count"] == 2
     assert payload["flexible_ev_count"] == 12
-    assert payload["hosting_expansion_percent"] == pytest.approx(3.0)
+    assert payload["hosting_expansion_percent"] == pytest.approx(5.0)
     assert payload["residual_hours_curve"][payload["flexible_ev_count"]] == (
         payload["base_floor_hours"]
     )
@@ -229,7 +250,7 @@ def test_governed_curtailment_headline_pins() -> None:
     # touch at the pool top.
     price = payload["curtailed_energy_percent_curve"]
     assert all(p >= 0.0 for p in price)
-    assert max(price) < 6.0
+    assert max(price) < 8.0
     assert price[-1] > price[1], "pool-top curtailment must exceed the 1-EV level"
     fairness = payload["fairness"]
     assert fairness["jain_fair"] > 0.99 > fairness["jain_fixed_order"]

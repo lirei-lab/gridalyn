@@ -32,6 +32,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
     C_RETAIL_KWH,
@@ -98,7 +99,10 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
     rows: list[dict[str, Any]] = []
     breakeven_n = pool_max  # last n where the contract still beats reinforcement
     for n in range(1, pool_max + 1):
-        out = simulate_curtailment(base, pool[:n], np.ones(n, bool), _RATING_KW)
+        out = simulate_curtailment(
+            base, pool[:n], np.ones(n, bool), _RATING_KW,
+            res_minutes=ANNUAL_RES_MINUTES,
+        )
         curt_kwh = float(out["curtailed_kwh_by_ev"].sum())
         contract = n * float(C_AVAIL_EV_YR) + float(C_A_CURTAIL) * curt_kwh
         pay_per_ev = contract / n

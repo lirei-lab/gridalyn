@@ -965,6 +965,22 @@ K_ANNUAL = 1
 within-year day-to-day thermostat/AR(1)/weather variation is the sampling
 axis); the plumbing accepts K > 1 (seeds ``SEED + r``) for ensemble tails."""
 
+ANNUAL_RES_MINUTES = 15
+"""Temporal resolution (minutes) of the annual kW chain (2026-07-07 granularity
+finding). Hourly means UNDERSTATE the sub-hourly coincidence of the few 13 kW
+baseboard thermostats + the discrete 7.2-11.5 kW EV step: the Jan-Mar 1-min
+probe showed the P95 cold-evening loading rising ~7 points (100% -> 107% at
+3 EVs) and firm dropping ~1 EV between 60- and 15-min aggregation, with
+sustained (>15 min) exceedances that a pole transformer's winding time constant
+(~5-15 min) genuinely feels. 15 min is the utility demand-metering interval and
+the dulce spot: finer than 15 adds only ~2-4 P95 points and enters the regime
+the transformer's thermal inertia legitimately filters. The SDK agent already
+simulates at 1-min, so the finer base aggregation is FREE; the EV sampler
+allocates sessions minute-exact into 15-min bins. The AC validation layer stays
+HOURLY (aggregated from this) — 96-step power flows would ~4x a validation cost
+for no gate value. Arrays are ``(K, N_DAYS * 24*60/ANNUAL_RES_MINUTES)`` = 35040
+steps at 15 min; energy is ``sum(kW_per_step) * ANNUAL_RES_MINUTES/60``."""
+
 FC_SIGMAS = (0.0, 1.5, 3.0, 5.0)
 """Day-ahead temperature-forecast error sigmas (°C) for the notice-quality
 forecast bases (D-B3). Provenance: ``generate_sdk_base.py`` ``FC_SIGMAS``."""

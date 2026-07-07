@@ -35,6 +35,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     tmy_hour_of_day,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    ANNUAL_RES_MINUTES,
     DTYPE,
     POWER_FACTOR,
     PROJECT_OUTPUTS_DIR,
@@ -43,6 +44,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
 )
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
+_HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 
 def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
@@ -62,17 +64,27 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     # the evening window is selected in local hours, not array positions.
     hod0 = tmy_hour_of_day(load_annual_tmy())
 
-    firm = firm_annual(base, pool, _RATING_KW, tday, hod0=hod0)
+    firm = firm_annual(
+        base, pool, _RATING_KW, tday, hod0=hod0, res_minutes=ANNUAL_RES_MINUTES
+    )
     firm_n = int(firm["firm_ev_count"])
     n_homes_pool = pool.shape[0]
 
-    # Congested-hours diagnostics per pool prefix (base floor at n=0).
+    # Congested-hours diagnostics per pool prefix (base floor at n=0); step
+    # counts converted to real hours at the governed resolution.
     congested_hours = []
     cumulative = np.zeros(base.shape, dtype=DTYPE)
-    congested_hours.append(int((base > _RATING_KW).sum()))
+    congested_hours.append(
+        round(float((base > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS)
+    )
     for ev in range(pool.shape[0]):
         cumulative = cumulative + pool[ev]
-        congested_hours.append(int(((base + cumulative) > _RATING_KW).sum()))
+        congested_hours.append(
+            round(
+                float(((base + cumulative) > _RATING_KW).sum()) * _HOURS_PER_STEP,
+                ROUND_DECIMALS,
+            )
+        )
 
     payload = {
         "firm_ev_count": firm_n,
@@ -84,6 +96,7 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "base_p95_cold_evening_percent": firm["p95_curve"][0],
         "feeder_transformer_modeled_kw": round(_RATING_KW, ROUND_DECIMALS),
         "horizon": "annual_8760h",
+        "res_minutes": int(ANNUAL_RES_MINUTES),
         "rule": "p95_cold_evening_loading_le_limit",
     }
     json_dir.mkdir(parents=True, exist_ok=True)
@@ -103,7 +116,9 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "congested_hours_at_pool_top": congested_hours[-1],
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "p95_base_check": round(
-            p95_cold_evening_loading(base, _RATING_KW, tday, hod0=hod0),
+            p95_cold_evening_loading(
+                base, _RATING_KW, tday, hod0=hod0, res_minutes=ANNUAL_RES_MINUTES
+            ),
             ROUND_DECIMALS,
         ),
     }

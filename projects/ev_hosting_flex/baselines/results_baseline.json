@@ -48,7 +48,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3,
+      "expected": 2,
       "id": "annual.firm_ev_count",
       "json_path": [
         "firm_ev_count"
@@ -57,7 +57,7 @@
       "tolerance": 0
     },
     {
-      "expected": 82.770377,
+      "expected": 84.10036,
       "id": "annual.base_p95_cold_evening",
       "json_path": [
         "p95_cold_evening_curve",
@@ -67,7 +67,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 175,
+      "expected": 186.0,
       "id": "annual.congested_hours_at_pool_top",
       "json_path": [
         "congested_hours_per_year_curve",
@@ -86,7 +86,7 @@
       "tolerance": 0
     },
     {
-      "expected": 3.0,
+      "expected": 5.0,
       "id": "annual.hosting_expansion_percent",
       "json_path": [
         "hosting_expansion_percent"
@@ -95,7 +95,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 5.396979,
+      "expected": 6.126869,
       "id": "annual.curtailed_pct_at_pool_top",
       "json_path": [
         "curtailed_energy_percent_curve",
@@ -105,7 +105,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.999606,
+      "expected": 0.999965,
       "id": "annual.jain_fair",
       "json_path": [
         "fairness",
@@ -133,11 +133,11 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.104294,
+      "expected": 0.042945,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
-        "mc_firm_3ev",
+        "mc_firm_2ev",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",

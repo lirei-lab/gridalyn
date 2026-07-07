@@ -47,6 +47,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     tmy_hour_of_day,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    ANNUAL_RES_MINUTES,
     DTYPE,
     FC_SIGMAS,
     K_ANNUAL,
@@ -59,6 +60,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     SEED_FC_OFFSETS,
     TRANSFORMER_KVA,
 )
+
+_HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 
@@ -144,6 +147,8 @@ def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "n_homes": n_homes,
         "k_annual": int(K_ANNUAL),
         "pool_max": int(POOL_MAX_ANNUAL),
+        "res_minutes": int(ANNUAL_RES_MINUTES),
+        "n_steps": int(base0.shape[0]),
         "tmy_hour_of_day_0": hod0,
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "base_peak_kw": round(float(base0.max()), ROUND_DECIMALS),
@@ -151,9 +156,11 @@ def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "base_peak_pct_rating": round(
             float(base0.max()) / _RATING_KW * 100.0, ROUND_DECIMALS
         ),
-        "base_floor_hours": int((base0 > _RATING_KW).sum()),
+        "base_floor_hours": round(
+            float((base0 > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS
+        ),
         "ev_pool_annual_kwh_mean": round(
-            float(ev_pool.sum(axis=1).mean()), ROUND_DECIMALS
+            float(ev_pool.sum(axis=1).mean()) * _HOURS_PER_STEP, ROUND_DECIMALS
         ),
         "fc_base_peaks_kw": fc_peaks,
     }

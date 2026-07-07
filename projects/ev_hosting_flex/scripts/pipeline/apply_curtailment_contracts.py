@@ -43,6 +43,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    ANNUAL_RES_MINUTES,
     DTYPE,
     FC_SIGMAS,
     POWER_FACTOR,
@@ -52,6 +53,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
 )
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
+_HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 ENROLLMENT_GRID = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 """Enrollment fractions swept at 1 EV/home (study-B Fig B grid)."""
@@ -79,21 +81,26 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     firm_payload = json.loads((json_dir / "firm_hosting_annual.json").read_text())
     firm = int(firm_payload["firm_ev_count"])
-    base_floor = int((base > _RATING_KW).sum())
+    base_floor = round(
+        float((base > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS
+    )
     pool_max = pool.shape[0]
 
     # ── Flexible hosting: full-enrollment backstop, zero residual beyond floor ─
     price_curve: list[float] = [0.0]
-    residual_curve: list[int] = [base_floor]
+    residual_curve: list[float] = [base_floor]
     flexible = 0
     for n in range(1, pool_max + 1):
-        out = simulate_curtailment(base, pool[:n], np.ones(n, bool), _RATING_KW)
-        energy = float(pool[:n].sum())
+        out = simulate_curtailment(
+            base, pool[:n], np.ones(n, bool), _RATING_KW,
+            res_minutes=ANNUAL_RES_MINUTES,
+        )
+        energy = float(pool[:n].sum()) * _HOURS_PER_STEP
         price_curve.append(
             round(float(out["curtailed_kwh_by_ev"].sum()) / energy * 100.0, ROUND_DECIMALS)
         )
-        residual_curve.append(int(out["residual_hours"]))
-        if out["residual_hours"] <= base_floor:
+        residual_curve.append(round(float(out["residual_hours"]), ROUND_DECIMALS))
+        if out["residual_hours"] <= base_floor + 1e-9:
             flexible = n
     expansion = (flexible / firm - 1.0) if firm > 0 else None
 
@@ -107,12 +114,14 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         n_enrolled = int(round(rho * n_lever))
         mask = np.zeros(n_lever, bool)
         mask[:n_enrolled] = True
-        out = simulate_curtailment(base, pool[:n_lever], mask, _RATING_KW)
+        out = simulate_curtailment(
+            base, pool[:n_lever], mask, _RATING_KW, res_minutes=ANNUAL_RES_MINUTES
+        )
         enrollment.append(
             {
                 "rho": rho,
                 "n_enrolled": n_enrolled,
-                "residual_hours": int(out["residual_hours"]),
+                "residual_hours": round(float(out["residual_hours"]), ROUND_DECIMALS),
                 "curtailed_kwh": round(
                     float(out["curtailed_kwh_by_ev"].sum()), ROUND_DECIMALS
                 ),
@@ -122,35 +131,41 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     # ── Notice quality per forecast sigma (study-B Fig C) ──────────────────
     # ``called`` uses the ACTUAL EV aggregate on the forecast base: the only
     # day-ahead error channel is the temperature (study-B convention, D-B3).
+    # All masks are at the governed step resolution (overlap fractions cancel).
     full = simulate_curtailment(
-        base, pool[:n_lever], np.ones(n_lever, bool), _RATING_KW
+        base, pool[:n_lever], np.ones(n_lever, bool), _RATING_KW,
+        res_minutes=ANNUAL_RES_MINUTES,
     )
-    actual_hours = full["curtailed_hours"]
+    actual_steps = full["curtailed_steps"]
     ev_aggregate = pool[:n_lever].sum(axis=0)
     notice = {}
     for sigma in FC_SIGMAS:
         fc = np.load(data_dir / f"fc_base_sigma_{sigma:.1f}.npy").astype(DTYPE)
         called = (fc + ev_aggregate) > _RATING_KW
-        n_actual = max(int(actual_hours.sum()), 1)
+        n_actual = max(int(actual_steps.sum()), 1)
         n_called = max(int(called.sum()), 1)
         notice[f"{sigma:.1f}"] = {
             "planned_percent": round(
-                float((called & actual_hours).sum()) / n_actual * 100.0, ROUND_DECIMALS
+                float((called & actual_steps).sum()) / n_actual * 100.0, ROUND_DECIMALS
             ),
             "surprise_percent": round(
-                float((~called & actual_hours).sum()) / n_actual * 100.0,
+                float((~called & actual_steps).sum()) / n_actual * 100.0,
                 ROUND_DECIMALS,
             ),
             "false_alarm_percent": round(
-                float((called & ~actual_hours).sum()) / n_called * 100.0,
+                float((called & ~actual_steps).sum()) / n_called * 100.0,
                 ROUND_DECIMALS,
             ),
         }
 
     # ── Fairness on the full pool (study-B Fig D) ──────────────────────────
-    fair = simulate_curtailment(base, pool, np.ones(pool_max, bool), _RATING_KW)
+    fair = simulate_curtailment(
+        base, pool, np.ones(pool_max, bool), _RATING_KW,
+        res_minutes=ANNUAL_RES_MINUTES,
+    )
     unfair = simulate_curtailment(
-        base, pool, np.ones(pool_max, bool), _RATING_KW, fair=False
+        base, pool, np.ones(pool_max, bool), _RATING_KW, fair=False,
+        res_minutes=ANNUAL_RES_MINUTES,
     )
     fairness = {
         "jain_fair": round(_jain(fair["curtailed_kwh_by_ev"]), ROUND_DECIMALS),

@@ -43,13 +43,20 @@ authoritative sandbox) and the local migration design doc
 | `compute_curtailment_economics` | Two-part contract vs annualized reinforcement + zone of agreement + break-even adoption | `curtailment_economics.json` |
 | `validate_powerflow` | AC validation: peak-day full-net scenario families + cold-day Monte-Carlo on the extracted feeder subnet (CSA C235 + thermal violations) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
 
+The kW chain runs at **15-minute resolution** (`ANNUAL_RES_MINUTES`): hourly
+means understate the sub-hourly coincidence of the few 13 kW baseboards and the
+discrete EV step, so the congestion metrics are computed at the utility
+demand-metering interval (the SDK agent already simulates 1-min, so the finer
+base aggregation is free; the AC validation layer stays hourly).
+
 ## Headlines (governed pins, `baselines/results_baseline.json`)
 
-- **Firm = 4 EVs** (P95 cold-evening rule crosses 100 % between 4 and 5).
-- **Flexible = 12 EVs (+200 %)**: the full-enrollment backstop hosts the whole
-  pool with zero residual congestion, curtailing **4.4 %** of EV energy
-  (~110 kWh and ~27 events per EV·year), shared fairly (Jain 0.9992).
-- **Notice**: at σ_T = 1.5 °C day-ahead forecast error, 85 % of curtailment
+- **Firm = 2 EVs** (P95 cold-evening rule crosses 100 % between 2 and 3 at
+  15-min resolution; hourly aggregation gave a too-generous 3).
+- **Flexible = 12 EVs (+500 %)**: the full-enrollment backstop hosts the whole
+  pool with zero residual congestion, curtailing **6.1 %** of EV energy,
+  shared fairly (Jain 0.9999).
+- **Notice**: at σ_T = 1.5 °C day-ahead forecast error, ~97 % of curtailment
   arrives pre-notified; the backstop covers the rest (no forecast-blindness).
 - **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
   annualized reinforcement up to **5 EVs (83 % adoption)** — the technical

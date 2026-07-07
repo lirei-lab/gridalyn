@@ -43,6 +43,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+    aggregate_to_hourly,
     load_annual_tmy,
     simulate_curtailment,
     tmy_hour_of_day,
@@ -55,6 +56,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     run_feeder_mc,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+    ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
     DTYPE,
     NETWORK_PENETRATION_SCENARIOS,
@@ -136,15 +138,21 @@ def build_scenario_profiles(
             "(prepare_topology_cache.py) so feeder_selection.json matches the net."
         )
 
+    # The curtailment backstop runs at the GOVERNED step resolution (correct
+    # energy/headroom), THEN the whole AC layer works on the HOURLY aggregate:
+    # 96-step power flows would ~4x a validation cost for no gate value, so the
+    # AC layer is deliberately the hourly view of the 15-min governed arrays.
+    backstop = simulate_curtailment(
+        base_annual, pool[:flexible], np.ones(flexible, bool), _FEEDER_RATING_KW,
+        res_minutes=ANNUAL_RES_MINUTES,
+    )
+    base_annual = aggregate_to_hourly(base_annual)
+    pool = aggregate_to_hourly(pool)
+    served = aggregate_to_hourly(backstop["served_ev_kw"])
+
     # The year's binding day: peak hour of base + the full unmanaged pool.
     pool_flex = pool[:flexible].sum(axis=0)
     peak_day = int(np.argmax(base_annual + pool_flex) // 24)
-
-    # The curtailment backstop's served EV profile (full pool, all enrolled).
-    backstop = simulate_curtailment(
-        base_annual, pool[:flexible], np.ones(flexible, bool), _FEEDER_RATING_KW
-    )
-    served = backstop["served_ev_kw"]
 
     base_day = _day_slice(base_annual, peak_day, hod0)
     per_home_base = base_day / float(n_homes)
