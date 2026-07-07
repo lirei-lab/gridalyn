@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.849268,
+      "expected": 0.908208,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -26,7 +26,7 @@
       "tolerance": 0
     },
     {
-      "expected": 216,
+      "expected": 79,
       "id": "pf.post_ev_1p5_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.747381,
+      "expected": 0.841344,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -133,7 +133,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.04908,
+      "expected": 0.042945,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
@@ -144,7 +144,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.595092,
+      "expected": 0.564417,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 107.983316,
+      "expected": 105.617675,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",

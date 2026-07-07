@@ -65,6 +65,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     COLD_DAY_TMEAN_C,
     DTYPE,
     LV_DYNAMIC_RATING_K,
+    LV_LINE_UTIL_TARGET,
+    LV_LINE_VDROP_BUDGET_PU,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
@@ -85,21 +87,26 @@ def _load_net(cache_dir: Path) -> Any:
         return pickle.load(handle)
 
 
-def size_transformers_to_load(
+def size_network_to_load(
     net: Any,
     cache_dir: Path,
     temp_hourly: Any,
     design_day_idx: int,
     feeder_idx: int,
 ) -> dict[str, Any]:
-    """Resize each LV transformer's ``sn_mva`` to its load-matched standard kVA.
+    """Size the LV transformers AND secondary conductors to their design load.
 
     HQ-style sizing (2026-07-07): each LV transformer's downstream homes carry
     the SDK per-home design-cold base of THEIR cluster's home count; the
-    transformer takes the smallest standard kVA covering that aggregate load.
-    Mutates ``net.trafo.sn_mva`` in place (impedance scales with it, so the AC
-    voltage drop is physical). The GOVERNED study feeder is pinned at
-    ``TRANSFORMER_KVA`` so the firm/flexible headlines are untouched.
+    transformer takes the smallest standard kVA covering that aggregate load,
+    and each LV line is upsized so its design-cold current sits at
+    ``LV_LINE_UTIL_TARGET`` of the (re-sized) conductor ampacity — a thicker
+    conductor raises ampacity AND lowers impedance, recovering both the thermal
+    margin and the LV voltage (the network verification found the SDK
+    load_aware LV lines undersized for the winter peak). Mutates
+    ``net.trafo.sn_mva`` and the LV ``net.line`` impedance/ampacity in place
+    (physical AC). The GOVERNED study feeder transformer is pinned at
+    ``TRANSFORMER_KVA``.
 
     Args:
         net: Loaded pandapower net (mutated in place).
@@ -109,8 +116,8 @@ def size_transformers_to_load(
         feeder_idx: Study feeder transformer index (kept at TRANSFORMER_KVA).
 
     Returns:
-        Dict with the per-home design-day base per size, the size→bus map, and
-        the assigned kVA per size (for the report + the network family).
+        Dict with the per-home design-day base per size, the size→bus map, the
+        assigned kVA per size, and the LV-line upsizing count.
     """
     downstream_map = json.loads((cache_dir / "downstream_bus_map.json").read_text())
     homes_by_bus = net.load.groupby("bus").size()
@@ -143,11 +150,52 @@ def size_transformers_to_load(
             kva = kva_by_size[n]
         net.trafo.at[idx, "sn_mva"] = kva / 1000.0
 
+    # ── LV secondary conductors sized to design-cold current + voltage drop ─
+    # Each LV line's design current follows from the homes downstream of it
+    # (all on one transformer -> one cluster size). Real LV design sizes for
+    # BOTH thermal ampacity AND voltage drop; the binding scale is the max.
+    # A thicker conductor (scale s) raises ampacity xs and lowers impedance /s,
+    # so both the thermal margin and the per-line voltage drop improve by s.
+    pf = float(POWER_FACTOR)
+    sinphi = float(np.sqrt(1.0 - pf * pf))
+    n_lines_upsized = 0
+    vn_by_bus = net.bus["vn_kv"]
+    for line_idx in net.line.index:
+        from_bus = int(net.line.at[line_idx, "from_bus"])
+        if float(vn_by_bus.loc[from_bus]) >= 1.0:  # LV lines only
+            continue
+        downstream = downstream_map.get(f"line:{int(line_idx)}", [])
+        down_buses = [int(b) for b in downstream if int(b) in homes_by_bus.index]
+        if not down_buses:
+            continue
+        n_down_homes = int(homes_by_bus.reindex(down_buses).fillna(0).sum())
+        cluster_size = size_by_loadbus[down_buses[0]]
+        per_home_peak = float(base_by_size[cluster_size].max())
+        design_load_mw = n_down_homes * per_home_peak / 1000.0
+        vn_kv = float(vn_by_bus.loc[from_bus])
+        design_i_ka = design_load_mw / (np.sqrt(3.0) * vn_kv * pf)
+        r = float(net.line.at[line_idx, "r_ohm_per_km"])
+        x = float(net.line.at[line_idx, "x_ohm_per_km"])
+        length_km = float(net.line.at[line_idx, "length_km"])
+        current_i_ka = float(net.line.at[line_idx, "max_i_ka"])
+        thermal_scale = design_i_ka / (float(LV_LINE_UTIL_TARGET) * current_i_ka)
+        vdrop_pu = (
+            np.sqrt(3.0) * design_i_ka * (r * pf + x * sinphi) * length_km / vn_kv
+        )
+        voltage_scale = vdrop_pu / float(LV_LINE_VDROP_BUDGET_PU)
+        scale = max(1.0, thermal_scale, voltage_scale)
+        if scale > 1.0:
+            net.line.at[line_idx, "max_i_ka"] = current_i_ka * scale
+            net.line.at[line_idx, "r_ohm_per_km"] = r / scale
+            net.line.at[line_idx, "x_ohm_per_km"] = x / scale
+            n_lines_upsized += 1
+
     return {
         "base_by_size": base_by_size,
         "size_by_loadbus": size_by_loadbus,
         "kva_by_size": kva_by_size,
         "size_by_trafo": size_by_trafo,
+        "n_lv_lines_upsized": n_lines_upsized,
     }
 
 
@@ -200,8 +248,8 @@ def build_scenario_profiles(
             "(prepare_topology_cache.py) so feeder_selection.json matches the net."
         )
 
-    # ── HQ-style transformer sizing: each LV unit matched to its own load ──
-    sizing = size_transformers_to_load(
+    # ── HQ-style sizing: transformers AND LV conductors matched to load ────
+    sizing = size_network_to_load(
         net, cache_dir, temp_hourly, design_day, feeder_idx
     )
     base_by_size = sizing["base_by_size"]
@@ -245,7 +293,9 @@ def build_scenario_profiles(
             for k in sorted(set(sizing["size_by_trafo"].values()))
             if k > 0
         },
-        "basis": "HQ load-matched transformers + SDK per-size base + C57.91 dynamic rating",
+        "lv_line_util_target": float(LV_LINE_UTIL_TARGET),
+        "n_lv_lines_upsized": int(sizing["n_lv_lines_upsized"]),
+        "basis": "HQ load-matched transformers + LV conductors + SDK per-size base + C57.91 dynamic rating",
     }
 
     # ── Feeder-unit cold-day MC: the curtailment backstop runs at the GOVERNED

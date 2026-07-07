@@ -1092,3 +1092,27 @@ count (loading > ``100 × LV_DYNAMIC_RATING_K`` = 140 %) — a transformer above
 nameplate but below the dynamic limit is loaded, not thermally overloaded. The
 GOVERNED firm/flexible gate stays on the conservative STATIC feeder rating
 (``TRANSFORMER_KVA × POWER_FACTOR``); this factor is reporting-only."""
+
+LV_LINE_UTIL_TARGET = 0.85
+"""Design-cold thermal utilization target the LV secondary conductors are sized
+to (2026-07-07 network verification). Like the transformers, the SDK
+``load_aware`` line sizing used the clustering's soft coincident model
+(10 kW/home diversified), but the SDK design-cold load is ~11 kW/home with
+near-zero diversity — so the LV conductors are undersized for the Québec
+all-electric winter peak, causing pre-EV line overloads on the larger clusters.
+The validate_powerflow stage upsizes each LV line so its design-cold current
+sits at this fraction of the (re-sized) conductor ampacity. GOVERNED chain
+untouched (in-memory, AC layer only)."""
+
+LV_LINE_VDROP_BUDGET_PU = 0.01
+"""Per-conductor design-cold voltage-drop budget (pu) the LV lines are ALSO
+sized to (2026-07-07 verification). Real LV design sizes conductors for BOTH
+thermal ampacity AND voltage drop — on loaded runs the voltage constraint
+usually binds. Sizing only for thermal (``LV_LINE_UTIL_TARGET``) fixed the line
+overloads but left the LV secondary undervoltage (the drop is spread over many
+lines within their thermal limit). Each LV line is upsized so its design-cold
+per-line drop ``√3·I·(R·pf + X·sinφ)·length / Vn`` ≤ this budget; the binding
+scale is ``max(thermal, voltage)``. NOTE (documented modeling boundary): this
+sizes the LV SECONDARY only — the residual deep-feeder undervoltage (~0.91 pu)
+is the inherent drop of the long 25 kV MV feeder, which a real network holds
+with the substation LTC / line regulators, not conductor gauge."""

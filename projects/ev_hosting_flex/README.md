@@ -81,13 +81,19 @@ work. See `cold_coupling_comparison.png`.
 - **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
   annualized reinforcement up to **5 EVs (83 % adoption)** — the technical
   +200 % vs the economic +25 % is the study's two-sided headline.
-- **AC network validation (load-matched HQ fleet)**: with each of the 540 LV
-  transformers sized to its own downstream load and rated for the −20 °C
-  ambient (IEEE C57.91, K≈1.4), the network is healthy before EVs (~1
-  transformer over the dynamic limit, not the 213 of the uniform-75 kVA fleet)
-  and congestion, voltage drops and line overloads all escalate cleanly with
-  adoption. The governed 6-home / 75 kVA feeder (idx-10) stays fixed, so the
-  firm/flexible headlines are unaffected.
+- **AC network validation (load-matched HQ fleet)**: each of the 540 LV
+  transformers is sized to its own downstream load and rated for the −20 °C
+  ambient (IEEE C57.91, K≈1.4), and each LV secondary conductor is sized for
+  BOTH thermal ampacity (~85 %) and voltage drop (≤1 %/conductor). The network
+  verification found the SDK `load_aware` conductors undersized for the winter
+  peak (40 lines over 100 % and 468 LV buses below CSA 0.917 pu before any EV,
+  on the larger clusters); sizing to load clears the thermal overloads and the
+  LV-secondary undervoltage. Documented modeling boundary: the residual
+  deep-feeder undervoltage (~0.91 pu) is the inherent drop of the long 25 kV MV
+  feeder, which a real network holds with the substation LTC / line regulators
+  (not conductor gauge). Congestion, voltage drops and line overloads all
+  escalate cleanly with EV adoption; the governed 6-home / 75 kVA feeder stays
+  fixed.
 - **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
   uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
   MC shows the firm count overloading a few % of cold days (losses/reactive
