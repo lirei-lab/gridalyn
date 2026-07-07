@@ -52,9 +52,8 @@ spec:
   validation:
     requiredReports:
       - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
-      - projects/ev_hosting_flex/outputs/reports/design_day_mc_report.json
-      - projects/ev_hosting_flex/outputs/reports/congestion_report.json
-      - projects/ev_hosting_flex/outputs/reports/flexibility_contracts_report.json
-      - projects/ev_hosting_flex/outputs/reports/twostage_program_report.json
-      - projects/ev_hosting_flex/outputs/reports/nonwires_economics_report.json
+      - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+      - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
+      - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
+      - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
       - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json

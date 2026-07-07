@@ -1,14 +1,14 @@
-"""Deterministic design-day AC power-flow kernel for the validation stage.
+"""AC power-flow kernel for the annual validation stage.
 
-Builds the per-home hourly load profiles (deterministic heating-degree base +
-diversified coincident EV overlay), runs the cached pandapower twin hour by
-hour per scenario, and counts CSA C235 voltage / thermal violations. Pure
-functions over numpy/pandas; the governed wiring (cache paths, scenario matrix,
-report) lives in ``pipeline/validate_powerflow.py``.
+Runs the cached pandapower twin hour by hour per scenario (24-h day profiles),
+extracts the study feeder's subtree for the cold-day Monte-Carlo sampling, and
+counts CSA C235 voltage / thermal violations. Pure functions over numpy/pandas;
+the governed wiring (annual artifacts, scenario matrix, report) lives in
+``pipeline/validate_powerflow.py``.
 
 GUARD-02: no module-scope ``import pandapower`` — the solver import is deferred
-inside :func:`run_design_day_powerflow` so cache-free unit tests of the profile
-and violation helpers never pull the heavy dependency.
+inside the runners so cache-free unit tests of the violation helpers never pull
+the heavy dependency.
 """
 
 from __future__ import annotations
@@ -19,128 +19,14 @@ import numpy as np
 import pandas as pd
 
 from projects.ev_hosting_flex.scripts.config import (
-    BG_KW,
-    CHARGING_WINDOW,
-    DIVERSITY_FACTOR,
     DTYPE,
-    EV_UNIT_KW,
     POWER_FACTOR,
-    R_THERM,
     SLACK_VM_PU,
-    T_BALANCE,
     VOLTAGE_LIMITS_PU,
 )
 
 N_DESIGN_HOURS = 24
-"""Hourly step count of the design-day validation profiles."""
-
-
-def design_day_hourly_temps() -> np.ndarray:
-    """Return the design day's 24 hourly mean temperatures (°C, float64).
-
-    Reuses the governed design-day seam (``_generators.select_design_day`` over
-    the committed TMY — empirically 1990-01-19) and aggregates the native 1-min
-    frame to hourly means, mirroring the MC kernel's aggregation step.
-
-    Returns:
-        A ``(24,)`` float64 array of hourly mean ``temp_air``.
-
-    Raises:
-        ValueError: If the selected design day does not aggregate to 24 hours.
-    """
-    from projects.ev_hosting_flex.scripts._generators import select_design_day
-
-    day = select_design_day()
-    hourly = day["temp_air"].resample("1h").mean().to_numpy(dtype=DTYPE)
-    if hourly.shape != (N_DESIGN_HOURS,):
-        raise ValueError(
-            f"design_day_hourly_temps aggregated to shape {hourly.shape}, "
-            f"expected ({N_DESIGN_HOURS},). Remediation: verify the committed "
-            "TMY covers the full design day at 1-min resolution."
-        )
-    return hourly
-
-
-def base_profile_per_home_kw(temps_c: np.ndarray) -> np.ndarray:
-    """Return the deterministic per-home heating-degree base profile (kW).
-
-    ``load(t) = max(0, T_BALANCE − T(t)) / R_THERM + BG_KW`` — the manuscript's
-    deterministic design anchor (D-08; at −25 °C it reproduces the 6.5 kW/home
-    ADMD). The stochastic Monte-Carlo base lives in stages 3–6; this layer is
-    deliberately deterministic so the AC validation is reproducible without an
-    ensemble.
-
-    Args:
-        temps_c: ``(24,)`` hourly temperatures in °C.
-
-    Returns:
-        A ``(24,)`` float64 per-home load profile in kW.
-    """
-    temps = np.asarray(temps_c, dtype=DTYPE)
-    heating = np.maximum(0.0, (float(T_BALANCE) - temps)) / float(R_THERM)
-    return (heating + float(BG_KW)).astype(DTYPE)
-
-
-def ev_profile_per_home_kw(penetration: float) -> np.ndarray:
-    """Return the diversified coincident per-home EV overlay profile (kW).
-
-    ``penetration × EV_UNIT_KW × DIVERSITY_FACTOR`` (2.52 kW per EV coincident,
-    D-05) applied flat inside the evening ``CHARGING_WINDOW`` (end-exclusive),
-    zero elsewhere. Fractional penetrations scale linearly (the diversified
-    aggregate view).
-
-    Args:
-        penetration: EVs per home (≥ 0; 0.0 returns the all-zero profile).
-
-    Returns:
-        A ``(24,)`` float64 per-home EV draw profile in kW.
-
-    Raises:
-        ValueError: If ``penetration`` is negative.
-    """
-    if penetration < 0.0:
-        raise ValueError(
-            f"ev_profile_per_home_kw received penetration={penetration}; the "
-            "EV overlay is a physical draw and must be >= 0."
-        )
-    profile = np.zeros(N_DESIGN_HOURS, dtype=DTYPE)
-    start, end = CHARGING_WINDOW
-    coincident_kw = float(penetration) * float(EV_UNIT_KW) * float(DIVERSITY_FACTOR)
-    profile[start:end] = coincident_kw
-    return profile
-
-
-def clip_to_headroom(
-    ev_kw: np.ndarray, base_kw: np.ndarray, rating_kw: float
-) -> np.ndarray:
-    """Clip an aggregate EV profile to the transformer headroom, hour by hour.
-
-    ``a(t) = min(ev(t), max(0, rating − base(t)))`` — the deferral/power-limiting
-    mechanism ENVELOPE: by construction the composed feeder load never exceeds
-    the rating, which is exactly what the AC validation needs to show the
-    "after with flexibility" network state. Energy bookkeeping (carry-forward,
-    unserved fractions) is the stages-5/6 kernels' job, not this layer's.
-
-    Args:
-        ev_kw: ``(24,)`` aggregate EV draw in kW.
-        base_kw: ``(24,)`` aggregate base load in kW.
-        rating_kw: Transformer usable rating in kW (> 0).
-
-    Returns:
-        A ``(24,)`` float64 clipped EV profile in kW.
-
-    Raises:
-        ValueError: If ``rating_kw`` is not positive.
-    """
-    if rating_kw <= 0.0:
-        raise ValueError(
-            f"clip_to_headroom received rating_kw={rating_kw}; the headroom "
-            "clip needs a positive transformer rating."
-        )
-    ev = np.asarray(ev_kw, dtype=DTYPE)
-    base = np.asarray(base_kw, dtype=DTYPE)
-    headroom = np.maximum(0.0, float(rating_kw) - base)
-    return np.minimum(ev, headroom).astype(DTYPE)
+"""Hourly step count of the per-day validation profiles."""
 
 
 def run_design_day_powerflow(

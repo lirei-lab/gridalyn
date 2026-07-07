@@ -3,9 +3,11 @@ kind: Workflow
 metadata:
   name: ev_hosting_flex_pipeline
   description: >-
-    Executes the governed EV hosting-capacity flexibility study: synthetic
-    radial twin, annual profiles, congestion proxy, per-node flexibility
-    contracts, peak-hour AC validation, and canonical reports.
+    Executes the governed study-B EV hosting-capacity study: synthetic radial
+    twin, annual SDK-agent Monte-Carlo base + cold-coupled EV pool, cold-day
+    P95 firm hosting, curtailment contracts with day-ahead notice and a fair
+    real-time backstop, contract-vs-reinforcement economics, and annual AC
+    power-flow validation.
 spec:
   stages:
     # ── Stage 1: workspace scaffolding (live) ────────────────────────────
@@ -33,11 +35,10 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/building_footprint_validation_report.json
         - projects/ev_hosting_flex/outputs/cache/topology_cache_manifest.json
 
-    # ── Stage 3b: study-B annual Monte-Carlo seam (live, F1 of the annual
-    # migration — docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-
-    # annual-migration.md). Runs ALONGSIDE the design-day seam until F6 retires
-    # it: SDK-agent annual base (R_STUDY_B), day-ahead forecast bases, and the
-    # cold-coupled nested EV pool.
+    # ── Stage 3: study-B annual Monte-Carlo seam — SDK-agent annual base
+    # (R_STUDY_B), day-ahead forecast bases, and the cold-coupled nested EV
+    # pool (docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-annual-
+    # migration.md).
     - id: generate_annual_mc
       needs: [prepare_topology_cache]
       command: uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
@@ -100,140 +101,6 @@ spec:
         - projects/ev_hosting_flex/outputs/json/curtailment_economics.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
 
-    # ── Stage 3: design-day Monte-Carlo generation seam (live, GEN-01..04) ─
-    # Phase-13 RETIRE-01: replaces the retired `generate_annual_profiles`
-    # annual 8760h degree-day stage. Emits the design-day transformer-load
-    # ensemble Q_real (K, n_steps) + the day-ahead forecast Q_design + the
-    # nested-EV pool the Phase-14 firm sweep overlays.
-    - id: generate_design_day_mc
-      needs: [prepare_topology_cache]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/generate_design_day_mc.py
-      inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/generate_design_day_mc.py
-        - projects/ev_hosting_flex/scripts/_generators.py
-        - projects/ev_hosting_flex/scripts/_stochastic.py
-        - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
-        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
-        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
-        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
-      outputs:
-        - projects/ev_hosting_flex/outputs/data/q_real.npy
-        - projects/ev_hosting_flex/outputs/data/q_design.npy
-        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
-        - projects/ev_hosting_flex/outputs/reports/design_day_mc_report.json
-
-    # ── Stage 4: congestion proxy + firm hosting limit (live, CONG-01/02/03) ─
-    # The DAG edge + input declarations are retargeted to the Phase-13 design-day
-    # seam here; the stage BODY (compute_congestion.py) is retargeted in Phase 14
-    # to consume q_real/q_design/ev_pool_design. The legacy base_load_8760 /
-    # ev_load_unit / ev_stack_K.npy inputs are removed from the DAG (RETIRE-01);
-    # Phase 14 wires the new artifacts once the body migrates.
-    - id: compute_congestion
-      needs: [generate_design_day_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_congestion.py
-      inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/compute_congestion.py
-        - projects/ev_hosting_flex/scripts/_congestion.py
-        - projects/ev_hosting_flex/scripts/_stochastic.py
-        - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/outputs/data/q_real.npy
-        - projects/ev_hosting_flex/outputs/data/q_design.npy
-        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
-        - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
-        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
-        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
-        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
-        - projects/ev_hosting_flex/outputs/cache/grid_cache_meta.json
-      outputs:
-        - projects/ev_hosting_flex/outputs/data/line_loading_firm.parquet
-        - projects/ev_hosting_flex/outputs/data/line_loading_p95.parquet
-        - projects/ev_hosting_flex/outputs/json/congestion_metrics.json
-        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
-        - projects/ev_hosting_flex/outputs/reports/congestion_report.json
-
-    # ── Stage 5: two-stage day-ahead flexibility controller (live, CTRL-01..04) ─
-    # Phase-15 RETIRE-02 re-point: replaces the retired power-limited/availability
-    # energy-gated sweep with the two-stage controller — plan r_t = Q_{1-eps} on
-    # Q_design (re-anchored compose_scenarios), validate realized P(overload after
-    # activation) <= eps OUT-OF-SAMPLE on a disjoint Q_real ensemble (+ an
-    # adversarial colder-Q_real test), report reserve-vs-activation resource value,
-    # and derive the re-baselined flexible_ev_count -> hosting_expansion_percent
-    # headline (firm 3 -> flexible). The stage BODY is re-pointed in Plan 03; the
-    # input/output wiring is re-pointed here onto the Phase-13/14 artifact set.
-    - id: apply_flexibility_contracts
-      needs: [compute_congestion]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/apply_flexibility_contracts.py
-      inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/apply_flexibility_contracts.py
-        - projects/ev_hosting_flex/scripts/_twostage.py
-        - projects/ev_hosting_flex/scripts/_generators.py
-        - projects/ev_hosting_flex/scripts/_congestion.py
-        - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/outputs/data/q_real.npy
-        - projects/ev_hosting_flex/outputs/data/q_design.npy
-        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
-        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
-        - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
-        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
-        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
-        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
-      outputs:
-        - projects/ev_hosting_flex/outputs/data/reserve_activation.parquet
-        - projects/ev_hosting_flex/outputs/data/realized_reliability.parquet
-        - projects/ev_hosting_flex/outputs/json/flexible_hosting.json
-        - projects/ev_hosting_flex/outputs/reports/flexibility_contracts_report.json
-
-    # ── Stage 6: two-stage program — eps-frontier + cvxpy↔oracle proof (live, TWOSTAGE-05/06) ─
-    # Phase-15 RETIRE-02 re-point: stage 6 keeps ONLY the eps-frontier sensitivity
-    # + the cvxpy↔oracle ≤1e-6 equivalence proof, re-pointed onto the Q_design-
-    # anchored ensemble (the retired annual headline / annual base / annual EV
-    # stack / TMY annual path is gone). The stage BODY is re-pointed in Plan 02; the
-    # input/output wiring is re-pointed here onto q_real/q_design/ev_pool_design.
-    - id: solve_twostage_program
-      needs: [apply_flexibility_contracts]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
-      inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/solve_twostage_program.py
-        - projects/ev_hosting_flex/scripts/_twostage.py
-        - projects/ev_hosting_flex/scripts/_generators.py
-        - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/outputs/data/q_real.npy
-        - projects/ev_hosting_flex/outputs/data/q_design.npy
-        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
-        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
-      outputs:
-        - projects/ev_hosting_flex/outputs/json/optimal_hosting.json
-        - projects/ev_hosting_flex/outputs/data/twostage_frontier.parquet
-        - projects/ev_hosting_flex/outputs/data/reserve_activation_coldday.parquet
-        - projects/ev_hosting_flex/outputs/reports/twostage_program_report.json
-
-    # ── Stage 6.5: non-wires economics (ECON-01 wiring / ECON-03 ledger) ──
-    - id: compute_nonwires_economics
-      needs: [apply_flexibility_contracts, solve_twostage_program]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_nonwires_economics.py
-      inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/compute_nonwires_economics.py
-        - projects/ev_hosting_flex/scripts/_economics.py
-        - projects/ev_hosting_flex/scripts/_generators.py
-        - projects/ev_hosting_flex/scripts/_congestion.py
-        - projects/ev_hosting_flex/scripts/config.py
-        - projects/ev_hosting_flex/outputs/data/q_real.npy
-        - projects/ev_hosting_flex/outputs/data/q_design.npy
-        - projects/ev_hosting_flex/outputs/data/ev_pool_design.npy
-        - projects/ev_hosting_flex/outputs/json/firm_hosting.json
-        - projects/ev_hosting_flex/outputs/json/flexible_hosting.json
-      outputs:
-        - projects/ev_hosting_flex/outputs/data/nonwires_economics_breakeven.csv
-        - projects/ev_hosting_flex/outputs/data/nonwires_economics_sensitivity.csv
-        - projects/ev_hosting_flex/outputs/data/nonwires_economics_npv.csv
-        - projects/ev_hosting_flex/outputs/json/nonwires_economics.json
-        - projects/ev_hosting_flex/outputs/figures/breakeven_nonwires.png
-        - projects/ev_hosting_flex/outputs/figures/breakeven_nonwires.pdf
-        - projects/ev_hosting_flex/outputs/figures/nonwires_economics.png
-        - projects/ev_hosting_flex/outputs/figures/nonwires_economics.pdf
-        - projects/ev_hosting_flex/outputs/reports/nonwires_economics_report.json
-
     # ── Stage 7: pandapower AC annual validation (live, F5 of the migration) ─
     # Before/after-EV network behavior on the study-B annual artifacts: the
     # peak-day full-net scenario families (network adoption + governed feeder
@@ -271,5 +138,5 @@ spec:
 
     # ── Stage 7: canonical reports + baseline (stubbed — Phase 12) ───────
     - id: build_study_reports
-      needs: [apply_flexibility_contracts, validate_powerflow]
-      command: echo "STUB build_study_reports — implemented in Phase 12"
+      needs: [compute_curtailment_economics, validate_powerflow]
+      command: echo "STUB build_study_reports — canonical study report pending"

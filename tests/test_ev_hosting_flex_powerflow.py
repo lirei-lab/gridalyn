@@ -2,8 +2,8 @@
 
 Three tiers, mirroring the project's test conventions:
 
-1. HAND-COMPUTED KERNEL TESTS — cache-free unit tests of the profile builders
-   and the violation counters in ``_powerflow.py`` (no pandapower net needed).
+1. HAND-COMPUTED KERNEL TESTS — cache-free unit tests of the violation
+   counters in ``_powerflow.py`` (no pandapower net needed).
 2. MINI-NET CONVERGENCE — a 3-bus real pandapower net through the 24-hour
    kernel, asserting output shapes and physical sanity.
 3. GOVERNED REPRODUCE-AND-PIN — reads the EMITTED ``powerflow_violations.json``
@@ -23,23 +23,14 @@ import pytest
 
 from projects.ev_hosting_flex.scripts._powerflow import (
     N_DESIGN_HOURS,
-    base_profile_per_home_kw,
-    clip_to_headroom,
     count_violations,
-    ev_profile_per_home_kw,
     extract_feeder_subnet,
     run_design_day_powerflow,
     run_feeder_mc,
 )
 from projects.ev_hosting_flex.scripts.config import (
-    BG_KW,
-    CHARGING_WINDOW,
-    DIVERSITY_FACTOR,
-    EV_UNIT_KW,
     NETWORK_PENETRATION_SCENARIOS,
     PROJECT_OUTPUTS_DIR,
-    R_THERM,
-    T_BALANCE,
 )
 
 _VIOLATIONS_PATH = PROJECT_OUTPUTS_DIR / "json" / "powerflow_violations.json"
@@ -54,53 +45,6 @@ _SKIP_REASON = (
 
 
 # ─── 1. Hand-computed kernel tests (cache-free) ──────────────────────────
-
-
-def test_base_profile_design_cold_reproduces_admd() -> None:
-    """At the −25 °C design cold the heating-degree base lands at ~6.5 kW/home."""
-    temps = np.full(N_DESIGN_HOURS, -25.0)
-    profile = base_profile_per_home_kw(temps)
-    expected = (float(T_BALANCE) + 25.0) / float(R_THERM) + float(BG_KW)
-    assert profile.shape == (N_DESIGN_HOURS,)
-    assert profile == pytest.approx(np.full(N_DESIGN_HOURS, expected))
-    assert expected == pytest.approx(6.5, abs=0.02)  # the ADMD anchor
-
-
-def test_base_profile_clamps_above_balance_point() -> None:
-    """Above T_BALANCE the heating term is zero — only BG_KW remains."""
-    temps = np.full(N_DESIGN_HOURS, float(T_BALANCE) + 10.0)
-    assert base_profile_per_home_kw(temps) == pytest.approx(
-        np.full(N_DESIGN_HOURS, float(BG_KW))
-    )
-
-
-def test_ev_profile_window_and_scaling() -> None:
-    """The EV overlay sits flat inside CHARGING_WINDOW and scales linearly."""
-    start, end = CHARGING_WINDOW
-    one = ev_profile_per_home_kw(1.0)
-    coincident = float(EV_UNIT_KW) * float(DIVERSITY_FACTOR)
-    assert one[start:end] == pytest.approx(np.full(end - start, coincident))
-    outside = np.concatenate([one[:start], one[end:]])
-    assert outside == pytest.approx(np.zeros(N_DESIGN_HOURS - (end - start)))
-    assert ev_profile_per_home_kw(0.0) == pytest.approx(np.zeros(N_DESIGN_HOURS))
-    assert ev_profile_per_home_kw(1.5) == pytest.approx(1.5 * one)
-    with pytest.raises(ValueError, match="penetration"):
-        ev_profile_per_home_kw(-0.1)
-
-
-def test_clip_to_headroom_hand_computed() -> None:
-    """The clip never lets base + EV exceed the rating; zero headroom clips to 0."""
-    ev = np.full(N_DESIGN_HOURS, 10.0)
-    base = np.full(N_DESIGN_HOURS, 65.0)
-    base[5] = 75.0  # over-rating hour -> zero headroom
-    clipped = clip_to_headroom(ev, base, 71.25)
-    assert clipped[0] == pytest.approx(6.25)
-    assert clipped[5] == pytest.approx(0.0)
-    # The clip guarantees the EV ADDITION never pushes past the rating; a base
-    # already over the rating stays as-is (the clip adds zero on top of it).
-    assert np.all(base + clipped <= np.maximum(base, 71.25) + 1e-12)
-    with pytest.raises(ValueError, match="rating_kw"):
-        clip_to_headroom(ev, base, 0.0)
 
 
 def test_count_violations_hand_built_frames() -> None:
