@@ -101,6 +101,24 @@ spec:
         - projects/ev_hosting_flex/outputs/json/curtailment_economics.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
 
+    # ── Stage 6c: cold-coupling comparison (the study's lead finding) ────────
+    # Does a naive (cold-agnostic) EV model overestimate winter hosting? Re-runs
+    # firm/flexible/curtailment on a naive counterfactual pool vs the governed
+    # cold-coupled pool and quantifies the over-estimation.
+    - id: analyze_cold_coupling
+      needs: [generate_annual_mc]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/cold_coupling_comparison.json
+        - projects/ev_hosting_flex/outputs/figures/cold_coupling_comparison.png
+        - projects/ev_hosting_flex/outputs/reports/cold_coupling_report.json
+
     # ── Stage 7: pandapower AC annual validation (live, F5 of the migration) ─
     # Before/after-EV network behavior on the study-B annual artifacts: the
     # peak-day full-net scenario families (network adoption + governed feeder

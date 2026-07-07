@@ -49,6 +49,26 @@ discrete EV step, so the congestion metrics are computed at the utility
 demand-metering interval (the SDK agent already simulates 1-min, so the finer
 base aggregation is free; the AC validation layer stays hourly).
 
+## Lead finding: cold-coupled EV charging shrinks winter hosting
+
+In a cold all-electric network the winter heating peak coincides with the
+evening EV-charging peak, and EVs charge MORE on the coldest evenings (higher
+plug-in probability + larger sessions). `analyze_cold_coupling` re-runs the
+firm/flexible/curtailment analysis on a NAIVE (cold-agnostic) EV model — the
+standard hosting-study assumption of a fixed year-round profile — against the
+governed cold-coupled model:
+
+- A naive model **overestimates the firm winter hosting limit by 50 %** (3 vs
+  2 EVs on the 6-home feeder).
+- It **underestimates the curtailment the flexibility contract must deliver
+  ~2.8×** (2.2 % vs 6.1 % of EV energy).
+- Driver: the cold-coupled model puts **+54 % more EV energy on cold days**,
+  exactly when the electric-heating base also peaks.
+
+Takeaway: cold-climate EV hosting studies need cold-coupled charging demand;
+a typical/mild profile is optimistic about both the limit and the flexibility
+work. See `cold_coupling_comparison.png`.
+
 ## Headlines (governed pins, `baselines/results_baseline.json`)
 
 - **Firm = 2 EVs** (P95 cold-evening rule crosses 100 % between 2 and 3 at

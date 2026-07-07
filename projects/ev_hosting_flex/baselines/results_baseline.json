@@ -164,6 +164,55 @@
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 2,
+      "id": "coldcoupling.firm_cold",
+      "json_path": [
+        "models",
+        "cold_coupled",
+        "firm_ev_count"
+      ],
+      "source": "outputs/json/cold_coupling_comparison.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 3,
+      "id": "coldcoupling.firm_naive",
+      "json_path": [
+        "models",
+        "naive",
+        "firm_ev_count"
+      ],
+      "source": "outputs/json/cold_coupling_comparison.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 50.0,
+      "id": "coldcoupling.firm_overestimate_percent",
+      "json_path": [
+        "firm_overestimate_percent"
+      ],
+      "source": "outputs/json/cold_coupling_comparison.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 2.784901,
+      "id": "coldcoupling.curtailment_underestimate_ratio",
+      "json_path": [
+        "curtailment_underestimate_ratio"
+      ],
+      "source": "outputs/json/cold_coupling_comparison.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 53.532985,
+      "id": "coldcoupling.cold_day_ev_energy_uplift_percent",
+      "json_path": [
+        "cold_day_ev_energy_uplift_percent"
+      ],
+      "source": "outputs/json/cold_coupling_comparison.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"

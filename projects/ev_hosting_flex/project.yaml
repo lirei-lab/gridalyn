@@ -56,4 +56,5 @@ spec:
       - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
       - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
       - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
+      - projects/ev_hosting_flex/outputs/reports/cold_coupling_report.json
       - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json
