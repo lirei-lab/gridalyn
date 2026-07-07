@@ -41,7 +41,7 @@ authoritative sandbox) and the local migration design doc
 | `compute_congestion_annual` | **Firm** = largest pool prefix with P95 cold-day evening loading ≤ 100 % + congested-hours curve | `firm_hosting_annual.json` |
 | `apply_curtailment_contracts` | The mechanism: day-ahead call (notice), real-time backstop (reliability), fair rotation; enrollment sweep + notice quality + fairness | `curtailment_hosting.json` |
 | `compute_curtailment_economics` | Two-part contract vs annualized reinforcement + zone of agreement + break-even adoption | `curtailment_economics.json` |
-| `validate_powerflow` | AC validation: peak-day full-net scenario families + cold-day Monte-Carlo on the extracted feeder subnet (CSA C235 + thermal violations) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
+| `validate_powerflow` | AC validation before/after EVs: (1) design-day network family with each of the 540 LV transformers sized to its own load on the HQ standard kVA ladder + IEEE C57.91 cold dynamic rating; (2) cold-day Monte-Carlo on the 6-home feeder subnet (transformer + LV line loading + home voltage) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
 
 The kW chain runs at **15-minute resolution** (`ANNUAL_RES_MINUTES`): hourly
 means understate the sub-hourly coincidence of the few 13 kW baseboards and the
@@ -61,10 +61,18 @@ base aggregation is free; the AC validation layer stays hourly).
 - **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
   annualized reinforcement up to **5 EVs (83 % adoption)** — the technical
   +200 % vs the economic +25 % is the study's two-sided headline.
-- **AC caveat (reported, not silently fixed)**: the kW rating convention
-  (kVA × PF) ignores losses/reactive flow; backstop-held cold days land at
-  ~104–108 % AC loading and the firm count overloads 11 % of cold days in AC
-  terms. An AC-consistent rating is an open, deliberate study decision.
+- **AC network validation (load-matched HQ fleet)**: with each of the 540 LV
+  transformers sized to its own downstream load and rated for the −20 °C
+  ambient (IEEE C57.91, K≈1.4), the network is healthy before EVs (~1
+  transformer over the dynamic limit, not the 213 of the uniform-75 kVA fleet)
+  and congestion, voltage drops and line overloads all escalate cleanly with
+  adoption. The governed 6-home / 75 kVA feeder (idx-10) stays fixed, so the
+  firm/flexible headlines are unaffected.
+- **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
+  uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
+  MC shows the firm count overloading a few % of cold days (losses/reactive
+  flow push AC apparent power ~3–4 % above the kW proxy). An AC-consistent
+  governed rating is an open, deliberate study decision.
 
 ## Running
 

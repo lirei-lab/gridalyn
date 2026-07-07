@@ -60,18 +60,22 @@ def test_count_violations_hand_built_frames() -> None:
         {"hour": [0, 1], "line": [0, 0], "loading_percent": [101.0, 99.0]}
     )
     trafos = pd.DataFrame(
-        {"hour": [0, 1], "trafo": [0, 0], "loading_percent": [80.0, 85.0]}
+        {"hour": [0, 1], "trafo": [0, 1], "loading_percent": [120.0, 85.0]}
     )
     out = count_violations(
         {"bus_voltage": volt, "line_loading": lines, "trafo_loading": trafos},
         lv_bus_ids=np.array([1, 2]),
+        dynamic_k=1.4,
     )
     assert out["n_lv_buses_below_normal"] == 1  # bus 1 once, despite 2 hours
     assert out["n_lv_buses_below_extreme"] == 0
     assert out["n_lines_over_100"] == 1
-    assert out["n_trafos_over_100"] == 0
+    # trafo 0 at 120% is over static nameplate but UNDER the 140% dynamic limit;
+    # trafo 1 at 85% is under both.
+    assert out["n_trafos_over_static"] == 1
+    assert out["n_trafos_over_dynamic"] == 0
     assert out["min_lv_vm_pu"] == pytest.approx(0.905)
-    assert out["max_trafo_loading_percent"] == pytest.approx(85.0)
+    assert out["max_trafo_loading_percent"] == pytest.approx(120.0)
 
 
 # ─── 2. Mini-net convergence ─────────────────────────────────────────────
@@ -156,80 +160,67 @@ def test_extract_feeder_subnet_and_mc_mini_net() -> None:
 
 
 @pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
-def test_governed_violations_monotonic_in_penetration() -> None:
-    """Thermal + voltage violations never DECREASE as network EV adoption grows."""
+def test_governed_network_before_after_evs() -> None:
+    """The load-matched network is healthy before EVs and congests as they grow.
+
+    HQ-style sizing (each transformer matched to its load + cold dynamic rating)
+    leaves few transformers over the dynamic limit at 0 EV; congestion, voltage
+    drops and line overloads all escalate monotonically with adoption.
+    """
     payload = json.loads(_VIOLATIONS_PATH.read_text())
     scenarios = payload["scenarios"]
     names = [f"network_pen_{p:.1f}" for p in NETWORK_PENETRATION_SCENARIOS]
     assert all(name in scenarios for name in names), sorted(scenarios)
-    for key in ("n_trafos_over_100", "n_lv_buses_below_normal"):
-        series = [scenarios[name][key] for name in names]
+    pre, post = scenarios[names[0]], scenarios[names[-1]]
+    # Before EVs the load-matched fleet is healthy vs the cold dynamic limit;
+    # after full adoption many transformers genuinely overload.
+    assert pre["n_trafos_over_dynamic"] < 10
+    assert post["n_trafos_over_dynamic"] > pre["n_trafos_over_dynamic"] + 50
+    for key in (
+        "n_trafos_over_static",
+        "n_trafos_over_dynamic",
+        "n_lv_buses_below_normal",
+        "n_lines_over_100",
+    ):
+        series = [scenarios[n][key] for n in names]
         assert series == sorted(series), f"{key} not monotonic: {series}"
-    min_v = [scenarios[name]["min_lv_vm_pu"] for name in names]
+    min_v = [scenarios[n]["min_lv_vm_pu"] for n in names]
     assert min_v == sorted(min_v, reverse=True), f"min V not decreasing: {min_v}"
 
 
 @pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
-def test_governed_feeder_backstop_removes_overload_depth() -> None:
-    """On the year's binding day the backstop caps the feeder near its rating.
+def test_governed_feeder_mc_before_after_evs() -> None:
+    """The feeder cold-day MC shows congestion + line overloads before/after EVs.
 
-    The peak day is the accepted tail of the P95 firm rule, so even the firm
-    count may exceed 100 % there; what the mechanism guarantees is ORDER (base
-    < unmanaged, curtailed < unmanaged) and that the backstop-held load stays
-    inside the kW-rating AC envelope (~rating/PF + losses, < 110 %) instead of
-    the unmanaged depth.
-    """
-    trafo = pd.read_parquet(
-        PROJECT_OUTPUTS_DIR / "data" / "powerflow_trafo_loading.parquet"
-    )
-    payload = json.loads(_VIOLATIONS_PATH.read_text())
-    feeder_idx = int(payload["feeder_transformer_idx"])
-    peaks = (
-        trafo[trafo["trafo"] == feeder_idx]
-        .groupby("scenario")["loading_percent"]
-        .max()
-    )
-    base = float(peaks["feeder_base_0ev"])
-    firm = float(
-        peaks[[k for k in peaks.index if k.startswith("feeder_firm_")][0]]
-    )
-    unmanaged = float(
-        peaks[[k for k in peaks.index if k.startswith("feeder_unmanaged_")][0]]
-    )
-    curtailed = float(
-        peaks[[k for k in peaks.index if k.startswith("feeder_curtailed_")][0]]
-    )
-    assert base < firm < unmanaged
-    assert curtailed < unmanaged
-    assert curtailed < 110.0  # the kW-rating AC envelope (losses + reactive)
-
-
-@pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
-def test_governed_mc_sampling_shows_tail_overloads() -> None:
-    """The cold-day AC sampling makes the overload tail visible and ordered.
-
-    Base never overloads; the firm count overloads on a small fraction of cold
-    days (the tail the P95 kW rule accepts, AMPLIFIED in AC by losses/reactive
-    flow — the reported AC-vs-kW gap); unmanaged is strictly worse than firm;
-    the backstop removes the overload DEPTH (max peak well below unmanaged)
-    even though it enforces the kW rating, which in AC sits a few % above 100.
+    Base barely overloads; the firm count overloads on a small fraction of cold
+    days (the tail the P95 kW rule accepts, amplified in AC by losses/reactive
+    flow); unmanaged is strictly worse; the backstop removes the overload DEPTH
+    (transformer AND line peaks well below unmanaged) while enforcing the kW
+    rating (AC peaks a few % above 100).
     """
     payload = json.loads(_VIOLATIONS_PATH.read_text())
     mc = payload["feeder_mc"]
     by_prefix = {
         name.split("_")[1]: stats for name, stats in mc.items()
     }  # base / firm / unmanaged / curtailed
-    assert by_prefix["base"]["p_overload_ac"] == 0.0
+    assert by_prefix["base"]["p_overload_ac"] < 0.02
     assert 0.0 < by_prefix["firm"]["p_overload_ac"] < 0.5
     assert (
         by_prefix["firm"]["p_overload_ac"] <= by_prefix["unmanaged"]["p_overload_ac"]
     )
+    # Transformer overload depth removed by the backstop.
     assert (
         by_prefix["curtailed"]["peak_loading_max"]
         < by_prefix["unmanaged"]["peak_loading_max"]
     )
-    # The backstop binds AT the kW rating: AC peaks just above 100%, never deep.
     assert by_prefix["curtailed"]["peak_loading_max"] < 110.0
+    # Line overloads appear in the unmanaged tail and the backstop pulls them
+    # back (the LV lines are part of the "sobrecargas" validation).
+    assert by_prefix["unmanaged"]["max_line_loading_max"] > 100.0
+    assert (
+        by_prefix["curtailed"]["max_line_loading_max"]
+        < by_prefix["unmanaged"]["max_line_loading_max"]
+    )
 
 
 @pytest.mark.skipif(not _REPORT_PATH.is_file(), reason=_SKIP_REASON)
@@ -242,5 +233,5 @@ def test_governed_report_contract() -> None:
         assert field_name in report, f"missing report field {field_name}"
     summary = report["summary"]
     assert summary["n_powerflows"] == summary["n_scenarios"] * N_DESIGN_HOURS
-    for key in ("pre_ev_min_lv_vm_pu", "post_ev_n_trafos_over_100", "slack_vm_pu"):
+    for key in ("pre_ev_min_lv_vm_pu", "post_ev_n_trafos_over_dynamic", "slack_vm_pu"):
         assert key in summary, sorted(summary)

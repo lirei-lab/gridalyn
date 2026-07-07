@@ -22,11 +22,39 @@ from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     POWER_FACTOR,
     SLACK_VM_PU,
+    TRANSFORMER_KVA_LADDER,
     VOLTAGE_LIMITS_PU,
 )
 
 N_DESIGN_HOURS = 24
 """Hourly step count of the per-day validation profiles."""
+
+
+def standard_kva_for_load(
+    design_load_kw: float,
+    *,
+    power_factor: float = POWER_FACTOR,
+    ladder: tuple[float, ...] = TRANSFORMER_KVA_LADDER,
+) -> float:
+    """Return the smallest standard kVA whose usable kW covers a design load.
+
+    HQ-style load-matched sizing (2026-07-07): pick the smallest ladder rung
+    with ``kVA × power_factor ≥ design_load_kw``; loads above the top rung take
+    the top rung (a real feeder would parallel units — surfaced, not silently
+    clipped, by the ``> top`` return being the ceiling).
+
+    Args:
+        design_load_kw: The transformer's design-cold aggregate load in kW.
+        power_factor: Usable-power factor mapping kVA → kW.
+        ladder: Ascending standard kVA sizes.
+
+    Returns:
+        The chosen standard kVA rating.
+    """
+    for kva in ladder:
+        if kva * float(power_factor) >= float(design_load_kw):
+            return float(kva)
+    return float(ladder[-1])
 
 
 def run_design_day_powerflow(
@@ -209,7 +237,9 @@ def run_feeder_mc(
 
     Returns:
         A long DataFrame with one row per (variant, realization, hour):
-        ``trafo_loading_percent`` and ``min_home_vm_pu``.
+        ``trafo_loading_percent``, ``max_line_loading_percent`` (the worst LV
+        line in the feeder subtree — the line-overload channel) and
+        ``min_home_vm_pu`` (the voltage-drop channel).
     """
     import pandapower as pp
 
@@ -222,6 +252,7 @@ def run_feeder_mc(
     n_homes = len(subnet.load)
     q_factor = float(np.tan(np.arccos(float(power_factor))))
     load_bus_ids = subnet.load["bus"].to_numpy()
+    has_lines = len(subnet.line) > 0
 
     records: list[dict[str, Any]] = []
     for variant, agg_kw in agg_kw_by_variant.items():
@@ -246,6 +277,11 @@ def run_feeder_mc(
                         "trafo_loading_percent": float(
                             subnet.res_trafo["loading_percent"].iloc[0]
                         ),
+                        "max_line_loading_percent": (
+                            float(subnet.res_line["loading_percent"].max())
+                            if has_lines
+                            else 0.0
+                        ),
                         "min_home_vm_pu": float(
                             subnet.res_bus.loc[load_bus_ids, "vm_pu"].min()
                         ),
@@ -259,18 +295,24 @@ def count_violations(
     lv_bus_ids: np.ndarray,
     *,
     limits: Mapping[str, float] = VOLTAGE_LIMITS_PU,
+    dynamic_k: float = 1.0,
 ) -> dict[str, Any]:
     """Classify a scenario's power-flow results against CSA + thermal limits.
 
     Voltage bands apply to LV buses only (the CSA C235 service-entrance bands
     on the 120 V base); thermal counts are network-wide. "n_*" counters count
     distinct ELEMENTS violating in at least one hour (a bus dipping low for
-    three hours is one violating bus, not three).
+    three hours is one violating bus, not three). ``loading_percent`` is
+    against each transformer's OWN (load-matched) nameplate; the STATIC count
+    flags > 100 % (over nameplate) and the DYNAMIC count flags
+    > ``100 × dynamic_k`` (over the cold-ambient IEEE C57.91 thermal limit).
 
     Args:
         results: Output of :func:`run_design_day_powerflow`.
         lv_bus_ids: Bus indices of the LV (240 V) level.
         limits: Voltage bands in pu (default: ``VOLTAGE_LIMITS_PU``).
+        dynamic_k: Cold-ambient dynamic rating factor (1.0 disables the
+            dynamic count = static).
 
     Returns:
         A flat dict of scenario violation metrics (floats/ints).
@@ -300,7 +342,10 @@ def count_violations(
             lines, "line", lines["loading_percent"] > 100.0
         ),
         "max_trafo_loading_percent": float(trafos["loading_percent"].max()),
-        "n_trafos_over_100": _n_elements(
+        "n_trafos_over_static": _n_elements(
             trafos, "trafo", trafos["loading_percent"] > 100.0
+        ),
+        "n_trafos_over_dynamic": _n_elements(
+            trafos, "trafo", trafos["loading_percent"] > 100.0 * float(dynamic_k)
         ),
     }

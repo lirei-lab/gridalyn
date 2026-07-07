@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.845234,
+      "expected": 0.849268,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -15,29 +15,29 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 215,
-      "id": "pf.pre_ev_n_trafos_over_100",
+      "expected": 1,
+      "id": "pf.pre_ev_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
         "network_pen_0.0",
-        "n_trafos_over_100"
+        "n_trafos_over_dynamic"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 0
     },
     {
-      "expected": 493,
-      "id": "pf.post_ev_1p5_n_trafos_over_100",
+      "expected": 216,
+      "id": "pf.post_ev_1p5_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
         "network_pen_1.5",
-        "n_trafos_over_100"
+        "n_trafos_over_dynamic"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 0
     },
     {
-      "expected": 0.630447,
+      "expected": 0.747381,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -133,7 +133,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.042945,
+      "expected": 0.04908,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
@@ -144,7 +144,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.588957,
+      "expected": 0.595092,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 107.676375,
+      "expected": 107.983316,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",

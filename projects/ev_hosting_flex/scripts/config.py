@@ -1062,3 +1062,33 @@ governed deferral ``C_A = 0.30``)."""
 C_RETAIL_KWH = 0.10
 """Retail energy value ($/kWh) of the foregone charging energy — the household
 floor of the zone-of-agreement panel (D-B6). Provenance: ``C_RETAIL = 0.10``."""
+
+# ─── Network-wide transformer sizing (2026-07-07, AC validation realism) ─────
+# APPEND-ONLY block. Quebec/HQ LV distribution sizes each pole transformer to
+# its connected load on a standard single-phase kVA ladder (NOT a uniform
+# fleet), and rates it dynamically for the cold winter ambient (IEEE C57.91),
+# consistent with the config's MV/HV transformer. The AC validation stage uses
+# these to give each of the 540 LV transformers its OWN load-matched rating so
+# the "before vs after EVs" network picture is physical (the uniform 75 kVA
+# fleet left 213/540 transformers overloaded at design cold with zero EVs — a
+# real under-sizing artifact of the geographic KMeans clustering, not physics).
+# The GOVERNED study feeder (idx-10, 6 homes) lands at 75 kVA by this rule, so
+# the firm/flexible headlines are unaffected; these constants touch ONLY the
+# validate_powerflow network family.
+
+TRANSFORMER_KVA_LADDER = (25.0, 37.5, 50.0, 75.0, 100.0, 167.0)
+"""Standard single-phase distribution-transformer sizes (kVA) HQ picks from.
+Each LV transformer is sized to the smallest ladder rung whose usable kW
+(``kVA × POWER_FACTOR``) covers its SDK design-cold aggregate load; a 6-home
+cluster lands at 75 kVA (matching the governed unit), a 12-home at 167 kVA."""
+
+LV_DYNAMIC_RATING_K = 1.4
+"""Cold-ambient dynamic thermal rating factor for the LV transformers at the
+design cold (IEEE C57.91). A transformer runs cooler in a −20 °C ambient and
+can carry ~1.3–1.5× nameplate without exceeding its hotspot limit; 1.4 mirrors
+the config's MV/HV ``K(−22.5 °C)=1.41``. The AC validation reports BOTH the
+static-nameplate overload count (loading > 100 %) and the dynamic overload
+count (loading > ``100 × LV_DYNAMIC_RATING_K`` = 140 %) — a transformer above
+nameplate but below the dynamic limit is loaded, not thermally overloaded. The
+GOVERNED firm/flexible gate stays on the conservative STATIC feeder rating
+(``TRANSFORMER_KVA × POWER_FACTOR``); this factor is reporting-only."""

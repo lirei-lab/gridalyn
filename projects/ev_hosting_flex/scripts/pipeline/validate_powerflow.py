@@ -1,19 +1,22 @@
 """AC power-flow validation of the twin before and after adding EVs (stage 7).
 
-F5 of the study-B annual migration: every scenario is now driven by the ANNUAL
-artifacts (SDK-agent base, cold-coupled EV pool, curtailment backstop) — the
-design-day inputs are gone. Two deterministic full-net families on the year's
-binding peak day plus a sampled cold-day Monte-Carlo on the feeder subnet:
+Two honest before/after-EV pictures on the study-B annual artifacts:
 
-* ``network_pen_*`` — the "before vs after" system picture on the peak day:
-  every one of the 3235 homes carries the per-home SDK base profile plus the
-  cold-coupled pool overlay at a uniform adoption level.
-* ``feeder_*`` — the study unit on the same day: base, the governed firm
-  count, the full pool unmanaged, and the full pool under the curtailment
-  backstop (the served post-contract profile).
-* ``mc_*`` — the SAMPLED picture: every cold day of the year solved in AC on
-  the extracted feeder subtree per variant; ``p_overload_ac`` = fraction of
-  cold days whose AC peak loading exceeds 100 %.
+* ``network_pen_*`` — the SYSTEM picture on the design (coldest) day, with each
+  of the 540 LV transformers sized to ITS OWN downstream load on the HQ
+  standard kVA ladder (``standard_kva_for_load``) and each of its homes carrying
+  the SDK per-home base of that transformer's home count. This replaces the
+  earlier uniform-75 kVA broadcast, which left 213/540 transformers overloaded
+  at design cold with ZERO EVs — an under-sizing artifact of the geographic
+  KMeans clustering, not physics. Overload is reported against BOTH the static
+  nameplate and the cold-ambient IEEE C57.91 dynamic rating
+  (``LV_DYNAMIC_RATING_K``); the network is loaded-but-healthy before EVs and
+  the uniform adoption sweep pushes it into real congestion.
+* ``mc_*`` — the governed STUDY UNIT: every cold day of the year solved in AC
+  on the extracted 6-home / 75 kVA feeder subtree per variant (base / firm /
+  unmanaged / curtailed), recording transformer loading, the worst LV line, and
+  the min home voltage. ``p_overload_ac`` = fraction of cold days whose AC peak
+  loading exceeds the (conservative, static) feeder rating.
 
 GUARD-02: no module-scope ``import pandapower`` — the net is read via pickle
 and the solver import is deferred inside the kernel.
@@ -44,6 +47,7 @@ import pandas as pd  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     aggregate_to_hourly,
+    design_day_base_per_home,
     load_annual_tmy,
     simulate_curtailment,
     tmy_hour_of_day,
@@ -54,16 +58,19 @@ from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     extract_feeder_subnet,
     run_design_day_powerflow,
     run_feeder_mc,
+    standard_kva_for_load,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
     DTYPE,
+    LV_DYNAMIC_RATING_K,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
     PROJECT_CACHE_DIR,
     PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
+    SEED,
     SLACK_VM_PU,
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
@@ -78,15 +85,70 @@ def _load_net(cache_dir: Path) -> Any:
         return pickle.load(handle)
 
 
-def _day_slice(annual: np.ndarray, day: int, hod0: int) -> np.ndarray:
-    """Return the (24,) LOCAL-midnight-anchored slice of day ``day``.
+def size_transformers_to_load(
+    net: Any,
+    cache_dir: Path,
+    temp_hourly: Any,
+    design_day_idx: int,
+    feeder_idx: int,
+) -> dict[str, Any]:
+    """Resize each LV transformer's ``sn_mva`` to its load-matched standard kVA.
 
-    The annual arrays are TMY-phase-anchored (position 0 = local ``hod0``);
-    rolling by ``hod0`` re-labels the axis so index h = local clock hour h
-    (2026-07-07 phase fix — same day-block approximation as study-B).
+    HQ-style sizing (2026-07-07): each LV transformer's downstream homes carry
+    the SDK per-home design-cold base of THEIR cluster's home count; the
+    transformer takes the smallest standard kVA covering that aggregate load.
+    Mutates ``net.trafo.sn_mva`` in place (impedance scales with it, so the AC
+    voltage drop is physical). The GOVERNED study feeder is pinned at
+    ``TRANSFORMER_KVA`` so the firm/flexible headlines are untouched.
+
+    Args:
+        net: Loaded pandapower net (mutated in place).
+        cache_dir: Topology cache directory (downstream map).
+        temp_hourly: Committed annual TMY series.
+        design_day_idx: Day-of-year index of the coldest design day.
+        feeder_idx: Study feeder transformer index (kept at TRANSFORMER_KVA).
+
+    Returns:
+        Dict with the per-home design-day base per size, the size→bus map, and
+        the assigned kVA per size (for the report + the network family).
     """
-    block = np.asarray(annual, dtype=DTYPE)[day * 24 : (day + 1) * 24]
-    return np.roll(block, int(hod0))
+    downstream_map = json.loads((cache_dir / "downstream_bus_map.json").read_text())
+    homes_by_bus = net.load.groupby("bus").size()
+    lv_trafos = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
+
+    size_by_trafo: dict[int, int] = {}
+    size_by_loadbus: dict[int, int] = {}
+    for idx in lv_trafos:
+        downstream = [int(b) for b in downstream_map.get(f"transformer:{int(idx)}", [])]
+        n = int(homes_by_bus.reindex(downstream).fillna(0).sum())
+        size_by_trafo[int(idx)] = n
+        for bus in downstream:
+            if bus in homes_by_bus.index:
+                size_by_loadbus[bus] = n
+
+    sizes = sorted({n for n in size_by_trafo.values() if n > 0})
+    base_by_size = {
+        n: design_day_base_per_home(temp_hourly, n, SEED, design_day_idx)
+        for n in sizes
+    }
+    kva_by_size = {
+        n: standard_kva_for_load(float(n) * float(base_by_size[n].max()))
+        for n in sizes
+    }
+    for idx in lv_trafos:
+        n = size_by_trafo[int(idx)]
+        if int(idx) == int(feeder_idx) or n == 0:
+            kva = float(TRANSFORMER_KVA)
+        else:
+            kva = kva_by_size[n]
+        net.trafo.at[idx, "sn_mva"] = kva / 1000.0
+
+    return {
+        "base_by_size": base_by_size,
+        "size_by_loadbus": size_by_loadbus,
+        "kva_by_size": kva_by_size,
+        "size_by_trafo": size_by_trafo,
+    }
 
 
 def build_scenario_profiles(
@@ -122,26 +184,73 @@ def build_scenario_profiles(
         )["summary"]["n_homes"]
     )
 
-    hod0 = tmy_hour_of_day(load_annual_tmy())
+    temp_hourly = load_annual_tmy()
+    hod0 = tmy_hour_of_day(temp_hourly)
+    design_day = int(np.argmin(tday))
 
     feeder_sel = json.loads((cache_dir / "feeder_selection.json").read_text())
     feeder_idx = int(feeder_sel["feeder_transformer_idx"])
     downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())[
         f"transformer:{feeder_idx}"
     ]
-    feeder_load_mask = net.load["bus"].isin([int(b) for b in downstream]).to_numpy()
-    n_feeder_homes = int(feeder_load_mask.sum())
-    if n_feeder_homes == 0:
+    if not net.load["bus"].isin([int(b) for b in downstream]).any():
         raise ValueError(
             f"validate_powerflow found no loads downstream of transformer:"
             f"{feeder_idx}. Remediation: regenerate the topology cache "
             "(prepare_topology_cache.py) so feeder_selection.json matches the net."
         )
 
-    # The curtailment backstop runs at the GOVERNED step resolution (correct
-    # energy/headroom), THEN the whole AC layer works on the HOURLY aggregate:
-    # 96-step power flows would ~4x a validation cost for no gate value, so the
-    # AC layer is deliberately the hourly view of the 15-min governed arrays.
+    # ── HQ-style transformer sizing: each LV unit matched to its own load ──
+    sizing = size_transformers_to_load(
+        net, cache_dir, temp_hourly, design_day, feeder_idx
+    )
+    base_by_size = sizing["base_by_size"]
+    size_by_loadbus = sizing["size_by_loadbus"]
+
+    # ── NETWORK family: per-size base + per-home EV overlay on the design day ─
+    # Each home carries the diversified per-home base of ITS transformer's home
+    # count; the EV overlay is the design-day mean per-EV profile scaled by the
+    # adoption level. All local-hour-ordered (index h = local clock hour h).
+    pool_hourly = aggregate_to_hourly(
+        np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
+    )
+    ev_perhome_day = np.roll(
+        pool_hourly[:, design_day * 24 : (design_day + 1) * 24].mean(axis=0),
+        int(hod0),
+    )
+    load_bus = net.load["bus"].to_numpy()
+    per_load_base = np.stack(
+        [base_by_size[size_by_loadbus.get(int(b), n_homes)] for b in load_bus]
+    ).astype(DTYPE)
+
+    profiles: dict[str, np.ndarray] = {}
+    for pen in NETWORK_PENETRATION_SCENARIOS:
+        overlay = float(pen) * ev_perhome_day
+        profiles[f"network_pen_{pen:.1f}"] = (per_load_base + overlay).astype(DTYPE)
+
+    meta = {
+        "feeder_transformer_idx": feeder_idx,
+        "n_homes": n_homes,
+        "firm_ev_count": firm,
+        "flexible_ev_count": flexible,
+        "design_day": design_day,
+        "hod0": hod0,
+        "feeder_rating_kw": round(_FEEDER_RATING_KW, ROUND_DECIMALS),
+        "dynamic_rating_k": float(LV_DYNAMIC_RATING_K),
+        "transformer_kva_by_size": {
+            str(k): v for k, v in sorted(sizing["kva_by_size"].items())
+        },
+        "n_transformers_by_size": {
+            str(k): int(list(sizing["size_by_trafo"].values()).count(k))
+            for k in sorted(set(sizing["size_by_trafo"].values()))
+            if k > 0
+        },
+        "basis": "HQ load-matched transformers + SDK per-size base + C57.91 dynamic rating",
+    }
+
+    # ── Feeder-unit cold-day MC: the curtailment backstop runs at the GOVERNED
+    # step resolution (correct energy/headroom), then the AC layer works on the
+    # HOURLY aggregate (96-step PFs would ~4x a validation cost for no gate).
     backstop = simulate_curtailment(
         base_annual, pool[:flexible], np.ones(flexible, bool), _FEEDER_RATING_KW,
         res_minutes=ANNUAL_RES_MINUTES,
@@ -149,54 +258,7 @@ def build_scenario_profiles(
     base_annual = aggregate_to_hourly(base_annual)
     pool = aggregate_to_hourly(pool)
     served = aggregate_to_hourly(backstop["served_ev_kw"])
-
-    # The year's binding day: peak hour of base + the full unmanaged pool.
     pool_flex = pool[:flexible].sum(axis=0)
-    peak_day = int(np.argmax(base_annual + pool_flex) // 24)
-
-    base_day = _day_slice(base_annual, peak_day, hod0)
-    per_home_base = base_day / float(n_homes)
-    n_load = len(net.load)
-    base_all = np.tile(per_home_base, (n_load, 1)).astype(DTYPE)
-
-    profiles: dict[str, np.ndarray] = {}
-    for pen in NETWORK_PENETRATION_SCENARIOS:
-        n_evs = int(round(pen * n_homes))
-        overlay_per_home = _day_slice(pool[:n_evs].sum(axis=0), peak_day, hod0) / float(
-            n_homes
-        )
-        profiles[f"network_pen_{pen:.1f}"] = (base_all + overlay_per_home).astype(
-            DTYPE
-        )
-
-    def _feeder_scenario(feeder_agg_kw: np.ndarray) -> np.ndarray:
-        matrix = base_all.copy()
-        matrix[feeder_load_mask, :] = feeder_agg_kw / float(n_feeder_homes)
-        return matrix.astype(DTYPE)
-
-    ev_firm_day = _day_slice(pool[:firm].sum(axis=0), peak_day, hod0)
-    ev_flex_day = _day_slice(pool_flex, peak_day, hod0)
-    ev_served_day = _day_slice(served, peak_day, hod0)
-    profiles["feeder_base_0ev"] = _feeder_scenario(base_day)
-    profiles[f"feeder_firm_{firm}ev"] = _feeder_scenario(base_day + ev_firm_day)
-    profiles[f"feeder_unmanaged_{flexible}ev"] = _feeder_scenario(
-        base_day + ev_flex_day
-    )
-    profiles[f"feeder_curtailed_{flexible}ev"] = _feeder_scenario(
-        base_day + ev_served_day
-    )
-
-    meta = {
-        "feeder_transformer_idx": feeder_idx,
-        "n_feeder_homes": n_feeder_homes,
-        "n_homes": n_homes,
-        "firm_ev_count": firm,
-        "flexible_ev_count": flexible,
-        "peak_day": peak_day,
-        "hod0": hod0,
-        "feeder_rating_kw": round(_FEEDER_RATING_KW, ROUND_DECIMALS),
-        "basis": "study-B annual seam (SDK base + cold-coupled pool + backstop)",
-    }
 
     # ── Cold-day Monte-Carlo variants for the subnet sampling layer ────────
     cold_days = np.where(tday < float(COLD_DAY_TMEAN_C))[0]
@@ -259,7 +321,7 @@ def _figures(
         plt.close(fig)
 
     network_names = [n for n in scenario_results if n.startswith("network_pen_")]
-    feeder_names = [n for n in scenario_results if n.startswith("feeder_")]
+    dyn_k = float(meta.get("dynamic_rating_k", 1.0))
 
     # 1. LV voltage percentile bands per network scenario (before vs after).
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
@@ -276,55 +338,28 @@ def _figures(
     ax.set_xticklabels(
         [n.replace("network_pen_", "") + " EV/home" for n in network_names]
     )
-    ax.set_ylabel("LV bus voltage (pu, peak day)")
+    ax.set_ylabel("LV bus voltage (pu, design day)")
     ax.set_title("LV voltage distribution vs network-wide EV adoption")
     _save(fig, "powerflow_lv_voltage_bands")
 
-    # 2. Per-transformer max loading distribution, pre-EV vs highest adoption.
+    # 2. Per-transformer max loading distribution, pre-EV vs highest adoption,
+    # with the static-nameplate and cold-ambient dynamic thresholds marked.
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     for name, color in ((network_names[0], "C0"), (network_names[-1], "C3")):
         trafo = scenario_results[name]["trafo_loading"]
         per_max = trafo.groupby("trafo")["loading_percent"].max()
         ax.hist(per_max, bins=40, alpha=0.55, color=color, label=name)
-    ax.axvline(100.0, color="k", ls="--", lw=1)
-    ax.set_xlabel("Transformer max loading over the peak day (%)")
+    ax.axvline(100.0, color="k", ls="--", lw=1, label="static nameplate")
+    ax.axvline(
+        100.0 * dyn_k, color="C3", ls=":", lw=1.5, label=f"dynamic ({dyn_k:g}x, cold)"
+    )
+    ax.set_xlabel("Transformer max loading over the design day (%)")
     ax.set_ylabel("Transformers")
-    ax.legend()
-    ax.set_title("Transformer loading before vs after EVs")
+    ax.legend(fontsize=8)
+    ax.set_title("Transformer loading before vs after EVs (load-matched fleet)")
     _save(fig, "powerflow_trafo_loading_hist")
 
-    # 3. Study-feeder hourly profile on the peak day: base / firm / unmanaged /
-    # curtailed vs the rating — the mechanism in one panel.
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
-    feeder_idx = meta["feeder_transformer_idx"]
-    palette = [f"C{i}" for i in range(10)]
-    for name, color in zip(feeder_names, palette):
-        trafo = scenario_results[name]["trafo_loading"]
-        prof = (
-            trafo[trafo["trafo"] == feeder_idx]
-            .sort_values("hour")["loading_percent"]
-            .to_numpy()
-            / 100.0
-            * meta["feeder_rating_kw"]
-        )
-        style = "--" if "unmanaged" in name else "-"
-        ax.step(
-            range(N_DESIGN_HOURS), prof, style, where="mid", color=color, label=name
-        )
-    ax.axhline(
-        meta["feeder_rating_kw"],
-        color="k",
-        ls=":",
-        lw=1.5,
-        label=f"rating {meta['feeder_rating_kw']:.2f} kW",
-    )
-    ax.set_xlabel(f"Peak-day hour (day {meta['peak_day']})")
-    ax.set_ylabel("Feeder transformer load (kW)")
-    ax.legend(fontsize=8)
-    ax.set_title(f"Study feeder (trafo {feeder_idx}) before/after EVs")
-    _save(fig, "powerflow_feeder_profile")
-
-    # 4. The SAMPLED picture: ECDF of per-cold-day AC peak loading per variant.
+    # 3. The SAMPLED feeder picture: ECDF of per-cold-day AC peak loading.
     if mc is not None and not mc.empty:
         fig, ax = plt.subplots(figsize=(7.2, 4.2))
         peaks_by_variant = mc.groupby(["variant", "realization"])[
@@ -381,7 +416,9 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     for name, p_kw in profiles.items():
         results = run_design_day_powerflow(net, p_kw)
         scenario_results[name] = results
-        violations[name] = count_violations(results, lv_bus_ids)
+        violations[name] = count_violations(
+            results, lv_bus_ids, dynamic_k=float(meta["dynamic_rating_k"])
+        )
 
     # ── Cold-day Monte-Carlo AC sampling on the extracted feeder subnet ────
     feeder_idx = int(meta["feeder_transformer_idx"])
@@ -389,7 +426,7 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         net, feeder_idx, [int(b) for b in mc_inputs["downstream_buses"]]
     )
     hv_bus = int(net.trafo.loc[feeder_idx, "hv_bus"])
-    base_volt = scenario_results["feeder_base_0ev"]["bus_voltage"]
+    base_volt = scenario_results["network_pen_0.0"]["bus_voltage"]
     mv_vm_hourly = (
         base_volt[base_volt["bus"] == hv_bus]
         .sort_values("hour")["vm_pu"]
@@ -398,9 +435,13 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     mc = run_feeder_mc(subnet, mc_inputs["variants"], mv_vm_hourly)
 
     mc_peaks = mc.groupby(["variant", "realization"])["trafo_loading_percent"].max()
+    mc_line_peaks = mc.groupby(["variant", "realization"])[
+        "max_line_loading_percent"
+    ].max()
     mc_summary: dict[str, dict[str, Any]] = {}
     for variant in mc_inputs["variants"]:
         peaks = mc_peaks.loc[variant]
+        line_peaks = mc_line_peaks.loc[variant]
         min_v = (
             mc[mc["variant"] == variant]
             .groupby("realization")["min_home_vm_pu"]
@@ -411,6 +452,11 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
             "peak_loading_p50": round(float(peaks.quantile(0.50)), ROUND_DECIMALS),
             "peak_loading_p95": round(float(peaks.quantile(0.95)), ROUND_DECIMALS),
             "peak_loading_max": round(float(peaks.max()), ROUND_DECIMALS),
+            "max_line_loading_p95": round(
+                float(line_peaks.quantile(0.95)), ROUND_DECIMALS
+            ),
+            "max_line_loading_max": round(float(line_peaks.max()), ROUND_DECIMALS),
+            "n_lines_over_100_days": int((line_peaks > 100.0).sum()),
             "min_home_vm_pu": round(float(min_v.min()), ROUND_DECIMALS),
             "n_realizations": int(len(peaks)),
         }
@@ -475,11 +521,11 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     }
 
     warnings = []
-    if pre["n_trafos_over_100"]:
+    if pre["n_trafos_over_dynamic"]:
         warnings.append(
-            f"{pre['n_trafos_over_100']} transformer(s) exceed 100% loading "
-            "BEFORE any EV (the oversubscribed 10-12-home tail clusters of "
-            "the physical twin) — pre-existing hot spots, surfaced not hidden."
+            f"{pre['n_trafos_over_dynamic']} transformer(s) exceed the cold-ambient "
+            "dynamic thermal rating BEFORE any EV even after HQ load-matched "
+            "sizing — a residual under-capacity spot, surfaced not hidden."
         )
     if mc_summary[curtailed_variant]["p_overload_ac"] > 0.0:
         warnings.append(
@@ -518,11 +564,12 @@ def main() -> None:
     print(
         "Validated AC power flow + report: "
         f"{summary.get('n_powerflows')} full-net + {summary.get('n_mc_powerflows')} "
-        f"cold-day MC power flows | peak day {summary.get('peak_day')} | "
-        f"pre-EV trafos>100%={summary.get('pre_ev_n_trafos_over_100')} | "
-        f"post-EV ({NETWORK_PENETRATION_SCENARIOS[-1]} EV/home) "
-        f"trafos>100%={summary.get('post_ev_n_trafos_over_100')} | "
-        f"MC P(overload): firm={summary.get('mc_p_overload_ac_at_firm')}, "
+        f"cold-day MC power flows | design day {summary.get('design_day')} | "
+        f"network (load-matched fleet) trafos>dynamic: "
+        f"pre-EV={summary.get('pre_ev_n_trafos_over_dynamic')} -> "
+        f"{NETWORK_PENETRATION_SCENARIOS[-1]} EV/home="
+        f"{summary.get('post_ev_n_trafos_over_dynamic')} | "
+        f"feeder MC P(overload): firm={summary.get('mc_p_overload_ac_at_firm')}, "
         f"unmanaged={summary.get('mc_p_overload_ac_unmanaged')}, "
         f"curtailed={summary.get('mc_p_overload_ac_curtailed')}"
     )

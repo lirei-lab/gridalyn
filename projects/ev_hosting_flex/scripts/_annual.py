@@ -212,6 +212,67 @@ def annual_base_realization(
     return stepped[:n_steps].astype(DTYPE)
 
 
+def design_day_base_per_home(
+    temp_hourly: pd.Series,
+    n_homes: int,
+    seed: int,
+    design_day_idx: int,
+    *,
+    lead_days: int = 1,
+) -> np.ndarray:
+    """Return the design day's ``(24,)`` per-home base profile in LOCAL-hour order.
+
+    Simulates the SDK agent over the ``[design_day_idx − lead_days …
+    design_day_idx]`` window at 1-min (the lead gives the thermostats real
+    burn-in state), aggregates the DESIGN day to hourly means, divides by
+    ``n_homes``, and reorders by local hour-of-day (index h = local clock hour
+    h). Used by the network-wide AC family to give each transformer the
+    diversified per-home base of ITS OWN downstream-home count — the honest
+    replacement for broadcasting the 6-home feeder profile (2026-07-07).
+
+    Args:
+        temp_hourly: Output of :func:`load_annual_tmy`.
+        n_homes: Downstream-home count of the transformer size being modeled.
+        seed: Per-size reproducible seed.
+        design_day_idx: Day-of-year index of the design (coldest) day.
+        lead_days: Burn-in lead days prepended to the window.
+
+    Returns:
+        A ``(24,)`` float64 per-home hourly base trace in kW, local-hour-ordered.
+
+    Raises:
+        ImportError: If the SDK agent cannot be imported (no silent fallback).
+    """
+    try:
+        from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
+    except ImportError as exc:  # no silent fallback (T-13-03)
+        raise ImportError(
+            "design_day_base_per_home could not import the SDK building "
+            f"generator. Remediation: install the gridalyn SDK. Error: {exc}"
+        ) from exc
+
+    start = max(0, int(design_day_idx) - int(lead_days))
+    window = temp_hourly.iloc[start * 24 : (int(design_day_idx) + 1) * 24]
+    window_1min = window.resample("1min").interpolate()
+
+    buildings = make_buildings(int(n_homes), seed=int(seed))
+    for building in buildings:
+        building.R = R_STUDY_B
+        building.p_heat_max = P_HEAT_QUEBEC
+    results = simulate_buildings(
+        buildings, window_1min, burnin_hours=6, random_seed=int(seed)
+    )
+    agg = sum(results[uid]["p_total_kw"] for uid in results)
+    hourly = agg.resample("60min").mean()
+    # keep only the design day, reorder by local hour-of-day
+    design_day = hourly.iloc[-24:]
+    per_home = design_day.to_numpy(dtype=DTYPE) / float(n_homes)
+    local_hours = design_day.index.hour.to_numpy()
+    ordered = np.zeros(24, dtype=DTYPE)
+    ordered[local_hours] = per_home
+    return ordered
+
+
 def cold_intensity(tday_mean_c: np.ndarray) -> np.ndarray:
     """Return the per-day cold intensity ``cp = max(0, E_TREF_C − Tday)``."""
     return np.maximum(0.0, float(E_TREF_C) - np.asarray(tday_mean_c, dtype=DTYPE))

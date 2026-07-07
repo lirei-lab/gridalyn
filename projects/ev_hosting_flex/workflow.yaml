@@ -133,7 +133,6 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/powerflow_feeder_mc_ecdf.png
         - projects/ev_hosting_flex/outputs/figures/powerflow_lv_voltage_bands.png
         - projects/ev_hosting_flex/outputs/figures/powerflow_trafo_loading_hist.png
-        - projects/ev_hosting_flex/outputs/figures/powerflow_feeder_profile.png
         - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json
 
     # ── Stage 7: canonical reports + baseline (stubbed — Phase 12) ───────
