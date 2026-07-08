@@ -308,7 +308,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.735679,
+      "expected": 1.655353,
       "id": "cluster.penalty_ratio",
       "json_path": [
         "penalty",
@@ -318,7 +318,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 216.222314,
+      "expected": 206.21564,
       "id": "cluster.worst_loading_clustered",
       "json_path": [
         "penalty",
@@ -328,7 +328,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 104.61255,
+      "expected": 104.616067,
       "id": "cluster.worst_loading_managed_clustered",
       "json_path": [
         "recovery",
@@ -338,7 +338,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 25.728694,
+      "expected": 25.095744,
       "id": "cluster.curtailed_energy_percent",
       "json_path": [
         "recovery",
@@ -348,7 +348,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.843567,
+      "expected": 0.835722,
       "id": "cluster.burden_gini",
       "json_path": [
         "recovery",
@@ -358,7 +358,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.517525,
+      "expected": 0.510065,
       "id": "cluster.gini_at_max_dispersion",
       "json_path": [
         "by_dispersion",

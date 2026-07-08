@@ -58,6 +58,28 @@ def test_draw_clustered_adoption_mean_preserving_and_monotone() -> None:
     assert ginis[-1] > 0.1
 
 
+def test_draw_clustered_adoption_respects_cap() -> None:
+    """The cap is enforced for EVERY transformer while the fleet stays exact.
+
+    High dispersion on a skewed homes vector is exactly where the naive
+    cap-then-rescale would push capped transformers back over the cap; the
+    water-fill must hold BOTH the cap and the fleet.
+    """
+    from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
+    from projects.ev_hosting_flex.scripts.config import CLUSTER_MAX_RATE
+
+    rng = np.random.default_rng(7)
+    homes = np.array([12, 1, 1, 1, 2, 3, 10, 1, 1, 8], dtype=float)
+    mu = 1.0
+    hit_cap = False
+    for _ in range(300):
+        a = draw_clustered_adoption(homes, mu, 1.1, rng)
+        assert np.all(a <= CLUSTER_MAX_RATE + 1e-9), f"cap violated: max {a.max()}"
+        assert float(np.sum(a * homes) / homes.sum()) == pytest.approx(mu, rel=1e-9)
+        hit_cap = hit_cap or bool(np.any(a >= CLUSTER_MAX_RATE - 1e-9))
+    assert hit_cap, "cap never bound — test not exercising the water-fill path"
+
+
 def test_apply_local_curtailment_caps_to_rating() -> None:
     """EV is shed only above headroom; below the rating nothing is curtailed."""
     from projects.ev_hosting_flex.scripts._powerflow import apply_local_curtailment

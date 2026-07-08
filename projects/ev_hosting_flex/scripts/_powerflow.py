@@ -86,35 +86,49 @@ def draw_clustered_adoption(
     """Draw a per-transformer EV adoption vector at a FIXED total fleet.
 
     Per transformer the adoption rate is ``mean_rate`` times a unit-mean
-    lognormal multiplier (``exp(sigma*z - sigma^2/2)``), then rescaled so the
-    home-weighted mean equals ``mean_rate`` exactly — i.e. the total fleet
-    ``sum(a_t * homes_t)`` is invariant to ``dispersion``. ``dispersion == 0``
-    returns a uniform vector.
+    lognormal multiplier (``exp(sigma*z - sigma^2/2)``). The vector is then
+    water-filled so that BOTH invariants hold exactly: the home-weighted mean
+    equals ``mean_rate`` (the total fleet ``sum(a_t * homes_t)`` is invariant to
+    ``dispersion``) AND no transformer exceeds ``CLUSTER_MAX_RATE`` — transformers
+    that would exceed the cap are pinned to it and their clipped excess is
+    redistributed (home-weighted) onto the not-yet-capped transformers, iterating
+    to a fixed point. ``dispersion == 0`` returns a uniform vector.
 
     Args:
         n_homes_by_trafo: ``(T,)`` homes served by each transformer.
-        mean_rate: Mean adoption (EV/home) = fixed fleet / total homes.
+        mean_rate: Mean adoption (EV/home) = fixed fleet / total homes. Must be
+            below ``CLUSTER_MAX_RATE`` (else the fleet cannot fit under the cap).
         dispersion: Lognormal sigma (>= 0); 0 = uniform, higher = clustered.
         rng: Seeded numpy Generator (determinism).
 
     Returns:
-        ``(T,)`` adoption rate (EV/home) per transformer, mean-preserving,
-        non-negative, capped at ``CLUSTER_MAX_RATE``.
+        ``(T,)`` adoption rate (EV/home) per transformer: fleet-preserving,
+        non-negative, and <= ``CLUSTER_MAX_RATE`` for every transformer.
     """
     homes = np.asarray(n_homes_by_trafo, dtype=float)
+    n = homes.shape[0]
     if float(dispersion) <= 0.0:
-        return np.full(homes.shape[0], float(mean_rate), dtype=float)
-    z = rng.standard_normal(homes.shape[0])
-    mult = np.exp(float(dispersion) * z - 0.5 * float(dispersion) ** 2)
-    raw = float(mean_rate) * mult
+        return np.full(n, float(mean_rate), dtype=float)
+    z = rng.standard_normal(n)
+    a = float(mean_rate) * np.exp(float(dispersion) * z - 0.5 * float(dispersion) ** 2)
     fleet = float(mean_rate) * float(homes.sum())
-    scale = fleet / float(np.sum(raw * homes))
-    a = np.minimum(raw * scale, CLUSTER_MAX_RATE)
-    # rescale once more after the (rare) cap so the fleet stays exact
-    denom = float(np.sum(a * homes))
-    if denom > 0.0:
-        a = a * (fleet / denom)
-    return a.astype(float)
+    # Water-fill: repeatedly scale the not-yet-capped transformers to carry the
+    # residual fleet, then pin any that crossed the cap. Terminates in <= n
+    # steps (each step pins at least one more, or converges with no new caps).
+    capped = np.zeros(n, dtype=bool)
+    for _ in range(n + 1):
+        free = ~capped
+        free_fleet = float(np.sum(a[free] * homes[free]))
+        residual = fleet - float(np.sum(a[capped] * homes[capped]))
+        if free_fleet <= 0.0 or residual <= 0.0:
+            break
+        a[free] *= residual / free_fleet
+        newly = free & (a > CLUSTER_MAX_RATE)
+        if not newly.any():
+            break
+        a[newly] = CLUSTER_MAX_RATE
+        capped |= newly
+    return np.minimum(a, CLUSTER_MAX_RATE).astype(float)
 
 
 def apply_local_curtailment(
