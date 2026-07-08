@@ -125,3 +125,62 @@ def test_solve_worst_trafo_mini_net() -> None:
     assert managed["worst_loading"] <= unmanaged["worst_loading"]
     assert managed["curtailed_kwh"] > 0.0
     assert unmanaged["curtailed_kwh"] == 0.0
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_CLUSTER = PROJECT_OUTPUTS_DIR / "json" / "clustered_adoption.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "clustered_adoption_report.json"
+_SKIP = (
+    "clustered_adoption.json not present; run analyze_clustered_adoption.py "
+    "first (outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _CLUSTER.is_file(), reason=_SKIP)
+def test_governed_clustered_adoption() -> None:
+    """Clustering worsens the worst hotspot; local flex recovers most; burden concentrates.
+
+    With ~540 transformers the per-transformer first-reinforcement mu is
+    degenerate (the worst crosses 100% at the lowest mu even uniformly), so the
+    penalty is framed as the worst-loading ratio at a fixed mean rate: clustering
+    makes the worst hotspot materially worse (higher loading) even though FEWER
+    transformers overload (stress concentrates). Local per-transformer curtailment
+    pulls the worst back toward its rating at a real, concentrated cost.
+    """
+    p = json.loads(_CLUSTER.read_text())
+    pen, rec = p["penalty"], p["recovery"]
+    # clustering makes the worst transformer materially worse at a fixed fleet
+    assert pen["worst_loading_clustered"] > pen["worst_loading_uniform"]
+    assert pen["penalty_ratio"] > 1.0
+    # local flex pulls the worst hotspot back toward its rating (large reduction)
+    assert rec["worst_loading_managed_clustered"] < pen["worst_loading_clustered"]
+    assert rec["worst_loading_reduction"] > 0.0
+    # recovery has a real, concentrated cost (burden falls on EV-heavy clusters)
+    assert rec["curtailed_energy_percent"] > 0.0
+    assert 0.0 < rec["burden_gini"] < 1.0
+    # eje A: worst loading AND Gini at the fixed mean rate rise with dispersion
+    deltas = p["dispersion_grid"]
+    mi = p["mu_grid"].index(
+        min(p["mu_grid"], key=lambda m: abs(m - p["mean_rate_for_gini_axis"]))
+    )
+    worst = [
+        p["by_dispersion"][f"delta_{d:.2f}"]["worst_loading_by_mu"][mi] for d in deltas
+    ]
+    ginis = [p["by_dispersion"][f"delta_{d:.2f}"]["gini_at_mean_rate"] for d in deltas]
+    assert worst == sorted(worst), f"worst loading not rising with dispersion: {worst}"
+    assert ginis == sorted(ginis), f"Gini not rising with dispersion: {ginis}"
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_clustered_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("penalty_ratio", "worst_loading_clustered", "burden_gini"):
+        assert key in report["summary"], sorted(report["summary"])

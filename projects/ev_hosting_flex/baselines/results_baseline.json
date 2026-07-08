@@ -306,6 +306,67 @@
       ],
       "source": "outputs/json/network_characterization.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 1.735679,
+      "id": "cluster.penalty_ratio",
+      "json_path": [
+        "penalty",
+        "penalty_ratio"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 216.222314,
+      "id": "cluster.worst_loading_clustered",
+      "json_path": [
+        "penalty",
+        "worst_loading_clustered"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 104.61255,
+      "id": "cluster.worst_loading_managed_clustered",
+      "json_path": [
+        "recovery",
+        "worst_loading_managed_clustered"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 25.728694,
+      "id": "cluster.curtailed_energy_percent",
+      "json_path": [
+        "recovery",
+        "curtailed_energy_percent"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.843567,
+      "id": "cluster.burden_gini",
+      "json_path": [
+        "recovery",
+        "burden_gini"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.517525,
+      "id": "cluster.gini_at_max_dispersion",
+      "json_path": [
+        "by_dispersion",
+        "delta_1.10",
+        "gini_at_mean_rate"
+      ],
+      "source": "outputs/json/clustered_adoption.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
