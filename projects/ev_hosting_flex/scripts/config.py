@@ -1084,14 +1084,24 @@ cluster lands at 75 kVA (matching the governed unit), a 12-home at 167 kVA."""
 
 LV_DYNAMIC_RATING_K = 1.4
 """Cold-ambient dynamic thermal rating factor for the LV transformers at the
-design cold (IEEE C57.91). A transformer runs cooler in a −20 °C ambient and
-can carry ~1.3–1.5× nameplate without exceeding its hotspot limit; 1.4 mirrors
-the config's MV/HV ``K(−22.5 °C)=1.41``. The AC validation reports BOTH the
-static-nameplate overload count (loading > 100 %) and the dynamic overload
-count (loading > ``100 × LV_DYNAMIC_RATING_K`` = 140 %) — a transformer above
-nameplate but below the dynamic limit is loaded, not thermally overloaded. The
-GOVERNED firm/flexible gate stays on the conservative STATIC feeder rating
-(``TRANSFORMER_KVA × POWER_FACTOR``); this factor is reporting-only."""
+design cold (IEEE C57.91). A transformer runs cooler in a −20 °C ambient and can
+carry more than nameplate without exceeding its 110 °C hot-spot limit.
+
+VERIFIED (2026-07-08) against the IEEE C57.91 steady-state hot-spot model: at
+−22.5 °C, keeping the hot-spot at the 110 °C normal-life limit gives K = 1.37
+with base parameters (top-oil rise 55 °C, hot-spot-over-oil 25 °C, R = 6,
+oil/winding exponents n = 0.9 / m = 0.8), and K = 1.31–1.41 across the plausible
+exponent range (n = m = 0.8 → 1.405). So 1.40 is at the OPTIMISTIC end (~+2 % vs
+the 1.37 base case) but inside the physical band. Cross-checked against
+Hydro-Québec practice — HQ actively dynamic-thermal-rates transformers for
+winter overload (Rajotte & Picher, "Experience with transformer loading tests
+and direct temperature measurements in laboratory and in service", CIGRE 2018,
+paper A2-110, SC A2 PS1). Their direct hot-spot measurements exist BECAUSE the
+simplified model has cold-weather uncertainties (oil viscosity, hot-spot factor)
+— so a fixed K is a documented simplification. SAFE because it is REPORTING-ONLY
+(the dynamic overload count, loading > 100 × K = 140 %); the GOVERNED
+firm/flexible gate stays on the conservative STATIC rating (``TRANSFORMER_KVA ×
+POWER_FACTOR``), so the ~2 % optimism never touches the headlines."""
 
 LV_LINE_UTIL_TARGET = 0.85
 """Design-cold thermal utilization target the LV secondary conductors are sized
@@ -1123,13 +1133,17 @@ with the substation LTC / line regulators, not conductor gauge."""
 # design-day full-net power flows, before the economic analysis.
 
 SUBSTATION_DYNAMIC_RATING_K = 1.41
-"""Cold-ambient IEEE C57.91 dynamic rating factor of the 15 MVA HV/MV substation
-transformer (D). Provenance: the config ``transformers.mv_hv`` note
-("K(−22.5 °C)=1.41 -> P_dyn=20.1 MW"). The characterization reports the
-substation peak loading against BOTH its static nameplate (100 %) and this
-dynamic limit (141 %); the probe found it already at ~140 % (its dynamic limit)
-at design cold with ZERO EVs, so the substation may be the binding
-reinforcement constraint at network-wide adoption — not the individual feeders."""
+"""Cold-ambient IEEE C57.91 dynamic rating factor of the HV/MV substation
+transformers. Provenance: the config ``transformers.mv_hv`` note ("K(−22.5 °C)=
+1.41"). VERIFIED (2026-07-08) — same C57.91 hot-spot check as
+``LV_DYNAMIC_RATING_K``: the rigorous value at −22.5 °C / 110 °C hot-spot is
+1.37 (base) to 1.41 (n = m = 0.8), so 1.41 is at the optimistic edge but within
+the physical band; cross-checked vs HQ dynamic-thermal-rating practice (Rajotte
+& Picher, CIGRE 2018 A2-110). The characterization reports the substation peak
+loading against BOTH its static nameplate (100 %) and this dynamic limit
+(141 %). After the HQ load-matched resizing the substation sits ~82 % at 0 EV
+and stays within the dynamic limit across the sweep — the FEEDERS bind first,
+not the substation (this factor is reporting-only, never a governed gate)."""
 
 HEADROOM_PENETRATION_GRID = (
     0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0,
