@@ -74,8 +74,9 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ROUND_DECIMALS,
     SEED,
     SLACK_VM_PU,
+    SUBSTATION_EMERGENCY_FACTOR,
     SUBSTATION_MVA_LADDER,
-    SUBSTATION_UTIL_TARGET,
+    SUBSTATION_N_TRANSFORMERS,
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
 )
@@ -192,8 +193,8 @@ def size_network_to_load(
             net.line.at[line_idx, "x_ohm_per_km"] = x / scale
             n_lines_upsized += 1
 
-    substation_mva_by_trafo = _size_substation_transformers(
-        net, downstream_map, homes_by_bus, base_by_size, size_by_loadbus, pf
+    substation = configure_substation_n1(
+        net, homes_by_bus, base_by_size, size_by_loadbus, pf
     )
 
     return {
@@ -202,48 +203,93 @@ def size_network_to_load(
         "kva_by_size": kva_by_size,
         "size_by_trafo": size_by_trafo,
         "n_lv_lines_upsized": n_lines_upsized,
-        "substation_mva_by_trafo": substation_mva_by_trafo,
+        "substation": substation,
     }
 
 
-def _size_substation_transformers(
+def configure_substation_n1(
     net: Any,
-    downstream_map: dict[str, Any],
     homes_by_bus: Any,
     base_by_size: dict[int, np.ndarray],
     size_by_loadbus: dict[int, int],
     pf: float,
-) -> dict[int, float]:
-    """Size each 120/25 kV substation transformer to its downstream design load.
+) -> dict[str, Any]:
+    """Reconfigure the substation into an HQ-realistic N-1 transformer bank.
 
-    HQ-realistic sizing (bibliographic verification: real 120/25 kV units are
-    33-140 MVA, not the synthetic 15). Diversity is ~0 at design cold, so a
-    transformer's downstream peak is the hourly max of the summed per-home base
-    of every downstream home; it takes the smallest MVA ladder rung covering
-    that load at ``SUBSTATION_UTIL_TARGET``. Mutates ``net.trafo.sn_mva``.
+    Ties the existing substation transformers' MV (25 kV) buses onto a common
+    bus (a near-zero-impedance coupler — the normal closed-tie operating state),
+    adds transformers until the bank has ``SUBSTATION_N_TRANSFORMERS`` units, and
+    sizes every unit to the smallest ``SUBSTATION_MVA_LADDER`` rung whose usable
+    MW ``× (N−1)`` covers the total area design-cold load — so the ``N−1``
+    remaining units carry the full load at ≤ 100 % nameplate on a single-unit
+    contingency (the ``SUBSTATION_EMERGENCY_FACTOR`` is then the margin). Diversity
+    is ~0 at design cold, so the area load is the hourly max of the summed
+    per-home base of every home. Mutates the net in place.
 
     Returns:
-        The assigned MVA per substation transformer index.
+        Dict with the per-unit MVA, unit count, total area load, and the N-1 firm
+        capacity at the normal and emergency ratings (MW).
     """
-    sub_trafos = net.trafo.index[net.trafo["vn_lv_kv"] >= 1.0]
-    mva_by_trafo: dict[int, float] = {}
-    for idx in sub_trafos:
-        downstream = downstream_map.get(f"transformer:{int(idx)}", [])
-        down_buses = [int(b) for b in downstream if int(b) in homes_by_bus.index]
-        day_profile = np.zeros(24, dtype=DTYPE)
-        for bus in down_buses:
-            day_profile = day_profile + int(homes_by_bus.loc[bus]) * base_by_size[
-                size_by_loadbus[bus]
-            ]
-        design_load_mw = float(day_profile.max()) / 1000.0
-        required_mva = design_load_mw / float(pf) / float(SUBSTATION_UTIL_TARGET)
-        mva = next(
-            (m for m in SUBSTATION_MVA_LADDER if m >= required_mva),
-            SUBSTATION_MVA_LADDER[-1],
+    import pandapower as pp
+
+    # Total area design-cold load (coincident; MV diversity ~0 at design cold).
+    day_profile = np.zeros(24, dtype=DTYPE)
+    for bus, size in size_by_loadbus.items():
+        day_profile = day_profile + int(homes_by_bus.loc[bus]) * base_by_size[size]
+    total_load_mw = float(day_profile.max()) / 1000.0
+    total_load_mva = total_load_mw / float(pf)
+
+    n = int(SUBSTATION_N_TRANSFORMERS)
+    per_unit_min_mva = total_load_mva / max(n - 1, 1)
+    mva = next(
+        (m for m in SUBSTATION_MVA_LADDER if m >= per_unit_min_mva),
+        SUBSTATION_MVA_LADDER[-1],
+    )
+
+    sub_idx = list(net.trafo.index[net.trafo["vn_lv_kv"] >= 1.0])
+    mv_buses = [int(net.trafo.at[i, "lv_bus"]) for i in sub_idx]
+    # Tie the MV LV-side buses onto a common node with closed bus-bus switches
+    # (the normal closed-tie operating state) — a zero-impedance fuse, unlike a
+    # near-zero line which ill-conditions the power flow.
+    for other in mv_buses[1:]:
+        pp.create_switch(net, bus=mv_buses[0], element=other, et="b", closed=True)
+    # Add transformers (copied from the first) until the bank has N units.
+    template = net.trafo.loc[sub_idx[0]]
+    while len(sub_idx) < n:
+        new_idx = pp.create_transformer_from_parameters(
+            net,
+            hv_bus=int(template.hv_bus),
+            lv_bus=mv_buses[0],
+            sn_mva=mva,
+            vn_hv_kv=float(template.vn_hv_kv),
+            vn_lv_kv=float(template.vn_lv_kv),
+            vk_percent=float(template.vk_percent),
+            vkr_percent=float(template.vkr_percent),
+            pfe_kw=float(template.pfe_kw),
+            i0_percent=float(template.i0_percent),
+            shift_degree=float(template.shift_degree),
         )
-        net.trafo.at[idx, "sn_mva"] = mva
-        mva_by_trafo[int(idx)] = mva
-    return mva_by_trafo
+        sub_idx.append(int(new_idx))
+    for i in sub_idx:
+        net.trafo.at[i, "sn_mva"] = mva
+    # The synthetic template carries a tap-dependency flag with no lookup table;
+    # the parallel N-1 bank uses fixed taps, so disable it to keep runpp clean.
+    if "tap_dependency_table" in net.trafo.columns:
+        net.trafo["tap_dependency_table"] = False
+
+    usable_mw = mva * float(pf)
+    return {
+        "n_transformers": n,
+        "mva_per_transformer": float(mva),
+        "total_area_load_mw": round(total_load_mw, ROUND_DECIMALS),
+        "normal_loading_percent": round(
+            total_load_mw / (n * usable_mw) * 100.0, ROUND_DECIMALS
+        ),
+        "firm_capacity_normal_mw": round((n - 1) * usable_mw, ROUND_DECIMALS),
+        "firm_capacity_emergency_mw": round(
+            (n - 1) * usable_mw * float(SUBSTATION_EMERGENCY_FACTOR), ROUND_DECIMALS
+        ),
+    }
 
 
 def build_scenario_profiles(
@@ -342,7 +388,8 @@ def build_scenario_profiles(
         },
         "lv_line_util_target": float(LV_LINE_UTIL_TARGET),
         "n_lv_lines_upsized": int(sizing["n_lv_lines_upsized"]),
-        "basis": "HQ load-matched transformers + LV conductors + SDK per-size base + C57.91 dynamic rating",
+        "substation": sizing["substation"],
+        "basis": "HQ load-matched LV fleet + N-1 substation bank + SDK per-size base + C57.91 dynamic rating",
     }
 
     # ── Feeder-unit cold-day MC: the curtailment backstop runs at the GOVERNED

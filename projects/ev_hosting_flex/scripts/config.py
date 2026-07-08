@@ -1180,3 +1180,32 @@ this target, landing it ~85% loaded before EVs so the EV sweep pushes it toward
 its limit cleanly. NOTE: this sizes for NORMAL operation; HQ's N-1 criterion
 (each unit carries the full load on contingency) would require ~2x — a documented
 reliability margin beyond this study's normal-operation hosting scope."""
+
+# ─── Substation N-1 reliability configuration (2026-07-08, HQ-realistic) ─────
+# APPEND-ONLY. The substation-sizing verification (Hydro-Québec docs + utility
+# planning practice) established that substations are sized by the N-1
+# contingency criterion — not a normal-operation utilization target: the
+# substation must still serve the load with ONE transformer out. HQ favours
+# THREE 120/25 kV transformers per substation (provision for a 4th). This block
+# reconfigures the twin's 2-transformer substation into a 3-transformer N-1
+# substation with a common (tied) MV bus, each transformer sized so the (N-1)
+# remaining units carry the full area load.
+
+SUBSTATION_N_TRANSFORMERS = 3
+"""Number of parallel 120/25 kV substation transformers on a common (tied) MV
+bus (HQ-typical: 3, with 4th provision). The twin ships 2 (separate MV halves);
+the validate_powerflow reconfiguration ties the MV buses and adds units to reach
+this count so they parallel-share the load and the N-1 contingency is realizable."""
+
+SUBSTATION_EMERGENCY_FACTOR = 1.5
+"""Short-term emergency loading factor for the substation transformers on an N-1
+contingency (utility practice: 1.5x nameplate for units < 100 MVA, 1.3x for
+> 100 MVA). The firm-capacity metric reports the load the substation can serve
+with one transformer out at BOTH the normal rating ((N-1) x nameplate) and this
+emergency rating ((N-1) x nameplate x factor)."""
+
+# Sizing rule: each transformer's nameplate is the smallest SUBSTATION_MVA_LADDER
+# rung >= total_area_load_MVA / (SUBSTATION_N_TRANSFORMERS - 1), so the (N-1)
+# remaining units carry the full design-cold load at <= 100% nameplate (the
+# emergency factor is then the safety margin). For the ~37 MVA area this lands
+# each unit at 20 MVA: ~62% loaded normally (3 in service), ~93% on N-1.

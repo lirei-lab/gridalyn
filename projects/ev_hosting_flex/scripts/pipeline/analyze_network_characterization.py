@@ -133,18 +133,22 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     loss_mwh: list[float] = []
     served_mwh: list[float] = []
     sub_peak: list[float] = []
+    served_peak_mw: list[float] = []
     lv_peak = np.zeros((len(pens), len(lv_trafos)), dtype=DTYPE)
 
     for pi, pen in enumerate(pens):
         served_e = loss_e = 0.0
         sub_pk = 0.0
+        peak_mw = 0.0
         tr_pk = np.zeros(len(lv_trafos), dtype=DTYPE)
         for hour in range(24):
             p_kw = per_load_base[:, hour] + float(pen) * ev_perhome_day[hour]
             net.load["p_mw"] = p_kw / 1000.0
             net.load["q_mvar"] = net.load["p_mw"] * q_factor
             pp.runpp(net, numba=True)
-            served_e += float(net.res_load["p_mw"].sum())
+            served_h = float(net.res_load["p_mw"].sum())
+            served_e += served_h
+            peak_mw = max(peak_mw, served_h)
             loss_e += float(
                 net.res_line["pl_mw"].sum() + net.res_trafo["pl_mw"].sum()
             )
@@ -158,7 +162,19 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         loss_mwh.append(round(loss_e, ROUND_DECIMALS))
         loss_pct.append(round(loss_e / served_e * 100.0, ROUND_DECIMALS))
         sub_peak.append(round(sub_pk, ROUND_DECIMALS))
+        served_peak_mw.append(round(peak_mw, ROUND_DECIMALS))
         lv_peak[pi] = tr_pk
+
+    # ── N-1 substation firm capacity: the EV penetration at which the peak
+    # load erodes the contingency margin (one transformer out). ──────────────
+    sub_cfg = sizing["substation"]
+    peak_arr = np.array(served_peak_mw)
+    n1_trigger_normal = _interp_crossing(
+        pens, peak_arr, float(sub_cfg["firm_capacity_normal_mw"])
+    )
+    n1_trigger_emergency = _interp_crossing(
+        pens, peak_arr, float(sub_cfg["firm_capacity_emergency_mw"])
+    )
 
     # ── Substation crossings ──────────────────────────────────────────────
     sub_arr = np.array(sub_peak)
@@ -185,6 +201,13 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             "loss_percent": loss_pct,
         },
         "substation": {
+            "n_transformers": sub_cfg["n_transformers"],
+            "mva_per_transformer": sub_cfg["mva_per_transformer"],
+            "total_area_load_mw": sub_cfg["total_area_load_mw"],
+            "normal_loading_percent": sub_cfg["normal_loading_percent"],
+            "firm_capacity_normal_mw": sub_cfg["firm_capacity_normal_mw"],
+            "firm_capacity_emergency_mw": sub_cfg["firm_capacity_emergency_mw"],
+            "served_peak_mw": served_peak_mw,
             "peak_loading_percent": sub_peak,
             "static_rating_percent": 100.0,
             "dynamic_rating_percent": round(
@@ -198,6 +221,16 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             "crossing_penetration_dynamic": (
                 round(sub_cross_dynamic, ROUND_DECIMALS)
                 if np.isfinite(sub_cross_dynamic)
+                else None
+            ),
+            "n1_reinforcement_penetration_normal": (
+                round(n1_trigger_normal, ROUND_DECIMALS)
+                if np.isfinite(n1_trigger_normal)
+                else None
+            ),
+            "n1_reinforcement_penetration_emergency": (
+                round(n1_trigger_emergency, ROUND_DECIMALS)
+                if np.isfinite(n1_trigger_emergency)
                 else None
             ),
         },
@@ -230,17 +263,23 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     fig_paths = _figures(
-        pens, loss_pct, sub_peak, headroom_static, home_counts,
-        float(SUBSTATION_DYNAMIC_RATING_K), PROJECT_OUTPUTS_DIR / "figures",
+        pens, loss_pct, served_peak_mw, sub_cfg, headroom_static, home_counts,
+        PROJECT_OUTPUTS_DIR / "figures",
     )
 
     summary = {
         "loss_percent_0ev": loss_pct[0],
         "loss_percent_max_pen": loss_pct[-1],
+        "substation_n_transformers": sub_cfg["n_transformers"],
+        "substation_mva_per_transformer": sub_cfg["mva_per_transformer"],
+        "substation_normal_loading_percent": sub_cfg["normal_loading_percent"],
         "substation_peak_0ev": sub_peak[0],
         "substation_peak_max_pen": sub_peak[-1],
-        "substation_crossing_dynamic": payload["substation"][
-            "crossing_penetration_dynamic"
+        "n1_reinforcement_penetration_normal": payload["substation"][
+            "n1_reinforcement_penetration_normal"
+        ],
+        "n1_reinforcement_penetration_emergency": payload["substation"][
+            "n1_reinforcement_penetration_emergency"
         ],
         "headroom_p50": payload["headroom"]["crossing_penetration_p50"],
         "n_transformers_overloaded_at_0ev": n_at_0,
@@ -251,13 +290,13 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
 def _figures(
     pens: np.ndarray,
     loss_pct: list[float],
-    sub_peak: list[float],
+    served_peak_mw: list[float],
+    sub_cfg: dict[str, Any],
     headroom: np.ndarray,
     home_counts: np.ndarray,
-    sub_k: float,
     figures_dir: Path,
 ) -> list[Path]:
-    """Three-panel figure: losses, substation loading, headroom map."""
+    """Three-panel figure: losses, substation N-1 firm capacity, headroom map."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -271,13 +310,21 @@ def _figures(
     ax1.set_ylabel("Network losses (% of served energy)")
     ax1.set_title("Losses rise with EV load")
 
-    ax2.plot(pens, sub_peak, "o-", color="C1")
-    ax2.axhline(100.0, color="k", ls="--", lw=1, label="static nameplate")
-    ax2.axhline(100.0 * sub_k, color="C3", ls=":", lw=1.5,
-                label=f"dynamic ({sub_k:g}x, cold)")
+    ax2.plot(pens, served_peak_mw, "o-", color="C1", label="area peak load")
+    ax2.axhline(
+        float(sub_cfg["firm_capacity_normal_mw"]), color="k", ls="--", lw=1,
+        label="N-1 firm (normal)",
+    )
+    ax2.axhline(
+        float(sub_cfg["firm_capacity_emergency_mw"]), color="C3", ls=":", lw=1.5,
+        label="N-1 firm (emergency)",
+    )
     ax2.set_xlabel("EV/home")
-    ax2.set_ylabel("Substation peak loading (%)")
-    ax2.set_title("Substation is the binding constraint")
+    ax2.set_ylabel("Area peak load (MW)")
+    ax2.set_title(
+        f"Substation N-1 firm capacity "
+        f"({sub_cfg['n_transformers']}x{sub_cfg['mva_per_transformer']:g} MVA)"
+    )
     ax2.legend(fontsize=8)
 
     finite = headroom[np.isfinite(headroom)]
@@ -309,15 +356,17 @@ def run_stage() -> dict[str, Any]:
         script.cache_dir, PROJECT_OUTPUTS_DIR / "data"
     )
     warnings = [
-        "LOW WINTER DIVERSITY: the deterministic per-size base broadcasts one "
-        "profile per cluster size, but the inter-cluster diversity at design cold "
-        "is ~0 (verified factor 0.997) — all-electric heating is weather-driven and "
-        "coincident, so every home's baseboards run flat-out at −20 °C. The "
-        "aggregate substation loading is therefore a faithful coincident-peak "
-        "estimate, NOT an upper bound. The substation transformers are now "
-        "HQ-load-matched (bibliographic verification: real 120/25 kV units are "
-        "33-140 MVA), so the network is design-cold-healthy before EVs at every "
-        "level and the EV sweep pushes each toward its limit."
+        "LOW WINTER DIVERSITY: inter-cluster diversity at design cold is ~0 "
+        "(verified factor 0.997) — all-electric heating is weather-driven and "
+        "coincident, so the aggregate substation loading is a faithful "
+        "coincident-peak estimate, not an upper bound.",
+        "SUBSTATION N-1: the substation is now an HQ-realistic N-1 bank (3 x 20 MVA "
+        "on a common tied MV bus, ~62% loaded normally). The firm-capacity metric "
+        "reports the load the (N-1) remaining units carry on a single-transformer "
+        "contingency; the N-1 reinforcement trigger is the EV penetration at which "
+        "the peak load exceeds that firm capacity (normal and emergency ratings). "
+        "The N-1 contingency itself is a PLANNING metric (analytic firm capacity), "
+        "not a simulated open-breaker power flow.",
     ]
     return script.write_report(
         "network_characterization_report",
@@ -336,10 +385,12 @@ def main() -> None:
     print(
         "Network characterization + report: "
         f"losses {s.get('loss_percent_0ev')}% -> {s.get('loss_percent_max_pen')}% | "
-        f"substation {s.get('substation_peak_0ev')}% -> {s.get('substation_peak_max_pen')}% "
-        f"(crosses dynamic at {s.get('substation_crossing_dynamic')} EV/home) | "
-        f"headroom p50 {s.get('headroom_p50')} EV/home | "
-        f"{s.get('n_transformers_overloaded_at_0ev')} trafos overloaded at 0 EV"
+        f"substation {s.get('substation_n_transformers')}x"
+        f"{s.get('substation_mva_per_transformer')} MVA N-1, "
+        f"{s.get('substation_normal_loading_percent')}% normal, "
+        f"N-1 reinforce at {s.get('n1_reinforcement_penetration_normal')} "
+        f"(emergency {s.get('n1_reinforcement_penetration_emergency')}) EV/home | "
+        f"feeder headroom p50 {s.get('headroom_p50')} EV/home"
     )
 
 

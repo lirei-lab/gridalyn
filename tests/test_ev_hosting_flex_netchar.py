@@ -38,34 +38,35 @@ def test_interp_crossing_hand_computed() -> None:
 
 @pytest.mark.skipif(not _CHAR.is_file(), reason=_SKIP)
 def test_governed_network_characterization() -> None:
-    """Governed reproduce-and-pin: losses rise, substation healthy, feeders bind.
+    """Governed reproduce-and-pin: losses rise, N-1 substation robust, feeders bind.
 
-    With the HQ-load-matched substation transformers (bibliographic
-    verification: real 120/25 kV units are 33-140 MVA, not the synthetic 15),
-    the network is design-cold-healthy BEFORE EVs at every level: losses rise
-    monotonically and super-linearly with EV load; the substation is loaded but
-    below its static nameplate at 0 EV and stays within its cold dynamic rating
-    across the swept range (it is NO longer the binding constraint); the FEEDERS
-    bind first, with a per-transformer headroom median matching the study
-    feeder's firm penetration (2 EVs / 6 homes = 0.33).
+    The substation is an HQ-realistic N-1 bank (3 x 20 MVA, ~62% loaded
+    normally). Losses rise monotonically and super-linearly with EV load; the
+    area peak load erodes the N-1 firm capacity — it crosses the NORMAL firm
+    rating at a low penetration but never the EMERGENCY firm rating within the
+    swept range, so a single-transformer contingency is survivable across all
+    realistic adoption. The FEEDERS are the binding constraint for hosting, with
+    a per-transformer headroom median near the study feeder's firm penetration
+    (2 EVs / 6 homes = 0.33); the network is healthy before EVs.
     """
     payload = json.loads(_CHAR.read_text())
     loss = payload["losses"]["loss_percent"]
     assert loss == sorted(loss), "losses must rise with EV load"
-    # super-linear: the increment grows (I^2 R).
-    assert (loss[-1] - loss[-2]) > (loss[1] - loss[0])
+    assert (loss[-1] - loss[-2]) > (loss[1] - loss[0])  # super-linear (I^2 R)
     sub = payload["substation"]
-    dyn = sub["dynamic_rating_percent"]
-    # HQ-load-matched: healthy (< nameplate) at 0 EV, rises with adoption.
-    assert sub["peak_loading_percent"][0] < 100.0
-    assert sub["peak_loading_percent"][-1] > sub["peak_loading_percent"][0]
-    # sized so it never crosses its cold dynamic rating over the swept range.
-    assert sub["crossing_penetration_dynamic"] is None
-    assert sub["peak_loading_percent"][-1] <= dyn
+    # HQ-realistic N-1 bank: 3 transformers, ~62% loaded normally.
+    assert sub["n_transformers"] == 3
+    assert 50.0 < sub["normal_loading_percent"] < 75.0
+    assert sub["firm_capacity_emergency_mw"] > sub["firm_capacity_normal_mw"]
+    peak = sub["served_peak_mw"]
+    assert peak == sorted(peak), "area peak load must rise with EV adoption"
+    assert peak[0] < sub["firm_capacity_normal_mw"]  # healthy before EVs
+    # N-1 survivable on emergency rating across the whole realistic sweep.
+    assert sub["n1_reinforcement_penetration_normal"] is not None
+    assert sub["n1_reinforcement_penetration_emergency"] is None
     hr = payload["headroom"]
-    # the feeders are the binding constraint (median headroom ~ the firm pen).
+    # the feeders are the binding hosting constraint.
     assert 0.0 < hr["crossing_penetration_p50"] < 1.0
     assert hr["crossing_penetration_p05"] <= hr["crossing_penetration_p50"]
     assert hr["crossing_penetration_p50"] <= hr["crossing_penetration_p95"]
-    # network healthy before EVs: no transformer over its static nameplate.
-    assert hr["n_overloaded_at_0ev"] == 0
+    assert hr["n_overloaded_at_0ev"] == 0  # network healthy before EVs
