@@ -3,10 +3,12 @@
 At a FIXED total fleet, non-uniform ("clustered") adoption saturates the worst
 last-mile transformer far earlier than the uniform metric suggests. This stage:
 
-* PART 1 — characterization: (eje A) worst-transformer loading + count over
-  limit vs the Gini of the adoption vector at a fixed mean rate; (eje B) the
-  mean penetration at which the worst transformer first crosses 100%, clustered
-  vs uniform (the headline gap Delta-mu).
+* PART 1 — characterization: the clustering PENALTY = how much worse the worst
+  transformer's loading gets at a fixed mean adoption rate as dispersion (Gini)
+  grows, uniform vs clustered. (The per-transformer first-reinforcement mu is
+  degenerate at this scale — with ~540 transformers the worst already exceeds
+  100% at the lowest swept mu even uniformly — so the penalty is framed as the
+  worst-loading ratio, not a mu-crossing gap.)
 * PART 2 — recovery: per-transformer local curtailment (static-rating cap, no
   time-shift) re-solved in AC; the hosting recovered, the curtailed energy, the
   burden concentration (Gini/Jain) on the EV-heavy clusters, and the dispersion
@@ -313,8 +315,6 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         for delta in deltas
     }
 
-    # eje B: first-reinforcement mu, uniform (delta=0) vs each clustered delta
-    mu_uniform = _interp_crossing(mus, per_delta[0.0]["worst"], 100.0)
     payload_delta = {}
     for delta in deltas:
         d = per_delta[float(delta)]
@@ -343,20 +343,41 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
 
     delta_hi = float(deltas[-1])
     d_hi = payload_delta[f"delta_{delta_hi:.2f}"]
-    mu_clustered = d_hi["reinforcement_mu"]
-    mu_clustered_managed = d_hi["reinforcement_mu_managed"]
-    reinforcement_gap_mu = (
-        round(float(mu_uniform) - float(mu_clustered), ROUND_DECIMALS)
-        if (np.isfinite(mu_uniform) and mu_clustered is not None)
+
+    # ── Headline: clustering PENALTY + flex RECOVERY at the fixed mean rate ──
+    # The per-transformer first-reinforcement mu is degenerate here: with ~540
+    # transformers the WORST one already exceeds 100% at the lowest swept mu,
+    # under uniform adoption too, so the crossing metric saturates and cannot
+    # separate clustered from uniform. The penalty instead shows up in HOW BAD
+    # the worst hotspot gets. Evaluate at mu = CLUSTER_MEAN_RATE, uniform
+    # (delta=0) vs the most-clustered dispersion level.
+    mi = int(np.argmin(np.abs(mus - float(CLUSTER_MEAN_RATE))))
+    worst_uniform = float(per_delta[0.0]["worst"][mi])
+    worst_clustered = float(per_delta[delta_hi]["worst"][mi])
+    worst_managed_clustered = float(per_delta[delta_hi]["worst_managed"][mi])
+    penalty_ratio = (
+        round(worst_clustered / worst_uniform, ROUND_DECIMALS)
+        if worst_uniform > 0
         else None
     )
-    hosting_recovered_frac = None
-    if reinforcement_gap_mu not in (None, 0.0) and mu_clustered_managed is not None:
-        hosting_recovered_frac = round(
-            (float(mu_clustered_managed) - float(mu_clustered))
-            / (float(mu_uniform) - float(mu_clustered)),
-            ROUND_DECIMALS,
-        )
+    penalty = {
+        "mean_rate": float(CLUSTER_MEAN_RATE),
+        "worst_loading_uniform": round(worst_uniform, ROUND_DECIMALS),
+        "worst_loading_clustered": round(worst_clustered, ROUND_DECIMALS),
+        "penalty_ratio": penalty_ratio,
+        "n_over_uniform": int(per_delta[0.0]["n_over"][mi]),
+        "n_over_clustered": int(per_delta[delta_hi]["n_over"][mi]),
+    }
+    recovery = {
+        "worst_loading_managed_clustered": round(
+            worst_managed_clustered, ROUND_DECIMALS
+        ),
+        "worst_loading_reduction": round(
+            worst_clustered - worst_managed_clustered, ROUND_DECIMALS
+        ),
+        "curtailed_energy_percent": d_hi["curtailed_energy_percent_at_mean"],
+        "burden_gini": d_hi["burden_gini_at_mean"],
+    }
 
     payload = {
         "design_day": design_day,
@@ -364,15 +385,8 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "mu_grid": [round(float(m), 6) for m in mus],
         "dispersion_grid": [round(float(x), 6) for x in deltas],
         "n_lv_transformers": int(len(lv_trafos)),
-        "reinforcement_mu_uniform": (
-            round(float(mu_uniform), ROUND_DECIMALS)
-            if np.isfinite(mu_uniform)
-            else None
-        ),
-        "reinforcement_gap_mu": reinforcement_gap_mu,
-        "hosting_recovered_frac": hosting_recovered_frac,
-        "curtailed_energy_percent": d_hi["curtailed_energy_percent_at_mean"],
-        "burden_gini": d_hi["burden_gini_at_mean"],
+        "penalty": penalty,
+        "recovery": recovery,
         "by_dispersion": payload_delta,
     }
     json_dir = PROJECT_OUTPUTS_DIR / "json"
@@ -384,11 +398,14 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
 
     summary = {
         "n_lv_transformers": payload["n_lv_transformers"],
-        "reinforcement_mu_uniform": payload["reinforcement_mu_uniform"],
-        "reinforcement_gap_mu": reinforcement_gap_mu,
-        "hosting_recovered_frac": hosting_recovered_frac,
-        "curtailed_energy_percent": payload["curtailed_energy_percent"],
-        "burden_gini": payload["burden_gini"],
+        "penalty_ratio": penalty_ratio,
+        "worst_loading_uniform": penalty["worst_loading_uniform"],
+        "worst_loading_clustered": penalty["worst_loading_clustered"],
+        "worst_loading_managed_clustered": recovery[
+            "worst_loading_managed_clustered"
+        ],
+        "curtailed_energy_percent": recovery["curtailed_energy_percent"],
+        "burden_gini": recovery["burden_gini"],
         "gini_at_max_dispersion": d_hi["gini_at_mean_rate"],
     }
     return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
@@ -492,12 +509,13 @@ def main() -> None:
     report = run_stage()
     s = report.get("summary", {})
     print(
-        "Clustered adoption + report: "
-        f"reinforcement mu uniform={s.get('reinforcement_mu_uniform')} -> "
-        f"gap Delta-mu={s.get('reinforcement_gap_mu')} EV/home | "
-        f"flex recovers {s.get('hosting_recovered_frac')} of the gap "
-        f"({s.get('curtailed_energy_percent')}% curtailed, burden Gini "
-        f"{s.get('burden_gini')}) | Gini@max disp {s.get('gini_at_max_dispersion')}"
+        "Clustered adoption + report: worst-trafo loading @ mean rate "
+        f"{s.get('worst_loading_uniform')}% uniform -> "
+        f"{s.get('worst_loading_clustered')}% clustered "
+        f"(penalty x{s.get('penalty_ratio')}, Gini {s.get('gini_at_max_dispersion')}) "
+        f"| local flex caps it to {s.get('worst_loading_managed_clustered')}% at "
+        f"{s.get('curtailed_energy_percent')}% curtailed (burden Gini "
+        f"{s.get('burden_gini')})"
     )
 
 
