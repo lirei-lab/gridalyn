@@ -41,7 +41,7 @@ authoritative sandbox) and the local migration design doc
 | `compute_congestion_annual` | **Firm** = largest pool prefix with P95 cold-day evening loading ≤ 100 % + congested-hours curve | `firm_hosting_annual.json` |
 | `apply_curtailment_contracts` | The mechanism: day-ahead call (notice), real-time backstop (reliability), fair rotation; enrollment sweep + notice quality + fairness | `curtailment_hosting.json` |
 | `compute_curtailment_economics` | Two-part contract vs annualized reinforcement + zone of agreement + break-even adoption | `curtailment_economics.json` |
-| `analyze_network_characterization` | Design-day full-net sweep of technical losses, the substation N-1 firm capacity (HQ-realistic 3 x 20 MVA bank on a common tied MV bus, ~62% loaded normally — the N-1 reinforcement trigger is when the area peak load erodes the contingency margin), and the per-transformer hosting-headroom map | `network_characterization.json`, figure |
+| `analyze_network_characterization` | Design-day full-net sweep of technical losses, the substation N-1 firm capacity (standard HQ bank of 2 identical parallel 33.3 MVA units on a common tied MV bus, ~56% loaded normally — on a single-unit contingency the survivor carries the base on its emergency rating, and the area peak crosses that N-1 emergency firm capacity at ~1.35 EV/home), and the per-transformer hosting-headroom map | `network_characterization.json`, figure |
 | `validate_powerflow` | AC validation before/after EVs: (1) design-day network family with each of the 540 LV transformers sized to its own load on the HQ standard kVA ladder + IEEE C57.91 cold dynamic rating; (2) cold-day Monte-Carlo on the 6-home feeder subnet (transformer + LV line loading + home voltage) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
 
 The kW chain runs at **15-minute resolution** (`ANNUAL_RES_MINUTES`): hourly
@@ -85,15 +85,16 @@ work. See `cold_coupling_comparison.png`.
 - **AC network validation (HQ-realistic network)**: the LV transformers (load-
   matched on the standard kVA ladder + C57.91 cold dynamic rating), the LV
   secondary conductors (thermal ampacity + ≤1 %/conductor voltage drop), and the
-  substation (an HQ-realistic N-1 bank of 3 × 20 MVA 120/25 kV units on a common
-  tied MV bus, ~62 % loaded normally — sized so the N-1 remaining units carry the
-  full load on a single-transformer contingency) are all matched to the Québec
-  all-electric design-cold load. The network is then fully healthy before EVs
-  (LV min voltage 0.940 pu ≥ CSA 0.917, no overloads), and EV adoption drives
-  undervoltage and LV line overloads (the binding channels — 1.5 EV/home: min
-  0.897 pu, 431 lines over 100 %) while the load-matched transformers and N-1
-  substation stay robust. The governed 6-home / 75 kVA feeder stays fixed, so the
-  firm/flexible headlines are unaffected.
+  substation (the standard HQ N-1 bank of 2 identical parallel 33.3 MVA 120/25 kV
+  units on a common tied MV bus, ~56 % loaded normally — sized so the lone
+  survivor carries the full load on a single-unit contingency using its 1.5×
+  emergency rating) are all matched to the Québec all-electric design-cold load.
+  The network is then fully healthy before EVs (LV min voltage 0.942 pu, no
+  overloads), and EV adoption drives undervoltage and LV line overloads (the
+  binding channels — 1.5 EV/home: min 0.900 pu, 431 lines over 100 %) while the
+  load-matched LV transformers stay robust and the substation N-1 becomes a real
+  reinforcement trigger at ~1.35 EV/home. The governed 6-home / 75 kVA feeder
+  stays fixed, so the firm/flexible headlines are unaffected.
 - **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
   uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
   MC shows the firm count overloading a few % of cold days (losses/reactive

@@ -1191,11 +1191,15 @@ reliability margin beyond this study's normal-operation hosting scope."""
 # substation with a common (tied) MV bus, each transformer sized so the (N-1)
 # remaining units carry the full area load.
 
-SUBSTATION_N_TRANSFORMERS = 3
-"""Number of parallel 120/25 kV substation transformers on a common (tied) MV
-bus (HQ-typical: 3, with 4th provision). The twin ships 2 (separate MV halves);
-the validate_powerflow reconfiguration ties the MV buses and adds units to reach
-this count so they parallel-share the load and the N-1 contingency is realizable."""
+SUBSTATION_N_TRANSFORMERS = 2
+"""Number of identical parallel 120/25 kV substation transformers on a common
+(tied) MV bus. The STANDARD/typical HQ distribution-substation configuration is
+TWO identical redundant units adhering to N-1 (each carries the full load on a
+single-transformer contingency using its emergency rating); 3-4 units are used
+only in large/high-growth substations, not at this ~35 MW / 3235-home scale. The
+twin ships exactly 2 (separate MV halves); the validate_powerflow reconfiguration
+ties their MV buses onto a common node so they parallel-share and the N-1
+contingency is realizable — no unit is added at N = 2."""
 
 SUBSTATION_EMERGENCY_FACTOR = 1.5
 """Short-term emergency loading factor for the substation transformers on an N-1
@@ -1204,8 +1208,12 @@ contingency (utility practice: 1.5x nameplate for units < 100 MVA, 1.3x for
 with one transformer out at BOTH the normal rating ((N-1) x nameplate) and this
 emergency rating ((N-1) x nameplate x factor)."""
 
-# Sizing rule: each transformer's nameplate is the smallest SUBSTATION_MVA_LADDER
-# rung >= total_area_load_MVA / (SUBSTATION_N_TRANSFORMERS - 1), so the (N-1)
-# remaining units carry the full design-cold load at <= 100% nameplate (the
-# emergency factor is then the safety margin). For the ~37 MVA area this lands
-# each unit at 20 MVA: ~62% loaded normally (3 in service), ~93% on N-1.
+SUBSTATION_N1_CONTINGENCY_TARGET = 1.20
+"""Target loading (per-unit of nameplate) of the (N-1) remaining transformers on
+a single-unit contingency, used to SIZE the bank: each unit is the smallest
+``SUBSTATION_MVA_LADDER`` rung with ``nameplate >= total_load_MVA / ((N-1) x
+SUBSTATION_N1_CONTINGENCY_TARGET)``. 1.20 is the classic distribution-substation
+N-1 design point — comfortably within the 1.5 emergency capability, equivalent
+to the "peak load < 60 % of total installed capacity" rule for 2 transformers.
+For the ~37 MVA area with N = 2 this lands each unit at 33.3 MVA (a real HQ
+size): ~56 % loaded normally, ~112 % on an N-1 contingency."""

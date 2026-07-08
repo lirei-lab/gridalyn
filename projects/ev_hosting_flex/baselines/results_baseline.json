@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.940107,
+      "expected": 0.942067,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.896712,
+      "expected": 0.899944,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -144,7 +144,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.521472,
+      "expected": 0.509202,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 102.359598,
+      "expected": 102.165098,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",
@@ -215,7 +215,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.461884,
+      "expected": 3.419715,
       "id": "netchar.loss_percent_0ev",
       "json_path": [
         "losses",
@@ -226,7 +226,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.945825,
+      "expected": 3.902502,
       "id": "netchar.loss_percent_2ev",
       "json_path": [
         "losses",
@@ -237,7 +237,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 63.26763,
+      "expected": 57.190858,
       "id": "netchar.substation_peak_0ev",
       "json_path": [
         "substation",
@@ -248,7 +248,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.379227,
+      "expected": 0.0,
       "id": "netchar.n1_reinforcement_penetration_normal",
       "json_path": [
         "substation",
@@ -258,7 +258,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.428487,
+      "expected": 0.436485,
       "id": "netchar.headroom_p50",
       "json_path": [
         "headroom",
@@ -278,7 +278,7 @@
       "tolerance": 0
     },
     {
-      "expected": 3,
+      "expected": 2,
       "id": "netchar.substation_n_transformers",
       "json_path": [
         "substation",
@@ -288,7 +288,7 @@
       "tolerance": 0
     },
     {
-      "expected": 20.0,
+      "expected": 33.3,
       "id": "netchar.substation_mva",
       "json_path": [
         "substation",
@@ -298,7 +298,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 61.883461,
+      "expected": 55.750866,
       "id": "netchar.substation_normal_loading",
       "json_path": [
         "substation",

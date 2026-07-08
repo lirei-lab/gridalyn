@@ -76,6 +76,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     SLACK_VM_PU,
     SUBSTATION_EMERGENCY_FACTOR,
     SUBSTATION_MVA_LADDER,
+    SUBSTATION_N1_CONTINGENCY_TARGET,
     SUBSTATION_N_TRANSFORMERS,
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
@@ -220,9 +221,11 @@ def configure_substation_n1(
     bus (a near-zero-impedance coupler — the normal closed-tie operating state),
     adds transformers until the bank has ``SUBSTATION_N_TRANSFORMERS`` units, and
     sizes every unit to the smallest ``SUBSTATION_MVA_LADDER`` rung whose usable
-    MW ``× (N−1)`` covers the total area design-cold load — so the ``N−1``
-    remaining units carry the full load at ≤ 100 % nameplate on a single-unit
-    contingency (the ``SUBSTATION_EMERGENCY_FACTOR`` is then the margin). Diversity
+    MW ``× (N−1) × SUBSTATION_N1_CONTINGENCY_TARGET`` covers the total area
+    design-cold load — so on a single-unit contingency the ``N−1`` remaining
+    units carry the full load at ≈ the N-1 contingency-loading target (~120 %,
+    well within the ``SUBSTATION_EMERGENCY_FACTOR`` capability). For N = 2 that is
+    the standard HQ two-identical-parallel-unit redundant substation. Diversity
     is ~0 at design cold, so the area load is the hourly max of the summed
     per-home base of every home. Mutates the net in place.
 
@@ -240,7 +243,9 @@ def configure_substation_n1(
     total_load_mva = total_load_mw / float(pf)
 
     n = int(SUBSTATION_N_TRANSFORMERS)
-    per_unit_min_mva = total_load_mva / max(n - 1, 1)
+    per_unit_min_mva = total_load_mva / (
+        max(n - 1, 1) * float(SUBSTATION_N1_CONTINGENCY_TARGET)
+    )
     mva = next(
         (m for m in SUBSTATION_MVA_LADDER if m >= per_unit_min_mva),
         SUBSTATION_MVA_LADDER[-1],
