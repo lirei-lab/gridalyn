@@ -117,6 +117,35 @@ def draw_clustered_adoption(
     return a.astype(float)
 
 
+def apply_local_curtailment(
+    base_kw: np.ndarray,
+    ev_kw: np.ndarray,
+    rating_kw: float,
+) -> tuple[np.ndarray, float]:
+    """Per-transformer curtailment cap on the design day (static-rating gate).
+
+    Sheds enough EV kW each hour to keep ``base + ev <= rating`` (never shifts
+    energy — there is no overnight valley to shift into; see the value-map
+    spec). The static kW rating is the governed gate, consistent with the
+    firm/flex chain; the AC re-solve then measures the recovered loading.
+
+    Args:
+        base_kw: ``(H,)`` design-day hourly base at the transformer (kW).
+        ev_kw: ``(H,)`` design-day hourly EV overlay at the transformer (kW).
+        rating_kw: Transformer usable static rating (kW).
+
+    Returns:
+        ``(served_ev_kw (H,), curtailed_kwh)``: the post-curtailment EV draw and
+        the shed energy (kWh; hourly steps => kW == kWh).
+    """
+    base = np.asarray(base_kw, dtype=float)
+    ev = np.asarray(ev_kw, dtype=float)
+    headroom = np.maximum(float(rating_kw) - base, 0.0)
+    served = np.minimum(ev, headroom)
+    curtailed_kwh = float(np.sum(ev - served))
+    return served, curtailed_kwh
+
+
 def run_design_day_powerflow(
     net: Any,
     p_kw_by_load: np.ndarray,
