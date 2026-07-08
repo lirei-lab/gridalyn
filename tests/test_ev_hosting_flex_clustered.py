@@ -77,3 +77,51 @@ def test_apply_local_curtailment_caps_to_rating() -> None:
     )
     assert c2 == pytest.approx(0.0)
     assert served2 == pytest.approx([5.0, 5.0])
+
+
+def test_solve_worst_trafo_mini_net() -> None:
+    """A 2-transformer hand-built net solves; curtailment lowers the worst load."""
+    import pandapower as pp
+
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_clustered_adoption import (
+        _solve_worst_trafo,
+    )
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.0)
+    lv_trafos = []
+    per_trafo_base, per_trafo_homes, load_bus_to_trafo = {}, {}, {}
+    for homes in (6, 6):
+        b_lv = pp.create_bus(net, vn_kv=0.24)
+        t = pp.create_transformer_from_parameters(
+            net, hv_bus=b_mv, lv_bus=b_lv, sn_mva=0.075, vn_hv_kv=25.0,
+            vn_lv_kv=0.24, vk_percent=2.0, vkr_percent=1.2, pfe_kw=0.25,
+            i0_percent=0.4,
+        )
+        b_h = pp.create_bus(net, vn_kv=0.24)
+        pp.create_line_from_parameters(
+            net, from_bus=b_lv, to_bus=b_h, length_km=0.02, r_ohm_per_km=0.3,
+            x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.4,
+        )
+        pp.create_load(net, bus=b_h, p_mw=0.0)
+        lv_trafos.append(t)
+        per_trafo_base[t] = np.full(24, 55.0)  # kW aggregate base
+        per_trafo_homes[t] = homes
+        load_bus_to_trafo[b_h] = t
+    lv_trafos = np.array(lv_trafos)
+    ev = np.full(24, 3.0)  # kW per home per hour
+    adoption = np.array([2.0, 0.0])  # trafo 0 heavily adopted, trafo 1 none
+
+    unmanaged = _solve_worst_trafo(
+        net, per_trafo_base, per_trafo_homes, load_bus_to_trafo, ev,
+        adoption, lv_trafos, curtail=False,
+    )
+    managed = _solve_worst_trafo(
+        net, per_trafo_base, per_trafo_homes, load_bus_to_trafo, ev,
+        adoption, lv_trafos, curtail=True,
+    )
+    assert unmanaged["worst_loading"] > 100.0     # cluster overloads trafo 0
+    assert managed["worst_loading"] <= unmanaged["worst_loading"]
+    assert managed["curtailed_kwh"] > 0.0
+    assert unmanaged["curtailed_kwh"] == 0.0
