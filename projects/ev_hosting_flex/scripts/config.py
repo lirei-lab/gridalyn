@@ -1217,3 +1217,29 @@ N-1 design point — comfortably within the 1.5 emergency capability, equivalent
 to the "peak load < 60 % of total installed capacity" rule for 2 transformers.
 For the ~37 MVA area with N = 2 this lands each unit at 33.3 MVA (a real HQ
 size): ~56 % loaded normally, ~112 % on an N-1 contingency."""
+
+# ─── Clustered EV adoption (Study 3B, 2026-07-08) ────────────────────────────
+# APPEND-ONLY. Non-uniform ("clustered") EV adoption over the ~540 last-mile
+# transformers at a FIXED total fleet: per-transformer adoption rate is drawn
+# from a mean-preserving lognormal so the fleet is invariant while dispersion
+# (Gini/CoV) grows. Sweeps mean adoption (CLUSTER_MU_GRID) and dispersion
+# (CLUSTER_DISPERSION_GRID); CLUSTER_MC_DRAWS realizations per level give bands.
+CLUSTER_MEAN_RATE = 1.0
+"""Fixed mean adoption (EV/home) for the penalty-vs-Gini axis (Part 1, eje A)."""
+
+CLUSTER_MU_GRID = (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
+"""Mean-adoption grid (EV/home) swept for the first-reinforcement axis (eje B):
+the mean penetration at which the WORST transformer first crosses 100%."""
+
+CLUSTER_DISPERSION_GRID = (0.0, 0.35, 0.7, 1.1)
+"""Lognormal dispersion levels (sigma). 0.0 = uniform (a_t == mu exactly);
+higher = more clustered. The Gini/CoV of the adoption vector rises with it."""
+
+CLUSTER_MC_DRAWS = 6
+"""Monte-Carlo draws of the adoption vector per (dispersion, mu) level; the
+per-transformer loading is reduced across draws (median) for stable curves."""
+
+CLUSTER_MAX_RATE = 4.0
+"""Physical cap on per-transformer adoption (EV/home) after the mean-preserving
+draw, guarding absurd tail values; realized fleet drift from the cap is
+reported. Chosen well above CLUSTER_MU_GRID[-1] so it rarely binds."""
