@@ -309,15 +309,15 @@ def run_stage() -> dict[str, Any]:
         script.cache_dir, PROJECT_OUTPUTS_DIR / "data"
     )
     warnings = [
-        "SUBSTATION UPPER BOUND: the characterization broadcasts one deterministic "
-        "SDK per-home base per cluster size, so all homes of a size peak in the same "
-        "hour — this omits the inter-home MV-level diversity the stochastic feeder "
-        "ensemble carries, making the aggregate SUBSTATION loading an UPPER BOUND "
-        "(~230% here; ~170% with full diversity). Either way it exceeds the "
-        "substation's cold dynamic rating at design peak, so the qualitative finding "
-        "(the substation is the binding constraint, undersized for the all-electric "
-        "load) is robust. The feeder-level and per-transformer metrics use small "
-        "groups and are unaffected."
+        "LOW WINTER DIVERSITY: the deterministic per-size base broadcasts one "
+        "profile per cluster size, but the inter-cluster diversity at design cold "
+        "is ~0 (verified factor 0.997) — all-electric heating is weather-driven and "
+        "coincident, so every home's baseboards run flat-out at −20 °C. The "
+        "aggregate substation loading is therefore a faithful coincident-peak "
+        "estimate, NOT an upper bound. The substation transformers are now "
+        "HQ-load-matched (bibliographic verification: real 120/25 kV units are "
+        "33-140 MVA), so the network is design-cold-healthy before EVs at every "
+        "level and the EV sweep pushes each toward its limit."
     ]
     return script.write_report(
         "network_characterization_report",

@@ -38,13 +38,16 @@ def test_interp_crossing_hand_computed() -> None:
 
 @pytest.mark.skipif(not _CHAR.is_file(), reason=_SKIP)
 def test_governed_network_characterization() -> None:
-    """Governed reproduce-and-pin: losses rise, substation binds, headroom map.
+    """Governed reproduce-and-pin: losses rise, substation healthy, feeders bind.
 
-    Losses rise monotonically and super-linearly with EV load; the substation is
-    already at/over its cold dynamic rating at 0 EV (crosses it almost
-    immediately), confirming it as the binding constraint; the per-transformer
-    headroom median (~0.35 EV/home) matches the study feeder's firm penetration
-    (2 EVs / 6 homes = 0.33).
+    With the HQ-load-matched substation transformers (bibliographic
+    verification: real 120/25 kV units are 33-140 MVA, not the synthetic 15),
+    the network is design-cold-healthy BEFORE EVs at every level: losses rise
+    monotonically and super-linearly with EV load; the substation is loaded but
+    below its static nameplate at 0 EV and stays within its cold dynamic rating
+    across the swept range (it is NO longer the binding constraint); the FEEDERS
+    bind first, with a per-transformer headroom median matching the study
+    feeder's firm penetration (2 EVs / 6 homes = 0.33).
     """
     payload = json.loads(_CHAR.read_text())
     loss = payload["losses"]["loss_percent"]
@@ -53,13 +56,16 @@ def test_governed_network_characterization() -> None:
     assert (loss[-1] - loss[-2]) > (loss[1] - loss[0])
     sub = payload["substation"]
     dyn = sub["dynamic_rating_percent"]
-    assert sub["peak_loading_percent"][0] >= 100.0  # already over static at 0 EV
-    # binds at (near) 0 EV — the substation is the constraint, not the feeders.
-    assert sub["crossing_penetration_dynamic"] is not None
-    assert sub["crossing_penetration_dynamic"] < 0.25
-    assert sub["peak_loading_percent"][-1] > dyn
+    # HQ-load-matched: healthy (< nameplate) at 0 EV, rises with adoption.
+    assert sub["peak_loading_percent"][0] < 100.0
+    assert sub["peak_loading_percent"][-1] > sub["peak_loading_percent"][0]
+    # sized so it never crosses its cold dynamic rating over the swept range.
+    assert sub["crossing_penetration_dynamic"] is None
+    assert sub["peak_loading_percent"][-1] <= dyn
     hr = payload["headroom"]
+    # the feeders are the binding constraint (median headroom ~ the firm pen).
     assert 0.0 < hr["crossing_penetration_p50"] < 1.0
     assert hr["crossing_penetration_p05"] <= hr["crossing_penetration_p50"]
     assert hr["crossing_penetration_p50"] <= hr["crossing_penetration_p95"]
-    assert 0 <= hr["n_overloaded_at_0ev"] < hr["n_transformers"]
+    # network healthy before EVs: no transformer over its static nameplate.
+    assert hr["n_overloaded_at_0ev"] == 0

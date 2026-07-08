@@ -163,19 +163,26 @@ def test_extract_feeder_subnet_and_mc_mini_net() -> None:
 def test_governed_network_before_after_evs() -> None:
     """The load-matched network is healthy before EVs and congests as they grow.
 
-    HQ-style sizing (each transformer matched to its load + cold dynamic rating)
-    leaves few transformers over the dynamic limit at 0 EV; congestion, voltage
-    drops and line overloads all escalate monotonically with adoption.
+    With the HQ-load-matched transformers (LV + substation) and voltage-sized LV
+    conductors, the network is fully healthy at design cold before EVs (no
+    undervoltage, no overloads); EV adoption then drives undervoltage, LV line
+    overloads and transformer congestion, all escalating monotonically.
     """
     payload = json.loads(_VIOLATIONS_PATH.read_text())
     scenarios = payload["scenarios"]
     names = [f"network_pen_{p:.1f}" for p in NETWORK_PENETRATION_SCENARIOS]
     assert all(name in scenarios for name in names), sorted(scenarios)
     pre, post = scenarios[names[0]], scenarios[names[-1]]
-    # Before EVs the load-matched fleet is healthy vs the cold dynamic limit;
-    # after full adoption many transformers genuinely overload.
-    assert pre["n_trafos_over_dynamic"] < 10
-    assert post["n_trafos_over_dynamic"] > pre["n_trafos_over_dynamic"] + 50
+    # Before EVs the load-matched network is healthy: no undervoltage, no
+    # thermal overloads.
+    assert pre["n_lv_buses_below_normal"] == 0
+    assert pre["n_lines_over_100"] == 0
+    assert pre["n_trafos_over_dynamic"] == 0
+    # EVs drive real stress on every channel (voltage + lines are the binding
+    # ones now that the fleet + dynamic rating make transformer overload rare).
+    assert post["n_lv_buses_below_normal"] > 10
+    assert post["n_lines_over_100"] > 100
+    assert post["n_trafos_over_dynamic"] > pre["n_trafos_over_dynamic"]
     for key in (
         "n_trafos_over_static",
         "n_trafos_over_dynamic",

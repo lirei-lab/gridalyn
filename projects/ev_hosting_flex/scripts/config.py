@@ -1138,3 +1138,31 @@ HEADROOM_PENETRATION_GRID = (
 curves (D). Each point is a 24-hour design-day full-net power flow; per-element
 peak loading is interpolated across the grid to find the penetration at which
 each transformer first crosses its limit (the hosting-headroom map)."""
+
+# ─── Substation transformer sizing (2026-07-08, HQ-realistic per verification) ─
+# APPEND-ONLY. The bibliographic verification (Hydro-Québec docs) found real HQ
+# 120-25 kV distribution substation transformers are 33-140 MVA (2-4 per
+# substation, N-1), while the twin's synthetic builder placed 2 x 15 MVA — under
+# the ~35 MW all-electric coincident design-cold load of the 3235-home area, so
+# the more-loaded unit sat at ~140% (its cold dynamic limit) with ZERO EVs. The
+# inter-cluster diversity at design cold is ~0 (all-electric heating is
+# weather-driven and coincident — verified factor 0.997), so that loading is
+# real, not an artifact. Size each substation transformer to ITS downstream
+# design-cold load, mirroring the LV-fleet philosophy.
+
+SUBSTATION_MVA_LADDER = (16.7, 20.0, 25.0, 33.3, 40.0, 50.0)
+"""Standard HQ-realistic 120/25 kV substation-transformer sizes (MVA) the twin's
+substation transformers are matched to. Provenance: HQ distribution substations
+use 33-140 MVA units (33.3 on 120-12 kV, 50-100 in growth zones, 140 on
+315-25 kV); for the ~1600-home half each of our transformers serves, the lower
+ladder rungs (25-33.3 MVA) are the realistic match."""
+
+SUBSTATION_UTIL_TARGET = 0.85
+"""Design-cold utilization target the substation transformers are sized to (like
+``LV_LINE_UTIL_TARGET`` and the LV-transformer 0.8 margin). Each substation
+transformer takes the smallest MVA ladder rung whose usable MW
+(``MVA × POWER_FACTOR``) covers its downstream coincident design-cold load /
+this target, landing it ~85% loaded before EVs so the EV sweep pushes it toward
+its limit cleanly. NOTE: this sizes for NORMAL operation; HQ's N-1 criterion
+(each unit carries the full load on contingency) would require ~2x — a documented
+reliability margin beyond this study's normal-operation hosting scope."""

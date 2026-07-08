@@ -74,6 +74,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ROUND_DECIMALS,
     SEED,
     SLACK_VM_PU,
+    SUBSTATION_MVA_LADDER,
+    SUBSTATION_UTIL_TARGET,
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
 )
@@ -190,13 +192,58 @@ def size_network_to_load(
             net.line.at[line_idx, "x_ohm_per_km"] = x / scale
             n_lines_upsized += 1
 
+    substation_mva_by_trafo = _size_substation_transformers(
+        net, downstream_map, homes_by_bus, base_by_size, size_by_loadbus, pf
+    )
+
     return {
         "base_by_size": base_by_size,
         "size_by_loadbus": size_by_loadbus,
         "kva_by_size": kva_by_size,
         "size_by_trafo": size_by_trafo,
         "n_lv_lines_upsized": n_lines_upsized,
+        "substation_mva_by_trafo": substation_mva_by_trafo,
     }
+
+
+def _size_substation_transformers(
+    net: Any,
+    downstream_map: dict[str, Any],
+    homes_by_bus: Any,
+    base_by_size: dict[int, np.ndarray],
+    size_by_loadbus: dict[int, int],
+    pf: float,
+) -> dict[int, float]:
+    """Size each 120/25 kV substation transformer to its downstream design load.
+
+    HQ-realistic sizing (bibliographic verification: real 120/25 kV units are
+    33-140 MVA, not the synthetic 15). Diversity is ~0 at design cold, so a
+    transformer's downstream peak is the hourly max of the summed per-home base
+    of every downstream home; it takes the smallest MVA ladder rung covering
+    that load at ``SUBSTATION_UTIL_TARGET``. Mutates ``net.trafo.sn_mva``.
+
+    Returns:
+        The assigned MVA per substation transformer index.
+    """
+    sub_trafos = net.trafo.index[net.trafo["vn_lv_kv"] >= 1.0]
+    mva_by_trafo: dict[int, float] = {}
+    for idx in sub_trafos:
+        downstream = downstream_map.get(f"transformer:{int(idx)}", [])
+        down_buses = [int(b) for b in downstream if int(b) in homes_by_bus.index]
+        day_profile = np.zeros(24, dtype=DTYPE)
+        for bus in down_buses:
+            day_profile = day_profile + int(homes_by_bus.loc[bus]) * base_by_size[
+                size_by_loadbus[bus]
+            ]
+        design_load_mw = float(day_profile.max()) / 1000.0
+        required_mva = design_load_mw / float(pf) / float(SUBSTATION_UTIL_TARGET)
+        mva = next(
+            (m for m in SUBSTATION_MVA_LADDER if m >= required_mva),
+            SUBSTATION_MVA_LADDER[-1],
+        )
+        net.trafo.at[idx, "sn_mva"] = mva
+        mva_by_trafo[int(idx)] = mva
+    return mva_by_trafo
 
 
 def build_scenario_profiles(

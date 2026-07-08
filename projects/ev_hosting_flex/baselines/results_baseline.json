@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.908208,
+      "expected": 0.931612,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -15,7 +15,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1,
+      "expected": 0,
       "id": "pf.pre_ev_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
@@ -26,7 +26,7 @@
       "tolerance": 0
     },
     {
-      "expected": 79,
+      "expected": 8,
       "id": "pf.post_ev_1p5_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.841344,
+      "expected": 0.882713,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -133,7 +133,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.042945,
+      "expected": 0.02454,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
@@ -144,7 +144,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.564417,
+      "expected": 0.533742,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 105.617675,
+      "expected": 103.206449,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",
@@ -215,7 +215,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.870599,
+      "expected": 3.545106,
       "id": "netchar.loss_percent_0ev",
       "json_path": [
         "losses",
@@ -226,7 +226,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4.514027,
+      "expected": 4.067417,
       "id": "netchar.loss_percent_2ev",
       "json_path": [
         "losses",
@@ -237,7 +237,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 140.731498,
+      "expected": 82.474388,
       "id": "netchar.substation_peak_0ev",
       "json_path": [
         "substation",
@@ -248,7 +248,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.01055,
+      "expected": null,
       "id": "netchar.substation_crossing_dynamic",
       "json_path": [
         "substation",
@@ -258,7 +258,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.350163,
+      "expected": 0.411351,
       "id": "netchar.headroom_p50",
       "json_path": [
         "headroom",
@@ -268,7 +268,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 44,
+      "expected": 0,
       "id": "netchar.n_overloaded_at_0ev",
       "json_path": [
         "headroom",
