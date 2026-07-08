@@ -41,17 +41,17 @@ def test_valley_fill_shift_fills_valley_and_preserves_energy() -> None:
     # clear valley: high in the evening (hours 4-5), low at night (0-3)
     net = np.array([10.0, 10.0, 10.0, 10.0, 60.0, 60.0], dtype=float)
     rating = 70.0
-    ev_energy = np.array([20.0, 12.0], dtype=float)   # two EVs, 32 kWh total
-    charger = np.array([7.2, 7.2], dtype=float)       # aggregate 14.4 kW/h cap
+    ev_energy = np.array([20.0, 12.0], dtype=float)  # two EVs, 32 kWh total
+    charger = np.array([7.2, 7.2], dtype=float)  # aggregate 14.4 kW/h cap
     agg = valley_fill_shift(net, ev_energy, rating, charger)
-    assert float(agg.sum()) == pytest.approx(32.0)          # energy preserved
-    assert np.all(agg[4:] == 0.0)                           # nothing added to the peak
-    assert (net + agg).max() <= 60.0 + 1e-9                 # peak not raised
+    assert float(agg.sum()) == pytest.approx(32.0)  # energy preserved
+    assert np.all(agg[4:] == 0.0)  # nothing added to the peak
+    assert (net + agg).max() <= 60.0 + 1e-9  # peak not raised
     # no valley: flat load already near the rating -> energy must stack, peak rises
     flat = np.full(6, 66.0, dtype=float)
     agg2 = valley_fill_shift(flat, ev_energy, rating, charger)
-    assert float(agg2.sum()) == pytest.approx(32.0)         # still energy-preserving
-    assert (flat + agg2).max() > rating                     # shift cannot relieve
+    assert float(agg2.sum()) == pytest.approx(32.0)  # still energy-preserving
+    assert (flat + agg2).max() > rating  # shift cannot relieve
 
 
 def test_wta_helpers_are_monotone_inverses() -> None:
@@ -70,4 +70,55 @@ def test_wta_helpers_are_monotone_inverses() -> None:
     p = wta_price_for_enrollment(0.8, med, sig)
     assert wta_enrollment(p, med, sig) == pytest.approx(0.8, abs=1e-6)
     # curtailment (higher median) costs more for the same enrollment
-    assert wta_price_for_enrollment(0.8, 120.0, sig) > wta_price_for_enrollment(0.8, 30.0, sig)
+    assert wta_price_for_enrollment(0.8, 120.0, sig) > wta_price_for_enrollment(
+        0.8, 30.0, sig
+    )
+
+
+def test_bin_p95_loading_valley_vs_flat() -> None:
+    """Shift relieves when a valley exists and barely helps when the base is flat."""
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive import (
+        _bin_p95_loading,
+    )
+
+    rating = 70.0
+    hours = 24
+    # base with a deep valley (low 0-15h, moderate evening) vs a flat-high base
+    valley_base = np.full(hours, 20.0)
+    valley_base[16:22] = 45.0
+    flat_base = np.full(hours, 60.0)
+
+    # one bin, one day (day 0); build a 2-day hourly base so index math works
+    def two_day(profile):
+        return np.concatenate([profile, profile]).astype(float)
+
+    # pool: 3 EVs each 8 kWh in the evening
+    pool = np.zeros((3, hours * 2), dtype=float)
+    for e in range(3):
+        pool[e, 16:20] = 2.0  # 8 kWh in the evening, day 0
+    charger = np.full(3, 7.2)
+    args = dict(
+        day_indices=[0],
+        n_ev=3,
+        n_enrolled=3,
+        rating_kw=rating,
+        hod0=0,
+        charger_kw=charger,
+        evening=(16, 22),
+    )
+    for policy, base in (("valley", valley_base), ("flat", flat_base)):
+        p_unc = _bin_p95_loading(
+            base=two_day(base), pool=pool, policy="uncontrolled", **args
+        )
+        p_shift = _bin_p95_loading(
+            base=two_day(base), pool=pool, policy="shift", **args
+        )
+        if policy == "valley":
+            assert p_shift < p_unc - 5.0  # shift relieves materially
+        else:
+            assert p_shift >= p_unc - 1.0  # flat base: shift barely helps
+    # curtail always caps to <= 100% of rating
+    p_cur = _bin_p95_loading(
+        base=two_day(flat_base), pool=pool, policy="curtail", **args
+    )
+    assert p_cur <= 100.0 + 1e-6
