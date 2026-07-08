@@ -184,6 +184,56 @@ def climate_bin_days(
     return out
 
 
+def valley_fill_shift(
+    net_load_kw: np.ndarray,
+    ev_energy_kwh: np.ndarray,
+    rating_kw: float,
+    charger_kw: np.ndarray,
+) -> np.ndarray:
+    """Redistribute enrolled EVs' daily energy into the lowest-net-load hours.
+
+    Greedy water-filling: raise the lowest ``net_load_kw`` hours toward
+    ``rating_kw`` (bounded by the aggregate charger power) until the total
+    enrolled energy is placed. If the energy does not fit under the rating (no
+    valley), the residual stacks on the least-loaded remaining hours up to the
+    charger cap — i.e. shift cannot relieve the peak (the physical point).
+    Energy is preserved exactly.
+
+    Args:
+        net_load_kw: ``(H,)`` base + non-enrolled load (kW).
+        ev_energy_kwh: ``(E,)`` per-enrolled-EV daily energy (kWh; hourly steps).
+        rating_kw: Feeder usable rating (kW).
+        charger_kw: ``(E,)`` per-enrolled-EV charger power (kW).
+
+    Returns:
+        ``(H,)`` aggregate shifted EV kW profile (sums to the total energy).
+    """
+    net = np.asarray(net_load_kw, dtype=DTYPE)
+    horizon = net.shape[0]
+    total_e = float(np.sum(ev_energy_kwh))
+    cap = float(np.sum(charger_kw))  # aggregate per-hour power cap
+    agg = np.zeros(horizon, dtype=DTYPE)
+    remaining = total_e
+    # Pass 1: fill under the rating, lowest-load hours first.
+    for h in np.argsort(net, kind="stable"):
+        if remaining <= 1e-12:
+            break
+        headroom = min(max(float(rating_kw) - float(net[h]), 0.0), cap)
+        put = min(headroom, remaining)
+        agg[h] = put
+        remaining -= put
+    # Pass 2 (no valley): stack the residual on the least-loaded resulting hours.
+    if remaining > 1e-9:
+        for h in np.argsort(net + agg, kind="stable"):
+            if remaining <= 1e-12:
+                break
+            put = min(cap - float(agg[h]), remaining)
+            put = max(put, 0.0)
+            agg[h] += put
+            remaining -= put
+    return agg
+
+
 def annual_base_realization(
     temp_hourly: pd.Series,
     n_homes: int,

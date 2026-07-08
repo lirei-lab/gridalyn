@@ -32,3 +32,23 @@ def test_climate_bin_days_hand_built() -> None:
     assert all(b["n_days"] > 0 for b in bins)
     # each entry carries the bin's day-index membership for the P95 over days
     assert sorted(by_lo[-20.0]["day_indices"]) == [1, 2]
+
+
+def test_valley_fill_shift_fills_valley_and_preserves_energy() -> None:
+    """Energy goes to the lowest-load hours; total energy is exactly preserved."""
+    from projects.ev_hosting_flex.scripts._annual import valley_fill_shift
+
+    # clear valley: high in the evening (hours 4-5), low at night (0-3)
+    net = np.array([10.0, 10.0, 10.0, 10.0, 60.0, 60.0], dtype=float)
+    rating = 70.0
+    ev_energy = np.array([20.0, 12.0], dtype=float)   # two EVs, 32 kWh total
+    charger = np.array([7.2, 7.2], dtype=float)       # aggregate 14.4 kW/h cap
+    agg = valley_fill_shift(net, ev_energy, rating, charger)
+    assert float(agg.sum()) == pytest.approx(32.0)          # energy preserved
+    assert np.all(agg[4:] == 0.0)                           # nothing added to the peak
+    assert (net + agg).max() <= 60.0 + 1e-9                 # peak not raised
+    # no valley: flat load already near the rating -> energy must stack, peak rises
+    flat = np.full(6, 66.0, dtype=float)
+    agg2 = valley_fill_shift(flat, ev_energy, rating, charger)
+    assert float(agg2.sum()) == pytest.approx(32.0)         # still energy-preserving
+    assert (flat + agg2).max() > rating                     # shift cannot relieve
