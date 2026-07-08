@@ -52,3 +52,22 @@ def test_valley_fill_shift_fills_valley_and_preserves_energy() -> None:
     agg2 = valley_fill_shift(flat, ev_energy, rating, charger)
     assert float(agg2.sum()) == pytest.approx(32.0)         # still energy-preserving
     assert (flat + agg2).max() > rating                     # shift cannot relieve
+
+
+def test_wta_helpers_are_monotone_inverses() -> None:
+    """Enrollment rises with incentive; price(enrollment) inverts it."""
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive import (
+        wta_enrollment,
+        wta_price_for_enrollment,
+    )
+
+    med, sig = 100.0, 0.5
+    # at the median incentive, half enrol
+    assert wta_enrollment(med, med, sig) == pytest.approx(0.5, abs=1e-6)
+    # monotone increasing in incentive
+    assert wta_enrollment(50.0, med, sig) < wta_enrollment(150.0, med, sig)
+    # inverse round-trips
+    p = wta_price_for_enrollment(0.8, med, sig)
+    assert wta_enrollment(p, med, sig) == pytest.approx(0.8, abs=1e-6)
+    # curtailment (higher median) costs more for the same enrollment
+    assert wta_price_for_enrollment(0.8, 120.0, sig) > wta_price_for_enrollment(0.8, 30.0, sig)
