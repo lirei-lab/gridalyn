@@ -104,7 +104,6 @@ def test_bin_p95_loading_valley_vs_flat() -> None:
         rating_kw=rating,
         hod0=0,
         charger_kw=charger,
-        evening=(16, 22),
     )
     for policy, base in (("valley", valley_base), ("flat", flat_base)):
         p_unc = _bin_p95_loading(

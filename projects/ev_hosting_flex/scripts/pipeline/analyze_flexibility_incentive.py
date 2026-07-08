@@ -87,9 +87,14 @@ def _bin_p95_loading(
     rating_kw: float,
     hod0: int,
     charger_kw: np.ndarray,
-    evening: tuple[int, int],
 ) -> float:
-    """P95 over the bin's days of the evening-window peak loading (% of rating).
+    """P95 over the bin's days of the WHOLE-DAY peak loading (% of rating).
+
+    The peak is taken over all 24 hours, NOT just the evening window: the
+    ``shift`` policy moves EV load into the overnight hours, so an evening-only
+    metric would credit shift with spurious "relief" while it dumps load into
+    unmonitored overnight hours (which can themselves exceed the rating). The
+    transformer can overload at any hour, so the constraint is the 24-hour max.
 
     Args:
         base: ``(N_days*24,)`` hourly feeder base kW (array-index order).
@@ -101,12 +106,10 @@ def _bin_p95_loading(
         rating_kw: feeder usable rating (kW).
         hod0: LOCAL hour of array index 0 (local-hour ordering via np.roll).
         charger_kw: ``(pool,)`` per-EV charger power (kW).
-        evening: ``(start, end)`` LOCAL-hour evening window.
 
     Returns:
-        The P95 (over the bin's days) evening peak loading, in percent.
+        The P95 (over the bin's days) whole-day peak loading, in percent.
     """
-    start, end = evening
     peaks: list[float] = []
     for d in day_indices:
         sl = slice(d * 24, (d + 1) * 24)
@@ -125,24 +128,16 @@ def _bin_p95_loading(
             )
             flex_agg = served
         elif policy == "shift":
-            net_for_shift = base_day + free_agg
-            if float(np.ptp(net_for_shift)) < 1e-9:
-                # A (numerically) flat net load has no valley to exploit: any
-                # redistribution would be an artifact of argsort tie-breaking
-                # (always favoring the lowest array index), not a genuine
-                # physical relief. Degenerate to the uncontrolled dispatch.
-                flex_agg = enrolled.sum(axis=0)
-            else:
-                flex_agg = valley_fill_shift(
-                    net_for_shift,
-                    enrolled.sum(axis=1),  # per-EV daily energy (kWh)
-                    rating_kw,
-                    charger_kw[:n_enrolled],
-                )
+            flex_agg = valley_fill_shift(
+                base_day + free_agg,
+                enrolled.sum(axis=1),  # per-EV daily energy (kWh)
+                rating_kw,
+                charger_kw[:n_enrolled],
+            )
         else:
             raise ValueError(f"unknown policy {policy!r}")
         total = base_day + free_agg + flex_agg
-        peaks.append(float(total[start:end].max()))
+        peaks.append(float(total.max()))
     return float(
         np.percentile(np.array(peaks, dtype=DTYPE) / float(rating_kw) * 100.0, 95)
     )
