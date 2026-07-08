@@ -41,6 +41,7 @@ authoritative sandbox) and the local migration design doc
 | `compute_congestion_annual` | **Firm** = largest pool prefix with P95 cold-day evening loading ≤ 100 % + congested-hours curve | `firm_hosting_annual.json` |
 | `apply_curtailment_contracts` | The mechanism: day-ahead call (notice), real-time backstop (reliability), fair rotation; enrollment sweep + notice quality + fairness | `curtailment_hosting.json` |
 | `compute_curtailment_economics` | Two-part contract vs annualized reinforcement + zone of agreement + break-even adoption | `curtailment_economics.json` |
+| `analyze_network_characterization` | Design-day full-net sweep of technical losses, the substation constraint, and the per-transformer hosting-headroom map (before the economics) | `network_characterization.json`, figure |
 | `validate_powerflow` | AC validation before/after EVs: (1) design-day network family with each of the 540 LV transformers sized to its own load on the HQ standard kVA ladder + IEEE C57.91 cold dynamic rating; (2) cold-day Monte-Carlo on the 6-home feeder subnet (transformer + LV line loading + home voltage) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
 
 The kW chain runs at **15-minute resolution** (`ANNUAL_RES_MINUTES`): hourly

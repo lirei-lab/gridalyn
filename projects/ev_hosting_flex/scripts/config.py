@@ -1116,3 +1116,25 @@ scale is ``max(thermal, voltage)``. NOTE (documented modeling boundary): this
 sizes the LV SECONDARY only — the residual deep-feeder undervoltage (~0.91 pu)
 is the inherent drop of the long 25 kV MV feeder, which a real network holds
 with the substation LTC / line regulators, not conductor gauge."""
+
+# ─── Network characterization (2026-07-08): losses, substation, headroom ─────
+# APPEND-ONLY. Constants for the network-characterization analysis stage
+# (losses / substation constraint / per-transformer hosting headroom) over the
+# design-day full-net power flows, before the economic analysis.
+
+SUBSTATION_DYNAMIC_RATING_K = 1.41
+"""Cold-ambient IEEE C57.91 dynamic rating factor of the 15 MVA HV/MV substation
+transformer (D). Provenance: the config ``transformers.mv_hv`` note
+("K(−22.5 °C)=1.41 -> P_dyn=20.1 MW"). The characterization reports the
+substation peak loading against BOTH its static nameplate (100 %) and this
+dynamic limit (141 %); the probe found it already at ~140 % (its dynamic limit)
+at design cold with ZERO EVs, so the substation may be the binding
+reinforcement constraint at network-wide adoption — not the individual feeders."""
+
+HEADROOM_PENETRATION_GRID = (
+    0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0,
+)
+"""EV-per-home penetration grid swept for the loss / substation / headroom
+curves (D). Each point is a 24-hour design-day full-net power flow; per-element
+peak loading is interpolated across the grid to find the penetration at which
+each transformer first crosses its limit (the hosting-headroom map)."""

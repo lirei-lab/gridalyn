@@ -213,6 +213,69 @@
       ],
       "source": "outputs/json/cold_coupling_comparison.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 3.870599,
+      "id": "netchar.loss_percent_0ev",
+      "json_path": [
+        "losses",
+        "loss_percent",
+        0
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 4.514027,
+      "id": "netchar.loss_percent_2ev",
+      "json_path": [
+        "losses",
+        "loss_percent",
+        -1
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 140.731498,
+      "id": "netchar.substation_peak_0ev",
+      "json_path": [
+        "substation",
+        "peak_loading_percent",
+        0
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.01055,
+      "id": "netchar.substation_crossing_dynamic",
+      "json_path": [
+        "substation",
+        "crossing_penetration_dynamic"
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.350163,
+      "id": "netchar.headroom_p50",
+      "json_path": [
+        "headroom",
+        "crossing_penetration_p50"
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 44,
+      "id": "netchar.n_overloaded_at_0ev",
+      "json_path": [
+        "headroom",
+        "n_overloaded_at_0ev"
+      ],
+      "source": "outputs/json/network_characterization.json",
+      "tolerance": 0
     }
   ],
   "project": "ev_hosting_flex"

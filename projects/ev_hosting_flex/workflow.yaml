@@ -119,6 +119,27 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/cold_coupling_comparison.png
         - projects/ev_hosting_flex/outputs/reports/cold_coupling_report.json
 
+    # ── Stage 6d: network characterization (losses / substation / headroom) ──
+    # Design-day full-net sweep before the economic analysis: technical losses,
+    # the substation constraint, and the per-transformer hosting-headroom map.
+    - id: analyze_network_characterization
+      needs: [generate_annual_mc]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
+        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/network_characterization.json
+        - projects/ev_hosting_flex/outputs/figures/network_characterization.png
+        - projects/ev_hosting_flex/outputs/reports/network_characterization_report.json
+
     # ── Stage 7: pandapower AC annual validation (live, F5 of the migration) ─
     # Before/after-EV network behavior on the study-B annual artifacts: the
     # peak-day full-net scenario families (network adoption + governed feeder
