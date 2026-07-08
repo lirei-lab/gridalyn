@@ -150,3 +150,356 @@ def _solve_worst_trafo(
         "curtailed_kwh": float(curtailed_by_trafo.sum()),
         "curtailed_by_trafo": curtailed_by_trafo,
     }
+
+
+def _sweep_one_dispersion(
+    net: Any,
+    per_trafo_base: dict[int, np.ndarray],
+    per_trafo_homes: dict[int, int],
+    load_bus_to_trafo: dict[int, int],
+    ev_perhome_day: np.ndarray,
+    lv_trafos: np.ndarray,
+    n_homes: np.ndarray,
+    mus: np.ndarray,
+    delta: float,
+) -> dict[str, Any]:
+    """Sweep the mean-adoption grid at one fixed dispersion level.
+
+    Args:
+        net: sized pandapower net (mutated per hour, reused across draws).
+        per_trafo_base: trafo_idx -> (24,) kW aggregate base at the trafo.
+        per_trafo_homes: trafo_idx -> homes served.
+        load_bus_to_trafo: load bus -> owning LV trafo idx.
+        ev_perhome_day: (24,) per-home design-day EV profile (kW).
+        lv_trafos: (T,) LV transformer indices.
+        n_homes: (T,) homes served, aligned to ``lv_trafos``.
+        mus: mean-adoption grid (EV/home).
+        delta: lognormal dispersion (sigma) for this sweep.
+
+    Returns:
+        Dict with the per-mu median worst-loading (unmanaged/managed),
+        median over-limit count, and the mean-rate-anchored Gini/curtailment/
+        burden metrics (computed only at ``mu == CLUSTER_MEAN_RATE``).
+    """
+    worst = np.zeros(len(mus), dtype=DTYPE)
+    worst_managed = np.zeros(len(mus), dtype=DTYPE)
+    n_over = np.zeros(len(mus), dtype=DTYPE)
+    gini_at_mean = 0.0
+    curtailed_pct_at_mean = 0.0
+    burden_gini_at_mean = 0.0
+    for mi, mu in enumerate(mus):
+        wl, wlm, no = [], [], []
+        for k in range(int(CLUSTER_MC_DRAWS)):
+            rng = np.random.default_rng(
+                SEED + int(round(delta * 1000)) * 131 + mi * 17 + k
+            )
+            adoption = draw_clustered_adoption(n_homes, float(mu), float(delta), rng)
+            un = _solve_worst_trafo(
+                net,
+                per_trafo_base,
+                per_trafo_homes,
+                load_bus_to_trafo,
+                ev_perhome_day,
+                adoption,
+                lv_trafos,
+                curtail=False,
+            )
+            mg = _solve_worst_trafo(
+                net,
+                per_trafo_base,
+                per_trafo_homes,
+                load_bus_to_trafo,
+                ev_perhome_day,
+                adoption,
+                lv_trafos,
+                curtail=True,
+            )
+            wl.append(un["worst_loading"])
+            wlm.append(mg["worst_loading"])
+            no.append(un["n_over_static"])
+            if float(mu) == float(CLUSTER_MEAN_RATE):
+                total_ev_kwh = float(
+                    np.sum(adoption * n_homes) * float(ev_perhome_day.sum())
+                )
+                gini_at_mean += gini(adoption) / CLUSTER_MC_DRAWS
+                curtailed_pct_at_mean += (
+                    (mg["curtailed_kwh"] / total_ev_kwh * 100.0) / CLUSTER_MC_DRAWS
+                    if total_ev_kwh > 0
+                    else 0.0
+                )
+                burden_gini_at_mean += gini(mg["curtailed_by_trafo"]) / CLUSTER_MC_DRAWS
+        worst[mi] = float(np.median(wl))
+        worst_managed[mi] = float(np.median(wlm))
+        n_over[mi] = float(np.median(no))
+    return {
+        "worst": worst,
+        "worst_managed": worst_managed,
+        "n_over": n_over,
+        "gini_at_mean": round(gini_at_mean, ROUND_DECIMALS),
+        "curtailed_pct_at_mean": round(curtailed_pct_at_mean, ROUND_DECIMALS),
+        "burden_gini_at_mean": round(burden_gini_at_mean, ROUND_DECIMALS),
+    }
+
+
+def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+    """Sweep dispersion x mean-adoption; compute the penalty + recovery metrics.
+
+    Args:
+        cache_dir: Topology cache directory.
+        data_dir: Annual artifact directory (EV pool).
+
+    Returns:
+        Dict with ``artifact_paths`` and the report ``summary``.
+    """
+    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
+        net = pickle.load(handle)
+    feeder_idx = int(
+        json.loads((cache_dir / "feeder_selection.json").read_text())[
+            "feeder_transformer_idx"
+        ]
+    )
+    downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())
+    temp = load_annual_tmy()
+    hod0 = tmy_hour_of_day(temp)
+    design_day = int(np.argmin(day_mean_temps(temp)))
+
+    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    base_by_size = sizing["base_by_size"]
+    size_by_trafo = sizing["size_by_trafo"]
+
+    lv_trafos = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0].to_numpy()
+    n_homes = np.array([int(size_by_trafo[int(t)]) for t in lv_trafos], dtype=float)
+
+    # per-trafo aggregate design-day base (kW): homes * per-home base of its size
+    per_trafo_base = {
+        int(t): (
+            int(size_by_trafo[int(t)]) * base_by_size[int(size_by_trafo[int(t)])]
+        ).astype(DTYPE)
+        for t in lv_trafos
+    }
+    per_trafo_homes = {int(t): int(size_by_trafo[int(t)]) for t in lv_trafos}
+
+    # load bus -> owning LV trafo (from the downstream map: trafo -> [buses])
+    load_bus_to_trafo: dict[int, int] = {}
+    for t in lv_trafos:
+        for b in downstream.get(f"transformer:{int(t)}", []):
+            load_bus_to_trafo[int(b)] = int(t)
+    # any load bus not mapped falls back to the feeder count via size_by_loadbus
+    for b in net.load["bus"].to_numpy():
+        load_bus_to_trafo.setdefault(int(b), feeder_idx)
+
+    pool_hourly = aggregate_to_hourly(
+        np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
+    )
+    ev_perhome_day = np.roll(
+        pool_hourly[:, design_day * 24 : (design_day + 1) * 24].mean(axis=0),
+        int(hod0),
+    ).astype(DTYPE)
+
+    mus = np.array(CLUSTER_MU_GRID, dtype=DTYPE)
+    deltas = list(CLUSTER_DISPERSION_GRID)
+    per_delta: dict[float, dict[str, Any]] = {
+        float(delta): _sweep_one_dispersion(
+            net,
+            per_trafo_base,
+            per_trafo_homes,
+            load_bus_to_trafo,
+            ev_perhome_day,
+            lv_trafos,
+            n_homes,
+            mus,
+            float(delta),
+        )
+        for delta in deltas
+    }
+
+    # eje B: first-reinforcement mu, uniform (delta=0) vs each clustered delta
+    mu_uniform = _interp_crossing(mus, per_delta[0.0]["worst"], 100.0)
+    payload_delta = {}
+    for delta in deltas:
+        d = per_delta[float(delta)]
+        mu_first = _interp_crossing(mus, d["worst"], 100.0)
+        mu_first_managed = _interp_crossing(mus, d["worst_managed"], 100.0)
+        payload_delta[f"delta_{delta:.2f}"] = {
+            "gini_at_mean_rate": d["gini_at_mean"],
+            "worst_loading_by_mu": [
+                round(float(x), ROUND_DECIMALS) for x in d["worst"]
+            ],
+            "worst_loading_managed_by_mu": [
+                round(float(x), ROUND_DECIMALS) for x in d["worst_managed"]
+            ],
+            "n_over_by_mu": [int(x) for x in d["n_over"]],
+            "reinforcement_mu": (
+                round(mu_first, ROUND_DECIMALS) if np.isfinite(mu_first) else None
+            ),
+            "reinforcement_mu_managed": (
+                round(mu_first_managed, ROUND_DECIMALS)
+                if np.isfinite(mu_first_managed)
+                else None
+            ),
+            "curtailed_energy_percent_at_mean": d["curtailed_pct_at_mean"],
+            "burden_gini_at_mean": d["burden_gini_at_mean"],
+        }
+
+    delta_hi = float(deltas[-1])
+    d_hi = payload_delta[f"delta_{delta_hi:.2f}"]
+    mu_clustered = d_hi["reinforcement_mu"]
+    mu_clustered_managed = d_hi["reinforcement_mu_managed"]
+    reinforcement_gap_mu = (
+        round(float(mu_uniform) - float(mu_clustered), ROUND_DECIMALS)
+        if (np.isfinite(mu_uniform) and mu_clustered is not None)
+        else None
+    )
+    hosting_recovered_frac = None
+    if reinforcement_gap_mu not in (None, 0.0) and mu_clustered_managed is not None:
+        hosting_recovered_frac = round(
+            (float(mu_clustered_managed) - float(mu_clustered))
+            / (float(mu_uniform) - float(mu_clustered)),
+            ROUND_DECIMALS,
+        )
+
+    payload = {
+        "design_day": design_day,
+        "mean_rate_for_gini_axis": float(CLUSTER_MEAN_RATE),
+        "mu_grid": [round(float(m), 6) for m in mus],
+        "dispersion_grid": [round(float(x), 6) for x in deltas],
+        "n_lv_transformers": int(len(lv_trafos)),
+        "reinforcement_mu_uniform": (
+            round(float(mu_uniform), ROUND_DECIMALS)
+            if np.isfinite(mu_uniform)
+            else None
+        ),
+        "reinforcement_gap_mu": reinforcement_gap_mu,
+        "hosting_recovered_frac": hosting_recovered_frac,
+        "curtailed_energy_percent": d_hi["curtailed_energy_percent_at_mean"],
+        "burden_gini": d_hi["burden_gini_at_mean"],
+        "by_dispersion": payload_delta,
+    }
+    json_dir = PROJECT_OUTPUTS_DIR / "json"
+    json_dir.mkdir(parents=True, exist_ok=True)
+    out_path = json_dir / "clustered_adoption.json"
+    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+
+    summary = {
+        "n_lv_transformers": payload["n_lv_transformers"],
+        "reinforcement_mu_uniform": payload["reinforcement_mu_uniform"],
+        "reinforcement_gap_mu": reinforcement_gap_mu,
+        "hosting_recovered_frac": hosting_recovered_frac,
+        "curtailed_energy_percent": payload["curtailed_energy_percent"],
+        "burden_gini": payload["burden_gini"],
+        "gini_at_max_dispersion": d_hi["gini_at_mean_rate"],
+    }
+    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+
+
+def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
+    """Three-panel figure: penalty vs Gini, first-reinforcement, flex recovery."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    mus = np.array(payload["mu_grid"], dtype=float)
+    deltas = payload["dispersion_grid"]
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14.5, 4.3))
+
+    # P1: worst-trafo loading at the fixed mean rate vs Gini
+    mean_rate = payload["mean_rate_for_gini_axis"]
+    mi = int(np.argmin(np.abs(mus - mean_rate)))
+    ginis = [
+        payload["by_dispersion"][f"delta_{d:.2f}"]["gini_at_mean_rate"] for d in deltas
+    ]
+    worst_at_mean = [
+        payload["by_dispersion"][f"delta_{d:.2f}"]["worst_loading_by_mu"][mi]
+        for d in deltas
+    ]
+    ax1.plot(ginis, worst_at_mean, "o-", color="C0")
+    ax1.axhline(100.0, color="k", ls="--", lw=1)
+    ax1.set_xlabel("Gini of adoption")
+    ax1.set_ylabel(f"Worst-transformer loading @ {mean_rate:g} EV/home (%)")
+    ax1.set_title("Clustering penalty")
+
+    # P2: worst-trafo loading vs mu, uniform vs high dispersion
+    for d, style in ((deltas[0], "o-"), (deltas[-1], "s--")):
+        w = payload["by_dispersion"][f"delta_{d:.2f}"]["worst_loading_by_mu"]
+        ax2.plot(mus, w, style, label=f"delta={d:g}")
+    ax2.axhline(100.0, color="k", ls=":", lw=1)
+    ax2.set_xlabel("mean EV/home")
+    ax2.set_ylabel("Worst-transformer loading (%)")
+    ax2.set_title("First reinforcement: clustered vs uniform")
+    ax2.legend(fontsize=8)
+
+    # P3: recovery — unmanaged vs managed at high dispersion
+    d_hi = deltas[-1]
+    blk = payload["by_dispersion"][f"delta_{d_hi:.2f}"]
+    ax3.plot(mus, blk["worst_loading_by_mu"], "s--", color="C3", label="clustered")
+    ax3.plot(
+        mus, blk["worst_loading_managed_by_mu"], "^-", color="C2", label="+ local flex"
+    )
+    ax3.axhline(100.0, color="k", ls=":", lw=1)
+    ax3.set_xlabel("mean EV/home")
+    ax3.set_ylabel("Worst-transformer loading (%)")
+    ax3.set_title(
+        f"Flex recovery (delta={d_hi:g}): "
+        f"{blk['curtailed_energy_percent_at_mean']:.1f}% curtailed"
+    )
+    ax3.legend(fontsize=8)
+
+    fig.suptitle(
+        "Clustered adoption: penalty, first reinforcement, flexibility recovery",
+        fontsize=10,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    paths = []
+    for suffix in (".png", ".pdf"):
+        p = figures_dir / f"clustered_adoption{suffix}"
+        fig.savefig(p, dpi=200, bbox_inches="tight")
+        paths.append(p)
+    plt.close(fig)
+    return paths
+
+
+def run_stage() -> dict[str, Any]:
+    """Run the clustered-adoption stage and emit the platform report."""
+    from gridalyn.projects.scripting import project_script
+
+    script = project_script()
+    derived = derive_clustered(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    warnings = [
+        "SCOPE: transformer-overload characterization only. Phase imbalance "
+        "within the split-phase secondary is out of scope (requires runpp_3ph); "
+        "the balanced model carries the aggregate hotspot story.",
+        "RECOVERY LEVER: per-transformer local curtailment on the static kW "
+        "rating (no time-shift — there is no overnight valley in an all-electric "
+        "cold network; see the flexibility value-map spec). The AC re-solve then "
+        "measures the recovered loading.",
+    ]
+    return script.write_report(
+        "clustered_adoption_report",
+        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        summary=derived["summary"],
+        validation={"valid": True, "errors": [], "warnings": warnings},
+    )
+
+
+def main() -> None:
+    """CLI entry point for the clustered-adoption stage."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.parse_args()
+    report = run_stage()
+    s = report.get("summary", {})
+    print(
+        "Clustered adoption + report: "
+        f"reinforcement mu uniform={s.get('reinforcement_mu_uniform')} -> "
+        f"gap Delta-mu={s.get('reinforcement_gap_mu')} EV/home | "
+        f"flex recovers {s.get('hosting_recovered_frac')} of the gap "
+        f"({s.get('curtailed_energy_percent')}% curtailed, burden Gini "
+        f"{s.get('burden_gini')}) | Gini@max disp {s.get('gini_at_max_dispersion')}"
+    )
+
+
+if __name__ == "__main__":
+    main()
