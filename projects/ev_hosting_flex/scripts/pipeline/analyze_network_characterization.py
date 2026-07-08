@@ -360,8 +360,9 @@ def run_stage() -> dict[str, Any]:
         "(verified factor 0.997) — all-electric heating is weather-driven and "
         "coincident, so the aggregate substation loading is a faithful "
         "coincident-peak estimate, not an upper bound.",
-        "SUBSTATION N-1: the substation is now an HQ-realistic N-1 bank (3 x 20 MVA "
-        "on a common tied MV bus, ~62% loaded normally). The firm-capacity metric "
+        "SUBSTATION N-1: the substation is the standard HQ N-1 bank (2 x 33.3 MVA "
+        "identical parallel units on a common tied MV bus, ~56% loaded normally). "
+        "The firm-capacity metric "
         "reports the load the (N-1) remaining units carry on a single-transformer "
         "contingency; the N-1 reinforcement trigger is the EV penetration at which "
         "the peak load exceeds that firm capacity (normal and emergency ratings). "
