@@ -1243,3 +1243,34 @@ CLUSTER_MAX_RATE = 4.0
 """Physical cap on per-transformer adoption (EV/home) after the mean-preserving
 draw, guarding absurd tail values; realized fleet drift from the cap is
 reported. Chosen well above CLUSTER_MU_GRID[-1] so it rarely binds."""
+
+# ─── Flexibility incentive / climate axis (Study 1A, 2026-07-08) ─────────────
+# APPEND-ONLY. The optimal flexibility incentive migrates with climate: on warm
+# days a valley exists so a cheap ToU/valley-fill SHIFT discount hosts EVs; on
+# cold all-electric days there is no overnight valley (base 67-89% around the
+# clock) so only a CURTAILMENT payment relieves the feeder. The WTA curve is an
+# ILLUSTRATIVE behavioural assumption (like the deck's enrollment lever) — the
+# crossover TEMPERATURE is robust (shift is physically infeasible in the cold
+# regardless of WTA); the subsidy DOLLARS are illustrative.
+CLIMATE_BIN_EDGES = (-25.0, -20.0, -15.0, -10.0, -5.0, 0.0, 5.0)
+"""Daily-mean-temperature bin edges (°C) for the climate axis; days are grouped
+into the half-open bins [edge_i, edge_{i+1})."""
+
+HOSTING_TARGET_EV_PER_HOME = 2.0
+"""Fleet to host on the 6-home feeder (× 6 = N EVs). Chosen in the binding
+range: uncontrolled must exceed 100% P95 in the cold bins so flexibility is
+actually needed (the stage reports if it is not binding in a bin)."""
+
+WTA_SHIFT_MEDIAN = 30.0
+"""Median willingness-to-accept ($/EV·yr) to enrol in a SHIFT program (low —
+overnight smart-charging is little inconvenience). Lognormal location."""
+
+WTA_SHIFT_SIGMA = 0.5
+"""Lognormal sigma (spread) of the SHIFT WTA distribution."""
+
+WTA_CURTAIL_MEDIAN = 120.0
+"""Median willingness-to-accept ($/EV·yr) to enrol in a CURTAILMENT program
+(higher — giving up / delaying charge has real disutility). Lognormal location."""
+
+WTA_CURTAIL_SIGMA = 0.5
+"""Lognormal sigma (spread) of the CURTAILMENT WTA distribution."""
