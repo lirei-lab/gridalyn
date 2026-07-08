@@ -19,6 +19,7 @@ curtailment / firm helpers are plain numpy and stay import-light for tests.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -137,6 +138,50 @@ def day_mean_temps(temp_hourly: pd.Series) -> np.ndarray:
         .reshape(N_DAYS, 24)
         .mean(axis=1)
     )
+
+
+def climate_bin_days(
+    temp_hourly: pd.Series, bin_edges: Sequence[float]
+) -> list[dict[str, Any]]:
+    """Group the year's days into daily-mean-temperature bins.
+
+    Args:
+        temp_hourly: Hourly ambient series for the year (24 values per day).
+        bin_edges: Ascending bin edges (°C); days fall in half-open
+            ``[edge_i, edge_{i+1})`` bins.
+
+    Returns:
+        One dict per NON-empty bin, ascending by ``bin_lo``:
+        ``{"bin_lo", "bin_hi", "day_idx" (median-temp day), "mean_temp_c"
+        (that day's mean), "n_days", "day_indices" (all day indices in the bin)}``.
+    """
+    # Compute daily mean temperatures (flexible for any hourly length).
+    arr = temp_hourly.to_numpy(dtype=DTYPE)
+    n_hours = arr.size
+    n_days = n_hours // 24
+    tday = arr[: n_days * 24].reshape(n_days, 24).mean(axis=1)
+
+    out: list[dict[str, Any]] = []
+    edges = list(bin_edges)
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        members = np.where((tday >= lo) & (tday < hi))[0]
+        if members.size == 0:
+            continue
+        member_temps = tday[members]
+        # median-temperature day (lower-median for even counts, deterministic)
+        order = members[np.argsort(member_temps, kind="stable")]
+        median_day = int(order[(order.size - 1) // 2])
+        out.append(
+            {
+                "bin_lo": float(lo),
+                "bin_hi": float(hi),
+                "day_idx": median_day,
+                "mean_temp_c": float(tday[median_day]),
+                "n_days": int(members.size),
+                "day_indices": [int(d) for d in members],
+            }
+        )
+    return out
 
 
 def annual_base_realization(
