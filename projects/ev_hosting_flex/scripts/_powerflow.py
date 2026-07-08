@@ -57,6 +57,25 @@ def standard_kva_for_load(
     return float(ladder[-1])
 
 
+def gini(values: np.ndarray) -> float:
+    """Gini coefficient of a non-negative 1-D array (0 = perfectly uniform).
+
+    Args:
+        values: Non-negative quantities (e.g., per-transformer adoption or
+            curtailment burden).
+
+    Returns:
+        Gini coefficient in [0, 1); 0.0 for a uniform or zero-sum vector.
+    """
+    v = np.sort(np.asarray(values, dtype=float))
+    n = v.size
+    total = float(v.sum())
+    if n == 0 or total <= 0.0:
+        return 0.0
+    idx = np.arange(1, n + 1, dtype=float)
+    return float((2.0 * np.sum(idx * v)) / (n * total) - (n + 1.0) / n)
+
+
 def run_design_day_powerflow(
     net: Any,
     p_kw_by_load: np.ndarray,
