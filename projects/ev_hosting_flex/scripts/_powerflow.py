@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from projects.ev_hosting_flex.scripts.config import (
+    CLUSTER_MAX_RATE,
     DTYPE,
     POWER_FACTOR,
     SLACK_VM_PU,
@@ -74,6 +75,46 @@ def gini(values: np.ndarray) -> float:
         return 0.0
     idx = np.arange(1, n + 1, dtype=float)
     return float((2.0 * np.sum(idx * v)) / (n * total) - (n + 1.0) / n)
+
+
+def draw_clustered_adoption(
+    n_homes_by_trafo: np.ndarray,
+    mean_rate: float,
+    dispersion: float,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Draw a per-transformer EV adoption vector at a FIXED total fleet.
+
+    Per transformer the adoption rate is ``mean_rate`` times a unit-mean
+    lognormal multiplier (``exp(sigma*z - sigma^2/2)``), then rescaled so the
+    home-weighted mean equals ``mean_rate`` exactly — i.e. the total fleet
+    ``sum(a_t * homes_t)`` is invariant to ``dispersion``. ``dispersion == 0``
+    returns a uniform vector.
+
+    Args:
+        n_homes_by_trafo: ``(T,)`` homes served by each transformer.
+        mean_rate: Mean adoption (EV/home) = fixed fleet / total homes.
+        dispersion: Lognormal sigma (>= 0); 0 = uniform, higher = clustered.
+        rng: Seeded numpy Generator (determinism).
+
+    Returns:
+        ``(T,)`` adoption rate (EV/home) per transformer, mean-preserving,
+        non-negative, capped at ``CLUSTER_MAX_RATE``.
+    """
+    homes = np.asarray(n_homes_by_trafo, dtype=float)
+    if float(dispersion) <= 0.0:
+        return np.full(homes.shape[0], float(mean_rate), dtype=float)
+    z = rng.standard_normal(homes.shape[0])
+    mult = np.exp(float(dispersion) * z - 0.5 * float(dispersion) ** 2)
+    raw = float(mean_rate) * mult
+    fleet = float(mean_rate) * float(homes.sum())
+    scale = fleet / float(np.sum(raw * homes))
+    a = np.minimum(raw * scale, CLUSTER_MAX_RATE)
+    # rescale once more after the (rare) cap so the fleet stays exact
+    denom = float(np.sum(a * homes))
+    if denom > 0.0:
+        a = a * (fleet / denom)
+    return a.astype(float)
 
 
 def run_design_day_powerflow(
