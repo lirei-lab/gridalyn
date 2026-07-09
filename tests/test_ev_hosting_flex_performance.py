@@ -41,3 +41,26 @@ def test_flexible_share_hand_computed() -> None:
     assert flexible_share(90.0, 10.0) == pytest.approx(0.1)
     assert flexible_share(50.0, 50.0) == pytest.approx(0.5)
     assert flexible_share(0.0, 0.0) == 0.0
+
+
+def test_build_panel_mini() -> None:
+    """A 3-transformer mini panel: overloads grow and margin falls with G."""
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_network_performance import (
+        _build_panel,
+    )
+
+    # per-home hourly profile (4 h) and three transformers of 1/2/4 homes,
+    # each rated exactly to its G=1 peak (growth_margin ~0 at G=1)
+    per_home = np.array([5.0, 8.0, 10.0, 6.0])   # peak 10 kW/home
+    homes = {0: 1, 1: 2, 2: 4}
+    ratings = {t: 10.0 * h for t, h in homes.items()}  # sized to G=1 peak
+    panel = _build_panel(per_home, homes, ratings, (1.0, 1.1, 1.2))
+    # at G=1 nothing is over 100% (rated to peak); overloads appear as G grows
+    assert panel["n_over_100_by_g"][0] == 0
+    assert panel["n_over_100_by_g"][-1] == 3        # all three over at G=1.2
+    assert panel["n_over_100_by_g"] == sorted(panel["n_over_100_by_g"])
+    # median growth margin at G=1 is ~0 (rated to peak)
+    assert panel["growth_margin_p50"] == pytest.approx(0.0, abs=1e-6)
+    # median peak utilization rises with G
+    mp = panel["median_peak_util_by_g"]
+    assert mp == sorted(mp) and mp[0] == pytest.approx(100.0)
