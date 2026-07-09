@@ -64,3 +64,47 @@ def test_build_panel_mini() -> None:
     # median peak utilization rises with G
     mp = panel["median_peak_util_by_g"]
     assert mp == sorted(mp) and mp[0] == pytest.approx(100.0)
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_PERF = PROJECT_OUTPUTS_DIR / "json" / "network_performance.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "network_performance_report.json"
+_SKIP = (
+    "network_performance.json not present; run analyze_network_performance.py "
+    "first (outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _PERF.is_file(), reason=_SKIP)
+def test_governed_network_performance() -> None:
+    """Overloads grow with load; peak is mostly inflexible; a flex window exists."""
+    p = json.loads(_PERF.read_text())
+    panel = p["panel"]
+    # overloads rise monotonically with the load-growth factor
+    assert panel["n_over_100_by_g"] == sorted(panel["n_over_100_by_g"])
+    assert panel["median_peak_util_by_g"] == sorted(panel["median_peak_util_by_g"])
+    # the healthy network sits below the cliff (positive growth margin)
+    assert panel["growth_margin_p50"] > 0.0
+    # the coincident peak is mostly INFLEXIBLE heating (flex share is small) —
+    # the ceiling on flexibility's value in the healthy state
+    assert 0.0 < p["flexible_share_p50"] < 0.5
+    # the feeder flexibility window is a real, ordered band; the shift ceiling
+    # falls with load
+    fw = p["feeder_window"]
+    assert fw["flex_window_g_low"] < fw["flex_window_g_high"]
+    assert fw["shift_ceiling"] == sorted(fw["shift_ceiling"], reverse=True)
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_performance_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("growth_margin_p50", "flexible_share_p50", "flex_window_g_high"):
+        assert key in report["summary"], sorted(report["summary"])

@@ -402,6 +402,41 @@
       "json_path": ["optimal_subsidy_warmest"],
       "source": "outputs/json/flexibility_incentive.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 7.635267,
+      "id": "perf.growth_margin_p50",
+      "json_path": ["panel", "growth_margin_p50"],
+      "source": "outputs/json/network_performance.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 488,
+      "id": "perf.n_over_100_at_g_high",
+      "json_path": ["panel", "n_over_100_by_g", -1],
+      "source": "outputs/json/network_performance.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.30698,
+      "id": "perf.flexible_share_p50",
+      "json_path": ["flexible_share_p50"],
+      "source": "outputs/json/network_performance.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.0,
+      "id": "perf.flex_window_g_low",
+      "json_path": ["feeder_window", "flex_window_g_low"],
+      "source": "outputs/json/network_performance.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.13,
+      "id": "perf.flex_window_g_high",
+      "json_path": ["feeder_window", "flex_window_g_high"],
+      "source": "outputs/json/network_performance.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
