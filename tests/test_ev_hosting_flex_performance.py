@@ -11,7 +11,10 @@ import json
 import numpy as np
 import pytest
 
-from projects.ev_hosting_flex.scripts._powerflow import annual_performance_metrics
+from projects.ev_hosting_flex.scripts._powerflow import (
+    annual_performance_metrics,
+    flexible_share,
+)
 
 
 def test_annual_performance_metrics_hand_computed() -> None:
@@ -31,3 +34,10 @@ def test_annual_performance_metrics_hand_computed() -> None:
     assert over["hours_over_100"] == 2       # 105, 120 exceed 100
     assert over["min_headroom_kw"] == pytest.approx(-20.0)
     assert over["growth_margin_pct"] == pytest.approx((100.0 / 120.0 - 1) * 100.0)
+
+
+def test_flexible_share_hand_computed() -> None:
+    """Flexible (EV) fraction of the peak; 0 when there is no load."""
+    assert flexible_share(90.0, 10.0) == pytest.approx(0.1)
+    assert flexible_share(50.0, 50.0) == pytest.approx(0.5)
+    assert flexible_share(0.0, 0.0) == 0.0

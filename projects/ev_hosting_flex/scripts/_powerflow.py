@@ -107,6 +107,13 @@ def annual_performance_metrics(
     }
 
 
+def flexible_share(base_at_peak: float, ev_at_peak: float) -> float:
+    """EV (flexible) fraction of the coincident peak = the ceiling on the value
+    of EV flexibility (it can only touch the EV part of the peak)."""
+    total = float(base_at_peak) + float(ev_at_peak)
+    return float(ev_at_peak) / total if total > 0.0 else 0.0
+
+
 def draw_clustered_adoption(
     n_homes_by_trafo: np.ndarray,
     mean_rate: float,
