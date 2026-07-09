@@ -77,6 +77,36 @@ def gini(values: np.ndarray) -> float:
     return float((2.0 * np.sum(idx * v)) / (n * total) - (n + 1.0) / n)
 
 
+def annual_performance_metrics(
+    load_kw: np.ndarray, rating_kw: float
+) -> dict[str, float]:
+    """Performance-state metrics of one element from its annual load series.
+
+    Args:
+        load_kw: ``(H,)`` annual load in kW.
+        rating_kw: Element usable rating in kW.
+
+    Returns:
+        Dict of ``peak_utilization_pct`` (peak / rating), ``load_factor``
+        (mean / peak), ``hours_over_90`` / ``hours_over_100`` (steps strictly
+        above 90 % / 100 % of the rating), ``min_headroom_kw`` (rating − peak;
+        negative if overloaded), and ``growth_margin_pct`` ((rating/peak − 1) ×
+        100 — how much the load can grow before the peak reaches the rating;
+        ``inf`` if the element carries no load).
+    """
+    load = np.asarray(load_kw, dtype=float)
+    rating = float(rating_kw)
+    peak = float(load.max())
+    return {
+        "peak_utilization_pct": peak / rating * 100.0,
+        "load_factor": float(load.mean()) / peak if peak > 0 else 0.0,
+        "hours_over_90": int(np.count_nonzero(load > 0.90 * rating)),
+        "hours_over_100": int(np.count_nonzero(load > rating)),
+        "min_headroom_kw": rating - peak,
+        "growth_margin_pct": (rating / peak - 1.0) * 100.0 if peak > 0 else float("inf"),
+    }
+
+
 def draw_clustered_adoption(
     n_homes_by_trafo: np.ndarray,
     mean_rate: float,
