@@ -66,6 +66,23 @@ def test_build_panel_mini() -> None:
     assert mp == sorted(mp) and mp[0] == pytest.approx(100.0)
 
 
+def test_g_at_ceiling_interpolation() -> None:
+    """The G where a decreasing ceiling crosses a target, with the edge cases."""
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_network_performance import (
+        _g_at_ceiling,
+    )
+
+    grid = (1.0, 1.1, 1.2, 1.3)
+    # crosses 2.5 between 1.1 (ceil 3.0) and 1.2 (ceil 2.0) -> 1.15
+    assert _g_at_ceiling(grid, [4.0, 3.0, 2.0, 1.0], 2.5) == pytest.approx(1.15)
+    # exact hit at a node returns that node
+    assert _g_at_ceiling(grid, [4.0, 3.0, 2.0, 1.0], 3.0) == pytest.approx(1.1)
+    # already below the target at the lowest G -> grid floor
+    assert _g_at_ceiling(grid, [1.0, 0.5, 0.0, 0.0], 2.0) == pytest.approx(1.0)
+    # never drops below the target in range -> grid ceiling
+    assert _g_at_ceiling(grid, [9.0, 8.0, 7.0, 6.0], 2.0) == pytest.approx(1.3)
+
+
 # ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
 
 from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402

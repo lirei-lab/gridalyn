@@ -82,6 +82,11 @@ def _build_panel(
     trafos = sorted(homes_by_trafo)
     base_by_trafo = {t: per_home * homes_by_trafo[t] for t in trafos}
 
+    if float(growth_grid[0]) != 1.0:
+        raise ValueError(
+            "growth_grid[0] must be 1.0 — growth_margin_p50 is measured at G=1 "
+            f"(the as-built network); got {growth_grid[0]}."
+        )
     n_over_100, n_over_90, median_util, p95_util = [], [], [], []
     growth_margin_g1: list[float] = []
     hours_over_100_top: list[int] = []
