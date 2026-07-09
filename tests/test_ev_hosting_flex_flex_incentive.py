@@ -165,6 +165,15 @@ def test_governed_flexibility_incentive() -> None:
     assert warmest["optimal_policy"] == "shift"
     # curtailment is the universal backstop (feasible in every bin)
     assert all(b["options"]["curtail"]["feasible"] for b in bins)
+    # pool-cap is surfaced honestly: warm bins hit the pool ceiling (lower bound),
+    # the cold bin does not, and the crossover sits below the capped region.
+    assert warmest["shift_ceiling_pool_capped"] is True
+    assert warmest["shift_ceiling_ev_per_home"] == pytest.approx(
+        p["pool_ev_per_home_max"]
+    )
+    assert coldest["shift_ceiling_pool_capped"] is False
+    assert p["crossover_reliable"] is True
+    assert p["shift_ceiling_warmest_pool_capped"] is True
 
 
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)

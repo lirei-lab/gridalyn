@@ -289,16 +289,28 @@ def derive_incentive(data_dir: Path) -> dict[str, Any]:
     crossover = _crossover_from_ceiling(results, target_ev_home)
     ordered = sorted(results, key=lambda b: b["mean_temp_c"])
     coldest, warmest = ordered[0], ordered[-1]
+    # A bin whose shift ceiling is pool-capped reports a LOWER BOUND, not the
+    # true ceiling. The crossover is only reliable if the target sits below the
+    # capped region (so the bracketing bins carry true ceilings) — otherwise the
+    # pool must be enlarged (POOL_TILES) to resolve it.
+    min_capped_ceiling = min(
+        (b["shift_ceiling_ev_per_home"] for b in results if b["shift_ceiling_pool_capped"]),
+        default=float("inf"),
+    )
+    crossover_reliable = bool(target_ev_home < min_capped_ceiling)
 
     payload = {
         "target_ev_per_home": target_ev_home,
         "n_target": n_target,
         "pool_ev_max": n_max,
+        "pool_ev_per_home_max": round(n_max / 6.0, ROUND_DECIMALS),
         "hod0": hod0,
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "crossover_temp_c": crossover,
+        "crossover_reliable": crossover_reliable,
         "shift_ceiling_coldest": coldest["shift_ceiling_ev_per_home"],
         "shift_ceiling_warmest": warmest["shift_ceiling_ev_per_home"],
+        "shift_ceiling_warmest_pool_capped": bool(warmest["shift_ceiling_pool_capped"]),
         "optimal_subsidy_coldest": coldest["optimal_subsidy"],
         "optimal_subsidy_warmest": warmest["optimal_subsidy"],
         "bins": results,
@@ -311,8 +323,10 @@ def derive_incentive(data_dir: Path) -> dict[str, Any]:
     summary = {
         "target_ev_per_home": target_ev_home,
         "crossover_temp_c": crossover,
+        "crossover_reliable": crossover_reliable,
         "shift_ceiling_coldest": coldest["shift_ceiling_ev_per_home"],
         "shift_ceiling_warmest": warmest["shift_ceiling_ev_per_home"],
+        "shift_ceiling_warmest_pool_capped": bool(warmest["shift_ceiling_pool_capped"]),
         "optimal_subsidy_coldest": coldest["optimal_subsidy"],
         "optimal_subsidy_warmest": warmest["optimal_subsidy"],
         "coldest_optimal_policy": coldest["optimal_policy"],
@@ -406,6 +420,13 @@ def run_stage() -> dict[str, Any]:
         "24-hour peak), no AC. Real tariff-billing mechanics and phase imbalance "
         "are out of scope.",
     ]
+    if not derived["summary"].get("crossover_reliable", True):
+        warnings.append(
+            "POOL-CAP: the incentive target is at or above the pool-capped shift "
+            "ceiling in some bins, so the reported ceiling there is a LOWER BOUND "
+            "and the crossover temperature is unreliable. Increase POOL_TILES to "
+            "resolve it, or lower INCENTIVE_TARGET_EV_PER_HOME."
+        )
     return script.write_report(
         "flexibility_incentive_report",
         artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
