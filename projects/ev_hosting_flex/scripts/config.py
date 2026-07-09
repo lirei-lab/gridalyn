@@ -1274,3 +1274,24 @@ WTA_CURTAIL_MEDIAN = 120.0
 
 WTA_CURTAIL_SIGMA = 0.5
 """Lognormal sigma (spread) of the CURTAILMENT WTA distribution."""
+
+# ─── Study 1A reframe: penetration crossover (2026-07-09) ────────────────────
+# APPEND-ONLY. Rigorous optimal valley-fill shift turned out FEASIBLE even in
+# the cold at 2 EV/home: the all-electric base is high (67-89%) but not at 100%
+# all day, so the DISTRIBUTED daily headroom (~353 kWh on the coldest day)
+# absorbs the fleet when spread optimally into the shallow evening/overnight dip.
+# The binding variable is therefore the per-bin SHIFT-HOSTING CEILING (the
+# EV/home at which optimal shift exhausts the daily headroom); it falls with cold
+# (less headroom). Beyond the ceiling, curtailment is required. To resolve that
+# ceiling the 12-EV pool is TILED, and the incentive crossover is evaluated at a
+# high-adoption target above the cold ceiling.
+POOL_TILES = 4
+"""Integer tiling of the 12-EV pool for the penetration sweep (× 12 = max EVs;
+4 → 48 EVs = 8 EV/home on the 6-home feeder). Homogeneous-fleet penetration."""
+
+INCENTIVE_TARGET_EV_PER_HOME = 5.0
+"""High-adoption target (EV/home) at which the incentive crossover is evaluated —
+chosen ABOVE the coldest-bin shift ceiling (~3.8) and below the mild-bin ceiling
+so the optimal incentive migrates shift→curtail as the shift ceiling falls with
+cold. A stress scenario, not typical adoption; the shift-ceiling CURVE is the
+robust physical headline."""
