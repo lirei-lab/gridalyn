@@ -121,3 +121,59 @@ def test_bin_p95_loading_valley_vs_flat() -> None:
         base=two_day(flat_base), pool=pool, policy="curtail", **args
     )
     assert p_cur <= 100.0 + 1e-6
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_INCENTIVE = PROJECT_OUTPUTS_DIR / "json" / "flexibility_incentive.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "flexibility_incentive_report.json"
+_SKIP = (
+    "flexibility_incentive.json not present; run analyze_flexibility_incentive.py "
+    "first (outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _INCENTIVE.is_file(), reason=_SKIP)
+def test_governed_flexibility_incentive() -> None:
+    """The shift-hosting ceiling falls with cold; the incentive migrates at a target.
+
+    Optimal valley-fill shift hosts far more than uncontrolled even in the cold
+    (distributed daily headroom), but the ceiling FALLS with cold as headroom
+    shrinks. At the high-adoption target the ceiling drops below it in the cold
+    so the optimal incentive migrates shift (warm) -> curtail (cold) with a
+    finite crossover temperature.
+    """
+    p = json.loads(_INCENTIVE.read_text())
+    bins = sorted(p["bins"], key=lambda b: b["mean_temp_c"])
+    coldest, warmest = bins[0], bins[-1]
+    # shift ceiling rises with temperature (falls with cold) and beats uncontrolled
+    ceils = [b["shift_ceiling_ev_per_home"] for b in bins]
+    assert ceils == sorted(ceils), f"shift ceiling not rising with temp: {ceils}"
+    assert coldest["shift_ceiling_ev_per_home"] < warmest["shift_ceiling_ev_per_home"]
+    assert all(
+        b["shift_ceiling_ev_per_home"] > b["uncontrolled_ceiling_ev_per_home"]
+        for b in bins
+    )
+    # uncontrolled hosting is tiny everywhere (EVs must be managed)
+    assert all(b["uncontrolled_ceiling_ev_per_home"] < 2.0 for b in bins)
+    # at the target the incentive migrates cold->warm with a finite crossover
+    assert p["crossover_temp_c"] is not None
+    assert coldest["mean_temp_c"] < p["crossover_temp_c"] < warmest["mean_temp_c"]
+    assert coldest["optimal_policy"] == "curtail"
+    assert warmest["optimal_policy"] == "shift"
+    # curtailment is the universal backstop (feasible in every bin)
+    assert all(b["options"]["curtail"]["feasible"] for b in bins)
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_flexibility_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("crossover_temp_c", "shift_ceiling_coldest"):
+        assert key in report["summary"], sorted(report["summary"])
