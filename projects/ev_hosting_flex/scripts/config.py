@@ -1295,3 +1295,18 @@ chosen ABOVE the coldest-bin shift ceiling (~3.8) and below the mild-bin ceiling
 so the optimal incentive migrates shift→curtail as the shift ceiling falls with
 cold. A stress scenario, not typical adoption; the shift-ceiling CURVE is the
 robust physical headline."""
+
+# ─── Network performance state + load-growth hypothesis (2026-07-09) ─────────
+# APPEND-ONLY. Real networks are UNDER-reinforced: sized for an earlier load
+# that has since grown. The load-growth factor G scales the (inflexible)
+# heating base; the network is SIZED at G=1 and EVALUATED under base × G. The
+# performance panel across G reveals the loadedness band where flexibility is
+# the right tool: below it the network is over-built (flex marginal), above it
+# the base itself overloads (reinforcement required).
+LOAD_GROWTH_GRID = (1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
+"""Load-growth factors G applied to the heating base (the network is sized at
+G=1). Swept to trace utilization / overload / the flexibility window vs load."""
+
+PERFORMANCE_REF_EV_PER_HOME = 1.0
+"""Reference EV adoption (EV/home) for the flexible-vs-inflexible peak
+decomposition and the feeder flexibility-window band target T."""
