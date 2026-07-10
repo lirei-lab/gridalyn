@@ -140,6 +140,26 @@ def congestion_stats(peaks_kw: np.ndarray, rating_kw: float) -> dict[str, float]
     }
 
 
+def _cold_day_peaks(
+    load_15min: np.ndarray, cold_mask: np.ndarray, steps_per_day: int
+) -> np.ndarray:
+    """Per-cold-day coincident maximum of a 15-min annual load series.
+
+    Args:
+        load_15min: ``(n_days*steps_per_day,)`` load (kW).
+        cold_mask: ``(n_days,)`` boolean — the cold days to keep.
+        steps_per_day: intraday step count (e.g. 96 at 15 min).
+
+    Returns:
+        ``(n_cold_days,)`` the daily coincident peak (kW) on the cold days.
+    """
+    n_days = int(np.asarray(cold_mask).size)
+    daily = np.asarray(load_15min, dtype=float)[: n_days * steps_per_day].reshape(
+        n_days, steps_per_day
+    )
+    return daily[np.asarray(cold_mask, dtype=bool)].max(axis=1)
+
+
 def draw_clustered_adoption(
     n_homes_by_trafo: np.ndarray,
     mean_rate: float,

@@ -11,7 +11,10 @@ import json
 import numpy as np
 import pytest
 
-from projects.ev_hosting_flex.scripts._powerflow import congestion_stats
+from projects.ev_hosting_flex.scripts._powerflow import (
+    _cold_day_peaks,
+    congestion_stats,
+)
 
 
 def test_congestion_stats_hand_computed() -> None:
@@ -25,3 +28,15 @@ def test_congestion_stats_hand_computed() -> None:
     # nothing over the rating -> zero probability
     s0 = congestion_stats(np.array([10.0, 20.0, 30.0]), 100.0)
     assert s0["p_cong"] == 0.0
+
+
+def test_cold_day_peaks_hand_computed() -> None:
+    """Daily coincident max over the cold days only."""
+    # 2 days, 4 steps/day; day 0 cold, day 1 warm
+    load = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 9.0, 6.0, 2.0])
+    peaks = _cold_day_peaks(load, np.array([True, False]), 4)
+    assert peaks.tolist() == [4.0]           # cold day 0's max
+    peaks2 = _cold_day_peaks(load, np.array([False, True]), 4)
+    assert peaks2.tolist() == [9.0]          # cold day 1's max
+    both = _cold_day_peaks(load, np.array([True, True]), 4)
+    assert both.tolist() == [4.0, 9.0]
