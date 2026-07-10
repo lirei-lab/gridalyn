@@ -70,3 +70,49 @@ def test_size_congestion_mini() -> None:
     hi = _size_congestion(base_mc, ev_pools, cold, steps_per_day, homes=1,
                           rating_kw=rating, g=1.2, ev_per_home=1.0)
     assert hi["peak_max"] >= lo["peak_max"]
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_CONG = PROJECT_OUTPUTS_DIR / "json" / "congestion_risk.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "congestion_risk_report.json"
+_SKIP = (
+    "congestion_risk.json not present; run analyze_congestion_risk.py first "
+    "(outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _CONG.is_file(), reason=_SKIP)
+def test_governed_congestion_risk() -> None:
+    """Congestion risk rises with growth and adoption; peaks are heavy-tailed."""
+    p = json.loads(_CONG.read_text())
+    feeder = str(p["feeder_homes"])
+    pcong = p["by_size"][feeder]["p_cong"]        # (G, ev)
+    # P(cong) rises with EV adoption at every growth level, and with growth
+    for row in pcong:
+        assert row == sorted(row), f"P(cong) not rising with adoption: {row}"
+    for ei in range(len(p["ev_per_home_grid"])):
+        col = [pcong[gi][ei] for gi in range(len(p["g_grid"]))]
+        assert col == sorted(col), f"P(cong) not rising with G at ev idx {ei}: {col}"
+    # the reference feeder shows material congestion already at G=1, 1 EV/home,
+    # with a heavy peak tail well over the rating
+    assert p["reference_feeder"]["p_cong_g1_1ev"] > 0.0
+    assert p["reference_feeder"]["peak_max_g1_1ev"] > 100.0
+    # at-risk transformer count rises with growth; first-risk adoption is finite
+    n = np.array(p["n_at_risk_by_scenario"])
+    assert np.all(np.diff(n, axis=1) >= 0)        # rises with adoption (columns)
+    assert p["first_risk_ev_per_home"] is not None
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_congestion_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("p_cong_g1_1ev", "peak_max_g1_1ev", "first_risk_ev_per_home"):
+        assert key in report["summary"], sorted(report["summary"])

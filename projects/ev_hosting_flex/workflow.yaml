@@ -193,6 +193,23 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/network_performance.png
         - projects/ev_hosting_flex/outputs/reports/network_performance_report.json
 
+    - id: analyze_congestion_risk
+      needs: [generate_annual_mc]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
+        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
+        - projects/ev_hosting_flex/outputs/json/congestion_risk.json
+        - projects/ev_hosting_flex/outputs/figures/congestion_risk.png
+        - projects/ev_hosting_flex/outputs/reports/congestion_risk_report.json
+
     # ── Stage 7: pandapower AC annual validation (live, F5 of the migration) ─
     # Before/after-EV network behavior on the study-B annual artifacts: the
     # peak-day full-net scenario families (network adoption + governed feeder

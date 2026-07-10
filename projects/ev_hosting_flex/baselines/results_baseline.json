@@ -437,6 +437,34 @@
       "json_path": ["feeder_window", "flex_window_g_high"],
       "source": "outputs/json/network_performance.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 0.288037,
+      "id": "congestion.p_cong_g1_1ev",
+      "json_path": ["reference_feeder", "p_cong_g1_1ev"],
+      "source": "outputs/json/congestion_risk.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 156.67574,
+      "id": "congestion.peak_max_g1_1ev",
+      "json_path": ["reference_feeder", "peak_max_g1_1ev"],
+      "source": "outputs/json/congestion_risk.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 488,
+      "id": "congestion.n_at_risk_at_ref",
+      "json_path": ["n_at_risk_at_ref"],
+      "source": "outputs/json/congestion_risk.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.097826,
+      "id": "congestion.first_risk_ev_per_home",
+      "json_path": ["first_risk_ev_per_home"],
+      "source": "outputs/json/congestion_risk.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
