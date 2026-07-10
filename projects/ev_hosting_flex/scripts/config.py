@@ -1310,3 +1310,29 @@ G=1). Swept to trace utilization / overload / the flexibility window vs load."""
 PERFORMANCE_REF_EV_PER_HOME = 1.0
 """Reference EV adoption (EV/home) for the flexible-vs-inflexible peak
 decomposition and the feeder flexibility-window band target T."""
+
+# ─── Probabilistic congestion-risk diagnostic (2026-07-09) ───────────────────
+# APPEND-ONLY. Diagnosis before solutions: Monte-Carlo BOTH stochastic
+# generators (building base + EV fleet) to estimate the probability and
+# peak-severity of cold-day congestion across a realistic load-growth surface.
+# No flexibility. Peaks (coincident 15-min daily max on cold days), not averages.
+CONGESTION_G_GRID = (1.0, 1.1, 1.2)
+"""Base electrification growth factors G (the network is sized at G=1)."""
+
+CONGESTION_EV_PER_HOME_GRID = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0)
+"""EV-adoption sweep (EV/home) for the congestion-risk surface."""
+
+CONGESTION_K_BASE = 6
+"""Monte-Carlo realizations of the SDK building base per distinct transformer
+size (expensive — SDK agent; cached in base_mc_by_size.npz)."""
+
+CONGESTION_K_EV = 20
+"""Monte-Carlo draws of the EV fleet (cheap) crossed with the base realizations."""
+
+CONGESTION_RISK_THRESHOLD = 0.05
+"""A transformer is 'at risk' when its congestion probability P(cong) exceeds
+this (5% of cold-day realizations with the peak over the rating)."""
+
+CONGESTION_AT_RISK_FRACTION = 0.10
+"""Network first-risk trigger: the smallest growth scenario at which this
+fraction of transformers cross CONGESTION_RISK_THRESHOLD."""
