@@ -94,10 +94,21 @@ def _solve_phase_min_v(
     }
 
 
-def _cold_peak_by_size(sizing: dict[str, Any]) -> dict[int, float]:
-    """Cold coincident peak (kW) of a size-h transformer = max of h*per-home."""
+def _base_day_by_size(sizing: dict[str, Any]) -> dict[int, np.ndarray]:
+    """Design-day hourly aggregate base (kW) of a size-h transformer = h * the
+    per-home profile — kept as a PROFILE so base and EV combine at the same hour."""
     base_by_size = sizing["base_by_size"]
-    return {int(h): float((int(h) * base_by_size[int(h)]).max()) for h in base_by_size}
+    return {
+        int(h): (int(h) * np.asarray(base_by_size[int(h)], dtype=DTYPE))
+        for h in base_by_size
+    }
+
+
+def _coincident_peak(base_day: np.ndarray, ev_day: np.ndarray, n_evs: float) -> float:
+    """True coincident peak (kW): max over the day of ``base + n_evs*EV`` at the
+    SAME hour — not max(base)+max(EV), which overstates it (base peaks morning,
+    EV peaks evening)."""
+    return float((base_day + float(n_evs) * ev_day).max())
 
 
 def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
@@ -114,36 +125,44 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     tday = day_mean_temps(temp)
     design_day = int(np.argmin(tday))
     sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
-    peak_by_size = _cold_peak_by_size(sizing)
+    base_day_by_size = _base_day_by_size(sizing)
     size_by_trafo = sizing["size_by_trafo"]
 
-    # per-EV cold evening peak (kW) from the fixed pool
+    # per-EV design-day hourly profile (kW), local-hour aligned to the base
     pool = aggregate_to_hourly(
         np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     )
     ev_day = np.roll(
         pool[:, design_day * 24 : (design_day + 1) * 24].mean(axis=0), int(hod0)
     )
-    ev_peak_kw = float(ev_day.max())
 
     mv, pole_to_mv = to_three_phase_mv(
         net, r0_mult=float(PHASE_R0_MULT), x0_mult=float(PHASE_X0_MULT)
     )
     trafos = sorted(pole_to_mv)
     homes = {t: int(size_by_trafo[t]) for t in trafos}
-    base_kw = {t: peak_by_size[homes[t]] for t in trafos}
+    missing = sorted({homes[t] for t in trafos} - set(base_day_by_size))
+    if missing:
+        raise ValueError(
+            f"no design-day base profile for transformer home-counts {missing}; "
+            "regenerate the topology cache so size_network_to_load covers them."
+        )
     csa = float(VOLTAGE_LIMITS_PU["normal_low"])
     ev_grid = [float(e) for e in PHASE_EV_GRID]
 
     p_undervolt, worst_vuf, min_v_p50, min_v_worst, balanced_min_v = [], [], [], [], []
     for e in ev_grid:
         bal = _solve_phase_min_v(
-            mv, pole_to_mv, {t: base_kw[t] + e * homes[t] * ev_peak_kw for t in trafos},
+            mv, pole_to_mv,
+            {
+                t: _coincident_peak(base_day_by_size[homes[t]], ev_day, e * homes[t])
+                for t in trafos
+            },
             balanced=True,
         )
         balanced_min_v.append(round(bal["min_vm_pu"], ROUND_DECIMALS))
         pu, wv, p50, pworst = _scenario_stats(
-            mv, pole_to_mv, base_kw, homes, e, ev_peak_kw, csa
+            mv, pole_to_mv, base_day_by_size, homes, ev_day, e, csa
         )
         p_undervolt.append(pu)
         worst_vuf.append(wv)
@@ -191,20 +210,23 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
 def _scenario_stats(
     mv: Any,
     pole_to_mv: dict[int, int],
-    base_kw: dict[int, float],
+    base_day_by_size: dict[int, np.ndarray],
     homes: dict[int, int],
+    ev_day: np.ndarray,
     e: float,
-    ev_peak_kw: float,
     csa: float,
 ) -> tuple[float, float, float, float]:
     """Run PHASE_MC_DRAWS unbalanced solves at adoption ``e``; return
-    (p_undervolt, worst_vuf, min_v_p50, min_v_worst)."""
+    (p_undervolt, worst_vuf, min_v_p50, min_v_worst). Each transformer's load is
+    the TRUE coincident peak of its base + its Poisson EV count."""
     trafos = sorted(pole_to_mv)
     minvs, vufs = [], []
     for k in range(int(PHASE_MC_DRAWS)):
         rng = np.random.default_rng(SEED + 7919 * int(e * 100) + k)
         loads = {
-            t: base_kw[t] + float(rng.poisson(e * homes[t])) * ev_peak_kw
+            t: _coincident_peak(
+                base_day_by_size[homes[t]], ev_day, int(rng.poisson(e * homes[t]))
+            )
             for t in trafos
         }
         r = _solve_phase_min_v(mv, pole_to_mv, loads, balanced=False)
@@ -292,7 +314,9 @@ def run_stage() -> dict[str, Any]:
         "ZERO-SEQUENCE PARAMS are standard multipliers (r0/x0), not measured — "
         "calibratable. Pole transformers are collapsed to their aggregate MV load "
         "(the single-phase LV, balanced within the transformer, is out of scope). "
-        "Round-robin transformer-to-phase assignment; the imbalance is EV-driven.",
+        "Round-robin transformer-to-phase assignment; the imbalance is EV-driven. "
+        "The substation Dyn transformer uses shift_degree=0 (a phase rotation "
+        "does not change per-phase voltage magnitudes or the VUF).",
     ]
     return script.write_report(
         "phase_imbalance_report",
