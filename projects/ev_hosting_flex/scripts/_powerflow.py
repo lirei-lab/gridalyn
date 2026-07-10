@@ -114,6 +114,32 @@ def flexible_share(base_at_peak: float, ev_at_peak: float) -> float:
     return float(ev_at_peak) / total if total > 0.0 else 0.0
 
 
+def congestion_stats(peaks_kw: np.ndarray, rating_kw: float) -> dict[str, float]:
+    """Congestion frequency + peak-severity tail from a population of peaks.
+
+    Args:
+        peaks_kw: population of coincident peaks (kW) — one per
+            (base realization × EV draw × cold day).
+        rating_kw: element usable rating (kW).
+
+    Returns:
+        ``{"p_cong"`` (fraction of peaks over the rating), ``"peak_p50"``,
+        ``"peak_p95"``, ``"peak_p99"``, ``"peak_max"}`` — the percentiles in
+        PERCENT of the rating.
+    """
+    p = np.asarray(peaks_kw, dtype=float) / float(rating_kw) * 100.0
+    if p.size == 0:
+        return {"p_cong": 0.0, "peak_p50": 0.0, "peak_p95": 0.0,
+                "peak_p99": 0.0, "peak_max": 0.0}
+    return {
+        "p_cong": float(np.count_nonzero(p > 100.0)) / p.size,
+        "peak_p50": float(np.percentile(p, 50)),
+        "peak_p95": float(np.percentile(p, 95)),
+        "peak_p99": float(np.percentile(p, 99)),
+        "peak_max": float(p.max()),
+    }
+
+
 def draw_clustered_adoption(
     n_homes_by_trafo: np.ndarray,
     mean_rate: float,
