@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
 
 from projects.ev_hosting_flex.scripts._powerflow import vuf
@@ -81,3 +80,45 @@ def test_solve_phase_min_voltage_real_net() -> None:
     unb = _solve_phase_min_v(mv, pole_to_mv, load_kw, balanced=False)
     assert 0.7 < unb["min_vm_pu"] <= bal["min_vm_pu"] <= 1.01
     assert unb["vuf"] >= bal["vuf"] - 1e-9      # unbalanced no less unbalanced
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_PHASE = PROJECT_OUTPUTS_DIR / "json" / "phase_imbalance.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "phase_imbalance_report.json"
+_SKIP = (
+    "phase_imbalance.json not present; run analyze_phase_imbalance.py first "
+    "(outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _PHASE.is_file(), reason=_SKIP)
+def test_governed_phase_imbalance() -> None:
+    """Phase undervoltage + unbalance rise with adoption; balanced hides the sag."""
+    p = json.loads(_PHASE.read_text())
+    # P(phase undervoltage) and VUF rise (non-decreasing) with EV adoption
+    assert p["p_undervolt_by_ev"] == sorted(p["p_undervolt_by_ev"])
+    assert p["worst_vuf_by_ev"] == sorted(p["worst_vuf_by_ev"])
+    # the balanced model is always at least as healthy as the unbalanced worst
+    for b, u in zip(p["balanced_min_v_by_ev"], p["min_v_worst_by_ev"]):
+        assert u <= b + 1e-9
+    # the phase penalty the balanced model hides is positive at the reference
+    assert p["balanced_gap_pu"] > 0.0
+    # VUF is the binding phase metric here (it crosses the ~2% IEC limit at high
+    # adoption); CSA undervoltage need not trigger with round-robin assignment,
+    # so first_risk_ev_per_home may legitimately be None — the honest finding.
+    assert p["worst_vuf_by_ev"][-1] > p["worst_vuf_by_ev"][0]
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_phase_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("p_undervolt_at_ref", "worst_vuf_at_ref", "balanced_gap_pu"):
+        assert key in report["summary"], sorted(report["summary"])
