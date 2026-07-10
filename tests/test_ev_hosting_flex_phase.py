@@ -54,3 +54,30 @@ def test_to_three_phase_mv_and_runpp_3ph_mini() -> None:
     assert r.vm_a_pu < r.vm_b_pu           # loaded phase A sags below B/C
     assert r.vm_a_pu < r.vm_c_pu
     assert r.vm_a_pu < 1.0
+
+
+def test_solve_phase_min_voltage_real_net() -> None:
+    """The solve helper converges on the real twin MV net and the balanced case
+    is at least as healthy as a round-robin single-phase case at the same load."""
+    import pickle
+
+    from projects.ev_hosting_flex.scripts.config import (
+        PROJECT_CACHE_DIR, PHASE_R0_MULT, PHASE_X0_MULT,
+    )
+    from projects.ev_hosting_flex.scripts._powerflow import to_three_phase_mv
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_phase_imbalance import (
+        _solve_phase_min_v,
+    )
+
+    cache = PROJECT_CACHE_DIR
+    if not (cache / "pp_net_cache.pkl").is_file():
+        pytest.skip("topology cache absent")
+    net = pickle.load(open(cache / "pp_net_cache.pkl", "rb"))
+    mv, pole_to_mv = to_three_phase_mv(net, r0_mult=PHASE_R0_MULT, x0_mult=PHASE_X0_MULT)
+    trafos = sorted(pole_to_mv)
+    # flat 20 kW per transformer
+    load_kw = {t: 20.0 for t in trafos}
+    bal = _solve_phase_min_v(mv, pole_to_mv, load_kw, balanced=True)
+    unb = _solve_phase_min_v(mv, pole_to_mv, load_kw, balanced=False)
+    assert 0.7 < unb["min_vm_pu"] <= bal["min_vm_pu"] <= 1.01
+    assert unb["vuf"] >= bal["vuf"] - 1e-9      # unbalanced no less unbalanced
