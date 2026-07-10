@@ -77,6 +77,16 @@ def gini(values: np.ndarray) -> float:
     return float((2.0 * np.sum(idx * v)) / (n * total) - (n + 1.0) / n)
 
 
+def vuf(vm_a: float, vm_b: float, vm_c: float) -> float:
+    """Voltage unbalance factor (%): max phase deviation from the 3-phase mean,
+    over the mean. A simple, monotone unbalance proxy (0 = balanced)."""
+    v = np.array([float(vm_a), float(vm_b), float(vm_c)])
+    mean = float(v.mean())
+    if mean <= 0.0:
+        return 0.0
+    return float(np.abs(v - mean).max() / mean * 100.0)
+
+
 def annual_performance_metrics(
     load_kw: np.ndarray, rating_kw: float
 ) -> dict[str, float]:
