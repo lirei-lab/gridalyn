@@ -1336,3 +1336,26 @@ this (5% of cold-day realizations with the peak over the rating)."""
 CONGESTION_AT_RISK_FRACTION = 0.10
 """Network first-risk trigger: the smallest growth scenario at which this
 fraction of transformers cross CONGESTION_RISK_THRESHOLD."""
+
+# ─── Phase-imbalance diagnostic (3-phase MV, 2026-07-09) ─────────────────────
+# APPEND-ONLY. In the HQ topology the LV is single-phase 240 V split-phase; the
+# phase imbalance is at 25 kV MV, where single-phase pole transformers are spread
+# across the three phases. Stochastic EV adoption that clusters on one phase's
+# transformers overloads/undervolts that phase. Diagnostic — no flexibility.
+PHASE_EV_GRID = (0.0, 0.5, 1.0, 1.5, 2.0)
+"""EV-adoption sweep (EV/home) for the phase-imbalance diagnostic."""
+
+PHASE_MC_DRAWS = 20
+"""Monte-Carlo draws of which homes adopt EVs (per-transformer Poisson counts);
+the phase imbalance emerges from the stochastic clustering of adopters."""
+
+PHASE_R0_MULT = 4.0
+"""Zero-sequence line resistance multiplier (r0 = PHASE_R0_MULT * r1) — a
+standard overhead-distribution assumption; calibratable, documented."""
+
+PHASE_X0_MULT = 3.0
+"""Zero-sequence line reactance multiplier (x0 = PHASE_X0_MULT * x1)."""
+
+PHASE_RISK_THRESHOLD = 0.10
+"""P(any MV phase < CSA 0.917 pu) above which the scenario is 'at risk' — used
+for the first-risk adoption trigger."""
