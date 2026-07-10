@@ -486,6 +486,80 @@ def run_feeder_mc(
     return pd.DataFrame.from_records(records)
 
 
+def _add_3ph_params_mini(net: Any, *, r0_mult: float, x0_mult: float) -> None:
+    """Stamp runpp_3ph parameters onto an existing net in place: sequenced
+    ext_grid, zero-sequence line params, Dyn transformers with zero-sequence."""
+    for gi in net.ext_grid.index:
+        net.ext_grid.at[gi, "s_sc_max_mva"] = 5000.0
+        net.ext_grid.at[gi, "rx_max"] = 0.1
+        net.ext_grid.at[gi, "x0x_max"] = 1.0
+        net.ext_grid.at[gi, "r0x0_max"] = 0.1
+    net.line["r0_ohm_per_km"] = net.line["r_ohm_per_km"] * float(r0_mult)
+    net.line["x0_ohm_per_km"] = net.line["x_ohm_per_km"] * float(x0_mult)
+    net.line["c0_nf_per_km"] = 0.0
+    for ti in net.trafo.index:
+        net.trafo.at[ti, "vector_group"] = "Dyn"
+        net.trafo.at[ti, "vk0_percent"] = float(net.trafo.at[ti, "vk_percent"])
+        net.trafo.at[ti, "vkr0_percent"] = float(net.trafo.at[ti, "vkr_percent"])
+        net.trafo.at[ti, "mag0_percent"] = 100.0
+        net.trafo.at[ti, "mag0_rx"] = 0.0
+        net.trafo.at[ti, "si0_hv_partial"] = 0.9
+
+
+def to_three_phase_mv(
+    net: Any, *, r0_mult: float, x0_mult: float
+) -> tuple[Any, dict[int, int]]:
+    """Rebuild the cached twin as an MV-level 3-phase net for runpp_3ph.
+
+    Copies the MV (25 kV) + 120 kV buses, MV line segments (with zero-sequence),
+    the substation transformers (as Dyn 3-phase), and a sequenced ext_grid. The
+    single-phase pole transformers are NOT added — the caller places each as a
+    single-phase asymmetric_load on its MV bus.
+
+    Args:
+        net: Loaded full pandapower net (read-only).
+        r0_mult: Zero-sequence resistance multiplier for MV line segments.
+        x0_mult: Zero-sequence reactance multiplier for MV line segments.
+
+    Returns:
+        ``(mv_net, {pole_trafo_idx: mv_bus})`` — the 3-phase net and the map from
+        each LV pole transformer to its 25 kV bus.
+    """
+    import pandapower as pp
+
+    mv = pp.create_empty_network(sn_mva=1.0)
+    keep = net.bus[net.bus["vn_kv"] > 1.0]
+    for bi in keep.index:
+        pp.create_bus(mv, vn_kv=float(net.bus.at[bi, "vn_kv"]), index=int(bi))
+    eg_bus = int(net.ext_grid["bus"].iloc[0])
+    pp.create_ext_grid(mv, bus=eg_bus, vm_pu=float(net.ext_grid["vm_pu"].iloc[0]))
+    keep_set = set(keep.index)
+    for li in net.line.index:
+        fb, tb = int(net.line.at[li, "from_bus"]), int(net.line.at[li, "to_bus"])
+        if fb in keep_set and tb in keep_set:
+            pp.create_line_from_parameters(
+                mv, from_bus=fb, to_bus=tb,
+                length_km=float(net.line.at[li, "length_km"]),
+                r_ohm_per_km=float(net.line.at[li, "r_ohm_per_km"]),
+                x_ohm_per_km=float(net.line.at[li, "x_ohm_per_km"]),
+                c_nf_per_km=0.0, max_i_ka=float(net.line.at[li, "max_i_ka"]),
+            )
+    for t in net.trafo[net.trafo["vn_lv_kv"] >= 1.0].index:
+        tr = net.trafo.loc[t]
+        pp.create_transformer_from_parameters(
+            mv, hv_bus=int(tr.hv_bus), lv_bus=int(tr.lv_bus), sn_mva=float(tr.sn_mva),
+            vn_hv_kv=float(tr.vn_hv_kv), vn_lv_kv=float(tr.vn_lv_kv),
+            vk_percent=float(tr.vk_percent), vkr_percent=float(tr.vkr_percent),
+            pfe_kw=float(tr.pfe_kw), i0_percent=float(tr.i0_percent), shift_degree=0,
+        )
+    _add_3ph_params_mini(mv, r0_mult=r0_mult, x0_mult=x0_mult)
+    pole_to_mv = {
+        int(t): int(net.trafo.at[t, "hv_bus"])
+        for t in net.trafo[net.trafo["vn_lv_kv"] < 1.0].index
+    }
+    return mv, pole_to_mv
+
+
 def count_violations(
     results: Mapping[str, pd.DataFrame],
     lv_bus_ids: np.ndarray,
