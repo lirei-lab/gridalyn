@@ -72,6 +72,22 @@ def test_size_congestion_mini() -> None:
     assert hi["peak_max"] >= lo["peak_max"]
 
 
+def test_interp_first_cross_hand_computed() -> None:
+    """First crossing of an increasing curve, with the edge cases."""
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
+        _interp_first_cross,
+    )
+
+    xs = [0.0, 0.5, 1.0, 1.5]
+    # rises 0 -> 0.08 -> 0.30 -> 0.60; crosses 0.10 between 0.5 and 1.0
+    ys = [0.0, 0.08, 0.30, 0.60]
+    assert _interp_first_cross(xs, ys, 0.10) == pytest.approx(0.545455, abs=1e-5)
+    # already at/above the target at the first point -> the first x
+    assert _interp_first_cross(xs, [0.2, 0.3, 0.4, 0.5], 0.10) == pytest.approx(0.0)
+    # never reaches the target -> None
+    assert _interp_first_cross(xs, [0.0, 0.01, 0.02, 0.03], 0.10) is None
+
+
 # ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
 
 from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
@@ -103,7 +119,10 @@ def test_governed_congestion_risk() -> None:
     # at-risk transformer count rises with growth; first-risk adoption is finite
     n = np.array(p["n_at_risk_by_scenario"])
     assert np.all(np.diff(n, axis=1) >= 0)        # rises with adoption (columns)
+    # both first-risk triggers are reported (EV-axis and growth-axis); either
+    # alone can trip the planning threshold
     assert p["first_risk_ev_per_home"] is not None
+    assert p["first_risk_g"] is not None and p["first_risk_g"] >= 1.0
 
 
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)

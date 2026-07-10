@@ -150,10 +150,15 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     }
     feeder_homes = homes_by_trafo[feeder_idx]
     sizes = sorted(set(homes_by_trafo.values()))
-    rating_by_size = {
-        h: next(rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h)
-        for h in sizes
-    }
+    rating_by_size = {}
+    for h in sizes:
+        group = {rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h}
+        if len(group) != 1:
+            raise ValueError(
+                f"transformers with {h} homes have non-uniform ratings {group}; "
+                "the per-size congestion mapping assumes one rating per size."
+            )
+        rating_by_size[h] = group.pop()
 
     base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(CONGESTION_K_BASE))
     ev_grid = [float(e) for e in CONGESTION_EV_PER_HOME_GRID]
@@ -189,11 +194,18 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         [n_at_risk[gi][ei] / n_trafos for ei in range(len(ev_grid))]
         for gi in range(len(g_grid))
     ]
-    # first-risk adoption at G=1: the ev/home where the at-risk fraction first
-    # crosses CONGESTION_AT_RISK_FRACTION (linear interpolation)
+    # First-risk triggers — the diagnostic has TWO independent load-growth axes,
+    # so we report both: (a) EV adoption at fixed G=1, and (b) baseline
+    # electrification growth G at fixed 0 EV. Either alone can trip the planning
+    # threshold; reporting only one would understate the risk.
     g1 = g_grid.index(1.0) if 1.0 in g_grid else 0
+    ev0 = ev_grid.index(0.0) if 0.0 in ev_grid else 0
+    at_risk_frac_thr = float(CONGESTION_AT_RISK_FRACTION)
     first_risk = _interp_first_cross(
-        ev_grid, at_risk_frac[g1], float(CONGESTION_AT_RISK_FRACTION)
+        ev_grid, at_risk_frac[g1], at_risk_frac_thr
+    )
+    first_risk_g = _interp_first_cross(
+        g_grid, [at_risk_frac[gi][ev0] for gi in range(len(g_grid))], at_risk_frac_thr
     )
 
     ref = size_stats[feeder_homes][g1][ev_grid.index(1.0)] if 1.0 in ev_grid else \
@@ -223,6 +235,7 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "pcong_p95_by_scenario": pcong_p95,
         "n_at_risk_at_ref": int(n_at_risk[g1][ref_ei]),
         "first_risk_ev_per_home": first_risk,
+        "first_risk_g": first_risk_g,
         "by_size": {
             str(h): {
                 "rating_kw": round(rating_by_size[h], ROUND_DECIMALS),
@@ -254,8 +267,13 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "peak_max_g1_1ev": payload["reference_feeder"]["peak_max_g1_1ev"],
         "n_at_risk_at_ref": payload["n_at_risk_at_ref"],
         "first_risk_ev_per_home": first_risk,
+        "first_risk_g": first_risk_g,
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    npz_path = data_dir / "base_mc_by_size.npz"
+    artifacts = [out_path, *fig_paths]
+    if npz_path.is_file():
+        artifacts.append(npz_path)
+    return {"artifact_paths": artifacts, "summary": summary}
 
 
 def _network_aggregates(
@@ -283,9 +301,8 @@ def _interp_first_cross(
 ) -> float | None:
     """Smallest x where (increasing) ys first crosses target; interpolated."""
     for i in range(1, len(xs)):
+        # the guard forces ys[i-1] < ys[i], so the denominator is never zero
         if ys[i - 1] < target <= ys[i]:
-            if ys[i] == ys[i - 1]:
-                return round(xs[i], ROUND_DECIMALS)
             return round(
                 xs[i - 1] + (target - ys[i - 1]) * (xs[i] - xs[i - 1])
                 / (ys[i] - ys[i - 1]),
@@ -365,6 +382,10 @@ def run_stage() -> dict[str, Any]:
         "size (transformers of equal home-count share the realization family); "
         "kW-proxy (power/thermal), no AC voltage or phase imbalance (future "
         "layers). Finite K_BASE/K_EV -> the probabilities carry MC sampling error.",
+        "TWO GROWTH AXES: the diagnostic reports both first-risk triggers — EV "
+        "adoption at fixed G=1 (first_risk_ev_per_home) AND baseline "
+        "electrification growth at zero EV (first_risk_g). Either alone can trip "
+        "the planning threshold; do not read the EV trigger as the only driver.",
     ]
     return script.write_report(
         "congestion_risk_report",
