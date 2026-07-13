@@ -493,6 +493,27 @@
       "json_path": ["balanced_gap_pu"],
       "source": "outputs/json/phase_imbalance.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "voltage.p_undervolt_at_ref",
+      "json_path": ["p_undervolt_at_ref"],
+      "source": "outputs/json/voltage_risk.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.969312,
+      "id": "voltage.min_v_p05_at_ref",
+      "json_path": ["min_v_p05_at_ref"],
+      "source": "outputs/json/voltage_risk.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.954096,
+      "id": "voltage.min_v_worst_at_ref",
+      "json_path": ["min_v_worst_at_ref"],
+      "source": "outputs/json/voltage_risk.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"

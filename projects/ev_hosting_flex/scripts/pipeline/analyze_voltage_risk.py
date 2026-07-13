@@ -270,10 +270,16 @@ def run_stage() -> dict[str, Any]:
         "DIAGNOSTIC ONLY — no flexibility. LV undervoltage probability + severity "
         "on the governed feeder under EV adoption, MC over the EV fleet x cold "
         "days with balanced AC power flow.",
-        "SCOPE: the governed 6-home feeder is the representative unit (voltage is "
-        "local per feeder; full-net AC MC is out of scope). Balanced AC (phase "
-        "imbalance is covered by analyze_phase_imbalance). Even load split across "
-        "homes; finite K_MC -> the probabilities carry MC sampling error.",
+        "SCOPE: the governed 6-home feeder is the study unit (voltage is local per "
+        "feeder; full-net AC MC is out of scope). Balanced AC (phase imbalance is "
+        "covered by analyze_phase_imbalance). Even load split across homes; finite "
+        "K_MC -> the probabilities carry MC sampling error.",
+        "UNDERSTATES NETWORK RISK: the governed 6-home / 75 kVA feeder is small and "
+        "well-sized, so its LV voltage stays healthy (worst ~0.93 pu at 2 EV/home > "
+        "CSA 0.917) and P(undervoltage) is ~0. The network-wide undervoltage that "
+        "validate_powerflow finds (0.916 pu at 1 EV/home, 0.900 at 1.5) sits on the "
+        "LARGER / deeper feeders, not this one — a follow-up should target the "
+        "largest feeder size to quantify that voltage risk probabilistically.",
     ]
     return script.write_report(
         "voltage_risk_report",

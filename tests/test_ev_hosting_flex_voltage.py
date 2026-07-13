@@ -74,3 +74,45 @@ def test_adoption_voltage_stats_mini() -> None:
     hi = _adoption_voltage_stats(net, base_hourly, [pool], cold, 1, 2.0, 1.0, 0.917)
     assert hi["min_v_worst"] <= lo["min_v_worst"]      # heavier -> lower tail
     assert hi["p_undervolt"] >= lo["p_undervolt"]
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_VOLT = PROJECT_OUTPUTS_DIR / "json" / "voltage_risk.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "voltage_risk_report.json"
+_SKIP = (
+    "voltage_risk.json not present; run analyze_voltage_risk.py first "
+    "(outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _VOLT.is_file(), reason=_SKIP)
+def test_governed_voltage_risk() -> None:
+    """Undervoltage probability rises with adoption; the voltage tail falls."""
+    p = json.loads(_VOLT.read_text())
+    # P(undervoltage) rises (non-decreasing) with EV adoption
+    assert p["p_undervolt_by_ev"] == sorted(p["p_undervolt_by_ev"])
+    # the min-voltage tail falls (non-increasing) with adoption at every quantile
+    for key in ("min_v_p50_by_ev", "min_v_p05_by_ev", "min_v_worst_by_ev"):
+        assert p[key] == sorted(p[key], reverse=True), f"{key} not falling"
+    # tail ordering: worst <= P5 <= P50 at the reference
+    ref_i = p["ev_per_home_grid"].index(p["reference_ev_per_home"])
+    assert (
+        p["min_v_worst_at_ref"]
+        <= p["min_v_p05_at_ref"]
+        <= p["min_v_p50_by_ev"][ref_i]
+    )
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_voltage_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("p_undervolt_at_ref", "min_v_worst_at_ref", "first_risk_ev_per_home"):
+        assert key in report["summary"], sorted(report["summary"])

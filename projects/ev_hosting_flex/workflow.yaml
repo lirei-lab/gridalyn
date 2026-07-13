@@ -228,6 +228,24 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/phase_imbalance.png
         - projects/ev_hosting_flex/outputs/reports/phase_imbalance_report.json
 
+    - id: analyze_voltage_risk
+      needs: [generate_annual_mc]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/voltage_risk.json
+        - projects/ev_hosting_flex/outputs/figures/voltage_risk.png
+        - projects/ev_hosting_flex/outputs/reports/voltage_risk_report.json
+
     # ── Stage 7: pandapower AC annual validation (live, F5 of the migration) ─
     # Before/after-EV network behavior on the study-B annual artifacts: the
     # peak-day full-net scenario families (network adoption + governed feeder
