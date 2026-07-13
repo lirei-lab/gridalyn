@@ -253,6 +253,34 @@ def apply_local_curtailment(
     return served, curtailed_kwh
 
 
+def feeder_min_voltage(
+    subnet: Any, p_kw_by_load: np.ndarray, *, slack_vm_pu: float,
+    power_factor: float = POWER_FACTOR,
+) -> float:
+    """Solve one balanced AC snapshot and return the minimum LV bus voltage (pu).
+
+    Args:
+        subnet: feeder subnet (mutated: load p/q, ext_grid vm).
+        p_kw_by_load: ``(n_load,)`` per-load active power (kW) for the snapshot.
+        slack_vm_pu: substation LTC setpoint.
+        power_factor: constant lagging PF for the Q injection.
+
+    Returns:
+        The minimum voltage (pu) over the LV buses (``vn_kv < 1.0``) — the MV /
+        slack bus is excluded.
+    """
+    import pandapower as pp
+
+    p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
+    q_factor = float(np.tan(np.arccos(float(power_factor))))
+    subnet.ext_grid["vm_pu"] = float(slack_vm_pu)
+    subnet.load["p_mw"] = p_kw / 1000.0
+    subnet.load["q_mvar"] = subnet.load["p_mw"] * q_factor
+    pp.runpp(subnet, numba=True)
+    lv_buses = subnet.bus.index[subnet.bus["vn_kv"] < 1.0]
+    return float(subnet.res_bus.loc[lv_buses, "vm_pu"].min())
+
+
 def run_design_day_powerflow(
     net: Any,
     p_kw_by_load: np.ndarray,
