@@ -281,6 +281,54 @@ def feeder_min_voltage(
     return float(subnet.res_bus.loc[lv_buses, "vm_pu"].min())
 
 
+def network_min_voltage(
+    net: Any,
+    p_kw_by_load: np.ndarray,
+    *,
+    use_lightsim: bool = True,
+    slack_vm_pu: float = SLACK_VM_PU,
+    power_factor: float = POWER_FACTOR,
+) -> float:
+    """Solve the full sized network once and return the minimum LV bus voltage.
+
+    The full-net analogue of :func:`feeder_min_voltage`: it keeps the whole 25 kV
+    feeder + N-1 substation + LV clusters, so the recorded minimum carries the
+    cumulative MV + transformer + LV drop that the isolated feeder subnet omits.
+
+    Args:
+        net: Full sized pandapower net (mutated in place: load p/q, ext_grid vm).
+            Reuse the SAME object across calls so the lightsim backend stays warm.
+        p_kw_by_load: ``(n_load,)`` per-load active power (kW) in ``net.load`` row
+            order.
+        use_lightsim: Solve with lightsim2grid when available (warm ~45 ms); on
+            any failure or when ``False``, fall back to the numba solver.
+        slack_vm_pu: substation LTC setpoint.
+        power_factor: constant lagging PF for the Q injection.
+
+    Returns:
+        The minimum voltage (pu) over the LV buses (``vn_kv < 1.0``) — the MV /
+        slack bus is excluded.
+    """
+    import pandapower as pp
+
+    p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
+    q_factor = float(np.tan(np.arccos(float(power_factor))))
+    net.ext_grid["vm_pu"] = float(slack_vm_pu)
+    net.load["p_mw"] = p_kw / 1000.0
+    net.load["q_mvar"] = net.load["p_mw"] * q_factor
+    solved = False
+    if use_lightsim:
+        try:
+            pp.runpp(net, lightsim2grid=True)
+            solved = True
+        except Exception:  # noqa: BLE001 — any lightsim failure -> numba fallback
+            solved = False
+    if not solved:
+        pp.runpp(net, numba=True)
+    lv_buses = net.bus.index[net.bus["vn_kv"] < 1.0]
+    return float(net.res_bus.loc[lv_buses, "vm_pu"].min())
+
+
 def run_design_day_powerflow(
     net: Any,
     p_kw_by_load: np.ndarray,
