@@ -206,7 +206,10 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
         ev_grid, p_undervolt, float(VOLTAGE_RISK_THRESHOLD)
     )
 
-    # where-it-binds diagnostic: cluster size of the reference worst bus
+    # where-it-binds diagnostic: cluster size of the reference worst bus. Only
+    # map from real LV clusters (size_by_trafo > 0); the MV substation
+    # transformer's downstream covers every LV bus in its half with size 0 and
+    # must not overwrite the unique pole-transformer size of each LV bus.
     down_map = json.loads((cache_dir / "downstream_bus_map.json").read_text())
     size_by_bus: dict[int, int] = {}
     for key, buses in down_map.items():
@@ -214,6 +217,8 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
             continue
         idx = int(key.split(":")[1])
         n = int(sizing["size_by_trafo"].get(int(idx), 0))
+        if n <= 0:
+            continue
         for b in buses:
             size_by_bus[int(b)] = n
     ref_bus = int(swept["worst_bus"][ref])

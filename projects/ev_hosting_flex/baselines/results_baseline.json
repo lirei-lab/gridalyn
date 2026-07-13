@@ -514,6 +514,34 @@
       "json_path": ["min_v_worst_at_ref"],
       "source": "outputs/json/voltage_risk.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 0.0,
+      "id": "voltage_net.p_undervolt_at_ref",
+      "json_path": ["p_undervolt_at_ref"],
+      "source": "outputs/json/voltage_risk_network.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.930018,
+      "id": "voltage_net.min_v_p05_at_ref",
+      "json_path": ["min_v_p05_at_ref"],
+      "source": "outputs/json/voltage_risk_network.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 0.918257,
+      "id": "voltage_net.min_v_worst_at_ref",
+      "json_path": ["min_v_worst_at_ref"],
+      "source": "outputs/json/voltage_risk_network.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 1.701111,
+      "id": "voltage_net.first_risk_ev_per_home",
+      "json_path": ["first_risk_ev_per_home"],
+      "source": "outputs/json/voltage_risk_network.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"

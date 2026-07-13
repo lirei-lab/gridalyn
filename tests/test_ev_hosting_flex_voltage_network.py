@@ -82,3 +82,43 @@ def test_adoption_network_voltage_stats_mini() -> None:
     )
     assert hi["min_v_worst"] <= lo["min_v_worst"]     # heavier -> lower tail
     assert hi["p_undervolt"] >= lo["p_undervolt"]
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_VOLT = PROJECT_OUTPUTS_DIR / "json" / "voltage_risk_network.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "voltage_risk_network_report.json"
+_SKIP = (
+    "voltage_risk_network.json not present; run "
+    "analyze_voltage_risk_network.py first (outputs are gitignored)"
+)
+
+
+@pytest.mark.skipif(not _VOLT.is_file(), reason=_SKIP)
+def test_governed_voltage_network() -> None:
+    """Network undervoltage probability rises with adoption; the tail falls."""
+    p = json.loads(_VOLT.read_text())
+    assert p["p_undervolt_by_ev"] == sorted(p["p_undervolt_by_ev"])
+    for key in ("min_v_p50_by_ev", "min_v_p05_by_ev", "min_v_worst_by_ev"):
+        assert p[key] == sorted(p[key], reverse=True), f"{key} not falling"
+    ref_i = p["ev_per_home_grid"].index(p["reference_ev_per_home"])
+    assert (
+        p["min_v_worst_at_ref"]
+        <= p["min_v_p05_at_ref"]
+        <= p["min_v_p50_by_ev"][ref_i]
+    )
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_voltage_network_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    for key in ("p_undervolt_at_ref", "min_v_worst_at_ref",
+                "first_risk_ev_per_home"):
+        assert key in report["summary"], sorted(report["summary"])
