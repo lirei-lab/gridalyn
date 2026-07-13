@@ -39,3 +39,38 @@ def test_feeder_min_voltage_mini_net() -> None:
     heavy = feeder_min_voltage(net, np.array([30.0, 30.0]), slack_vm_pu=1.0)
     assert 0.95 < heavy < light <= 1.0     # heavier load -> lower min LV voltage
     assert heavy < 1.0                     # LV buses sag below the 1.0 slack
+
+
+def test_adoption_voltage_stats_mini() -> None:
+    """A mini feeder: P(undervoltage) rises and the min-voltage tail falls as
+    the EV adoption grows."""
+    import pandapower as pp
+
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk import (
+        _adoption_voltage_stats,
+    )
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    b_lv = pp.create_bus(net, vn_kv=0.24)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.0)
+    pp.create_transformer_from_parameters(
+        net, hv_bus=b_mv, lv_bus=b_lv, sn_mva=0.075, vn_hv_kv=25.0, vn_lv_kv=0.24,
+        vk_percent=2.0, vkr_percent=1.2, pfe_kw=0.25, i0_percent=0.4,
+    )
+    b_h = pp.create_bus(net, vn_kv=0.24)
+    pp.create_line_from_parameters(
+        net, from_bus=b_lv, to_bus=b_h, length_km=0.1, r_ohm_per_km=0.4,
+        x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.3,
+    )
+    pp.create_load(net, bus=b_h, p_mw=0.0)
+    # 2-day base (both cold), 1 home; 2 EVs in the pool, evening spike
+    base_hourly = np.tile(np.concatenate([np.full(20, 40.0), np.full(4, 55.0)]), 2)
+    pool = np.zeros((2, 48))
+    pool[:, 20:24] = 8.0
+    pool[:, 44:48] = 8.0
+    cold = [0, 1]
+    lo = _adoption_voltage_stats(net, base_hourly, [pool], cold, 1, 0.0, 1.0, 0.917)
+    hi = _adoption_voltage_stats(net, base_hourly, [pool], cold, 1, 2.0, 1.0, 0.917)
+    assert hi["min_v_worst"] <= lo["min_v_worst"]      # heavier -> lower tail
+    assert hi["p_undervolt"] >= lo["p_undervolt"]
