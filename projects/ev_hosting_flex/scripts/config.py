@@ -1374,3 +1374,16 @@ VOLTAGE_MC_DRAWS = 8
 VOLTAGE_RISK_THRESHOLD = 0.10
 """P(min LV voltage < CSA normal-low) above which the scenario is 'at risk' —
 used for the first-risk adoption trigger."""
+
+# ── Full-net probabilistic voltage diagnostic (analyze_voltage_risk_network) ──
+# The full-network sibling of the governed voltage stage: the deterministic
+# validate_powerflow network min LV is 0.942/0.931/0.916/0.900 pu at
+# 0/0.5/1/1.5 EV/home, so first-risk is expected FINITE. MC over cold days x
+# resampled EV fleets, one full-net lightsim solve per (day, draw, level) at the
+# network coincident-peak hour. Reuses VOLTAGE_EV_GRID / VOLTAGE_RISK_THRESHOLD /
+# VOLTAGE_LIMITS_PU / COLD_DAY_TMEAN_C / SLACK_VM_PU / SEED.
+VOLTAGE_NET_MC_DRAWS = 8
+# Fleet size whose per-EV mean is the uniform per-home EV overlay shape. Large
+# enough for a stable mean; draw-to-draw variance is secondary to the cold-day
+# weather axis (163 days), which dominates the undervoltage probability.
+VOLTAGE_NET_EV_POOL = 300
