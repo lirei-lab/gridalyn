@@ -1359,3 +1359,18 @@ PHASE_X0_MULT = 3.0
 PHASE_RISK_THRESHOLD = 0.10
 """P(any MV phase < CSA 0.917 pu) above which the scenario is 'at risk' — used
 for the first-risk adoption trigger."""
+
+# ─── Probabilistic voltage-risk diagnostic (2026-07-13) ──────────────────────
+# APPEND-ONLY. Completes the diagnostic's voltage layer: the probability and
+# severity of LV undervoltage on the governed feeder under EV adoption, MC over
+# the EV fleet x cold days with balanced AC power flow. Diagnostic — no
+# flexibility. Peaks (min voltage at the coincident-peak hour), not averages.
+VOLTAGE_EV_GRID = (0.0, 0.5, 1.0, 1.5, 2.0)
+"""EV-adoption sweep (EV/home) for the voltage-risk diagnostic."""
+
+VOLTAGE_MC_DRAWS = 8
+"""Monte-Carlo resamples of the EV fleet crossed with the cold days."""
+
+VOLTAGE_RISK_THRESHOLD = 0.10
+"""P(min LV voltage < CSA normal-low) above which the scenario is 'at risk' —
+used for the first-risk adoption trigger."""
