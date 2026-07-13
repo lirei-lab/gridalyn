@@ -42,3 +42,43 @@ def test_network_min_voltage_mini_net() -> None:
     )
     assert heavy < light <= 1.0          # heavier load -> lower min LV voltage
     assert abs(heavy - numba) < 1e-6     # lightsim and numba agree
+
+
+def test_adoption_network_voltage_stats_mini() -> None:
+    """A mini full net: P(undervoltage) rises and the min-voltage tail falls as
+    the EV adoption grows."""
+    import pandapower as pp
+
+    from projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk_network import (
+        _adoption_network_voltage_stats,
+    )
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    b_lv = pp.create_bus(net, vn_kv=0.4)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.04)
+    pp.create_transformer_from_parameters(
+        net, hv_bus=b_mv, lv_bus=b_lv, sn_mva=0.05, vn_hv_kv=25.0, vn_lv_kv=0.4,
+        vk_percent=4.0, vkr_percent=1.2, pfe_kw=0.25, i0_percent=0.4,
+    )
+    b_h = pp.create_bus(net, vn_kv=0.4)
+    pp.create_line_from_parameters(
+        net, from_bus=b_lv, to_bus=b_h, length_km=0.12, r_ohm_per_km=0.5,
+        x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.3,
+    )
+    pp.create_load(net, bus=b_h, p_mw=0.0)
+    # 2 cold days; per-load base ~ (1 load, 48 h) heavy evening; evbar evening EV
+    base = np.tile(np.concatenate([np.full(20, 6.0), np.full(4, 9.0)]), 2)
+    per_load_base_annual = base[None, :].astype(np.float64)     # (1 load, 48 h)
+    evbar = np.zeros(48)
+    evbar[20:24] = 3.0
+    evbar[44:48] = 3.0
+    cold = [0, 1]
+    lo = _adoption_network_voltage_stats(
+        net, per_load_base_annual, [evbar], cold, 1, 0.0, 0.917
+    )
+    hi = _adoption_network_voltage_stats(
+        net, per_load_base_annual, [evbar], cold, 1, 3.0, 0.917
+    )
+    assert hi["min_v_worst"] <= lo["min_v_worst"]     # heavier -> lower tail
+    assert hi["p_undervolt"] >= lo["p_undervolt"]
