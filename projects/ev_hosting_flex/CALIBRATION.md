@@ -552,6 +552,26 @@ cold 4 (+25 %); substation 2×33.3 → 2×25 MVA (66/540 over static at 0 EV, 0 
 dynamic); flex-incentive shift ≥ target in every bin (no crossover); voltage-net
 first-risk 1.70 → 1.53 EV/home; VUF 1.75 → 1.63 %.
 
+## Pilar-2 non-wires value — cost anchors (2026-07-14)
+
+The network reinforcement-deferral stage (`analyze_nonwires_value`) uses
+literature-illustrative cost anchors (like the pilar-1 WTA): the physical crossings
+A₀/A₁ are the robust result, the $ are illustrative.
+
+- **`TRAFO_CAPEX_PER_KVA = 107` $/kVA** — INSTALLED reinforcement (transformer +
+  labor + outage), reconciled with pilar-1's `CAPEX_UPGRADE = 8000` / 75 kVA ≈ 107.
+  The raw transformer hardware (~$20–40/kVA) is too low — at that level the
+  annualized reinforcement is cheaper than the flex contract everywhere and the
+  flex defers nothing (a calibration artifact, not a finding).
+- **`SUBSTATION_CAPEX_PER_MVA = 25000` $/MVA** — substation reinforcement (~$15–30k/MVA).
+- **Adoption ramp:** logistic S-curve 0 → 2 EV/home over 15 years (midpoint 7,
+  steepness 0.7) — ONE scenario; the per-adoption snapshot is ramp-shape-robust.
+- **`NONWIRES_CURTAIL_TOLERANCE = 0.10`** — the reliability side of A₁ (max EV-energy
+  fraction curtailed before flex is unacceptable).
+
+Result on the realistic DHW base: **$171 k NPV + 821 transformer-years deferred**
+network-wide (substation $47 k), concentrated on the early-binding transformer sizes.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).
