@@ -509,6 +509,49 @@ controller and records the following framing changes (D-14):
   ROADMAP per GSD upstream-input precedence; the headline shift (firm 3 → flexible,
   +%) is reported explicitly with this rationale.
 
+## Realistic residential base — DHW tank + R re-base (2026-07-14)
+
+The 4th deliberate re-base. An audit found the base **peak-calibrated but
+energy-inflated**: `R_STUDY_B = 5.0` hit the HQ winter peak (11.4 kW/home) with
+the bare RC envelope but inflated annual energy to **38.9 MWh/home** (~1.8× the
+SDK-native 20–22; QC all-electric typical 25–30).
+
+**Frontier evidence (no single R hits both):** the single-R RC model couples peak
+and energy (ratio fixed by climate); sweeping R, energy lands in band (25–30) only
+at R≈8–9 where the peak is 7.5–8.1 kW (below the 10–15 band), and the peak lands in
+band only at R≈5–6 where energy is 34–39 MWh.
+
+| R | MWh/home | peak kW/home |
+|---|---|---|
+| 5.0 | 38.9 | 11.4 (peak ✓, energy ✗) |
+| 8.0 | 28.8 | 8.1 (energy ✓, peak ✗) |
+| 11.0 (SDK native) | 24.1 | 6.6 |
+
+**Mechanism (physical):** QC all-electric homes peak higher for the same energy
+because of the **electric water-heater tank** — a ~4.5 kW element recovering after
+occupancy-clustered morning/evening draws — which the model had smoothed into the
+~1.5 kW ARX background. `dhw_tank_annual` (project-local, no SDK edit) models it as
+a single-node thermostatic tank (270 L, 4.5 kW, setpoint 60 °C, standby loss,
+seasonal 10–15 °C inlet, stochastic draws phase-anchored to the local evening via
+`hod0`); `BG_SCALE = 0.6` removes the double-counted DHW from the background. The
+base becomes `Σp_heat + Σp_cool + BG_SCALE·Σp_bg + DHW`.
+
+**Final knobs (calibrate_base.py):** `R_STUDY_B = 7.5`, `DHW_ELEMENT_KW = 4.5`
+(standard QC), `DHW_DAILY_L_MEAN = 180`, `BG_SCALE = 0.6`.
+
+**Result — realistic in BOTH:** peak **11.2 kW/home** (centre of HQ 10–15, p99
+daily-peak 10.2), energy **29.4 MWh/home**, split **63/14/24 %** heat/DHW/appliance
+(textbook QC all-electric). The peak is **preserved** vs the old R=5 (11.4 kW) so
+the congestion/voltage diagnostics survive; the energy is corrected (39→29 MWh) so
+the curtailment-energy denominator is now realistic, and the base is **peaky, not
+sustained** (high at recovery hours, lower otherwise).
+
+**Deliberate headline re-base** (every pin re-pinned, byte-stable): firm 2 → 4,
+flexible +200 %, curtailed 6.1 → 2.7 %, breakeven 5 → 6; cold-coupling naive 5 vs
+cold 4 (+25 %); substation 2×33.3 → 2×25 MVA (66/540 over static at 0 EV, 0 over
+dynamic); flex-incentive shift ≥ target in every bin (no crossover); voltage-net
+first-risk 1.70 → 1.53 EV/home; VUF 1.75 → 1.63 %.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).

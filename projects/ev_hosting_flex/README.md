@@ -18,12 +18,19 @@ authoritative sandbox) and the local migration design doc
 1. **Buildings — SDK agent only** (`gridalyn.assets.datagen.agents`):
    first-order RC thermal model per dwelling with ON/OFF thermostat hysteresis
    over an electric baseboard, plus a time-correlated AR(1) background load
-   (appliances/DHW/lighting). Simulated at 1-min over the committed annual TMY
-   and aggregated hourly. Recalibrated to the stressed Québec all-electric
-   archetype (`R_STUDY_B = 5.0 °C/kW`, `P_HEAT_QUEBEC = 13 kW`): the 6-home
-   feeder base peaks at ~93 % of the 71.25 kW usable rating (~11 kW/home,
-   inside the CALIBRATION.md 10–15 band). No parametric fallback exists —
-   the SDK agent import failing is a hard error.
+   (appliances/lighting, scaled by `BG_SCALE`), plus an explicit stochastic
+   **electric water-heater tank** (`dhw_tank_annual`: 270 L / 4.5 kW thermostatic
+   tank with occupancy-clustered morning/evening draws — the coincident peak
+   driver a flat background smooths away). Base = `Σp_heat + Σp_cool +
+   BG_SCALE·Σp_bg + DHW`. Simulated at 1-min over the committed annual TMY and
+   aggregated. Recalibrated to the Québec all-electric archetype (`R_STUDY_B =
+   7.5 °C/kW`, `P_HEAT_QUEBEC = 13 kW`, `DHW_ELEMENT_KW = 4.5`, `BG_SCALE = 0.6`):
+   the 6-home feeder base is realistic in **both** power and energy — peak
+   ~11.2 kW/home (centre of the CALIBRATION.md 10–15 band) AND annual energy
+   ~29.4 MWh/home (25–30 band), with a textbook 63/14/24 % heat/DHW/appliance
+   split (2026-07-14 DHW re-base; the old `R = 5.0` hit the peak but inflated
+   energy to ~39 MWh). No parametric fallback exists — the SDK agent import
+   failing is a hard error.
 2. **EVs — the study-B cold-coupled sampler** (`scripts/_annual.py`):
    per EV per day, plug-in probability (0.60 → 0.85) and lognormal session
    energy (+50 % median at −25 °C) BOTH rise with the day's cold intensity, so
