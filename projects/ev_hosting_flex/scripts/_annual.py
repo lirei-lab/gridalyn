@@ -33,6 +33,18 @@ from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_HOURS,
     CHARGER_MIX,
     COLD_DAY_TMEAN_C,
+    DHW_DAILY_L_MEAN,
+    DHW_DAILY_L_MIN,
+    DHW_DAILY_L_STD,
+    DHW_DRAW_WEIGHTS,
+    DHW_ELEMENT_KW,
+    DHW_INLET_MAX_C,
+    DHW_INLET_MIN_C,
+    DHW_T_AMB,
+    DHW_T_LOW,
+    DHW_T_SET,
+    DHW_TANK_L,
+    DHW_UA_KW_PER_K,
     DTYPE,
     E_TREF_C,
     EV_KWH_BASE,
@@ -366,6 +378,78 @@ def design_day_base_per_home(
     ordered = np.zeros(24, dtype=DTYPE)
     ordered[local_hours] = per_home
     return ordered
+
+
+def dhw_tank_annual(
+    rng: np.random.Generator,
+    n_homes: int,
+    temp_hourly: pd.Series,
+    *,
+    res_minutes: int = ANNUAL_RES_MINUTES,
+) -> np.ndarray:
+    """Return one stochastic electric DHW-tank feeder trace ``(n_steps,)`` kW.
+
+    Per home: a single-node thermostatic hot-water tank (``DHW_TANK_L`` litres,
+    one ``DHW_ELEMENT_KW`` resistive element) with occupancy-clustered stochastic
+    draws. Per step the draw removes hot water (energy ``V*cp*(T-T_inlet)``),
+    standby loses ``UA*(T-T_amb)``, and the element reheats toward ``DHW_T_SET``
+    when ``T`` falls below ``DHW_T_LOW``. The clustered morning/evening draws make
+    the tanks reheat together — the coincident peak the flat ARX background misses.
+    Deterministic given ``rng``. Project-local — no SDK import.
+
+    Args:
+        rng: Pinned generator (derive from the base seed in the caller).
+        n_homes: Dwelling count (feeder aggregate = sum of the per-home tanks).
+        temp_hourly: Outdoor TMY series (drives the seasonal cold-water inlet).
+        res_minutes: Step resolution in minutes.
+
+    Returns:
+        A ``(n_steps,)`` float64 feeder-aggregate DHW trace in kW, where
+        ``n_steps`` matches ``temp_hourly`` resampled to ``res_minutes``.
+    """
+    res = int(res_minutes)
+    steps_per_day = 24 * 60 // res
+    steps_per_hour = steps_per_day // 24
+    dt_h = res / 60.0
+    cp = 4.186  # kJ/(kg*K); 1 L water ~ 1 kg
+
+    t_res = (
+        temp_hourly.resample(f"{res}min").interpolate().to_numpy(dtype=DTYPE)
+    )
+    n_steps = int(t_res.shape[0])
+    inlet = DHW_INLET_MIN_C + (DHW_INLET_MAX_C - DHW_INLET_MIN_C) * np.clip(
+        (t_res + 20.0) / 50.0, 0.0, 1.0
+    )
+
+    weights = np.zeros(24, dtype=DTYPE)
+    for hour, w in DHW_DRAW_WEIGHTS.items():
+        weights[int(hour)] = float(w)
+    weights = weights / weights.sum()
+
+    c_tank = float(DHW_TANK_L) * cp / 3600.0  # kWh/K
+    element = float(DHW_ELEMENT_KW)
+    t_set, t_low, t_amb = float(DHW_T_SET), float(DHW_T_LOW), float(DHW_T_AMB)
+    ua = float(DHW_UA_KW_PER_K)
+
+    feeder = np.zeros(n_steps, dtype=DTYPE)
+    for _ in range(int(n_homes)):
+        daily_l = max(
+            float(DHW_DAILY_L_MIN),
+            float(rng.normal(DHW_DAILY_L_MEAN, DHW_DAILY_L_STD)),
+        )
+        tank = t_set
+        for k in range(n_steps):
+            hod = (k % steps_per_day) // steps_per_hour
+            exp_l = daily_l * float(weights[hod]) / steps_per_hour
+            vol = float(rng.gamma(2.0, exp_l / 2.0)) if exp_l > 0.0 else 0.0
+            e_draw = vol * cp * (tank - float(inlet[k])) / 3600.0
+            e_loss = ua * (tank - t_amb) * dt_h
+            tank -= (e_draw + e_loss) / c_tank
+            if tank < t_low:
+                e_in = min(element * dt_h, c_tank * (t_set - tank))
+                tank += e_in / c_tank
+                feeder[k] += e_in / dt_h
+    return feeder.astype(DTYPE)
 
 
 def cold_intensity(tday_mean_c: np.ndarray) -> np.ndarray:
