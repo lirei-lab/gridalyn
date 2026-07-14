@@ -38,35 +38,45 @@ def test_interp_crossing_hand_computed() -> None:
 
 @pytest.mark.skipif(not _CHAR.is_file(), reason=_SKIP)
 def test_governed_network_characterization() -> None:
-    """Governed reproduce-and-pin: losses rise, N-1 substation robust, feeders bind.
+    """Governed reproduce-and-pin: losses rise, N-1 substation binds, feeders bind.
 
-    The substation is an HQ-realistic N-1 bank (3 x 20 MVA, ~62% loaded
-    normally). Losses rise monotonically and super-linearly with EV load; the
-    area peak load erodes the N-1 firm capacity — it crosses the NORMAL firm
-    rating at a low penetration but never the EMERGENCY firm rating within the
-    swept range, so a single-transformer contingency is survivable across all
-    realistic adoption. The FEEDERS are the binding constraint for hosting, with
-    a per-transformer headroom median near the study feeder's firm penetration
-    (2 EVs / 6 homes = 0.33); the network is healthy before EVs.
+    The substation is the standard HQ N-1 bank (2 identical parallel units,
+    25 MVA each, ~60% loaded normally). Losses rise monotonically and
+    super-linearly with EV load; on a single-unit contingency the lone survivor
+    carries the all-electric base on its short-term EMERGENCY rating (the
+    normal-rating firm capacity is below the base — precisely why a 2-unit N-1
+    bank leans on the emergency rating), and the area peak load crosses that
+    EMERGENCY firm capacity within the realistic adoption range, so the
+    substation N-1 is itself a reinforcement trigger (unlike an over-built
+    3-unit bank). The FEEDERS still bind first for hosting, with a
+    per-transformer headroom median near the study feeder's firm penetration.
+    On the realistic DHW-tank base (re-based 2026-07-14) the winter all-electric
+    peak pushes 66/540 transformers over their STATIC rating at 0 EV — held by
+    the C57.91 cold DYNAMIC uprating (0 over dynamic pre-EV), the real HQ posture.
     """
     payload = json.loads(_CHAR.read_text())
     loss = payload["losses"]["loss_percent"]
     assert loss == sorted(loss), "losses must rise with EV load"
     assert (loss[-1] - loss[-2]) > (loss[1] - loss[0])  # super-linear (I^2 R)
     sub = payload["substation"]
-    # HQ-realistic N-1 bank: 3 transformers, ~62% loaded normally.
-    assert sub["n_transformers"] == 3
-    assert 50.0 < sub["normal_loading_percent"] < 75.0
+    # Standard HQ N-1 bank: 2 identical parallel units, ~56% loaded normally.
+    assert sub["n_transformers"] == 2
+    assert 50.0 < sub["normal_loading_percent"] < 65.0
     assert sub["firm_capacity_emergency_mw"] > sub["firm_capacity_normal_mw"]
     peak = sub["served_peak_mw"]
     assert peak == sorted(peak), "area peak load must rise with EV adoption"
-    assert peak[0] < sub["firm_capacity_normal_mw"]  # healthy before EVs
-    # N-1 survivable on emergency rating across the whole realistic sweep.
-    assert sub["n1_reinforcement_penetration_normal"] is not None
-    assert sub["n1_reinforcement_penetration_emergency"] is None
+    # With 2 units the single survivor carries the base on its EMERGENCY rating:
+    # healthy before EVs at emergency, but over the normal firm rating from the
+    # start (that is the design intent of a 2-unit N-1 bank, not a violation).
+    assert peak[0] < sub["firm_capacity_emergency_mw"]  # healthy before EVs (N-1 emerg.)
+    assert peak[0] > sub["firm_capacity_normal_mw"]
+    # The N-1 emergency contingency is a real reinforcement trigger in range.
+    assert sub["n1_reinforcement_penetration_normal"] == 0.0
+    assert sub["n1_reinforcement_penetration_emergency"] is not None
+    assert sub["n1_reinforcement_penetration_emergency"] > 0.0
     hr = payload["headroom"]
     # the feeders are the binding hosting constraint.
     assert 0.0 < hr["crossing_penetration_p50"] < 1.0
     assert hr["crossing_penetration_p05"] <= hr["crossing_penetration_p50"]
     assert hr["crossing_penetration_p50"] <= hr["crossing_penetration_p95"]
-    assert hr["n_overloaded_at_0ev"] == 0  # network healthy before EVs
+    assert hr["n_overloaded_at_0ev"] == 66  # over STATIC pre-EV; 0 over dynamic

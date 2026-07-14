@@ -199,11 +199,12 @@ def test_governed_network_before_after_evs() -> None:
 def test_governed_feeder_mc_before_after_evs() -> None:
     """The feeder cold-day MC shows congestion + line overloads before/after EVs.
 
-    Base barely overloads; the firm count overloads on a small fraction of cold
-    days (the tail the P95 kW rule accepts, amplified in AC by losses/reactive
-    flow); unmanaged is strictly worse; the backstop removes the overload DEPTH
-    (transformer AND line peaks well below unmanaged) while enforcing the kW
-    rating (AC peaks a few % above 100).
+    Base barely overloads; the firm count is safe in AC too (re-based 2026-07-14
+    onto the realistic DHW-tank base: firm 4 now clears the AC cold-day MC with
+    ~0 overload, where the old marginal firm 2 left a small tail); unmanaged is
+    strictly worse; the backstop removes the overload DEPTH (transformer AND line
+    peaks well below unmanaged) while enforcing the kW rating (AC peaks a few %
+    above 100).
     """
     payload = json.loads(_VIOLATIONS_PATH.read_text())
     mc = payload["feeder_mc"]
@@ -211,7 +212,7 @@ def test_governed_feeder_mc_before_after_evs() -> None:
         name.split("_")[1]: stats for name, stats in mc.items()
     }  # base / firm / unmanaged / curtailed
     assert by_prefix["base"]["p_overload_ac"] < 0.02
-    assert 0.0 < by_prefix["firm"]["p_overload_ac"] < 0.5
+    assert 0.0 <= by_prefix["firm"]["p_overload_ac"] < 0.5
     assert (
         by_prefix["firm"]["p_overload_ac"] <= by_prefix["unmanaged"]["p_overload_ac"]
     )

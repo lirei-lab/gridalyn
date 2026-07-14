@@ -215,7 +215,10 @@ def test_governed_annual_firm_pin() -> None:
     firm = int(payload["firm_ev_count"])
     curve = payload["p95_cold_evening_curve"]
     limit = float(payload["p95_limit_percent"])
-    assert firm == 2, payload
+    # Re-based 2026-07-14 (realistic DHW-tank base): firm 2 -> 4. The DHW-peaky
+    # but energy-lighter base has a lower P95 cold-evening loading, so more firm
+    # headroom before the crossing.
+    assert firm == 4, payload
     assert curve == sorted(curve), "P95 must be monotone in the EV count"
     assert curve[firm] <= limit < curve[firm + 1]
     hours = payload["congested_hours_per_year_curve"]
@@ -238,9 +241,9 @@ def test_governed_curtailment_headline_pins() -> None:
     (Firm dropped 3 → 2 at the governed 15-min resolution.)
     """
     payload = json.loads(_CURTAIL.read_text())
-    assert payload["firm_ev_count"] == 2
+    assert payload["firm_ev_count"] == 4
     assert payload["flexible_ev_count"] == 12
-    assert payload["hosting_expansion_percent"] == pytest.approx(5.0)
+    assert payload["hosting_expansion_percent"] == pytest.approx(2.0)
     assert payload["residual_hours_curve"][payload["flexible_ev_count"]] == (
         payload["base_floor_hours"]
     )
@@ -276,7 +279,7 @@ def test_governed_curtailment_economics_pins() -> None:
     payload = json.loads(_ECON.read_text())
     assert payload["crf"] == pytest.approx(0.065051, abs=1e-6)
     assert payload["reinforcement_annual_yr"] == pytest.approx(520.411481, abs=1e-3)
-    assert payload["breakeven_ev_count"] == 5
+    assert payload["breakeven_ev_count"] == 6
     curve = payload["curve"]
     costs = [row["contract_cost_yr"] for row in curve]
     assert costs == sorted(costs), "contract cost must grow with the EV count"

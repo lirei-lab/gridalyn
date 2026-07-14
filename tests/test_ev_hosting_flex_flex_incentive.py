@@ -141,9 +141,10 @@ def test_governed_flexibility_incentive() -> None:
 
     Optimal valley-fill shift hosts far more than uncontrolled even in the cold
     (distributed daily headroom), but the ceiling FALLS with cold as headroom
-    shrinks. At the high-adoption target the ceiling drops below it in the cold
-    so the optimal incentive migrates shift (warm) -> curtail (cold) with a
-    finite crossover temperature.
+    shrinks. Re-based 2026-07-14 (realistic DHW-tank base): the shift ceiling now
+    sits ABOVE the target (5 EV/home) in every climate bin — 7.83 even at the
+    coldest -20.1 C bin — so the optimal incentive is SHIFT in every bin and there
+    is no shift->curtail crossover (curtailment remains the feasible backstop).
     """
     p = json.loads(_INCENTIVE.read_text())
     bins = sorted(p["bins"], key=lambda b: b["mean_temp_c"])
@@ -157,12 +158,11 @@ def test_governed_flexibility_incentive() -> None:
         for b in bins
     )
     # uncontrolled hosting is tiny everywhere (EVs must be managed)
-    assert all(b["uncontrolled_ceiling_ev_per_home"] < 2.0 for b in bins)
-    # at the target the incentive migrates cold->warm with a finite crossover
-    assert p["crossover_temp_c"] is not None
-    assert coldest["mean_temp_c"] < p["crossover_temp_c"] < warmest["mean_temp_c"]
-    assert coldest["optimal_policy"] == "curtail"
-    assert warmest["optimal_policy"] == "shift"
+    assert all(b["uncontrolled_ceiling_ev_per_home"] <= 2.0 for b in bins)
+    # shift hosts above the target in every bin -> optimal is SHIFT everywhere,
+    # so there is no shift->curtail crossover (None).
+    assert p["crossover_temp_c"] is None
+    assert all(b["optimal_policy"] == "shift" for b in bins)
     # curtailment is the universal backstop (feasible in every bin)
     assert all(b["options"]["curtail"]["feasible"] for b in bins)
     # pool-cap is surfaced honestly: warm bins hit the pool ceiling (lower bound),
