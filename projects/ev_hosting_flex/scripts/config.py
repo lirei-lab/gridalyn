@@ -1418,3 +1418,19 @@ DHW_INLET_MIN_C = 10.0       # cold-water inlet, winter (deg C)
 DHW_INLET_MAX_C = 15.0       # cold-water inlet, summer (deg C)
 DHW_SEED_SALT = 991          # RNG salt so DHW draws are independent of the base seed
 BG_SCALE = 0.6               # ARX background scale (remove double-counted DHW)
+
+# ── Pilar-2: network non-wires value (analyze_nonwires_value) ─────────────────
+# Deferral of reinforcement ($ NPV + transformer-years) as EV adoption ramps.
+# Cost anchors are literature-illustrative (like the pilar-1 WTA): the physical
+# crossing (A0/A1) is the robust result, the $ are illustrative. Spec
+# 2026-07-14-ev-hosting-flex-nonwires-network-value.
+TRAFO_CAPEX_PER_KVA = 30.0        # $/kVA distribution reinforcement (~$20-40/kVA)
+SUBSTATION_CAPEX_PER_MVA = 25000.0  # $/MVA substation reinforcement (~$15-30k/MVA)
+RAMP_MAX_EV_PER_HOME = 2.0        # adoption ceiling of the ramp (EV/home)
+RAMP_HORIZON_YEARS = 15           # planning horizon (years)
+RAMP_MIDPOINT_YEAR = 7.0          # logistic S-curve midpoint (year of MAX/2)
+RAMP_STEEPNESS = 0.7              # logistic growth rate
+RAMP_SHAPE = "logistic"          # "logistic" | "linear"
+NONWIRES_ADOPTION_GRID = tuple(round(0.1 * i, 6) for i in range(21))  # 0.0..2.0
+NONWIRES_CURTAIL_TOLERANCE = 0.10  # max curtailed EV-energy fraction before flex
+#                                    is unacceptable (the reliability side of A1)
