@@ -210,6 +210,22 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/congestion_risk.png
         - projects/ev_hosting_flex/outputs/reports/congestion_risk_report.json
 
+    - id: analyze_nonwires_value
+      needs: [analyze_network_characterization, analyze_congestion_risk]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
+        - projects/ev_hosting_flex/outputs/json/network_characterization.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/nonwires_value.json
+        - projects/ev_hosting_flex/outputs/figures/nonwires_value.png
+        - projects/ev_hosting_flex/outputs/reports/nonwires_value_report.json
+
     - id: analyze_phase_imbalance
       needs: [generate_annual_mc]
       command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py

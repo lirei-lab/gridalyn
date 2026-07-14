@@ -239,7 +239,11 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     substation = _substation_deferral(cache_dir, sizing, crf)
     total_defer += substation["defer_npv"]
 
-    ref = grid.index(1.0) if 1.0 in grid else len(grid) - 1
+    # the flexibility action concentrates at low adoption (the network binds
+    # early on the realistic base), so the peak of the snapshot — the most CAPEX
+    # simultaneously under deferral, and the adoption at which it peaks — is the
+    # informative headline (the at-1-EV/home level is often past the flex window).
+    peak_i = int(np.argmax(snap_capex)) if snap_capex else 0
     payload = {
         "adoption_grid": [round(a, 6) for a in grid],
         "n_cold_days": n_cold_days,
@@ -251,7 +255,8 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "substation_deferral_npv": substation["defer_npv"],
         "snapshot_transformers_deferred": snap_deferred,
         "snapshot_capex_deferred": snap_capex,
-        "deferral_npv_at_ref": snap_capex[ref],
+        "peak_capex_deferred": snap_capex[peak_i] if snap_capex else 0.0,
+        "peak_capex_deferred_adoption": round(grid[peak_i], 6) if snap_capex else None,
         "first_reinforcement_year": first_reinf_year,
     }
     json_dir = PROJECT_OUTPUTS_DIR / "json"
@@ -263,7 +268,7 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "total_deferral_npv": payload["total_deferral_npv"],
         "total_trafo_years_deferred": payload["total_trafo_years_deferred"],
         "substation_deferral_npv": payload["substation_deferral_npv"],
-        "deferral_npv_at_ref": payload["deferral_npv_at_ref"],
+        "peak_capex_deferred": payload["peak_capex_deferred"],
         "first_reinforcement_year": payload["first_reinforcement_year"],
     }
     return {"artifact_paths": [out_path, *fig_paths], "summary": summary}

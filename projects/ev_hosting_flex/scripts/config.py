@@ -1424,7 +1424,11 @@ BG_SCALE = 0.6               # ARX background scale (remove double-counted DHW)
 # Cost anchors are literature-illustrative (like the pilar-1 WTA): the physical
 # crossing (A0/A1) is the robust result, the $ are illustrative. Spec
 # 2026-07-14-ev-hosting-flex-nonwires-network-value.
-TRAFO_CAPEX_PER_KVA = 30.0        # $/kVA distribution reinforcement (~$20-40/kVA)
+TRAFO_CAPEX_PER_KVA = 107.0       # $/kVA INSTALLED reinforcement (hardware+labor+
+#                                   outage); reconciles with pilar-1 CAPEX_UPGRADE
+#                                   8000 / 75 kVA = ~107 (raw transformer hardware
+#                                   is only ~$20-40/kVA — too low; the flex has no
+#                                   value against trivially-cheap reinforcement).
 SUBSTATION_CAPEX_PER_MVA = 25000.0  # $/MVA substation reinforcement (~$15-30k/MVA)
 RAMP_MAX_EV_PER_HOME = 2.0        # adoption ceiling of the ramp (EV/home)
 RAMP_HORIZON_YEARS = 15           # planning horizon (years)
