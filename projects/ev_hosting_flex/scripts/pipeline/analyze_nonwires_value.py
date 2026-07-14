@@ -94,6 +94,16 @@ def _size_deferral(
     """Derive A0/A1/Y0/Y1/deferral-NPV/transformer-years for one size."""
     reinf_annual = float(capex) * float(crf)
     a0 = _first_cross(grid, curves["peak_noflex"], 100.0)
+    # BASE-DRIVEN guard: if the base alone overloads at 0 EV, the reinforcement is
+    # base-driven and needed now regardless of EVs. Flexibility (EV curtailment /
+    # shift) cannot touch the base — at the base-peak hour the headroom is 0 — so
+    # it defers nothing. Credit no deferral (an honest limit of EV flexibility).
+    base_driven = bool(float(curves["peak_noflex"][0]) > 100.0)
+    if base_driven:
+        return {"a0": a0, "a1": a0, "y0": year_at_adoption(a0 or 0.0),
+                "y1": year_at_adoption(a0 or 0.0), "defer_npv": 0.0,
+                "trafo_years": 0.0, "reinf_annual": reinf_annual,
+                "base_driven": True}
     # A1 reliability side: curtailed fraction exceeds the tolerance
     a1_rel = _first_cross(
         grid, curves["curtailed_frac"], float(NONWIRES_CURTAIL_TOLERANCE)
@@ -137,12 +147,21 @@ def _size_deferral(
             c_y = C_AVAIL_EV_YR * n_evs + C_A_CURTAIL * ck * int(n_cold_days)
             contract_cost += c_y * (1.0 + r) ** (-y)
     defer_npv = capex_deferral - contract_cost
+    # A rational planner signs the flex contract only when it beats reinforcing:
+    # floor the per-size deferral at 0 (a value-negative contract is declined ->
+    # reinforce), and the "deferred years" are illusory unless the deferral has
+    # positive value. This also reconciles the A1 gate (annuity crf) with the
+    # lump-sum NPV benefit.
+    if defer_npv <= 0.0:
+        return {"a0": a0, "a1": a1, "y0": y0, "y1": y1, "defer_npv": 0.0,
+                "trafo_years": 0.0, "reinf_annual": reinf_annual,
+                "base_driven": False}
     ty = (y1 - y0) if np.isfinite(y1) else float("inf")
     return {
         "a0": a0, "a1": a1, "y0": y0, "y1": y1,
         "defer_npv": round(defer_npv, ROUND_DECIMALS),
         "trafo_years": round(ty, ROUND_DECIMALS) if np.isfinite(ty) else None,
-        "reinf_annual": reinf_annual,
+        "reinf_annual": reinf_annual, "base_driven": False,
     }
 
 
