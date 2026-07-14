@@ -30,6 +30,7 @@ from projects.ev_hosting_flex.scripts.config import (
     ARRIVAL_CLIP_ANNUAL,
     ARRIVAL_MEAN_ANNUAL_H,
     ARRIVAL_STD_ANNUAL_H,
+    BG_SCALE,
     CALENDAR_HOURS,
     CHARGER_MIX,
     COLD_DAY_TMEAN_C,
@@ -40,6 +41,7 @@ from projects.ev_hosting_flex.scripts.config import (
     DHW_ELEMENT_KW,
     DHW_INLET_MAX_C,
     DHW_INLET_MIN_C,
+    DHW_SEED_SALT,
     DHW_T_AMB,
     DHW_T_LOW,
     DHW_T_SET,
@@ -307,8 +309,20 @@ def annual_base_realization(
     results = simulate_buildings(
         buildings, temp_1min, burnin_hours=6, random_seed=int(seed)
     )
-    agg = sum(results[uid]["p_total_kw"] for uid in results)
+    agg = sum(
+        results[uid]["p_heat_kw"]
+        + results[uid]["p_cool_kw"]
+        + BG_SCALE * results[uid]["p_bg_kw"]
+        for uid in results
+    )
     stepped = agg.resample(f"{int(res_minutes)}min").mean().to_numpy(dtype=DTYPE)
+    dhw = dhw_tank_annual(
+        np.random.default_rng(int(seed) + DHW_SEED_SALT),
+        int(n_homes),
+        temp,
+        res_minutes=int(res_minutes),
+    )
+    stepped = stepped + dhw[: stepped.shape[0]]
     n_steps = N_DAYS * (24 * 60 // int(res_minutes))
     # The 1-min resample ends at the TMY's last hourly stamp, so the final
     # ``60/res - 1`` steps of the year (the last <1 h) have no interpolation
@@ -369,8 +383,20 @@ def design_day_base_per_home(
     results = simulate_buildings(
         buildings, window_1min, burnin_hours=6, random_seed=int(seed)
     )
-    agg = sum(results[uid]["p_total_kw"] for uid in results)
+    agg = sum(
+        results[uid]["p_heat_kw"]
+        + results[uid]["p_cool_kw"]
+        + BG_SCALE * results[uid]["p_bg_kw"]
+        for uid in results
+    )
     hourly = agg.resample("60min").mean()
+    dhw = dhw_tank_annual(
+        np.random.default_rng(int(seed) + DHW_SEED_SALT),
+        int(n_homes),
+        window,
+        res_minutes=60,
+    )
+    hourly = hourly + dhw[: len(hourly)]
     # keep only the design day, reorder by local hour-of-day
     design_day = hourly.iloc[-24:]
     per_home = design_day.to_numpy(dtype=DTYPE) / float(n_homes)
