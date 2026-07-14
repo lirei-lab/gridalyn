@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from projects.ev_hosting_flex.scripts.config import (
+    CHARGER_MIX,
     CLUSTER_MAX_RATE,
     DTYPE,
     POWER_FACTOR,
@@ -251,6 +252,72 @@ def apply_local_curtailment(
     served = np.minimum(ev, headroom)
     curtailed_kwh = float(np.sum(ev - served))
     return served, curtailed_kwh
+
+
+def flex_deferral_curves(
+    base_perhome_day: np.ndarray,
+    ev_perhome_day: np.ndarray,
+    n_homes: int,
+    rating_kw: float,
+    adoption_grid: np.ndarray,
+) -> dict[str, np.ndarray]:
+    """Per-adoption curves for one transformer size on the cold design day.
+
+    For each adoption ``a`` in ``adoption_grid`` (EV/home): the feeder base is
+    ``n_homes * base_perhome_day``; the coincident EV overlay is
+    ``round(a*n_homes) * ev_perhome_day``. Returns:
+
+    - ``peak_noflex``: coincident-peak loading (% of rating), no flexibility.
+    - ``curtailed_frac``: EV-energy fraction curtailed after valley-fill shift +
+      a local-curtailment backstop that holds ``base + ev <= rating``.
+    - ``curtailed_kwh``: absolute daily curtailed energy (kWh) for the contract.
+
+    A0 = first adoption where ``peak_noflex`` > 100; A1 (derived in the stage) is
+    the first where ``curtailed_frac`` exceeds the tolerance OR the flex contract
+    outcosts reinforcement — flexibility never physically overloads (curtailment
+    always caps), so A1 is a viability bound, not a physical crossing.
+
+    Args:
+        base_perhome_day: ``(H,)`` per-home design-day base profile (kW).
+        ev_perhome_day: ``(H,)`` per-EV design-day charging profile (kW).
+        n_homes: Homes on this transformer size.
+        rating_kw: Transformer usable static rating (kW).
+        adoption_grid: ``(G,)`` adoption levels (EV/home) to evaluate.
+
+    Returns:
+        ``dict`` with ``peak_noflex`` / ``curtailed_frac`` / ``curtailed_kwh``,
+        each a ``(G,)`` float array aligned with ``adoption_grid``.
+    """
+    from projects.ev_hosting_flex.scripts._annual import valley_fill_shift
+
+    base_day = (int(n_homes) * np.asarray(base_perhome_day, dtype=DTYPE)).astype(DTYPE)
+    ev_day_unit = np.asarray(ev_perhome_day, dtype=DTYPE)
+    ev_daily_kwh = float(ev_day_unit.sum())  # per-EV daily energy (hourly steps)
+    charger = float(
+        sum(kw * w for kw, w in CHARGER_MIX.items()) / sum(CHARGER_MIX.values())
+    )
+    peak_noflex, curtailed_frac, curtailed_kwh = [], [], []
+    for a in np.asarray(adoption_grid, dtype=DTYPE):
+        n_evs = int(round(float(a) * int(n_homes)))
+        ev_day = float(n_evs) * ev_day_unit
+        peak_noflex.append(float((base_day + ev_day).max()) / float(rating_kw) * 100.0)
+        if n_evs <= 0 or ev_daily_kwh <= 0.0:
+            curtailed_frac.append(0.0)
+            curtailed_kwh.append(0.0)
+            continue
+        ev_energy = np.full(n_evs, ev_daily_kwh, dtype=DTYPE)
+        chargers = np.full(n_evs, charger, dtype=DTYPE)
+        shifted_net = valley_fill_shift(base_day, ev_energy, float(rating_kw), chargers)
+        shifted_ev = np.asarray(shifted_net, dtype=DTYPE) - base_day
+        _served, ckwh = apply_local_curtailment(base_day, shifted_ev, float(rating_kw))
+        total_ev = ev_daily_kwh * float(n_evs)
+        curtailed_kwh.append(float(ckwh))
+        curtailed_frac.append(float(ckwh) / total_ev if total_ev > 0.0 else 0.0)
+    return {
+        "peak_noflex": np.array(peak_noflex, dtype=DTYPE),
+        "curtailed_frac": np.array(curtailed_frac, dtype=DTYPE),
+        "curtailed_kwh": np.array(curtailed_kwh, dtype=DTYPE),
+    }
 
 
 def feeder_min_voltage(
