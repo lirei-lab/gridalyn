@@ -47,16 +47,24 @@ def test_dhw_element_bounds_power() -> None:
     assert float(f.max()) <= 5 * float(DHW_ELEMENT_KW) + 1e-9
 
 
-def test_dhw_draws_cluster_into_a_peak() -> None:
-    """The occupancy weights produce an evening reheat peak above the daily
-    mean (the tank recovers after clustered draws)."""
-    idx = pd.date_range("2020-01-01", periods=24 * 30, freq="h")
+def test_dhw_draws_cluster_at_local_occupancy_hours() -> None:
+    """The reheat peak lands at the LOCAL occupancy hours (evening 17-21),
+    honouring the 19:00 TMY phase anchor — position p is local hour (19+p)%24.
+    A phase bug (ignoring hod0) would peak ~5 h early at local midday."""
+    hod0 = 19
+    idx = pd.date_range("2020-01-01 19:00", periods=24 * 30, freq="h")
     temp = pd.Series(np.full(24 * 30, -10.0), idx)
     f = dhw_tank_annual(np.random.default_rng(3), 8, temp, res_minutes=15)
     spd = 24 * 60 // 15
     daily = f[: (f.shape[0] // spd) * spd].reshape(-1, spd)
-    hourly = daily.mean(axis=0).reshape(24, spd // 24).mean(axis=1)
-    assert hourly[18:22].max() > hourly.mean()   # evening reheat peak
+    by_pos = daily.mean(axis=0).reshape(24, spd // 24).mean(axis=1)   # by array-hour
+    # remap array-hour position p -> local clock hour (hod0 + p) % 24
+    by_local = np.zeros(24)
+    for p in range(24):
+        by_local[(hod0 + p) % 24] = by_pos[p]
+    # evening cluster (local 17-21) is elevated; the daily peak is at a draw hour
+    assert by_local[17:22].max() > by_local.mean()
+    assert int(np.argmax(by_local)) in {6, 7, 8, 17, 18, 19, 20, 21}
 
 
 # ── Governed range assertion on the recalibrated base (skipif cache absent) ──

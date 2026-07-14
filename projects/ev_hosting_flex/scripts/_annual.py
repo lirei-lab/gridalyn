@@ -435,9 +435,14 @@ def dhw_tank_annual(
     """
     res = int(res_minutes)
     steps_per_day = 24 * 60 // res
-    steps_per_hour = steps_per_day // 24
+    steps_per_hour = max(1, steps_per_day // 24)
     dt_h = res / 60.0
     cp = 4.186  # kJ/(kg*K); 1 L water ~ 1 kg
+    # LOCAL-hour phase anchor: array position p is local clock hour
+    # (hod0 + p) % 24 (the study-B _HOD0 convention; the TMY starts 19:00 local).
+    # The occupancy draw weights are clock-hour keyed, so they MUST be shifted by
+    # hod0 or the morning/evening reheat peak lands ~5 h early.
+    hod0 = int(temp_hourly.index[0].hour)
 
     t_res = (
         temp_hourly.resample(f"{res}min").interpolate().to_numpy(dtype=DTYPE)
@@ -465,7 +470,7 @@ def dhw_tank_annual(
         )
         tank = t_set
         for k in range(n_steps):
-            hod = (k % steps_per_day) // steps_per_hour
+            hod = (hod0 + k // steps_per_hour) % 24
             exp_l = daily_l * float(weights[hod]) / steps_per_hour
             vol = float(rng.gamma(2.0, exp_l / 2.0)) if exp_l > 0.0 else 0.0
             e_draw = vol * cp * (tank - float(inlet[k])) / 3600.0
