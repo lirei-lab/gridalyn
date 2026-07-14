@@ -953,12 +953,16 @@ diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
 # TRANSFORMER_KVA, POWER_FACTOR, TMY_INPUT_PATH, CHARGER_MIX, CAPEX_UPGRADE,
 # DISCOUNT_RATE, LIFE_YEARS (do NOT redefine them).
 
-R_STUDY_B = 5.0
-"""Per-home thermal envelope resistance (°C/kW) of the SDK building agent for
-the study-B stressed Québec all-electric calibration (D-B1). Provenance:
-``generate_sdk_base.py`` ``R_VALUE = 5.0`` — loads the feeder base toward the
-CALIBRATION.md 10–15 kW/home winter band so congestion is rare but real.
-Supersedes ``R_QUEBEC = 7.0`` (design-day seam) for the annual path."""
+R_STUDY_B = 7.5
+"""Per-home thermal envelope resistance (deg C/kW), study-B all-electric base.
+
+RE-BASED 2026-07-14 (spec realistic-building-base-dhw): 5.0 -> 7.5. The old 5.0
+was reverse-engineered to hit the HQ winter peak (11.4 kW/home) with the bare RC
+envelope, which inflated annual energy to ~39 MWh/home (~1.8x the SDK-native
+20-22; QC all-electric typical 25-30). R=7.5 gives energy-realistic heating
+(~18 MWh); the explicit DHW tank (`dhw_tank_annual`) + `BG_SCALE` restore the
+coincident peak to the HQ 10-15 kW band WITHOUT the energy inflation. Final value
+fixed by calibrate_base.py. Supersedes the peak-calibrated 5.0."""
 
 K_ANNUAL = 1
 """Annual SDK base realization count (D-B2). Study-B faithful default 1 (the
@@ -1387,3 +1391,30 @@ VOLTAGE_NET_MC_DRAWS = 8
 # enough for a stable mean; draw-to-draw variance is secondary to the cold-day
 # weather axis (163 days), which dominates the undervoltage probability.
 VOLTAGE_NET_EV_POOL = 300
+
+# ── Realistic residential base: electric DHW tank + background split ──────────
+# The single-R RC envelope couples peak and energy (no single R hits both HQ
+# targets: peak 10-15 kW AND energy 25-30 MWh). QC all-electric homes peak higher
+# for the same energy because of the electric water-heater tank (a ~4.5 kW element
+# recovering after clustered morning/evening draws) — currently smoothed into the
+# ARX background. `dhw_tank_annual` models it explicitly; `BG_SCALE` removes the
+# double-counted DHW from the background. Provenance: spec
+# 2026-07-14-ev-hosting-flex-realistic-building-base-dhw. INITIAL values; the final
+# ones are fixed by calibrate_base.py (Task 4) to land the targets.
+DHW_TANK_L = 270.0            # 60-gal tank water volume (L)
+DHW_ELEMENT_KW = 4.5         # resistive element power (kW), standard QC
+DHW_T_SET = 60.0             # thermostat setpoint (deg C)
+DHW_T_LOW = 53.0             # element turns on below this (deg C)
+DHW_T_AMB = 20.0             # tank ambient (indoor) (deg C)
+DHW_UA_KW_PER_K = 0.0025     # standby heat loss (kW/K), well-insulated tank
+DHW_DAILY_L_MEAN = 180.0     # mean daily hot-water draw per home (L)
+DHW_DAILY_L_STD = 30.0       # per-home draw variability (L)
+DHW_DAILY_L_MIN = 60.0       # floor on the per-home daily draw (L)
+DHW_DRAW_WEIGHTS = {         # hour-of-day draw weights (occupancy-clustered)
+    6: 0.09, 7: 0.17, 8: 0.11, 12: 0.05,
+    17: 0.10, 18: 0.15, 19: 0.14, 20: 0.09, 21: 0.04,
+}
+DHW_INLET_MIN_C = 10.0       # cold-water inlet, winter (deg C)
+DHW_INLET_MAX_C = 15.0       # cold-water inlet, summer (deg C)
+DHW_SEED_SALT = 991          # RNG salt so DHW draws are independent of the base seed
+BG_SCALE = 0.6               # ARX background scale (remove double-counted DHW)
