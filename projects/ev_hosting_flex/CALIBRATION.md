@@ -569,8 +569,11 @@ A₀/A₁ are the robust result, the $ are illustrative.
 - **`NONWIRES_CURTAIL_TOLERANCE = 0.10`** — the reliability side of A₁ (max EV-energy
   fraction curtailed before flex is unacceptable).
 
-Result on the realistic DHW base: **$171 k NPV + 821 transformer-years deferred**
-network-wide (substation $47 k), concentrated on the early-binding transformer sizes.
+Result on the realistic DHW base: **$72 k NPV + 286 transformer-years deferred**
+network-wide, DOMINATED by the substation deferral ($47 k, 66 %). Base-driven feeder
+overloads (the all-electric base alone exceeds the rating — flexibility cannot defer
+them) are honestly excluded, and per-size deferral is floored at 0 (a value-negative
+flex contract is declined in favour of reinforcement).
 
 ## Sources
 
