@@ -59,6 +59,11 @@ from projects.ev_hosting_flex.scripts.config import (
     PLUGIN_KCOLD,
     PLUGIN_MAX,
     R_STUDY_B,
+    RAMP_HORIZON_YEARS,
+    RAMP_MAX_EV_PER_HOME,
+    RAMP_MIDPOINT_YEAR,
+    RAMP_SHAPE,
+    RAMP_STEEPNESS,
     TMY_INPUT_PATH,
 )
 
@@ -246,6 +251,32 @@ def valley_fill_shift(
             agg[h] += put
             remaining -= put
     return agg
+
+
+def adoption_at_year(year: float) -> float:
+    """EV/home adoption at ``year`` under the configured ramp (logistic S-curve
+    0 -> RAMP_MAX_EV_PER_HOME, or linear over RAMP_HORIZON_YEARS)."""
+    mx = float(RAMP_MAX_EV_PER_HOME)
+    if str(RAMP_SHAPE) == "linear":
+        return float(np.clip(mx * float(year) / float(RAMP_HORIZON_YEARS), 0.0, mx))
+    k, m = float(RAMP_STEEPNESS), float(RAMP_MIDPOINT_YEAR)
+    return float(mx / (1.0 + np.exp(-k * (float(year) - m))))
+
+
+def year_at_adoption(adoption: float) -> float:
+    """Inverse of :func:`adoption_at_year`: the year the ramp first reaches
+    ``adoption``. Returns 0.0 at/below 0 and ``inf`` at/above the ceiling
+    (never reached in finite time)."""
+    mx = float(RAMP_MAX_EV_PER_HOME)
+    a = float(adoption)
+    if a <= 0.0:
+        return 0.0
+    if a >= mx:
+        return float("inf")
+    if str(RAMP_SHAPE) == "linear":
+        return a / mx * float(RAMP_HORIZON_YEARS)
+    k, m = float(RAMP_STEEPNESS), float(RAMP_MIDPOINT_YEAR)
+    return float(m - (1.0 / k) * np.log(mx / a - 1.0))
 
 
 def annual_base_realization(
