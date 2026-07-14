@@ -464,7 +464,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.288037,
+      "expected": 0.1682,
       "id": "congestion.p_cong_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -474,7 +474,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 156.67574,
+      "expected": 149.345958,
       "id": "congestion.peak_max_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -484,7 +484,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 528,
+      "expected": 527,
       "id": "congestion.n_at_risk_at_ref",
       "json_path": [
         "n_at_risk_at_ref"

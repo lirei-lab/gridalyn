@@ -64,18 +64,39 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
 _STEPS_PER_DAY = 24 * (60 // int(ANNUAL_RES_MINUTES))
 
 
+def _base_mc_signature(k_base: int) -> str:
+    """Signature of the base-determining config, so the cache invalidates on a
+    base recalibration (R/DHW/BG_SCALE re-base) instead of silently reusing a
+    stale MC (the 2026-07-14 DHW re-base footgun)."""
+    import hashlib
+
+    from projects.ev_hosting_flex.scripts import config as _cfg
+
+    parts = (
+        _cfg.R_STUDY_B, _cfg.P_HEAT_QUEBEC, _cfg.BG_SCALE, _cfg.DHW_ELEMENT_KW,
+        _cfg.DHW_DAILY_L_MEAN, _cfg.DHW_DAILY_L_STD, _cfg.DHW_TANK_L,
+        _cfg.DHW_T_SET, _cfg.DHW_T_LOW, _cfg.DHW_UA_KW_PER_K, _cfg.DHW_SEED_SALT,
+        int(SEED), int(ANNUAL_RES_MINUTES), int(k_base),
+    )
+    return hashlib.sha256(repr(parts).encode()).hexdigest()[:16]
+
+
 def _ensure_base_mc_cache(
     data_dir: Path, temp: Any, sizes: list[int], k_base: int
 ) -> dict[int, np.ndarray]:
     """K base realizations per distinct home-count, cached in an npz.
 
     Returns ``{home_count: (k_base, n_steps) kW}``. Deterministic (seeds derived
-    from SEED); regenerates only if the cache is absent.
+    from SEED); regenerates if the cache is absent OR its base-config signature
+    no longer matches (so a base recalibration is never silently reused).
     """
     path = data_dir / "base_mc_by_size.npz"
+    sig = _base_mc_signature(k_base)
     if path.is_file():
         z = np.load(path)
-        return {int(k): z[k].astype(DTYPE) for k in z.files}
+        cached_sig = str(z["_sig"]) if "_sig" in z.files else ""
+        if cached_sig == sig:
+            return {int(k): z[k].astype(DTYPE) for k in z.files if k != "_sig"}
     out: dict[int, np.ndarray] = {}
     for h in sorted(sizes):
         out[h] = np.stack(
@@ -84,7 +105,7 @@ def _ensure_base_mc_cache(
                 for k in range(int(k_base))
             ]
         ).astype(DTYPE)
-    np.savez(path, **{str(h): out[h] for h in out})
+    np.savez(path, _sig=np.array(sig), **{str(h): out[h] for h in out})
     return out
 
 
