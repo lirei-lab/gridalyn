@@ -307,8 +307,11 @@ def flex_deferral_curves(
             continue
         ev_energy = np.full(n_evs, ev_daily_kwh, dtype=DTYPE)
         chargers = np.full(n_evs, charger, dtype=DTYPE)
-        shifted_net = valley_fill_shift(base_day, ev_energy, float(rating_kw), chargers)
-        shifted_ev = np.asarray(shifted_net, dtype=DTYPE) - base_day
+        # valley_fill_shift returns the shifted EV overlay (kW), not net load.
+        shifted_ev = np.asarray(
+            valley_fill_shift(base_day, ev_energy, float(rating_kw), chargers),
+            dtype=DTYPE,
+        )
         _served, ckwh = apply_local_curtailment(base_day, shifted_ev, float(rating_kw))
         total_ev = ev_daily_kwh * float(n_evs)
         curtailed_kwh.append(float(ckwh))
