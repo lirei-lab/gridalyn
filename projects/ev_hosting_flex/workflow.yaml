@@ -101,6 +101,20 @@ spec:
         - projects/ev_hosting_flex/outputs/json/curtailment_economics.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
 
+    - id: analyze_credibility
+      needs: [generate_annual_mc, compute_congestion_annual, apply_curtailment_contracts]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/credibility.json
+        - projects/ev_hosting_flex/outputs/figures/credibility.png
+        - projects/ev_hosting_flex/outputs/reports/credibility_report.json
+
     # ── Stage 6c: cold-coupling comparison (the study's lead finding) ────────
     # Does a naive (cold-agnostic) EV model overestimate winter hosting? Re-runs
     # firm/flexible/curtailment on a naive counterfactual pool vs the governed

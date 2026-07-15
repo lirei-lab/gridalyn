@@ -644,6 +644,86 @@
       ],
       "source": "outputs/json/nonwires_value.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 2.0,
+      "id": "cred.firm_p05",
+      "json_path": [
+        "firm",
+        "p05"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 3.0,
+      "id": "cred.firm_p50",
+      "json_path": [
+        "firm",
+        "p50"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 4.0,
+      "id": "cred.firm_p95",
+      "json_path": [
+        "firm",
+        "p95"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 12.0,
+      "id": "cred.flex_p05",
+      "json_path": [
+        "flex",
+        "p05"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 12.0,
+      "id": "cred.flex_p50",
+      "json_path": [
+        "flex",
+        "p50"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 12.0,
+      "id": "cred.flex_p95",
+      "json_path": [
+        "flex",
+        "p95"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 6.0,
+      "id": "cred.breakeven_p50",
+      "json_path": [
+        "breakeven",
+        "p50"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 65.976174,
+      "id": "cred.base_peak_p50",
+      "json_path": [
+        "base_peak",
+        "p50"
+      ],
+      "source": "outputs/json/credibility.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
