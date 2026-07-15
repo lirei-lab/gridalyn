@@ -1438,3 +1438,13 @@ RAMP_SHAPE = "logistic"          # "logistic" | "linear"
 NONWIRES_ADOPTION_GRID = tuple(round(0.1 * i, 6) for i in range(21))  # 0.0..2.0
 NONWIRES_CURTAIL_TOLERANCE = 0.10  # max curtailed EV-energy fraction before flex
 #                                    is unacceptable (the reliability side of A1)
+
+# ── Credibility layer: confidence intervals on the headlines (analyze_credibility)
+# K realizations vary the building/EV seeds AND a synthetic winter-severity
+# temperature anomaly (a cold year vs mild year); the point headlines firm/flex/
+# breakeven become P5/P50/P95 distributions. Single TMY -> the weather axis is a
+# synthetic severity proxy (uniform per-day offset), not measured weather years.
+CREDIBILITY_K = 50               # number of realizations
+WEATHER_SIGMA_C = 1.5            # winter-severity anomaly std (deg C, inter-annual)
+CREDIBILITY_WEATHER_SALT = 104729  # RNG salt for the per-realization temp offsets
+CREDIBILITY_EV_SALT = 7919       # EV-fleet seed multiplier per realization
