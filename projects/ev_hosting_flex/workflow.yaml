@@ -110,6 +110,7 @@ spec:
         - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/credibility.json
         - projects/ev_hosting_flex/outputs/figures/credibility.png
