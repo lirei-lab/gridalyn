@@ -575,6 +575,26 @@ overloads (the all-electric base alone exceeds the rating — flexibility cannot
 them) are honestly excluded, and per-size deferral is floored at 0 (a value-negative
 flex contract is declined in favour of reinforcement).
 
+## Credibility layer — headline confidence intervals (2026-07-15)
+
+`analyze_credibility` re-runs the firm/flex/breakeven chain over **K=50** realizations
+varying the building seed, the EV-fleet seed, and a synthetic **winter-severity**
+temperature anomaly (`WEATHER_SIGMA_C = 1.5` °C, `δ₀=0`). **Caveat:** a single committed
+TMY → the weather axis is a synthetic winter-severity proxy (uniform per-day offset),
+NOT measured inter-annual weather years.
+
+Result on the realistic DHW base (realization 0 reproduces the governed firm/flex/
+breakeven exactly — a consistency anchor):
+
+| Headline | Governed (nominal) | P5 | P50 | P95 | robustness |
+|---|---|---|---|---|---|
+| firm | 4 | 2 | 3 | 4 | **weather-sensitive** (P(=4)=0.32; a colder winter → 2–3) |
+| flex | 12 | 12 | 12 | 12 | robust (P(=12)=1.0) |
+| breakeven | 6 | 5 | 6 | 6 | robust (P(=6)=0.70) |
+
+The citable `firm=4` is the nominal-weather value; under winter-severity uncertainty it
+is **[2, 4] with median 3** — an honest CI a reader should cite alongside the point.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).
