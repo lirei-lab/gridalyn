@@ -595,6 +595,33 @@ breakeven exactly — a consistency anchor):
 The citable `firm=4` is the nominal-weather value; under winter-severity uncertainty it
 is **[2, 4] with median 3** — an honest CI a reader should cite alongside the point.
 
+## DHW smooth-occupancy realism fix (2026-07-16, 5th re-base)
+
+A visual validation of the substation aggregate revealed a **near-vertical evening
+ramp** — an unphysical coincident step for a 3235-home aggregate. Serious
+verification (continuous 3-day decomposition) isolated the cause: NOT the heating
+(0.64 kW/home/h, smooth) but the **DHW tank** (5.85 kW/home/h). The old
+`DHW_DRAW_WEIGHTS` was a **sparse dict with zeros** (no hot water at 9–11h, 13–16h,
+overnight; a 0→0.10 jump at 17h) **identical across homes** → a coincident on/off
+that does not diversify away.
+
+**Fix:** (1) a continuous **`dhw_draw_profile()`** occupancy curve (all-day baseline +
+smooth morning/evening Gaussians, no zero hours) replaces the sparse dict; (2)
+**per-home tank diversity** — setpoint (±2 °C), deadband (±1.5 °C), element (±0.5 kW),
+tank volume (±30 L) jittered inside the per-home loop so reheats stagger.
+**Validation:** the hourly coincident step drops **70 %** (1.14 → 0.35 kW/home/h) and
+the near-vertical ramp is gone (see `profiles_transformer_substation.png`); the DHW
+daily energy is preserved (~11.8 kWh/home). The residual morning/evening coincidence
+is physical (real hot-water use clusters, like heating CF~0.85).
+
+**Re-calibration:** the diversified DHW lowers the coincident peak, so the P99
+typical-cold-day peak drops to ~9.8 kW (the annual coincident peak stays 11.1 kW, in
+the HQ 10–15 band; energy 29.7 MWh; split 62/14/24 %). No knob change — the lower P99
+is the honest diversification effect, not a defect. **Headline re-base:** firm 4 → 5,
+netchar `n_over_static_at_0ev` 66 → 0 (the base is now healthy before EVs — the
+base-driven overload was partly the DHW coincident peak), nonwires
+first-reinforcement-year 0 → 4.36, NPV $72k → $97k, credibility firm P50 3 → 4 [3, 5].
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).

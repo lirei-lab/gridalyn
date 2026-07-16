@@ -20,8 +20,10 @@ authoritative sandbox) and the local migration design doc
    over an electric baseboard, plus a time-correlated AR(1) background load
    (appliances/lighting, scaled by `BG_SCALE`), plus an explicit stochastic
    **electric water-heater tank** (`dhw_tank_annual`: 270 L / 4.5 kW thermostatic
-   tank with occupancy-clustered morning/evening draws — the coincident peak
-   driver a flat background smooths away). Base = `Σp_heat + Σp_cool +
+   tank with draws following a **continuous occupancy profile** —
+   `dhw_draw_profile()`, an all-day baseline + smooth morning/evening Gaussians —
+   and **per-home tank diversity** (setpoint/deadband/element/volume jitter) so
+   reheats stagger and the aggregate has no coincident on/off step; 2026-07-16 fix). Base = `Σp_heat + Σp_cool +
    BG_SCALE·Σp_bg + DHW`. Simulated at 1-min over the committed annual TMY and
    aggregated. Recalibrated to the Québec all-electric archetype (`R_STUDY_B =
    7.5 °C/kW`, `P_HEAT_QUEBEC = 13 kW`, `DHW_ELEMENT_KW = 4.5`, `BG_SCALE = 0.6`):
