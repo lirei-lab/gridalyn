@@ -39,12 +39,19 @@ def test_dhw_zero_homes_is_zero() -> None:
 
 
 def test_dhw_element_bounds_power() -> None:
-    """No step exceeds n_homes x element power (the physical cap)."""
-    from projects.ev_hosting_flex.scripts.config import DHW_ELEMENT_KW
+    """No step exceeds the sum of the per-home jittered element powers. The
+    per-home element is max(1.0, N(DHW_ELEMENT_KW, DHW_ELEMENT_JITTER_KW)), so
+    the feeder cap is n_homes * a generous per-home ceiling (4-sigma tail)."""
+    from projects.ev_hosting_flex.scripts.config import (
+        DHW_ELEMENT_JITTER_KW,
+        DHW_ELEMENT_KW,
+    )
 
     t = _temp()
-    f = dhw_tank_annual(np.random.default_rng(2), 5, t, res_minutes=15)
-    assert float(f.max()) <= 5 * float(DHW_ELEMENT_KW) + 1e-9
+    n = 5
+    f = dhw_tank_annual(np.random.default_rng(2), n, t, res_minutes=15)
+    cap = n * (float(DHW_ELEMENT_KW) + 4.0 * float(DHW_ELEMENT_JITTER_KW))
+    assert float(f.max()) <= cap + 1e-9
 
 
 def test_dhw_draws_cluster_at_local_occupancy_hours() -> None:

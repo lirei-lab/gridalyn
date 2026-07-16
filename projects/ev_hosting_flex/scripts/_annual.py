@@ -472,13 +472,16 @@ def dhw_tank_annual(
 ) -> np.ndarray:
     """Return one stochastic electric DHW-tank feeder trace ``(n_steps,)`` kW.
 
-    Per home: a single-node thermostatic hot-water tank (``DHW_TANK_L`` litres,
-    one ``DHW_ELEMENT_KW`` resistive element) with occupancy-clustered stochastic
-    draws. Per step the draw removes hot water (energy ``V*cp*(T-T_inlet)``),
-    standby loses ``UA*(T-T_amb)``, and the element reheats toward ``DHW_T_SET``
-    when ``T`` falls below ``DHW_T_LOW``. The clustered morning/evening draws make
-    the tanks reheat together — the coincident peak the flat ARX background misses.
-    Deterministic given ``rng``. Project-local — no SDK import.
+    Per home: a single-node thermostatic hot-water tank whose parameters (tank
+    volume, element power, setpoint, deadband) are drawn per home with jitter
+    around ``DHW_TANK_L``/``DHW_ELEMENT_KW``/``DHW_T_SET``/``DHW_T_LOW``. Draws
+    follow the continuous ``dhw_draw_profile()`` occupancy curve (all-day baseline
+    + smooth morning/evening peaks, no zero hours); per step the draw removes hot
+    water (energy ``V*cp*(T-T_inlet)``), standby loses ``UA*(T-T_amb)``, and the
+    element reheats toward the home's setpoint when ``T`` falls below its cut-in.
+    The smooth profile + per-home diversity STAGGER the reheats so the aggregate
+    has no coincident on/off step (the 2026-07-16 realism fix). Deterministic
+    given ``rng``. Project-local — no SDK import.
 
     Args:
         rng: Pinned generator (derive from the base seed in the caller).
