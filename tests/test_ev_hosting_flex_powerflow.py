@@ -182,7 +182,9 @@ def test_governed_network_before_after_evs() -> None:
     # cold dynamic rating, the BINDING channels are voltage and LV lines
     # (transformer dynamic overload stays rare/zero across the sweep).
     assert post["n_lv_buses_below_normal"] > 0
-    assert post["n_lines_over_100"] > 100
+    # LV lines overload at 1.5 EV/home (smooth-DHW base: ~78, down from the
+    # peakier DHW-tank base's ~183 — the diversified peak stresses fewer lines).
+    assert post["n_lines_over_100"] > 50
     for key in (
         "n_trafos_over_static",
         "n_trafos_over_dynamic",

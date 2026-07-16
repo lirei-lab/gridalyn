@@ -50,9 +50,9 @@ def test_governed_network_characterization() -> None:
     substation N-1 is itself a reinforcement trigger (unlike an over-built
     3-unit bank). The FEEDERS still bind first for hosting, with a
     per-transformer headroom median near the study feeder's firm penetration.
-    On the realistic DHW-tank base (re-based 2026-07-14) the winter all-electric
-    peak pushes 66/540 transformers over their STATIC rating at 0 EV — held by
-    the C57.91 cold DYNAMIC uprating (0 over dynamic pre-EV), the real HQ posture.
+    On the smooth-DHW base (re-based 2026-07-16) the diversified DHW spreads the
+    coincident peak, so the network is healthy before EVs (0/540 transformers over
+    STATIC rating at 0 EV, and 0 over the C57.91 dynamic rating).
     """
     payload = json.loads(_CHAR.read_text())
     loss = payload["losses"]["loss_percent"]
@@ -79,4 +79,4 @@ def test_governed_network_characterization() -> None:
     assert 0.0 < hr["crossing_penetration_p50"] < 1.0
     assert hr["crossing_penetration_p05"] <= hr["crossing_penetration_p50"]
     assert hr["crossing_penetration_p50"] <= hr["crossing_penetration_p95"]
-    assert hr["n_overloaded_at_0ev"] == 66  # over STATIC pre-EV; 0 over dynamic
+    assert hr["n_overloaded_at_0ev"] == 0  # smooth DHW: healthy before EVs (static)

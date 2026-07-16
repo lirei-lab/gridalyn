@@ -52,19 +52,19 @@ def test_naive_toggle_removes_cold_escalation() -> None:
 def test_governed_cold_coupling_headline() -> None:
     """Governed reproduce-and-pin: naive overestimates firm hosting, underestimates curtailment.
 
-    firm cold-coupled 4 -> naive 5 (+25 %); the naive model underestimates the
-    curtailment the flexibility contract must deliver ~3.4x, because it misses
+    firm cold-coupled 5 -> naive 6 (+20 %); the naive model underestimates the
+    curtailment the flexibility contract must deliver ~4x, because it misses
     the ~54 % more EV energy the cold-coupled model puts on cold days.
-    (Re-based 2026-07-14 onto the realistic DHW-tank base: firm 2 -> 4.)
+    (Re-based 2026-07-16 onto the smooth-DHW base: firm 4 -> 5.)
     """
     payload = json.loads(_CMP.read_text())
     cold = payload["models"]["cold_coupled"]
     naive = payload["models"]["naive"]
     # The naive model overestimates the firm limit.
     assert naive["firm_ev_count"] > cold["firm_ev_count"]
-    assert cold["firm_ev_count"] == 4
-    assert naive["firm_ev_count"] == 5
-    assert payload["firm_overestimate_percent"] == pytest.approx(25.0)
+    assert cold["firm_ev_count"] == 5
+    assert naive["firm_ev_count"] == 6
+    assert payload["firm_overestimate_percent"] == pytest.approx(20.0)
     # More EV energy on cold days drives it; the P95 curves diverge above n=0.
     assert payload["cold_day_ev_energy_uplift_percent"] > 40.0
     assert cold["cold_day_ev_kwh_per_ev"] > naive["cold_day_ev_kwh_per_ev"]
