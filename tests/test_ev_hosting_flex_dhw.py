@@ -62,9 +62,53 @@ def test_dhw_draws_cluster_at_local_occupancy_hours() -> None:
     by_local = np.zeros(24)
     for p in range(24):
         by_local[(hod0 + p) % 24] = by_pos[p]
-    # evening cluster (local 17-21) is elevated; the daily peak is at a draw hour
+    # evening cluster (local 17-21) is the elevated peak of the continuous profile
     assert by_local[17:22].max() > by_local.mean()
-    assert int(np.argmax(by_local)) in {6, 7, 8, 17, 18, 19, 20, 21}
+    assert 17 <= int(np.argmax(by_local)) <= 21
+
+
+def test_dhw_per_home_diversity_and_energy() -> None:
+    """Per-home jitter diversifies the tanks (a small aggregate is not a clean
+    integer multiple of one tank) while the annual energy stays in the QC band."""
+    idx = pd.date_range("2020-01-01", periods=8760, freq="h")
+    temp = pd.Series(-5.0 + 15.0 * np.sin(np.arange(8760) * 2 * np.pi / 8760), idx)
+    one = dhw_tank_annual(np.random.default_rng(0), 1, temp, res_minutes=15)
+    many = dhw_tank_annual(np.random.default_rng(0), 20, temp, res_minutes=15)
+    # not identical tanks: 20-home trace is not 20x the single (jitter + draws differ)
+    assert not np.allclose(many, 20.0 * one, atol=1.0)
+    per_home_mwh = many.sum() * (15 / 60) / 1000 / 20
+    assert 3.0 <= per_home_mwh <= 6.0, per_home_mwh
+
+
+def test_dhw_deterministic_after_jitter() -> None:
+    """Same rng seed -> byte-identical trace (the added jitter draws are seeded)."""
+    idx = pd.date_range("2020-01-01 19:00", periods=24 * 20, freq="h")
+    temp = pd.Series(np.full(24 * 20, -8.0), idx)
+    a = dhw_tank_annual(np.random.default_rng(5), 4, temp, res_minutes=15)
+    b = dhw_tank_annual(np.random.default_rng(5), 4, temp, res_minutes=15)
+    assert np.array_equal(a, b)
+
+
+def test_dhw_draw_profile_continuous_and_smoother() -> None:
+    """The continuous draw profile has no zero hours, sums to 1, peaks in the
+    evening, and is far smoother (smaller hour-to-hour jumps) than the old
+    sparse DHW_DRAW_WEIGHTS."""
+    from projects.ev_hosting_flex.scripts._annual import dhw_draw_profile
+    from projects.ev_hosting_flex.scripts.config import DHW_DRAW_WEIGHTS
+
+    w = dhw_draw_profile()
+    assert w.shape == (24,)
+    assert (w > 0.0).all()                       # no zero hours
+    assert abs(float(w.sum()) - 1.0) < 1e-9      # normalized
+    assert 17 <= int(np.argmax(w)) <= 21         # evening peak
+    # sparse baseline (old dict) for the relative smoothness comparison
+    sparse = np.zeros(24)
+    for h, v in DHW_DRAW_WEIGHTS.items():
+        sparse[int(h)] = v
+    sparse = sparse / sparse.sum()
+    new_step = float(np.max(np.abs(np.diff(w))))
+    old_step = float(np.max(np.abs(np.diff(sparse))))
+    assert new_step <= 0.6 * old_step, (new_step, old_step)
 
 
 # ── Governed range assertion on the recalibrated base (skipif cache absent) ──

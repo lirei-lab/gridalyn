@@ -34,18 +34,28 @@ from projects.ev_hosting_flex.scripts.config import (
     CALENDAR_HOURS,
     CHARGER_MIX,
     COLD_DAY_TMEAN_C,
+    DHW_BASE_WEIGHT,
     DHW_DAILY_L_MEAN,
     DHW_DAILY_L_MIN,
     DHW_DAILY_L_STD,
-    DHW_DRAW_WEIGHTS,
+    DHW_DEADBAND_JITTER_C,
+    DHW_ELEMENT_JITTER_KW,
     DHW_ELEMENT_KW,
+    DHW_EVENING_AMP,
+    DHW_EVENING_HOUR,
+    DHW_EVENING_SIGMA,
     DHW_INLET_MAX_C,
     DHW_INLET_MIN_C,
+    DHW_MORNING_AMP,
+    DHW_MORNING_HOUR,
+    DHW_MORNING_SIGMA,
     DHW_SEED_SALT,
+    DHW_SETPOINT_JITTER_C,
     DHW_T_AMB,
     DHW_T_LOW,
     DHW_T_SET,
     DHW_TANK_L,
+    DHW_TANK_L_JITTER_L,
     DHW_UA_KW_PER_K,
     DTYPE,
     E_TREF_C,
@@ -437,6 +447,22 @@ def design_day_base_per_home(
     return ordered
 
 
+def dhw_draw_profile() -> np.ndarray:
+    """Return the normalized ``(24,)`` continuous hot-water draw profile by local
+    hour: an all-day baseline plus smooth morning and evening occupancy Gaussians
+    (no zero hours). Replaces the sparse on/off DHW_DRAW_WEIGHTS whose coincident
+    on/off produced an unphysical aggregate step."""
+    h = np.arange(24, dtype=DTYPE)
+    w = (
+        float(DHW_BASE_WEIGHT)
+        + float(DHW_MORNING_AMP)
+        * np.exp(-0.5 * ((h - float(DHW_MORNING_HOUR)) / float(DHW_MORNING_SIGMA)) ** 2)
+        + float(DHW_EVENING_AMP)
+        * np.exp(-0.5 * ((h - float(DHW_EVENING_HOUR)) / float(DHW_EVENING_SIGMA)) ** 2)
+    )
+    return (w / w.sum()).astype(DTYPE)
+
+
 def dhw_tank_annual(
     rng: np.random.Generator,
     n_homes: int,
@@ -483,15 +509,11 @@ def dhw_tank_annual(
         (t_res + 20.0) / 50.0, 0.0, 1.0
     )
 
-    weights = np.zeros(24, dtype=DTYPE)
-    for hour, w in DHW_DRAW_WEIGHTS.items():
-        weights[int(hour)] = float(w)
-    weights = weights / weights.sum()
+    weights = dhw_draw_profile()
 
-    c_tank = float(DHW_TANK_L) * cp / 3600.0  # kWh/K
-    element = float(DHW_ELEMENT_KW)
-    t_set, t_low, t_amb = float(DHW_T_SET), float(DHW_T_LOW), float(DHW_T_AMB)
+    t_amb = float(DHW_T_AMB)
     ua = float(DHW_UA_KW_PER_K)
+    base_deadband = float(DHW_T_SET) - float(DHW_T_LOW)
 
     feeder = np.zeros(n_steps, dtype=DTYPE)
     for _ in range(int(n_homes)):
@@ -499,6 +521,13 @@ def dhw_tank_annual(
             float(DHW_DAILY_L_MIN),
             float(rng.normal(DHW_DAILY_L_MEAN, DHW_DAILY_L_STD)),
         )
+        # per-home tank diversity (fixed draw order for determinism)
+        t_set = float(rng.normal(DHW_T_SET, DHW_SETPOINT_JITTER_C))
+        deadband = max(1.0, float(rng.normal(base_deadband, DHW_DEADBAND_JITTER_C)))
+        t_low = t_set - deadband
+        element = max(1.0, float(rng.normal(DHW_ELEMENT_KW, DHW_ELEMENT_JITTER_KW)))
+        tank_l = max(100.0, float(rng.normal(DHW_TANK_L, DHW_TANK_L_JITTER_L)))
+        c_tank = tank_l * cp / 3600.0  # kWh/K
         tank = t_set
         for k in range(n_steps):
             hod = (hod0 + k // steps_per_hour) % 24
