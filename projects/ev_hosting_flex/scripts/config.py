@@ -1410,6 +1410,9 @@ DHW_UA_KW_PER_K = 0.0025     # standby heat loss (kW/K), well-insulated tank
 DHW_DAILY_L_MEAN = 180.0     # mean daily hot-water draw per home (L)
 DHW_DAILY_L_STD = 30.0       # per-home draw variability (L)
 DHW_DAILY_L_MIN = 60.0       # floor on the per-home daily draw (L)
+# DEPRECATED 2026-07-16 (smooth-occupancy fix): the sparse on/off draw schedule
+# caused a coincident aggregate step. dhw_tank_annual no longer reads this; the
+# continuous dhw_draw_profile() replaces it. Kept for provenance / diff tests.
 DHW_DRAW_WEIGHTS = {         # hour-of-day draw weights (occupancy-clustered)
     6: 0.09, 7: 0.17, 8: 0.11, 12: 0.05,
     17: 0.10, 18: 0.15, 19: 0.14, 20: 0.09, 21: 0.04,
@@ -1448,3 +1451,22 @@ CREDIBILITY_K = 50               # number of realizations
 WEATHER_SIGMA_C = 1.5            # winter-severity anomaly std (deg C, inter-annual)
 CREDIBILITY_WEATHER_SALT = 104729  # RNG salt for the per-realization temp offsets
 CREDIBILITY_EV_SALT = 7919       # EV-fleet seed multiplier per realization
+
+# ── DHW realism: smooth occupancy draw profile + per-home tank diversity ──────
+# The old sparse DHW_DRAW_WEIGHTS (zeros between clusters, identical per home)
+# produced a coincident on/off step -> a near-vertical ramp in the aggregate.
+# Replace it with a continuous occupancy profile (baseline all-day + smooth
+# morning/evening Gaussians) and jitter the tank parameters per home so reheats
+# stagger. Spec 2026-07-16-ev-hosting-flex-dhw-smooth-occupancy. INITIAL values;
+# calibrate_base.py fixes the finals (Task 3).
+DHW_BASE_WEIGHT = 0.15       # all-day baseline draw weight (no zero hours)
+DHW_MORNING_HOUR = 7.0       # morning occupancy peak (local hour)
+DHW_MORNING_SIGMA = 1.6      # morning peak width (h)
+DHW_MORNING_AMP = 1.0        # morning peak amplitude
+DHW_EVENING_HOUR = 19.0      # evening occupancy peak (local hour)
+DHW_EVENING_SIGMA = 2.2      # evening peak width (h)
+DHW_EVENING_AMP = 1.3        # evening peak amplitude
+DHW_SETPOINT_JITTER_C = 2.0  # per-home setpoint std (deg C)
+DHW_DEADBAND_JITTER_C = 1.5  # per-home deadband std (deg C)
+DHW_ELEMENT_JITTER_KW = 0.5  # per-home element-power std (kW)
+DHW_TANK_L_JITTER_L = 30.0   # per-home tank-volume std (L)
