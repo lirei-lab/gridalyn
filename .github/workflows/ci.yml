@@ -39,6 +39,50 @@ jobs:
       - name: Run test suite
         run: python -m pytest -q --durations=15
 
+  projects:
+    # End-to-end contract gate. The governed study outputs are gitignored, so the
+    # reproduce-and-pin tests SKIP in CI — without this job nothing would actually
+    # exercise StudyProject YAML -> Workflow runner -> platform report -> regression
+    # baseline. These six studies run in ~75 s total, so CI can prove the whole
+    # contract end-to-end on every push. (The research studies — ev_hosting_flex,
+    # flexibility_cls, admm_thermal_consensus — are far too heavy for CI: their
+    # baselines stay operator-verified, see docs/projects/.)
+    name: Governed project contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package with dev extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run fast governed studies and verify their baselines
+        run: |
+          set -euo pipefail
+          for project in \
+            minimal_grid_project \
+            synthetic_geojson_feeder \
+            ieee_33_bus_demo \
+            der_voltage_optimization \
+            prosumer_battery_market \
+            rl_voltage_control_lightsim
+          do
+            echo "::group::${project}"
+            python -m gridalyn.interfaces.cli.project run "projects/${project}"
+            python -m gridalyn.interfaces.cli.project regression "projects/${project}"
+            echo "::endgroup::"
+          done
+
   lint:
     # Lints only the files changed in the pull request, mirroring the local
     # pre-commit hook behavior; the full tree does not yet pass all hooks.
