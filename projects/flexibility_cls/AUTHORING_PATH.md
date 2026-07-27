@@ -29,12 +29,22 @@ into `gridalyn.operations.flexibility` / `gridalyn.operations.market` or any
 concept submodule. The `tests/test_study_facade_boundaries.py` (D-04) guard
 locks this facade-only rule for all study code.
 
-The descriptions below trace what the facade does **internally** — this is
-`cls_market.py` plumbing that is **interior to the facade, not study-facing**.
-The legacy `gridalyn/operations/flexibility/` and `gridalyn/operations/market/`
-packages still exist as quiet deprecation shims (deletion is Phase 5 / CLEAN-02);
-they are not removed by this migration. In
-`gridalyn/operations/flexibility/cls_market.py` (interior plumbing):
+The descriptions below trace what the facade does **internally** — plumbing that
+is **interior to the facade, not study-facing**.
+
+> **UPDATE (2026-07-17):** the consolidation completed. The legacy
+> `gridalyn/operations/flexibility/` and `gridalyn/operations/market/` packages
+> (described below as "quiet deprecation shims" pending Phase-5 deletion)
+> **no longer exist** — `gridalyn/operations/` now holds `clearing/`,
+> `settlement.py`, `contracts.py`, `constraints.py`, `replay.py`, `runs.py` and
+> friends. The line-number citations below refer to the deleted
+> `cls_market.py` and are kept only as a historical record of what the facade
+> replaced; do not treat them as navigable paths. `BuildingAggregator`, for
+> example, now lives in `gridalyn/operations/clearing/engine_mode.py`. The
+> facade-only rule and its guard (`tests/test_study_facade_boundaries.py`)
+> remain in force.
+
+Historical record — in the (now deleted) `cls_market.py`:
 
 - `:17` `from gridalyn.operations.market.dso_dispatch import DSODispatcher`
 - `:18` `from gridalyn.operations.market.engine import MarketSimulationEngine`
