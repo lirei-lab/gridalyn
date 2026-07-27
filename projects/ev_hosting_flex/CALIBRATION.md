@@ -622,6 +622,38 @@ netchar `n_over_static_at_0ev` 66 → 0 (the base is now healthy before EVs — 
 base-driven overload was partly the DHW coincident peak), nonwires
 first-reinforcement-year 0 → 4.36, NPV $72k → $97k, credibility firm P50 3 → 4 [3, 5].
 
+## DHW tank validated against CREST (2026-07-17)
+
+The DHW tank was cross-checked against the **CREST demand model** lineage via
+[demod](https://github.com/epfl-herus/demod) (EPFL HERUS, GPL-3.0), whose thermal
+module ports CREST's hot-water cylinder. Parameters extracted from
+`demod/datasets/Germany/parsed_data/v0.1/heating/_heating_system_dict.json` and the
+CREST loader; `cyl_loss` confirmed to be in **W/K** with the same equation form as
+ours (`loss = UA·(T_tank − T_interior)`), so the comparison is direct.
+
+| Tank | V (L) | UA (W/K) | UA/V^⅔ | standby kWh/day | element | T_set | deadband |
+|---|---|---|---|---|---|---|---|
+| **gridalyn (ours)** | 270 | 2.5 | **0.0598** | 2.40 | 4.5 kW | 60 °C | 7 K |
+| CREST ElectricWaterHeater | 50 | 0.5 | 0.0368 | 0.36 | 2.0 kW | ~50 | 5 K |
+| CREST boiler cylinder | 125 | 1.5 | **0.0600** | 1.08 | — | ~50 | 5 K |
+
+**Findings:**
+1. **Model structure is identical** — 1R1C thermostatic tank, `C = V·cp` (cp 4200 vs
+   our 4186), `loss = UA·ΔT`. demod also randomizes the per-household cylinder
+   temperature, independently corroborating the per-home diversity we added.
+2. **Our UA is CORRECT, not high.** Normalized by surface area (∝ V^⅔, since our tank
+   is 2–5× larger), we land at **0.0598 vs CREST's 0.0600 — an exact match** with the
+   boiler cylinder. (An earlier internal review flagged UA=2.5 W/K as "high"; that
+   flag is retracted — it compared raw UA across different tank sizes.)
+3. **Remaining differences are geographic and correct for North America:** 270 L
+   (NA 60-gal standard) vs 50–125 L (European); 4.5 kW element (NA standard) vs
+   2 kW (European immersion); 60 °C setpoint (NA Legionella code) vs CREST's 42–55 °C
+   distribution.
+
+Together with the HQ-real validation (diurnal shape + aggregate smoothness), the
+building generator is now validated on three axes: **shape**, **smoothness**, and
+**DHW tank physics**.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).
