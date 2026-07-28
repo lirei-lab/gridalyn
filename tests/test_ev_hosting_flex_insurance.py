@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json  # noqa: F401  (governed reproduce-and-pin tests)
+import json
 
 import numpy as np
-import pytest  # noqa: F401  (governed reproduce-and-pin tests)
+import pytest
 
 
 def test_realization_insurance_shapes_and_shortfall() -> None:
@@ -59,3 +59,56 @@ def test_aggregate_insurance_risk_curve_and_costs() -> None:
         assert abs(cov + agg["residual_risk_by_adoption"][i] - 1.0) < 1e-9
         assert agg["flex_viable_by_adoption"][i] == (cov >= 0.95)
         assert agg["expected_cost_flex_by_adoption"][i] >= 0.0
+
+
+# ─── Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+from projects.ev_hosting_flex.scripts.config import PROJECT_OUTPUTS_DIR  # noqa: E402
+
+_INS = PROJECT_OUTPUTS_DIR / "json" / "cold_insurance.json"
+_CRED = PROJECT_OUTPUTS_DIR / "json" / "credibility.json"
+_REPORT = PROJECT_OUTPUTS_DIR / "reports" / "cold_insurance_report.json"
+_SKIP = "cold_insurance.json absent; run analyze_cold_insurance.py first (gitignored)"
+
+
+@pytest.mark.skipif(not _INS.is_file(), reason=_SKIP)
+def test_governed_firm_distribution_matches_credibility() -> None:
+    """CONSISTENCY GUARD: this study and analyze_credibility share seeds, so they
+    must report the SAME firm distribution. Two studies in one project cannot
+    disagree about the hosting capacity."""
+    ins = json.loads(_INS.read_text())
+    if not _CRED.is_file():
+        pytest.skip("credibility.json absent")
+    cred = json.loads(_CRED.read_text())
+    assert sorted(ins["firm_samples"]) == sorted(
+        int(v) for v in cred["samples"]["firm"]
+    )
+
+
+@pytest.mark.skipif(not _INS.is_file(), reason=_SKIP)
+def test_governed_cold_insurance() -> None:
+    """Risk curve rises with adoption; coverage and residual risk are consistent;
+    the flexibility cost grows with the number of contracted EVs."""
+    p = json.loads(_INS.read_text())
+    risk = p["activation_frequency_by_adoption"]
+    assert risk == sorted(risk), risk
+    target = float(p["reliability_target"])
+    for i in range(len(p["adoption_grid"])):
+        cov = p["coverage_by_adoption"][i]
+        assert abs(cov + p["residual_risk_by_adoption"][i] - 1.0) < 1e-6
+        assert p["flex_viable_by_adoption"][i] == (cov >= target)
+    cf = p["expected_cost_flex_by_adoption"]
+    assert cf == sorted(cf), "flex cost must grow with contracted EVs"
+    assert p["firm_p05"] <= p["firm_p50"] <= p["firm_p95"]
+
+
+@pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)
+def test_governed_cold_insurance_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing {field_name}"
+    for key in ("p_short_at_ref", "coverage_at_ref", "crossover_adoption",
+                "short_years_if_plan_p50"):
+        assert key in report["summary"], sorted(report["summary"])

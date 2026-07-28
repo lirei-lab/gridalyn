@@ -116,6 +116,22 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/credibility.png
         - projects/ev_hosting_flex/outputs/reports/credibility_report.json
 
+    - id: analyze_cold_insurance
+      needs: [generate_annual_mc, analyze_credibility]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/cold_insurance.json
+        - projects/ev_hosting_flex/outputs/figures/cold_insurance.png
+        - projects/ev_hosting_flex/outputs/reports/cold_insurance_report.json
+
     # ── Stage 6c: cold-coupling comparison (the study's lead finding) ────────
     # Does a naive (cold-agnostic) EV model overestimate winter hosting? Re-runs
     # firm/flexible/curtailment on a naive counterfactual pool vs the governed
