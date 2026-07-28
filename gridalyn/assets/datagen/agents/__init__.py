@@ -1,4 +1,18 @@
-"""Synthetic building and EV agents used by data-generation workflows."""
+"""Synthetic building, hot-water and EV agents used by data-generation workflows.
+
+Two distinct kinds of agent live here:
+
+* **Actuators** carry state and respond to control signals — :class:`EVCharger`
+  tracks state of charge and honours a curtailment cap. Use them for control
+  and market studies.
+* **Profile generators** answer "what does a population draw?" in one call —
+  :func:`make_cold_coupled_ev_fleet`, :func:`make_dhw_tank_fleet`. Use them to
+  build realistic baseline load.
+
+Do not use an actuator as a stand-in for a generator: :class:`EVCharger`
+spreads each session evenly over the plugged window, which pre-flattens the
+peak a flexibility study is trying to measure.
+"""
 
 from gridalyn.assets.datagen.agents.buildings import Building
 from gridalyn.assets.datagen.agents.dhw import (
