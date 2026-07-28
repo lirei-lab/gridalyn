@@ -98,3 +98,35 @@ MIN_AGGREGATOR_COST = PAPER_CONFIG["market"]["min_aggregator_cost"]
 MAX_AGGREGATOR_COST = PAPER_CONFIG["market"]["max_aggregator_cost"]
 PAY_FULL_BLOCK = PAPER_CONFIG["market"]["pay_full_block"]
 EV_CHARGER_KW = PAPER_CONFIG["ev"]["charger_kw"]
+
+# ---------------------------------------------------------------------------
+# Québec all-electric load calibration (2026-07-28)
+#
+# The SDK building defaults (R_MEAN = 11.0, P_HEAT_MAX_KW = 8.0, no hot-water
+# tank) produced 5.89 kW/home at -23 C — 41 % below the floor of the
+# Hydro-Québec 10-15 kW design band, and below the 8.8 kW/home that real HQ
+# feeders measure. These values port the archetype validated in
+# `projects/ev_hosting_flex/CALIBRATION.md` on three axes: diurnal shape and
+# aggregate smoothness against the real HQ 1000-home dataset, and tank physics
+# against the CREST lineage.
+# ---------------------------------------------------------------------------
+
+R_QUEBEC_CLS = 7.5
+"""Thermal resistance (°C/kW) of a Québec all-electric dwelling."""
+
+P_HEAT_QUEBEC_CLS = 13.0
+"""Installed electric-heating capacity (kW) — baseboard plinthes."""
+
+BG_SCALE_CLS = 0.6
+"""ARX background scale.
+
+The SDK background trace already contains an implicit hot-water component.
+With the explicit DHW tank added, the background is scaled down so hot water
+is not counted twice.
+"""
+
+DHW_SEED_SALT_CLS = 991
+"""RNG salt so the DHW draws are independent of the building seed."""
+
+EV_SEED_SALT_CLS = 617
+"""RNG salt so the EV draws are independent of the building and DHW seeds."""
