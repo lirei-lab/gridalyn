@@ -1470,3 +1470,16 @@ DHW_SETPOINT_JITTER_C = 2.0  # per-home setpoint std (deg C)
 DHW_DEADBAND_JITTER_C = 1.5  # per-home deadband std (deg C)
 DHW_ELEMENT_JITTER_KW = 0.5  # per-home element-power std (kW)
 DHW_TANK_L_JITTER_L = 30.0   # per-home tank-volume std (L)
+
+# ── Cold-tail insurance study (analyze_cold_insurance) ───────────────────────
+# Hosting capacity is a DISTRIBUTION under winter-severity uncertainty (the
+# credibility layer found firm = {2:1, 3:10, 4:20, 5:18, 6:1} over K=50, i.e.
+# planning at the point estimate leaves the feeder short ~22 % of years). This
+# study prices flexibility as INSURANCE against that cold tail and compares it to
+# reinforcement AT AN EQUAL RELIABILITY TARGET. Spec
+# 2026-07-28-ev-hosting-flex-cold-tail-insurance. Reuses the credibility seeds
+# (CREDIBILITY_K / WEATHER_SIGMA_C / CREDIBILITY_WEATHER_SALT /
+# CREDIBILITY_EV_SALT) so the two studies share one firm distribution.
+INSURANCE_ADOPTION_GRID = tuple(range(1, 13))  # target EV counts on the 6-home feeder
+INSURANCE_RELIABILITY_TARGET = 0.95  # both strategies must cover >= 95 % of years
+INSURANCE_REF_ADOPTION = 6           # 1 EV/home on the governed feeder (pin reference)
