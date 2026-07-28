@@ -654,6 +654,41 @@ Together with the HQ-real validation (diurnal shape + aggregate smoothness), the
 building generator is now validated on three axes: **shape**, **smoothness**, and
 **DHW tank physics**.
 
+## Cold-tail insurance study — knobs and headline (2026-07-28)
+
+`analyze_cold_insurance` prices flexibility as insurance against the cold tail of
+the hosting-capacity distribution. It reuses the **credibility seeds verbatim**
+(`CREDIBILITY_K`, `WEATHER_SIGMA_C`, `CREDIBILITY_WEATHER_SALT`,
+`CREDIBILITY_EV_SALT`) so both studies report one firm distribution — enforced by
+`test_governed_firm_distribution_matches_credibility`.
+
+**Knobs:** `INSURANCE_ADOPTION_GRID` = 1..12 EVs on the 6-home feeder,
+`INSURANCE_RELIABILITY_TARGET = 0.95` (BOTH strategies must cover ≥95 % of years;
+they are compared on cost), `INSURANCE_REF_ADOPTION = 6` (1 EV/home).
+Costs reuse the illustrative `C_AVAIL_EV_YR = 80`, `C_A_CURTAIL = 0.5` and
+`TRAFO_CAPEX_PER_KVA = 107`.
+
+**Part 1 — capacity is a distribution:** firm = {2:1, 3:10, 4:20, 5:18, 6:1} over
+K=50, P5/P50/P95 = 3/4/5. Planning at the P50 leaves the feeder short **22 %** of
+years; at the P5, 2 %. `corr(winter severity, firm) = +0.42` — the spread is
+weather, not sampling noise.
+
+**Part 2 — insurance vs reinforcement at equal reliability:**
+
+| target adoption | P(short) | coverage | flex $/yr | reinforce $/yr | kVA needed |
+|---|---|---|---|---|---|
+| 1–3 | ≤0.02 | 1.00 | 80–241 | 0 (present unit) | 75 |
+| 4 | 0.22 | 1.00 | 323 | 696 | 100 |
+| **6 (ref)** | **0.98** | **1.00** | **499** | **696** | 100 |
+| 8 (crossover) | 1.00 | 1.00 | 704 | 696 | 100 |
+| 12 | 1.00 | 1.00 | 1277 | 1162 | 167 |
+
+**Reading:** there is a **window (4–7 EVs)** where flexibility-as-insurance is
+cheaper than reinforcing at the same reliability. The crossover is **8 EVs**
+(1.33 EV/home). Coverage never drops below 100 %, so flexibility fails on **cost**,
+never on reliability (`flex_viability_limit_adoption` is null — a finding, left
+unpinned). Reinforcement is lumpy (ladder rungs) while insurance scales smoothly.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).

@@ -25,6 +25,17 @@ The study follows a deliberate arc — *diagnosis before solutions*:
    transformers plus the N-1 substation bank.
 4. **Credibility.** Confidence intervals on the citable headlines over K=50
    realizations spanning seeds and winter severity.
+5. **Cold-tail insurance** — the study the others were building toward, and the
+   answer to *why flexibility matters if the network is robust at the median*:
+    - **Hosting capacity is a distribution, not a number.** Planning at the P50
+      leaves the feeder short **22 % of years**; the spread is weather
+      (corr(severity, firm) = +0.42), not sampling noise.
+    - **Flexibility is priced as insurance** against that cold tail and compared to
+      reinforcement **at an equal 95 % reliability target**. There is a window —
+      **4–7 EVs** — where insurance is cheaper. At 1 EV/home the feeder falls short
+      98 % of years, yet flexibility covers **100 %** of them for **$499/yr vs
+      $696/yr** to reinforce. The **crossover is 8 EVs**; beyond it, reinforce.
+    - Flexibility never fails on *reliability* here — only on *cost*.
 
 ## Why It Is Defensible
 
