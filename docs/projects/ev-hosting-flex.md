@@ -33,9 +33,13 @@ The study follows a deliberate arc — *diagnosis before solutions*:
     - **Flexibility is priced as insurance** against that cold tail and compared to
       reinforcement **at an equal 95 % reliability target**. There is a window —
       **4–7 EVs** — where insurance is cheaper. At 1 EV/home the feeder falls short
-      98 % of years, yet flexibility covers **100 %** of them for **$499/yr vs
-      $696/yr** to reinforce. The **crossover is 8 EVs**; beyond it, reinforce.
-    - Flexibility never fails on *reliability* here — only on *cost*.
+      98 % of years, yet flexibility covers **100 %** of them for **$503/yr vs
+      $696/yr** to reinforce. The **crossover is 8 EVs** (7 under the project's
+      other CAPEX anchor); beyond it, reinforce.
+    - Coverage is an **energy-service** criterion: the backstop always holds the
+      transformer, so what can fail is denied charging — which peaks at 2.1 % and is
+      **priced into** the flex cost, so the comparison is like-for-like.
+    - Flexibility therefore fails on *cost*, never on *reliability*.
 
 ## Why It Is Defensible
 

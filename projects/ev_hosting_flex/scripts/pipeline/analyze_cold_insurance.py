@@ -4,9 +4,15 @@ Part 1 (methodological): under winter-severity uncertainty the firm hosting coun
 is a DISTRIBUTION, not a number, so a point estimate leaves the feeder short in a
 measurable fraction of years. Part 2 (economic): to host a target adoption, compare
 REINFORCING (upgrade the transformer so firm >= A in >=95 % of years, paid every
-year) against FLEXIBILITY INSURANCE (availability every year + activation only in
-the cold years that fall short) -- at the SAME reliability target, reporting where
-flexibility stops being cheaper AND where it stops being viable at all.
+year) against FLEXIBILITY INSURANCE (availability every year + expected activation
++ the value of the charging it denies) -- reporting where flexibility stops being
+cheaper AND where it stops being viable at all.
+
+Two honesty notes baked into the code: (a) coverage is an ENERGY-service test, not
+a congestion one -- with full enrollment the backstop always holds the transformer,
+so what can fail is how much charging it had to deny; (b) the denied energy is
+priced at C_RETAIL_KWH so the comparison is like-for-like, because reinforcement
+delivers 100 % of the EV energy and flexibility does not.
 
 Reuses the credibility seeds and winter anomalies verbatim, so the two studies
 share one firm distribution (guarded by a consistency test). No SDK edit.
@@ -43,11 +49,13 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ANNUAL_RES_MINUTES,
+    CAPEX_UPGRADE,
     CREDIBILITY_EV_SALT,
     CREDIBILITY_K,
     CREDIBILITY_WEATHER_SALT,
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
+    C_RETAIL_KWH,
     DISCOUNT_RATE,
     DTYPE,
     INSURANCE_ADOPTION_GRID,
@@ -95,15 +103,17 @@ def realization_insurance(
     adoption: whether the year falls short, whether flexibility covers it, and the
     curtailment energy the cover would cost.
 
-    A year is COVERED when curtailment holds residual congestion at the base floor
-    AND the curtailed EV-energy fraction stays within ``NONWIRES_CURTAIL_TOLERANCE``.
-    Years with no shortfall are covered trivially.
+    A year is COVERED when the curtailed EV-energy fraction stays within
+    ``NONWIRES_CURTAIL_TOLERANCE``. Note precisely what this does and does NOT
+    mean: with FULL enrollment the backstop can always hold the transformer under
+    its rating (there is no un-enrolled EV draw left to spill), so the congestion
+    side is satisfied *by construction* and is not a discriminating test. What can
+    fail is the ENERGY side — how much charging the backstop had to deny. Coverage
+    is therefore an **energy-service** criterion, not a congestion one.
+
+    ``rung_ratings[0]`` is the present rating, so ``firm_by_rung[0]`` IS the
+    present-rating firm count and is reused rather than recomputed.
     """
-    firm = int(
-        firm_annual(base, pool, rating, tday, hod0=hod0, res_minutes=res)[
-            "firm_ev_count"
-        ]
-    )
     firm_by_rung = [
         int(
             firm_annual(base, pool, float(rr), tday, hod0=hod0, res_minutes=res)[
@@ -112,9 +122,11 @@ def realization_insurance(
         )
         for rr in rung_ratings
     ]
+    firm = int(firm_by_rung[0])
     shortfall: list[bool] = []
     covered: list[bool] = []
     curtailed_kwh: list[float] = []
+    curtailed_frac: list[float] = []
     for a in adoption_grid:
         n = min(int(a), int(pool.shape[0]))
         out = simulate_curtailment(
@@ -123,20 +135,43 @@ def realization_insurance(
         ck = float(np.sum(out["curtailed_kwh_by_ev"]))
         total_ev_kwh = float(np.sum(pool[:n])) * (res / 60.0)
         frac = ck / total_ev_kwh if total_ev_kwh > 0.0 else 0.0
-        ok = bool(
-            float(out["residual_hours"]) <= float(out["base_floor_hours"]) + 1e-9
-            and frac <= float(NONWIRES_CURTAIL_TOLERANCE)
-        )
         shortfall.append(bool(firm < int(a)))
-        covered.append(ok)
+        covered.append(bool(frac <= float(NONWIRES_CURTAIL_TOLERANCE)))
         curtailed_kwh.append(ck)
+        curtailed_frac.append(frac)
     return {
         "firm": firm,
         "firm_by_rung": firm_by_rung,
         "shortfall": shortfall,
         "covered": covered,
         "curtailed_kwh": curtailed_kwh,
+        "curtailed_frac": curtailed_frac,
     }
+
+
+def _reinforcement_for_adoption(
+    firm_rung: np.ndarray,
+    rung_kvas: list[float],
+    adoption: int,
+    target: float,
+    crf: float,
+) -> tuple[float | None, float | None]:
+    """Smallest ladder rung reaching ``firm >= adoption`` in >= ``target`` of the
+    realizations, and its annualized cost.
+
+    Returns ``(kva, cost)`` where ``cost`` is ``0.0`` when the PRESENT unit already
+    suffices (nothing to buy) and ``(None, None)`` when no rung on the ladder
+    reaches the target.
+    """
+    for j, kva in enumerate(rung_kvas):
+        if float((firm_rung[:, j] >= adoption).mean()) >= target:
+            if float(kva) <= float(TRANSFORMER_KVA):
+                return float(kva), 0.0
+            return (
+                float(kva),
+                round(float(TRAFO_CAPEX_PER_KVA) * float(kva) * crf, ROUND_DECIMALS),
+            )
+    return None, None
 
 
 def aggregate_insurance(
@@ -155,15 +190,30 @@ def aggregate_insurance(
     if no rung reaches it, the entry is ``None`` (off the ladder).
 
     Strategy F (flexibility insurance): availability for A contracted EVs every
-    year, plus activation energy only in the years that fall short.
+    year, PLUS the expected activation cost, PLUS the value of the charging the
+    backstop denies.
+
+    That last term is what makes the comparison like-for-like. Reinforcement
+    delivers 100 % of the EV energy; flexibility buys its cheaper headline by
+    denying some charging. Pricing the denied energy at ``C_RETAIL_KWH`` puts both
+    strategies on the same service basis, so the cost comparison is not an artifact
+    of one strategy quietly delivering less. ``unserved_value`` is reported
+    separately so the size of that concession stays visible.
+
+    ``activation_frequency`` is a PLANNING statistic — the fraction of years whose
+    firm count falls below the target adoption. It is deliberately NOT the driver
+    of the activation cost, which is the expected curtailment over ALL years
+    (real-time overload does not coincide exactly with the P95 planning rule).
     """
     shortfall = np.array([r["shortfall"] for r in rows], dtype=bool)      # (K, A)
     covered = np.array([r["covered"] for r in rows], dtype=bool)          # (K, A)
     ck = np.array([r["curtailed_kwh"] for r in rows], dtype=DTYPE)        # (K, A)
+    cfrac = np.array([r["curtailed_frac"] for r in rows], dtype=DTYPE)    # (K, A)
     firm_rung = np.array([r["firm_by_rung"] for r in rows], dtype=DTYPE)  # (K, R)
 
     activation, coverage, residual, viable = [], [], [], []
     cost_flex, cost_reinforce, kva_required = [], [], []
+    unserved_value, mean_curtailed_frac = [], []
     for i, a in enumerate(adoption_grid):
         act = float(shortfall[:, i].mean())
         cov = float(covered[:, i].mean())
@@ -171,31 +221,23 @@ def aggregate_insurance(
         coverage.append(round(cov, ROUND_DECIMALS))
         residual.append(round(1.0 - cov, ROUND_DECIMALS))
         viable.append(bool(cov >= float(target)))
+        mean_ck = float(ck[:, i].mean())
+        unserved = float(C_RETAIL_KWH) * mean_ck
+        unserved_value.append(round(unserved, ROUND_DECIMALS))
+        mean_curtailed_frac.append(round(float(cfrac[:, i].mean()), ROUND_DECIMALS))
         cost_flex.append(
             round(
                 float(C_AVAIL_EV_YR) * int(a)
-                + float(C_A_CURTAIL) * float(ck[:, i].mean()),
+                + float(C_A_CURTAIL) * mean_ck
+                + unserved,
                 ROUND_DECIMALS,
             )
         )
-        # Strategy R: smallest rung reaching the reliability target at this adoption
-        chosen_kva: float | None = None
-        for j, kva in enumerate(rung_kvas):
-            if float((firm_rung[:, j] >= int(a)).mean()) >= float(target):
-                chosen_kva = float(kva)
-                break
+        chosen_kva, cost_r = _reinforcement_for_adoption(
+            firm_rung, rung_kvas, int(a), float(target), float(crf)
+        )
         kva_required.append(chosen_kva)
-        if chosen_kva is None:
-            cost_reinforce.append(None)                     # off the ladder
-        elif chosen_kva <= float(TRANSFORMER_KVA):
-            cost_reinforce.append(0.0)                      # present unit suffices
-        else:
-            cost_reinforce.append(
-                round(
-                    float(TRAFO_CAPEX_PER_KVA) * chosen_kva * float(crf),
-                    ROUND_DECIMALS,
-                )
-            )
+        cost_reinforce.append(cost_r)
 
     # The two limits of insurance
     crossover = None
@@ -210,6 +252,18 @@ def aggregate_insurance(
             viability_limit = int(a)
             break
 
+    # Sensitivity: the crossover is an INTEGER and the project carries a second,
+    # flatter reinforcement anchor (pilar-1's CAPEX_UPGRADE, a per-upgrade lump
+    # rather than TRAFO_CAPEX_PER_KVA x the new rung's full kVA). Recompute the
+    # crossover under it so the headline's fragility is visible rather than implied.
+    alt_annual = float(CAPEX_UPGRADE) * float(crf)
+    crossover_flat_capex = None
+    for i, a in enumerate(adoption_grid):
+        cr = cost_reinforce[i]
+        if cr is not None and cr > 0.0 and viable[i] and cost_flex[i] >= alt_annual:
+            crossover_flat_capex = int(a)
+            break
+
     return {
         "adoption_grid": [int(a) for a in adoption_grid],
         "activation_frequency_by_adoption": activation,
@@ -219,7 +273,11 @@ def aggregate_insurance(
         "expected_cost_flex_by_adoption": cost_flex,
         "expected_cost_reinforce_by_adoption": cost_reinforce,
         "kva_required_by_adoption": kva_required,
+        "unserved_value_by_adoption": unserved_value,
+        "mean_curtailed_frac_by_adoption": mean_curtailed_frac,
         "crossover_adoption": crossover,
+        "crossover_adoption_flat_capex": crossover_flat_capex,
+        "reinforce_annual_flat_capex": round(alt_annual, ROUND_DECIMALS),
         "flex_viability_limit_adoption": viability_limit,
     }
 
@@ -239,6 +297,14 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
         float(x) for x in TRANSFORMER_KVA_LADDER if x >= float(TRANSFORMER_KVA)
     ]
     rung_ratings = [kva * float(POWER_FACTOR) for kva in rung_kvas]
+
+    if max(grid) > int(POOL_MAX_ANNUAL):
+        raise ValueError(
+            f"INSURANCE_ADOPTION_GRID tops out at {max(grid)} but the EV pool holds "
+            f"only {POOL_MAX_ANNUAL}; the physics would silently clamp while the "
+            "availability premium kept rising. Remediation: raise POOL_MAX_ANNUAL "
+            "or lower the grid."
+        )
 
     rows: list[dict[str, Any]] = []
     for r in range(k):
@@ -288,7 +354,13 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
     )
 
     ref = int(INSURANCE_REF_ADOPTION)
-    ref_i = grid.index(ref) if ref in grid else len(grid) - 1
+    if ref not in grid:
+        raise ValueError(
+            f"INSURANCE_REF_ADOPTION={ref} is not in INSURANCE_ADOPTION_GRID={grid}; "
+            "every *_at_ref metric would be mislabelled. Remediation: put the "
+            "reference adoption on the grid."
+        )
+    ref_i = grid.index(ref)
     payload = {
         "k": k,
         "weather_sigma_c": float(WEATHER_SIGMA_C),

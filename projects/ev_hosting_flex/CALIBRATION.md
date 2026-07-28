@@ -675,19 +675,42 @@ weather, not sampling noise.
 
 **Part 2 — insurance vs reinforcement at equal reliability:**
 
-| target adoption | P(short) | coverage | flex $/yr | reinforce $/yr | kVA needed |
-|---|---|---|---|---|---|
-| 1–3 | ≤0.02 | 1.00 | 80–241 | 0 (present unit) | 75 |
-| 4 | 0.22 | 1.00 | 323 | 696 | 100 |
-| **6 (ref)** | **0.98** | **1.00** | **499** | **696** | 100 |
-| 8 (crossover) | 1.00 | 1.00 | 704 | 696 | 100 |
-| 12 | 1.00 | 1.00 | 1277 | 1162 | 167 |
+| target adoption | P(short) | coverage | flex $/yr | of which unserved | mean curtailed | reinforce $/yr | kVA |
+|---|---|---|---|---|---|---|---|
+| 1–3 | ≤0.02 | 1.00 | 80–241 | ≤$0.20 | 0.0 % | 0 (present unit) | 75 |
+| 4 | 0.22 | 1.00 | 324 | $0.58 | 0.1 % | 696 | 100 |
+| **6 (ref)** | **0.98** | **1.00** | **503** | **$3.77** | **0.2 %** | **696** | 100 |
+| 8 (crossover) | 1.00 | 1.00 | 717 | $12.86 | 0.6 % | 696 | 100 |
+| 12 | 1.00 | 1.00 | 1340 | $63.29 | 2.1 % | 1162 | 167 |
 
 **Reading:** there is a **window (4–7 EVs)** where flexibility-as-insurance is
-cheaper than reinforcing at the same reliability. The crossover is **8 EVs**
-(1.33 EV/home). Coverage never drops below 100 %, so flexibility fails on **cost**,
-never on reliability (`flex_viability_limit_adoption` is null — a finding, left
-unpinned). Reinforcement is lumpy (ladder rungs) while insurance scales smoothly.
+cheaper than reinforcing. The crossover is **8 EVs** (1.33 EV/home).
+
+**Two honesty corrections applied after adversarial review — read these before
+citing the headline:**
+
+1. **Coverage is an ENERGY-service test, not a congestion one.** With full
+   enrollment the backstop can always hold the transformer under its rating (no
+   un-enrolled EV draw is left to spill), so the congestion clause is satisfied *by
+   construction*. What can fail is how much charging the backstop denies. Coverage
+   stays 100 % because the mean curtailed fraction never exceeds **2.1 %** — far
+   inside the 10 % tolerance. So flexibility fails on **cost**, never on
+   reliability (`flex_viability_limit_adoption` is null — a finding, left unpinned).
+2. **The comparison is made like-for-like by pricing the denied charging.**
+   Reinforcement delivers 100 % of the EV energy; flexibility does not. The flex
+   cost therefore includes the unserved energy at `C_RETAIL_KWH`, reported
+   separately above so the concession stays visible. It is small ($3.77 of $503 at
+   the reference) — which is what makes the cheaper headline defensible rather than
+   an artifact of delivering less.
+
+**Headline fragility (disclosed):** the crossover is an integer and the project
+carries two reinforcement anchors. At `TRAFO_CAPEX_PER_KVA × the new rung`
+(used here) it is **8 EVs**; at pilar-1's flat `CAPEX_UPGRADE = 8000` it is
+**7 EVs** (`crossover_adoption_flat_capex`). The window exists under both; its
+right edge moves by one rung.
+
+Reinforcement is lumpy (ladder rungs) while insurance scales smoothly — that shape,
+and the activation frequency, are the robust results; the dollars are illustrative.
 
 ## Sources
 

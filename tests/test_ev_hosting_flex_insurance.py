@@ -36,20 +36,25 @@ def test_realization_insurance_shapes_and_shortfall() -> None:
 
 def test_aggregate_insurance_risk_curve_and_costs() -> None:
     """The risk curve is non-decreasing in adoption, coverage and residual risk
-    sum to 1, and flex viability is exactly coverage >= target."""
+    sum to 1, flex viability is exactly coverage >= target, and the reinforcement
+    ladder / headline definitions behave as specified."""
     from projects.ev_hosting_flex.scripts.pipeline.analyze_cold_insurance import (
         aggregate_insurance,
     )
 
     grid = [1, 2, 3]
-    # three realizations with firm 1, 2, 3 -> P(firm<A) rises with A
+    # three realizations with firm 1, 2, 3 -> P(firm<A) rises with A.
+    # firm_by_rung: index 0 is the PRESENT rung (75 kVA), index 1 an upgrade.
     rows = [
         {"firm": 1, "firm_by_rung": [1, 3], "shortfall": [False, True, True],
-         "covered": [True, True, False], "curtailed_kwh": [0.0, 10.0, 40.0]},
+         "covered": [True, True, False], "curtailed_kwh": [0.0, 10.0, 40.0],
+         "curtailed_frac": [0.0, 0.02, 0.20]},
         {"firm": 2, "firm_by_rung": [2, 3], "shortfall": [False, False, True],
-         "covered": [True, True, True], "curtailed_kwh": [0.0, 0.0, 20.0]},
+         "covered": [True, True, True], "curtailed_kwh": [0.0, 0.0, 20.0],
+         "curtailed_frac": [0.0, 0.0, 0.05]},
         {"firm": 3, "firm_by_rung": [3, 3], "shortfall": [False, False, False],
-         "covered": [True, True, True], "curtailed_kwh": [0.0, 0.0, 0.0]},
+         "covered": [True, True, True], "curtailed_kwh": [0.0, 0.0, 0.0],
+         "curtailed_frac": [0.0, 0.0, 0.0]},
     ]
     agg = aggregate_insurance(rows, grid, [75.0, 100.0], 0.95, 0.065)
     risk = agg["activation_frequency_by_adoption"]
@@ -59,6 +64,26 @@ def test_aggregate_insurance_risk_curve_and_costs() -> None:
         assert abs(cov + agg["residual_risk_by_adoption"][i] - 1.0) < 1e-9
         assert agg["flex_viable_by_adoption"][i] == (cov >= 0.95)
         assert agg["expected_cost_flex_by_adoption"][i] >= 0.0
+
+    # Reinforcement ladder: at A=1 every realization already reaches firm>=1 on the
+    # PRESENT rung -> nothing to buy; at A=2,3 the present rung misses the 95 %
+    # target so the upgrade rung is chosen and costs money.
+    assert agg["kva_required_by_adoption"][0] == 75.0
+    assert agg["expected_cost_reinforce_by_adoption"][0] == 0.0
+    assert agg["kva_required_by_adoption"][1] == 100.0
+    assert agg["expected_cost_reinforce_by_adoption"][1] > 0.0
+
+    # Headlines: the viability limit is the first adoption whose coverage falls
+    # below the target (A=3 here, coverage 2/3).
+    assert agg["flex_viability_limit_adoption"] == 3
+    # The crossover only considers adoptions that need reinforcement AND where
+    # flexibility is still viable; it is None when flexibility never costs more.
+    co = agg["crossover_adoption"]
+    assert co is None or co in grid
+
+    # Denied charging is priced and reported separately so the concession is visible.
+    assert all(v >= 0.0 for v in agg["unserved_value_by_adoption"])
+    assert len(agg["mean_curtailed_frac_by_adoption"]) == len(grid)
 
 
 # ─── Governed reproduce-and-pin (skipif artifacts absent) ─────────────

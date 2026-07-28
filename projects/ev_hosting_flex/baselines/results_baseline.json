@@ -727,15 +727,6 @@
     },
     {
       "expected": 0.98,
-      "id": "insurance.p_short_at_ref",
-      "json_path": [
-        "p_short_at_ref"
-      ],
-      "source": "outputs/json/cold_insurance.json",
-      "tolerance": 1e-06
-    },
-    {
-      "expected": 0.98,
       "id": "insurance.activation_frequency_at_ref",
       "json_path": [
         "activation_frequency_at_ref"
@@ -753,7 +744,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 498.857661,
+      "expected": 502.629193,
       "id": "insurance.expected_cost_flex_at_ref",
       "json_path": [
         "expected_cost_flex_at_ref"
@@ -787,6 +778,15 @@
       ],
       "source": "outputs/json/cold_insurance.json",
       "tolerance": 0
+    },
+    {
+      "expected": 0.423151,
+      "id": "insurance.delta_firm_correlation",
+      "json_path": [
+        "delta_firm_correlation"
+      ],
+      "source": "outputs/json/cold_insurance.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
