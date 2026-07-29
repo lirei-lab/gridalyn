@@ -42,17 +42,24 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
+    draw_clustered_adoption,
+)
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DISCOUNT_RATE,
     LIFE_YEARS,
     POWER_FACTOR,
     PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
+    SEED,
     TRAFO_CAPEX_PER_KVA,
     TRANSFORMER_KVA_LADDER,
     TRIAGE_ADOPTION_GRID,
+    TRIAGE_BASE_DISPERSION,
     TRIAGE_BASE_FLOOR_TOLERANCE_H,
+    TRIAGE_CLUSTER_DRAWS,
     TRIAGE_CURTAIL_TOLERANCE,
+    TRIAGE_DISPERSION_GRID,
     TRIAGE_K_BASE,
     TRIAGE_POOL_PER_HOME,
 )
@@ -225,42 +232,70 @@ def triage_fleet(
     homes_by_trafo: dict[int, int],
     limits: dict[int, dict[str, Any]],
     adoption: float,
+    *,
+    dispersion: float = 0.0,
+    draws: int = 1,
+    seed: int = 0,
 ) -> dict[str, Any]:
-    """Classify every transformer at one adoption level.
+    """Classify every transformer at one adoption level and dispersion.
+
+    EV ownership is spatially correlated, so at a FIXED fleet total the
+    per-transformer adoption rate is drawn from a unit-mean lognormal
+    (:func:`draw_clustered_adoption`, fleet-preserving and capped) rather than
+    assumed uniform. Uniform allocation understates the worst last-mile
+    transformer while reporting the same fleet size, which is why
+    ``dispersion=0`` is the reference case here and not the base case.
 
     Args:
         homes_by_trafo: Transformer index -> connected home count.
         limits: Per-size firm/flexible counts.
-        adoption: EVs per home.
+        adoption: MEAN EVs per home across the fleet (invariant to dispersion).
+        dispersion: Lognormal sigma of the adoption allocation; 0 = uniform.
+        draws: Allocation draws averaged (the allocation is stochastic).
+        seed: Base seed for the allocation draws.
 
     Returns:
-        Counts per category plus the deferred and required capital.
+        Counts per category (averaged over draws and rounded) plus the deferred
+        and required capital.
     """
-    counts = {NEVER_BINDS: 0, FLEX_DEFERS: 0, NEEDS_STEEL: 0, BASE_CONSTRAINED: 0}
+    order = sorted(homes_by_trafo)
+    homes_arr = np.array([homes_by_trafo[t] for t in order], dtype=float)
+    n_draws = max(1, int(draws)) if float(dispersion) > 0.0 else 1
+
+    acc = {NEVER_BINDS: 0.0, FLEX_DEFERS: 0.0, NEEDS_STEEL: 0.0, BASE_CONSTRAINED: 0.0}
     deferred_kva = 0.0
     steel_kva = 0.0
-    for homes in homes_by_trafo.values():
-        lim = limits[homes]
-        n_evs = int(round(float(adoption) * int(homes)))
-        rung = _next_rung_kva(float(lim["rating_kw"]))
-        if bool(lim["base_constrained"]):
-            # Winter heating alone already overloads this asset. There is no EV
-            # load to shed in those hours, so enrollment cannot defer it — this
-            # is checked BEFORE the EV counts so such assets are never credited
-            # to flexibility.
-            counts[BASE_CONSTRAINED] += 1
-            steel_kva += rung if rung is not None else 0.0
-        elif n_evs <= int(lim["firm_ev_count"]):
-            counts[NEVER_BINDS] += 1
-        elif n_evs <= int(lim["flexible_ev_count"]):
-            counts[FLEX_DEFERS] += 1
-            deferred_kva += rung if rung is not None else 0.0
-        else:
-            counts[NEEDS_STEEL] += 1
-            steel_kva += rung if rung is not None else 0.0
+    for d in range(n_draws):
+        rng = np.random.default_rng(int(seed) + 7919 * d)
+        rates = draw_clustered_adoption(
+            homes_arr, float(adoption), float(dispersion), rng
+        )
+        for i, homes in enumerate(order):
+            homes_i = int(homes_by_trafo[homes])
+            lim = limits[homes_i]
+            n_evs = int(round(float(rates[i]) * homes_i))
+            rung = _next_rung_kva(float(lim["rating_kw"])) or 0.0
+            if bool(lim["base_constrained"]):
+                # Winter heating alone already overloads this asset. There is no
+                # EV load to shed in those hours, so enrollment cannot defer it —
+                # checked BEFORE the EV counts so such assets are never credited
+                # to flexibility.
+                acc[BASE_CONSTRAINED] += 1.0
+                steel_kva += rung
+            elif n_evs <= int(lim["firm_ev_count"]):
+                acc[NEVER_BINDS] += 1.0
+            elif n_evs <= int(lim["flexible_ev_count"]):
+                acc[FLEX_DEFERS] += 1.0
+                deferred_kva += rung
+            else:
+                acc[NEEDS_STEEL] += 1.0
+                steel_kva += rung
+
+    counts = {k: int(round(v / n_draws)) for k, v in acc.items()}
     at_risk = counts[FLEX_DEFERS] + counts[NEEDS_STEEL] + counts[BASE_CONSTRAINED]
     return {
         "adoption_ev_per_home": float(adoption),
+        "dispersion": float(dispersion),
         "never_binds": counts[NEVER_BINDS],
         "flex_defers": counts[FLEX_DEFERS],
         "needs_steel": counts[NEEDS_STEEL],
@@ -269,8 +304,10 @@ def triage_fleet(
         "deferred_fraction_of_at_risk": round(
             counts[FLEX_DEFERS] / at_risk if at_risk else 0.0, ROUND_DECIMALS
         ),
-        "deferred_capex_usd": round(deferred_kva * float(TRAFO_CAPEX_PER_KVA), 2),
-        "steel_capex_usd": round(steel_kva * float(TRAFO_CAPEX_PER_KVA), 2),
+        "deferred_capex_usd": round(
+            deferred_kva / n_draws * float(TRAFO_CAPEX_PER_KVA), 2
+        ),
+        "steel_capex_usd": round(steel_kva / n_draws * float(TRAFO_CAPEX_PER_KVA), 2),
     }
 
 
@@ -314,7 +351,18 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         pools_by_size[h] = _ev_pools(depth, tday, hod0, int(TRIAGE_K_BASE))
 
     limits = per_size_limits(base_mc, pools_by_size, rating_by_size, tday, hod0)
-    triage = [triage_fleet(homes_by_trafo, limits, a) for a in TRIAGE_ADOPTION_GRID]
+    triage = [
+        triage_fleet(
+            homes_by_trafo,
+            limits,
+            a,
+            dispersion=float(delta),
+            draws=int(TRIAGE_CLUSTER_DRAWS),
+            seed=int(SEED) + int(round(float(delta) * 1000)) * 131,
+        )
+        for delta in TRIAGE_DISPERSION_GRID
+        for a in TRIAGE_ADOPTION_GRID
+    ]
 
     crf = capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS))
     pool_limited = sorted(h for h in limits if limits[h]["pool_limited"])
@@ -325,6 +373,8 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "n_homes": int(sum(homes_by_trafo.values())),
         "feeder_homes": feeder_homes,
         "curtail_tolerance": float(TRIAGE_CURTAIL_TOLERANCE),
+        "base_dispersion": float(TRIAGE_BASE_DISPERSION),
+        "dispersion_grid": [float(x) for x in TRIAGE_DISPERSION_GRID],
         "k_base": int(TRIAGE_K_BASE),
         "pool_per_home": float(TRIAGE_POOL_PER_HOME),
         "crf": round(crf, 6),
@@ -340,7 +390,22 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
 
     ref = payload["reference_feeder"]
     at_ref = next(
-        (t for t in triage if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9), triage[0]
+        (
+            t
+            for t in triage
+            if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
+            and abs(t["dispersion"] - float(TRIAGE_BASE_DISPERSION)) < 1e-9
+        ),
+        triage[0],
+    )
+    at_uniform = next(
+        (
+            t
+            for t in triage
+            if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
+            and abs(t["dispersion"]) < 1e-9
+        ),
+        triage[0],
     )
     payload["artifact_paths"] = [out_path] + _figures(payload)
     payload["summary"] = {
@@ -355,6 +420,9 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "feeder_flexible_ev_count": ref["flexible_ev_count"],
         "feeder_curtailed_fraction_at_flexible": ref["curtailed_fraction_at_flexible"],
         "n_pool_limited_sizes": len(pool_limited),
+        "base_dispersion": float(TRIAGE_BASE_DISPERSION),
+        "flex_defers_at_1ev_uniform": at_uniform["flex_defers"],
+        "n_at_risk_at_1ev_uniform": at_uniform["n_at_risk"],
     }
     return payload
 
@@ -368,7 +436,8 @@ def _figures(payload: dict[str, Any]) -> list[Path]:
 
     figures_dir = PROJECT_OUTPUTS_DIR / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    tri = payload["triage"]
+    base_delta = float(payload["base_dispersion"])
+    tri = [t for t in payload["triage"] if abs(t["dispersion"] - base_delta) < 1e-9]
     adopt = [t["adoption_ev_per_home"] for t in tri]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 4.6))
@@ -388,17 +457,24 @@ def _figures(payload: dict[str, Any]) -> list[Path]:
     )
     ax1.set_xlabel("EV adoption (EV per home)")
     ax1.set_ylabel("pole transformers")
-    ax1.set_title(f"Fleet triage ({payload['n_transformers']} transformers)")
+    ax1.set_title(
+        f"Fleet triage ({payload['n_transformers']} transformers), "
+        f"clustered adoption sigma={base_delta}"
+    )
     ax1.legend(loc="lower left", fontsize=8)
 
-    sizes = sorted(int(h) for h in payload["by_size"])
-    firm = [payload["by_size"][str(h)]["firm_ev_per_home"] for h in sizes]
-    flex = [payload["by_size"][str(h)]["flexible_ev_per_home"] for h in sizes]
-    ax2.plot(sizes, firm, "o-", label="firm")
-    ax2.plot(sizes, flex, "s-", label="flexible (curtailment-gated)")
-    ax2.set_xlabel("homes per transformer")
-    ax2.set_ylabel("EV per home hosted")
-    ax2.set_title("Hosting limit by size class")
+    at1 = sorted(
+        (t for t in payload["triage"] if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9),
+        key=lambda t: t["dispersion"],
+    )
+    del_x = [t["dispersion"] for t in at1]
+    ax2.plot(del_x, [t["never_binds"] for t in at1], "o-", label="never binds")
+    ax2.plot(del_x, [t["flex_defers"] for t in at1], "s-", label="flexibility defers")
+    ax2.plot(del_x, [t["needs_steel"] for t in at1], "^-", label="needs steel")
+    ax2.axvline(base_delta, ls=":", c="k", lw=1)
+    ax2.set_xlabel("adoption dispersion (lognormal sigma)")
+    ax2.set_ylabel("pole transformers")
+    ax2.set_title("Effect of adoption clustering at 1 EV/home")
     ax2.legend(fontsize=8)
     ax2.grid(alpha=0.3)
 
@@ -431,6 +507,11 @@ def run_stage() -> dict[str, Any]:
         f"{float(TRIAGE_BASE_FLOOR_TOLERANCE_H)} base-alone overload hours; the "
         "per-size base_floor_hours are emitted so a laxer threshold can be "
         "applied without re-running.",
+        "CLUSTERED ADOPTION IS THE BASE CASE, uniform is the reference. EV "
+        "ownership is spatially correlated, so at a fixed fleet total a uniform "
+        "allocation understates the worst last-mile transformer. The headline "
+        f"uses sigma={float(TRIAGE_BASE_DISPERSION)}; the full dispersion grid "
+        "is emitted so the sensitivity is readable rather than assumed.",
         "kW-proxy (power/thermal): no AC voltage or phase imbalance. Per-size "
         "MC with finite K_BASE -> the counts are medians carrying sampling "
         "error, and transformers of equal home count share a realization family.",

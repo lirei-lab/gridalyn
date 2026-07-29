@@ -1537,3 +1537,27 @@ The emitted `base_floor_hours` per size class lets a reader apply a laxer
 threshold -- utilities do tolerate brief overloads under dynamic rating -- so
 the classification stays auditable rather than resting on one chosen number.
 """
+
+TRIAGE_DISPERSION_GRID = CLUSTER_DISPERSION_GRID
+"""Adoption-dispersion levels swept by the fleet triage.
+
+Reuses the clustered-adoption stage's grid so the two studies are directly
+comparable. `0.0` is the uniform reference, NOT the base case.
+"""
+
+TRIAGE_BASE_DISPERSION = 0.7
+"""Headline dispersion for the fleet triage (Gini ~0.37 across transformers).
+
+EV ownership is spatially correlated -- income, detached housing with a
+driveway, neighbour effects -- so a uniform allocation understates the stress
+on the worst last-mile transformer while preserving the fleet total. The
+clustered-adoption stage measured the consequence: at 1 EV/home the worst
+transformer goes from 132 % loading (uniform) to 237 % at this dispersion.
+
+0.7 is the MIDDLE of the swept grid, chosen so the headline is neither the
+uniform fiction nor the most extreme case; the full grid is emitted so a reader
+can read the sensitivity rather than trust this one choice.
+"""
+
+TRIAGE_CLUSTER_DRAWS = CLUSTER_MC_DRAWS
+"""Allocation draws averaged per (adoption, dispersion) cell."""
