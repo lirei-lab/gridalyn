@@ -1483,3 +1483,57 @@ DHW_TANK_L_JITTER_L = 30.0   # per-home tank-volume std (L)
 INSURANCE_ADOPTION_GRID = tuple(range(1, 13))  # target EV counts on the 6-home feeder
 INSURANCE_RELIABILITY_TARGET = 0.95  # both strategies must cover >= 95 % of years
 INSURANCE_REF_ADOPTION = 6           # 1 EV/home on the governed feeder (pin reference)
+
+# ---------------------------------------------------------------------------
+# Fleet triage (2026-07-29)
+#
+# The per-asset flexibility results (firm -> flexible on the governed feeder)
+# were never scaled to the 540-transformer fleet, so the study could not say
+# how MANY assets flexibility actually defers. The triage classifies every
+# pole transformer into: never binds / flexibility defers it / needs steel.
+#
+# It also corrects a measurement artefact. `apply_curtailment_contracts` gates
+# the flexible count on `residual_hours <= base_floor`, but under FULL
+# enrollment the backstop can always hold the feeder (it simply curtails more),
+# so that gate is near-vacuous and the reported flexible count equalled
+# POOL_MAX_ANNUAL (12) -- a pool-size artefact, not a physical limit. Measured
+# on the governed feeder, 12 EVs curtail only 2.0 % of EV energy, a fifth of
+# the tolerance. Gating on TRIAGE_CURTAIL_TOLERANCE instead gives 20 EVs
+# (6.5 % curtailed), i.e. firm 5 -> flexible 20 (+300 %, not +140 %).
+# ---------------------------------------------------------------------------
+
+TRIAGE_ADOPTION_GRID = (0.5, 1.0, 1.5, 2.0, 3.0)
+"""EV-per-home adoption levels at which the fleet is triaged."""
+
+TRIAGE_CURTAIL_TOLERANCE = NONWIRES_CURTAIL_TOLERANCE
+"""Max curtailed EV-energy fraction a flexibility contract may impose.
+
+This -- not feasibility -- is what bounds the flexible count. The constraint is
+the SERVICE the customer is denied, so the limit is a commercial term, not a
+physical one.
+"""
+
+TRIAGE_POOL_PER_HOME = 6.0
+"""EV-per-home pool depth searched for the flexible count.
+
+Must exceed the largest adoption on the grid by enough headroom that the
+tolerance binds before the pool does -- the artefact this stage corrects.
+"""
+
+TRIAGE_K_BASE = 3
+"""Base realizations per size class (the triage reports the median)."""
+
+TRIAGE_BASE_FLOOR_TOLERANCE_H = 0.0
+"""Base-alone overload hours a transformer may carry before it needs steel.
+
+An EV flexibility contract can only curtail EV load. In the hours where the
+BUILDING BASE alone already exceeds the rating there is nothing for the
+contract to shed, so no amount of enrollment defers that asset -- it is
+constrained by winter heating, not by cars. Assets over this tolerance are
+reported as `base_constrained` and never counted as deferred.
+
+Default 0.0 (any base-alone overload disqualifies) is the conservative reading.
+The emitted `base_floor_hours` per size class lets a reader apply a laxer
+threshold -- utilities do tolerate brief overloads under dynamic rating -- so
+the classification stays auditable rather than resting on one chosen number.
+"""
