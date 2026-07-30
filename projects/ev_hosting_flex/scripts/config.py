@@ -1655,3 +1655,15 @@ and across the whole reachable adoption range the resulting hot spot stays
 below the 110 °C normal-insulation-life limit, so the extra capability is not
 borrowed against transformer life.
 """
+
+EV_KWH_PER_YEAR = 2509.0
+"""Annual energy of one EV as this study's own generator produces it (kWh).
+
+MEASURED, not assumed: mean over a 60-EV draw from `ev_fleet_annual` on the
+committed TMY (p5 2349, p95 2663). Anchored to the generator rather than to a
+literature value because it multiplies a curtailed FRACTION that the same
+generator produced — mixing the two would price denied energy the model never
+generated. For external validity it sits just below the ~2 700–3 000 kWh/yr
+reported for Canadian EVs, consistent with a cold-climate fleet that plugs in
+on 60–85 % of days rather than daily.
+"""

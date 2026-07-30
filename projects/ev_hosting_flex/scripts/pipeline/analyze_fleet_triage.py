@@ -53,6 +53,9 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
+    C_A_CURTAIL,
+    C_AVAIL_EV_YR,
+    EV_KWH_PER_YEAR,
     TRAFO_CAPEX_PER_KVA,
     TRANSFORMER_KVA_LADDER,
     TRIAGE_ADOPTION_GRID,
@@ -196,6 +199,7 @@ def per_size_limits(
         flex_draws: list[int] = []
         curt_draws: list[float] = []
         floor_draws: list[float] = []
+        curt_at: dict[float, list[float]] = {}
         for k in range(base_mc[homes].shape[0]):
             base = base_mc[homes][k]
             pool = pools_by_size[homes][k % len(pools_by_size[homes])]
@@ -236,6 +240,10 @@ def per_size_limits(
                 float(np.median(curt_draws)), ROUND_DECIMALS
             ),
             "base_floor_hours": round(float(np.median(floor_draws)), ROUND_DECIMALS),
+            "curtailed_fraction_by_adoption": {
+                str(a): round(float(np.median(v)), ROUND_DECIMALS)
+                for a, v in sorted(curt_at.items())
+            },
             "base_constrained": bool(
                 float(np.median(floor_draws)) > float(TRIAGE_BASE_FLOOR_TOLERANCE_H)
             ),
@@ -254,6 +262,7 @@ def triage_fleet(
     dispersion: float = 0.0,
     draws: int = 1,
     seed: int = 0,
+    crf: float = 0.065,
 ) -> dict[str, Any]:
     """Classify every transformer at one adoption level and dispersion.
 
@@ -283,6 +292,8 @@ def triage_fleet(
     acc = {NEVER_BINDS: 0.0, FLEX_DEFERS: 0.0, NEEDS_STEEL: 0.0, BASE_CONSTRAINED: 0.0}
     deferred_kva = 0.0
     steel_kva = 0.0
+    flex_cost = 0.0
+    curtailed_kwh = 0.0
     for d in range(n_draws):
         rng = np.random.default_rng(int(seed) + 7919 * d)
         rates = draw_clustered_adoption(
@@ -305,6 +316,13 @@ def triage_fleet(
             elif n_evs <= int(lim["flexible_ev_count"]):
                 acc[FLEX_DEFERS] += 1.0
                 deferred_kva += rung
+                # What the contract COSTS on this asset: an availability
+                # payment per enrolled EV plus the energy it must deny.
+                frac = float(
+                    lim["curtailed_fraction_by_adoption"].get(str(float(adoption)), 0.0)
+                )
+                flex_cost += float(C_AVAIL_EV_YR) * n_evs
+                curtailed_kwh += frac * n_evs * float(EV_KWH_PER_YEAR)
             else:
                 acc[NEEDS_STEEL] += 1.0
                 steel_kva += rung
@@ -326,6 +344,16 @@ def triage_fleet(
             deferred_kva / n_draws * float(TRAFO_CAPEX_PER_KVA), 2
         ),
         "steel_capex_usd": round(steel_kva / n_draws * float(TRAFO_CAPEX_PER_KVA), 2),
+        # Annual cost of the contracts that do the deferring, against the
+        # annualised capex they avoid. The comparison only means something at
+        # fleet scale: on a single asset it is one lumpy transformer.
+        "flex_cost_usd_per_year": round(
+            (flex_cost + curtailed_kwh * float(C_A_CURTAIL)) / n_draws, 2
+        ),
+        "deferred_capex_annualised_usd": round(
+            deferred_kva / n_draws * float(TRAFO_CAPEX_PER_KVA) * crf, 2
+        ),
+        "curtailed_mwh_per_year": round(curtailed_kwh / n_draws / 1000.0, 3),
     }
 
 
@@ -390,6 +418,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
                     dispersion=float(delta),
                     draws=int(TRIAGE_CLUSTER_DRAWS),
                     seed=int(SEED) + int(round(float(delta) * 1000)) * 131,
+                    crf=capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS)),
                 )
                 cell["rating_convention"] = convention
                 triage.append(cell)
