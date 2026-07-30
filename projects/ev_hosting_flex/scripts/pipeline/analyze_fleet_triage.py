@@ -59,6 +59,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     TRIAGE_BASE_FLOOR_TOLERANCE_H,
     TRIAGE_CLUSTER_DRAWS,
     TRIAGE_CURTAIL_TOLERANCE,
+    TRIAGE_HOTSPOT_LIMIT_C,
+    TRIAGE_RATING_CONVENTIONS,
     TRIAGE_DISPERSION_GRID,
     TRIAGE_K_BASE,
     TRIAGE_POOL_PER_HOME,
@@ -79,8 +81,38 @@ NEEDS_STEEL = "needs_steel"
 BASE_CONSTRAINED = "base_constrained"
 
 
+def cold_capability_curve(temp_steps: np.ndarray) -> np.ndarray:
+    """Return K(T): usable capability per step, relative to the 30 C nameplate.
+
+    IEEE C57.91 steady-state hot-spot model at the ``TRIAGE_HOTSPOT_LIMIT_C``
+    normal-insulation-life limit. A transformer in a -22 C ambient sheds heat
+    far better than at the 30 C basis the nameplate assumes, so it carries more
+    before the same hot spot -- and in a heating-dominated feeder that extra
+    capability appears exactly in the hours the load peaks.
+
+    Args:
+        temp_steps: ``(n_steps,)`` ambient temperature per step (deg C).
+
+    Returns:
+        ``(n_steps,)`` multiplier on the nameplate rating.
+    """
+    from gridalyn.assets.modeling.transformers import TransformerThermalModel
+
+    model = TransformerThermalModel(theta_max=float(TRIAGE_HOTSPOT_LIMIT_C))
+    ref = float(model.max_load_for_temp(30.0))
+    rounded = np.round(np.asarray(temp_steps, dtype=float), 1)
+    table = {
+        t: float(model.max_load_for_temp(float(t))) / ref for t in np.unique(rounded)
+    }
+    return np.array([table[t] for t in rounded], dtype=float)
+
+
 def curtailed_fraction(
-    base: np.ndarray, pool: np.ndarray, n_evs: int, rating_kw: float
+    base: np.ndarray,
+    pool: np.ndarray,
+    n_evs: int,
+    rating_kw: float,
+    rating_series: np.ndarray | None = None,
 ) -> float:
     """Return the fraction of EV energy the contract must deny at ``n_evs``.
 
@@ -103,6 +135,7 @@ def curtailed_fraction(
         np.ones(int(n_evs), bool),
         float(rating_kw),
         res_minutes=ANNUAL_RES_MINUTES,
+        rating_series=rating_series,
     )
     requested = float(pool[:n_evs].sum()) * _HOURS_PER_STEP
     if requested <= 0.0:
@@ -111,7 +144,11 @@ def curtailed_fraction(
 
 
 def flexible_count(
-    base: np.ndarray, pool: np.ndarray, rating_kw: float, tolerance: float
+    base: np.ndarray,
+    pool: np.ndarray,
+    rating_kw: float,
+    tolerance: float,
+    rating_series: np.ndarray | None = None,
 ) -> int:
     """Return the largest EV count a contract serves within ``tolerance``.
 
@@ -134,12 +171,12 @@ def flexible_count(
     n_max = int(pool.shape[0])
     if n_max <= 0:
         return 0
-    if curtailed_fraction(base, pool, n_max, rating_kw) <= tolerance:
+    if curtailed_fraction(base, pool, n_max, rating_kw, rating_series) <= tolerance:
         return n_max
     lo, hi = 0, n_max  # invariant: lo is feasible, hi is not
     while hi - lo > 1:
         mid = (lo + hi) // 2
-        if curtailed_fraction(base, pool, mid, rating_kw) <= tolerance:
+        if curtailed_fraction(base, pool, mid, rating_kw, rating_series) <= tolerance:
             lo = mid
         else:
             hi = mid
@@ -169,6 +206,7 @@ def per_size_limits(
     rating_by_size: dict[int, float],
     tday: np.ndarray,
     hod0: int,
+    k_curve: np.ndarray | None = None,
 ) -> dict[int, dict[str, Any]]:
     """Return ``{homes: {firm, flexible, curtail_at_flexible}}`` per size class.
 
@@ -178,6 +216,7 @@ def per_size_limits(
     out: dict[int, dict[str, Any]] = {}
     for homes in sorted(base_mc):
         rating = float(rating_by_size[homes])
+        series = None if k_curve is None else rating * k_curve
         firm_draws: list[int] = []
         flex_draws: list[int] = []
         curt_draws: list[float] = []
@@ -187,7 +226,8 @@ def per_size_limits(
             pool = pools_by_size[homes][k % len(pools_by_size[homes])]
             # Hours the BASE ALONE is over rating: an EV contract cannot touch
             # these, so they disqualify the asset from being deferred.
-            floor_draws.append(float((base > rating).sum()) * _HOURS_PER_STEP)
+            cap = rating if series is None else series
+            floor_draws.append(float((base > cap).sum()) * _HOURS_PER_STEP)
             firm_draws.append(
                 int(
                     firm_annual(
@@ -197,12 +237,15 @@ def per_size_limits(
                         tday,
                         hod0=int(hod0),
                         res_minutes=ANNUAL_RES_MINUTES,
+                        rating_series=series,
                     )["firm_ev_count"]
                 )
             )
-            n_flex = flexible_count(base, pool, rating, float(TRIAGE_CURTAIL_TOLERANCE))
+            n_flex = flexible_count(
+                base, pool, rating, float(TRIAGE_CURTAIL_TOLERANCE), series
+            )
             flex_draws.append(n_flex)
-            curt_draws.append(curtailed_fraction(base, pool, n_flex, rating))
+            curt_draws.append(curtailed_fraction(base, pool, n_flex, rating, series))
         out[homes] = {
             "homes": homes,
             "rating_kw": round(rating, ROUND_DECIMALS),
@@ -350,22 +393,44 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         depth = int(math.ceil(float(TRIAGE_POOL_PER_HOME) * h))
         pools_by_size[h] = _ev_pools(depth, tday, hod0, int(TRIAGE_K_BASE))
 
-    limits = per_size_limits(base_mc, pools_by_size, rating_by_size, tday, hod0)
-    triage = [
-        triage_fleet(
-            homes_by_trafo,
-            limits,
-            a,
-            dispersion=float(delta),
-            draws=int(TRIAGE_CLUSTER_DRAWS),
-            seed=int(SEED) + int(round(float(delta) * 1000)) * 131,
-        )
-        for delta in TRIAGE_DISPERSION_GRID
-        for a in TRIAGE_ADOPTION_GRID
+    # Both rating conventions in one run. They are not a small correction
+    # apart: the nameplate judges a winter peak against a 30 C basis, while
+    # K(T) credits the capability the cold ambient actually provides.
+    steps_per_hour = 60 // int(ANNUAL_RES_MINUTES)
+    temp_steps = np.repeat(temp.to_numpy(float), steps_per_hour)[
+        : base_mc[sizes[0]].shape[1]
     ]
+    k_curve = cold_capability_curve(temp_steps)
+
+    limits_by_conv: dict[str, dict[int, dict[str, Any]]] = {}
+    triage: list[dict[str, Any]] = []
+    for convention in TRIAGE_RATING_CONVENTIONS:
+        curve = None if convention == "static" else k_curve
+        lim = per_size_limits(
+            base_mc, pools_by_size, rating_by_size, tday, hod0, k_curve=curve
+        )
+        limits_by_conv[convention] = lim
+        for delta in TRIAGE_DISPERSION_GRID:
+            for a in TRIAGE_ADOPTION_GRID:
+                cell = triage_fleet(
+                    homes_by_trafo,
+                    lim,
+                    a,
+                    dispersion=float(delta),
+                    draws=int(TRIAGE_CLUSTER_DRAWS),
+                    seed=int(SEED) + int(round(float(delta) * 1000)) * 131,
+                )
+                cell["rating_convention"] = convention
+                triage.append(cell)
+    limits = limits_by_conv[TRIAGE_RATING_CONVENTIONS[0]]
 
     crf = capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS))
-    pool_limited = sorted(h for h in limits if limits[h]["pool_limited"])
+    pool_limited = sorted(
+        h
+        for conv in TRIAGE_RATING_CONVENTIONS
+        for h in limits_by_conv[conv]
+        if limits_by_conv[conv][h]["pool_limited"]
+    )
     feeder_homes = homes_by_trafo[feeder_idx]
 
     payload: dict[str, Any] = {
@@ -378,7 +443,17 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "k_base": int(TRIAGE_K_BASE),
         "pool_per_home": float(TRIAGE_POOL_PER_HOME),
         "crf": round(crf, 6),
-        "by_size": {str(h): limits[h] for h in sorted(limits)},
+        "rating_conventions": list(TRIAGE_RATING_CONVENTIONS),
+        "hotspot_limit_c": float(TRIAGE_HOTSPOT_LIMIT_C),
+        "k_curve_summary": {
+            "min": round(float(k_curve.min()), 4),
+            "max": round(float(k_curve.max()), 4),
+            "mean": round(float(k_curve.mean()), 4),
+        },
+        "by_size": {
+            conv: {str(h): limits_by_conv[conv][h] for h in sorted(sizes)}
+            for conv in TRIAGE_RATING_CONVENTIONS
+        },
         "triage": triage,
         "pool_limited_sizes": pool_limited,
         "reference_feeder": limits[feeder_homes],
@@ -395,6 +470,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             for t in triage
             if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
             and abs(t["dispersion"] - float(TRIAGE_BASE_DISPERSION)) < 1e-9
+            and t["rating_convention"] == TRIAGE_RATING_CONVENTIONS[0]
         ),
         triage[0],
     )
@@ -404,6 +480,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             for t in triage
             if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
             and abs(t["dispersion"]) < 1e-9
+            and t["rating_convention"] == TRIAGE_RATING_CONVENTIONS[0]
         ),
         triage[0],
     )
@@ -437,7 +514,12 @@ def _figures(payload: dict[str, Any]) -> list[Path]:
     figures_dir = PROJECT_OUTPUTS_DIR / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     base_delta = float(payload["base_dispersion"])
-    tri = [t for t in payload["triage"] if abs(t["dispersion"] - base_delta) < 1e-9]
+    conv0 = payload["rating_conventions"][0]
+    tri = [
+        t
+        for t in payload["triage"]
+        if abs(t["dispersion"] - base_delta) < 1e-9 and t["rating_convention"] == conv0
+    ]
     adopt = [t["adoption_ev_per_home"] for t in tri]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 4.6))
@@ -464,7 +546,12 @@ def _figures(payload: dict[str, Any]) -> list[Path]:
     ax1.legend(loc="lower left", fontsize=8)
 
     at1 = sorted(
-        (t for t in payload["triage"] if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9),
+        (
+            t
+            for t in payload["triage"]
+            if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
+            and t["rating_convention"] == conv0
+        ),
         key=lambda t: t["dispersion"],
     )
     del_x = [t["dispersion"] for t in at1]

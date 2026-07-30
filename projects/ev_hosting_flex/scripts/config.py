@@ -1502,7 +1502,7 @@ INSURANCE_REF_ADOPTION = 6           # 1 EV/home on the governed feeder (pin ref
 # (6.5 % curtailed), i.e. firm 5 -> flexible 20 (+300 %, not +140 %).
 # ---------------------------------------------------------------------------
 
-TRIAGE_ADOPTION_GRID = (0.5, 1.0, 1.5, 2.0, 3.0)
+TRIAGE_ADOPTION_GRID = (0.11, 0.25, 0.5, 0.75, 1.0, 1.32)
 """EV-per-home adoption levels at which the fleet is triaged."""
 
 TRIAGE_CURTAIL_TOLERANCE = NONWIRES_CURTAIL_TOLERANCE
@@ -1561,3 +1561,60 @@ can read the sensitivity rather than trust this one choice.
 
 TRIAGE_CLUSTER_DRAWS = CLUSTER_MC_DRAWS
 """Allocation draws averaged per (adoption, dispersion) cell."""
+
+# ---------------------------------------------------------------------------
+# EV adoption anchored to Québec reality (2026-07-30)
+#
+# The previous grid (0.5 ... 3.0 EV/home) spanned scenarios that CANNOT occur:
+# 2.0 and 3.0 EV per home exceed total household vehicle ownership in Québec.
+# It also had no resolution where planning actually happens -- its LOWEST point
+# was already 4.5x today's adoption. Both ends are now anchored to published
+# figures rather than chosen.
+# ---------------------------------------------------------------------------
+
+QC_LIGHT_VEHICLES = 5_500_000
+"""Automobiles + light trucks in circulation in Québec, 2021.
+
+Source: Statistique Québec, "Véhicules en circulation".
+"""
+
+QC_RESIDENTIAL_ACCOUNTS = 4_178_346
+"""Hydro-Québec residential customer accounts, 2024.
+
+Source: Hydro-Québec Rapport annuel 2024, Operating Statistics. Used as the
+per-home denominator because it is the same "home" this study models -- an HQ
+residential service -- and it is a published hard number.
+"""
+
+QC_PLUGIN_VEHICLES_2026 = 454_922
+"""Plug-in vehicles registered in Québec, 2026 (6.15 % of the fleet).
+
+Source: SAAQ statistics compiled by AVÉQ.
+"""
+
+EV_PER_HOME_TODAY = QC_PLUGIN_VEHICLES_2026 / QC_RESIDENTIAL_ACCOUNTS
+"""Québec EV adoption TODAY: 0.109 EV per residential account."""
+
+EV_PER_HOME_SATURATION = QC_LIGHT_VEHICLES / QC_RESIDENTIAL_ACCOUNTS
+"""Ceiling: 1.32 EV/home = every household light vehicle electrified.
+
+A fleet-mean adoption above this is not a scenario, it is an impossibility.
+NOTE this bounds the fleet MEAN only -- under clustered adoption an individual
+transformer can exceed it (see ``CLUSTER_MAX_RATE``), which is precisely why
+the clustered case is the base case.
+"""
+
+TRIAGE_RATING_CONVENTIONS = ("static", "hourly_kt")
+"""Rating conventions the fleet triage evaluates side by side.
+
+`static` judges every hour against the nameplate, which is defined at a 30 °C
+ambient basis. `hourly_kt` scales it by the IEEE C57.91 loading capability at
+each step's actual ambient. In a heating-dominated system these are not a small
+correction apart: load and thermal capability are driven by the SAME variable
+and rise together, so the choice changes not only HOW MUCH congestion is found
+but WHAT IT IS ATTRIBUTED TO. Both are emitted so the reader sees the spread
+instead of inheriting one convention silently.
+"""
+
+TRIAGE_HOTSPOT_LIMIT_C = 110.0
+"""Hot-spot limit defining the C57.91 capability (normal insulation life)."""

@@ -660,6 +660,7 @@ def simulate_curtailment(
     *,
     fair: bool = True,
     res_minutes: int = 60,
+    rating_series: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Run the fair real-time curtailment backstop over the year.
 
@@ -683,6 +684,12 @@ def simulate_curtailment(
         fair: Fairness rotation on (study-B criterion a); ``False`` = fixed
             index order (the unfair comparator).
         res_minutes: Step width in minutes (governed stages pass 15).
+        rating_series: Optional ``(horizon,)`` per-step usable rating in kW,
+            overriding ``rating_kw``. Use it to carry a temperature-dependent
+            rating (IEEE C57.91): in a heating-dominated system the load peak
+            and the thermal capability are both driven by ambient temperature,
+            so a fixed nameplate judges a winter peak against a 30 °C basis.
+            ``None`` keeps the scalar behaviour exactly.
 
     Returns:
         Dict with ``curtailed_kwh_by_ev (n_evs,)`` (kWh), ``events_by_ev
@@ -702,6 +709,21 @@ def simulate_curtailment(
             f"({n_evs},) matching ev_demand rows."
         )
     hours_per_step = float(res_minutes) / 60.0
+    # A transformer's usable rating depends on its ambient: in a cold climate
+    # the peak and the thermal capability are driven by the SAME variable and
+    # rise together. `rating_series` opts into that (IEEE C57.91 K(T)); when it
+    # is None the scalar path below is unchanged, so governed callers that pass
+    # a nameplate keep byte-identical results.
+    if rating_series is None:
+        rating_t = np.full(horizon, float(rating_kw), dtype=DTYPE)
+    else:
+        rating_t = np.asarray(rating_series, dtype=DTYPE)
+        if rating_t.shape != (horizon,):
+            raise ValueError(
+                f"simulate_curtailment received rating_series {rating_t.shape}, "
+                f"expected ({horizon},) matching the load horizon. Remediation: "
+                "build it as rating_kw × K(ambient) at the same resolution."
+            )
 
     curtailed = np.zeros(n_evs, dtype=DTYPE)  # kWh
     events = np.zeros(n_evs, dtype=int)
@@ -710,8 +732,9 @@ def simulate_curtailment(
     free_draw = demand[~enrolled, :].sum(axis=0)
     served_ev_kw = demand.sum(axis=0).astype(DTYPE)  # curtailments subtract below
     for t in range(horizon):
-        headroom = float(rating_kw) - (base[t] + free_draw[t])
-        if base[t] <= rating_kw and (base[t] + free_draw[t]) > rating_kw:
+        cap_t = float(rating_t[t])
+        headroom = cap_t - (base[t] + free_draw[t])
+        if base[t] <= cap_t and (base[t] + free_draw[t]) > cap_t:
             residual_steps += 1
         active = np.where(enrolled & (demand[:, t] > 1e-9))[0]
         if active.size == 0 or demand[active, t].sum() <= max(headroom, 0.0):
@@ -735,7 +758,7 @@ def simulate_curtailment(
         "events_by_ev": events,
         "curtailed_steps": curtailed_steps,
         "residual_hours": float(residual_steps) * hours_per_step,
-        "base_floor_hours": float((base > float(rating_kw)).sum()) * hours_per_step,
+        "base_floor_hours": float((base > rating_t).sum()) * hours_per_step,
         "served_ev_kw": served_ev_kw,
     }
 
@@ -747,6 +770,7 @@ def p95_cold_evening_loading(
     *,
     hod0: int = 0,
     res_minutes: int = 60,
+    rating_series: np.ndarray | None = None,
 ) -> float:
     """Return the P95 over cold days of the max evening loading (%).
 
@@ -786,8 +810,19 @@ def p95_cold_evening_loading(
     daily = np.asarray(load_kw, dtype=DTYPE)[: N_DAYS * steps_per_day].reshape(
         N_DAYS, steps_per_day
     )
-    evening_peaks = daily[cold_days][:, window].max(axis=1)
-    return float(np.percentile(evening_peaks / float(rating_kw) * 100.0, 95))
+    if rating_series is None:
+        evening_peaks = daily[cold_days][:, window].max(axis=1)
+        return float(np.percentile(evening_peaks / float(rating_kw) * 100.0, 95))
+    # Time-varying rating: divide BEFORE taking the window max. With a rating
+    # that moves, the peak LOAD step is not necessarily the peak LOADING step —
+    # in a cold climate the biggest load lands in the coldest hour, which is
+    # also the hour of greatest capability.
+    rating_t = np.asarray(rating_series, dtype=DTYPE)
+    pct = np.asarray(load_kw, dtype=DTYPE)[: N_DAYS * steps_per_day] / rating_t[
+        : N_DAYS * steps_per_day
+    ] * 100.0
+    daily_pct = pct.reshape(N_DAYS, steps_per_day)
+    return float(np.percentile(daily_pct[cold_days][:, window].max(axis=1), 95))
 
 
 def firm_annual(
@@ -798,6 +833,7 @@ def firm_annual(
     *,
     hod0: int = 0,
     res_minutes: int = 60,
+    rating_series: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Return the study-B firm hosting count and its P95 curve.
 
@@ -821,7 +857,8 @@ def firm_annual(
     cumulative = np.zeros(pool.shape[1], dtype=DTYPE)
     curve.append(
         p95_cold_evening_loading(
-            base, rating_kw, tday_mean_c, hod0=hod0, res_minutes=res_minutes
+            base, rating_kw, tday_mean_c, hod0=hod0, res_minutes=res_minutes,
+            rating_series=rating_series,
         )
     )
     for ev in range(pool.shape[0]):
@@ -833,6 +870,7 @@ def firm_annual(
                 tday_mean_c,
                 hod0=hod0,
                 res_minutes=res_minutes,
+                rating_series=rating_series,
             )
         )
     passing = [n for n, p95 in enumerate(curve) if p95 <= float(FIRM_P95_LIMIT_PERCENT)]
