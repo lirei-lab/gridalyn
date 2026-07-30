@@ -30,6 +30,7 @@ import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     firm_annual,
+    feeder_rating,
     load_annual_tmy,
     p95_cold_evening_loading,
     tmy_hour_of_day,
@@ -44,6 +45,8 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
 )
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
+"""Nameplate usable kW. The rating a load is JUDGED against comes from
+``feeder_rating`` and may vary per step -- see ``RATING_CONVENTION``."""
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 
@@ -62,10 +65,22 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
     # LOCAL phase anchor of array position 0 (the 2026-07-07 phase-bug fix):
     # the evening window is selected in local hours, not array positions.
-    hod0 = tmy_hour_of_day(load_annual_tmy())
+    temp = load_annual_tmy()
+    hod0 = tmy_hour_of_day(temp)
+    # The rating a winter peak is judged against depends on the ambient of that
+    # very hour (RATING_CONVENTION); `cap` is the scalar for reporting, `series`
+    # the per-step limit the kernels actually apply.
+    cap, series = feeder_rating(temp)
+    limit = cap if series is None else series
 
     firm = firm_annual(
-        base, pool, _RATING_KW, tday, hod0=hod0, res_minutes=ANNUAL_RES_MINUTES
+        base,
+        pool,
+        cap,
+        tday,
+        hod0=hod0,
+        res_minutes=ANNUAL_RES_MINUTES,
+        rating_series=series,
     )
     firm_n = int(firm["firm_ev_count"])
     n_homes_pool = pool.shape[0]
@@ -75,13 +90,13 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     congested_hours = []
     cumulative = np.zeros(base.shape, dtype=DTYPE)
     congested_hours.append(
-        round(float((base > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS)
+        round(float((base > limit).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS)
     )
     for ev in range(pool.shape[0]):
         cumulative = cumulative + pool[ev]
         congested_hours.append(
             round(
-                float(((base + cumulative) > _RATING_KW).sum()) * _HOURS_PER_STEP,
+                float(((base + cumulative) > limit).sum()) * _HOURS_PER_STEP,
                 ROUND_DECIMALS,
             )
         )
@@ -117,7 +132,12 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "p95_base_check": round(
             p95_cold_evening_loading(
-                base, _RATING_KW, tday, hod0=hod0, res_minutes=ANNUAL_RES_MINUTES
+                base,
+                cap,
+                tday,
+                hod0=hod0,
+                res_minutes=ANNUAL_RES_MINUTES,
+                rating_series=series,
             ),
             ROUND_DECIMALS,
         ),

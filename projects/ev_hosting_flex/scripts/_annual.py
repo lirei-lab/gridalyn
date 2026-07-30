@@ -65,6 +65,8 @@ from projects.ev_hosting_flex.scripts.config import (
     EVENING_WINDOW_ANNUAL,
     FIRM_P95_LIMIT_PERCENT,
     P_HEAT_QUEBEC,
+    POWER_FACTOR,
+    RATING_CONVENTION,
     PLUGIN_BASE,
     PLUGIN_KCOLD,
     PLUGIN_MAX,
@@ -75,6 +77,8 @@ from projects.ev_hosting_flex.scripts.config import (
     RAMP_SHAPE,
     RAMP_STEEPNESS,
     TMY_INPUT_PATH,
+    TRANSFORMER_KVA,
+    TRIAGE_HOTSPOT_LIMIT_C,
 )
 
 N_DAYS = CALENDAR_HOURS // 24
@@ -147,6 +151,76 @@ def load_annual_tmy() -> pd.Series:
 
     out["timestamp"] = stamps.dt.tz_convert(_tz(offset))
     return out.set_index("timestamp")["temp_air"].astype(float)
+
+
+def cold_capability_curve(
+    temp_hourly: pd.Series, *, res_minutes: int = ANNUAL_RES_MINUTES
+) -> np.ndarray:
+    """Return K(T) per step: usable capability relative to the 30 °C nameplate.
+
+    IEEE C57.91 steady-state hot-spot model held at
+    ``TRIAGE_HOTSPOT_LIMIT_C`` (normal insulation life). A transformer in a
+    −22 °C ambient sheds heat far better than at the 30 °C basis its nameplate
+    assumes, so it carries more current before reaching the same hot spot.
+
+    Args:
+        temp_hourly: The committed TMY ambient series (8760 h).
+        res_minutes: Step width the curve is expanded to.
+
+    Returns:
+        ``(N_DAYS · 24·60/res,)`` multiplier on the nameplate rating.
+    """
+    from gridalyn.assets.modeling.transformers import TransformerThermalModel
+
+    steps_per_hour = 60 // int(res_minutes)
+    temp = np.repeat(
+        temp_hourly.to_numpy(dtype=DTYPE)[:CALENDAR_HOURS], steps_per_hour
+    )
+    model = TransformerThermalModel(theta_max=float(TRIAGE_HOTSPOT_LIMIT_C))
+    ref = float(model.max_load_for_temp(30.0))
+    rounded = np.round(temp, 1)
+    table = {
+        t: float(model.max_load_for_temp(float(t))) / ref for t in np.unique(rounded)
+    }
+    return np.array([table[t] for t in rounded], dtype=DTYPE)
+
+
+def feeder_rating(
+    temp_hourly: pd.Series,
+    *,
+    kva: float = TRANSFORMER_KVA,
+    res_minutes: int = ANNUAL_RES_MINUTES,
+) -> tuple[float, np.ndarray | None]:
+    """Return ``(nameplate_kw, rating_series)`` per the declared convention.
+
+    ONE place decides how the study judges a transformer against its limit.
+    Callers pass both results straight through to the kernels: the scalar keeps
+    error messages and reports meaningful, and ``rating_series`` is ``None``
+    under the 'static' convention so the scalar code path runs unchanged.
+
+    Args:
+        temp_hourly: The committed TMY ambient series.
+        kva: Transformer nameplate (default: the governed feeder unit).
+        res_minutes: Step width of the annual arrays.
+
+    Returns:
+        ``(usable kW at nameplate, per-step rating in kW or None)``.
+
+    Raises:
+        ValueError: If ``RATING_CONVENTION`` is not a recognised convention.
+    """
+    nameplate_kw = float(kva) * float(POWER_FACTOR)
+    if RATING_CONVENTION == "static":
+        return nameplate_kw, None
+    if RATING_CONVENTION == "hourly_kt":
+        return nameplate_kw, nameplate_kw * cold_capability_curve(
+            temp_hourly, res_minutes=res_minutes
+        )
+    raise ValueError(
+        f"RATING_CONVENTION={RATING_CONVENTION!r} is not recognised; expected "
+        "'hourly_kt' (IEEE C57.91 capability at each step's ambient) or "
+        "'static' (nameplate). Remediation: set it in config.py."
+    )
 
 
 def tmy_hour_of_day(temp_hourly: pd.Series) -> int:

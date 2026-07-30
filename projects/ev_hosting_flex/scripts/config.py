@@ -993,12 +993,19 @@ SEED_FC_OFFSETS = 7
 """RNG seed of the per-day N(0, σ) forecast-offset draws (D-B3). Provenance:
 ``generate_sdk_base.py`` ``rng = default_rng(7)``."""
 
-POOL_MAX_ANNUAL = 12
+POOL_MAX_ANNUAL = 16
 """Nested annual EV pool ceiling (D-B4). One governed pool
 ``(POOL_MAX_ANNUAL, 8760)`` drawn from ``default_rng(SEED)``; every sweep
 (hosting, enrollment, economics) uses row prefixes. DEVIATION from study_b's
-two ad-hoc pools (seeds 1 and 8 EVs / 7 and 9 EVs): one pinned pool, sized to
-2 EV/home on the 6-home twin unit."""
+two ad-hoc pools (seeds 1 and 8 EVs / 7 and 9 EVs): one pinned pool.
+
+RAISED 12 -> 16 on 2026-07-30. Under the temperature-dependent rating the firm
+count reaches 12 (2.00 EV/home) on the 6-home unit, i.e. exactly the old
+ceiling, so the stage could not evaluate firm+1 and reported `None` for the
+crossing. Verified with a 40-EV pool that 12 is the GENUINE limit and not a
+pool artefact -- but the ceiling must sit above it for the boundary to be
+demonstrable rather than assumed. 16 = 2.67 EV/home, comfortably above both the
+firm limit and the 1.32 EV/home Québec saturation."""
 
 E_TREF_C = 15.0
 """Cold-intensity reference temperature (°C) (D-B4): ``cp = max(0, E_TREF_C −
@@ -1618,3 +1625,33 @@ instead of inheriting one convention silently.
 
 TRIAGE_HOTSPOT_LIMIT_C = 110.0
 """Hot-spot limit defining the C57.91 capability (normal insulation life)."""
+
+# ---------------------------------------------------------------------------
+# Feeder rating convention (2026-07-30) — the study's highest-leverage choice
+#
+# Measured on this feeder: judging every hour against the nameplate finds 255
+# of 540 transformers in trouble TODAY; the temperature-dependent rating finds
+# zero. The convention moves more assets (255) than electrifying every
+# household vehicle in Québec does (222). It is therefore declared here, once,
+# rather than implied by each stage building its own scalar.
+# ---------------------------------------------------------------------------
+
+RATING_CONVENTION = "hourly_kt"
+"""How the feeder's usable rating is evaluated: 'hourly_kt' or 'static'.
+
+'static' uses the nameplate, a rating defined at a 30 °C ambient basis.
+'hourly_kt' scales it by the IEEE C57.91 loading capability at each step's
+actual ambient.
+
+In a heating-dominated feeder the load peak and the thermal capability are
+driven by the SAME variable and rise together, so the nameplate systematically
+understates capability in exactly the hours the load peaks. 'hourly_kt' is the
+default because it is the physically correct comparison and it matches
+Hydro-Québec practice; 'static' is retained so the conservative planning
+convention stays reproducible for comparison.
+
+Verified consequence: at the design cold the capability is ~1.43x nameplate,
+and across the whole reachable adoption range the resulting hot spot stays
+below the 110 °C normal-insulation-life limit, so the extra capability is not
+borrowed against transformer life.
+"""

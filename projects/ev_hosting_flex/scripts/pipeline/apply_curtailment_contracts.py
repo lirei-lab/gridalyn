@@ -40,6 +40,8 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+    feeder_rating,
+    load_annual_tmy,
     simulate_curtailment,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
@@ -81,9 +83,12 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     firm_payload = json.loads((json_dir / "firm_hosting_annual.json").read_text())
     firm = int(firm_payload["firm_ev_count"])
-    base_floor = round(
-        float((base > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS
-    )
+    # Each hour is judged against the capability its OWN ambient allows
+    # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
+    # `limit` is what a load is actually compared against.
+    cap, series = feeder_rating(load_annual_tmy())
+    limit = cap if series is None else series
+    base_floor = round(float((base > limit).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS)
     pool_max = pool.shape[0]
 
     # ── Flexible hosting: full-enrollment backstop, zero residual beyond floor ─
@@ -92,12 +97,18 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     flexible = 0
     for n in range(1, pool_max + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, bool), _RATING_KW,
+            base,
+            pool[:n],
+            np.ones(n, bool),
+            cap,
             res_minutes=ANNUAL_RES_MINUTES,
+            rating_series=series,
         )
         energy = float(pool[:n].sum()) * _HOURS_PER_STEP
         price_curve.append(
-            round(float(out["curtailed_kwh_by_ev"].sum()) / energy * 100.0, ROUND_DECIMALS)
+            round(
+                float(out["curtailed_kwh_by_ev"].sum()) / energy * 100.0, ROUND_DECIMALS
+            )
         )
         residual_curve.append(round(float(out["residual_hours"]), ROUND_DECIMALS))
         if out["residual_hours"] <= base_floor + 1e-9:
@@ -115,7 +126,12 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         mask = np.zeros(n_lever, bool)
         mask[:n_enrolled] = True
         out = simulate_curtailment(
-            base, pool[:n_lever], mask, _RATING_KW, res_minutes=ANNUAL_RES_MINUTES
+            base,
+            pool[:n_lever],
+            mask,
+            cap,
+            res_minutes=ANNUAL_RES_MINUTES,
+            rating_series=series,
         )
         enrollment.append(
             {
@@ -133,7 +149,11 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     # day-ahead error channel is the temperature (study-B convention, D-B3).
     # All masks are at the governed step resolution (overlap fractions cancel).
     full = simulate_curtailment(
-        base, pool[:n_lever], np.ones(n_lever, bool), _RATING_KW,
+        base,
+        pool[:n_lever],
+        np.ones(n_lever, bool),
+        cap,
+        rating_series=series,
         res_minutes=ANNUAL_RES_MINUTES,
     )
     actual_steps = full["curtailed_steps"]
@@ -141,7 +161,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     notice = {}
     for sigma in FC_SIGMAS:
         fc = np.load(data_dir / f"fc_base_sigma_{sigma:.1f}.npy").astype(DTYPE)
-        called = (fc + ev_aggregate) > _RATING_KW
+        called = (fc + ev_aggregate) > limit
         n_actual = max(int(actual_steps.sum()), 1)
         n_called = max(int(called.sum()), 1)
         notice[f"{sigma:.1f}"] = {
@@ -160,11 +180,20 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
 
     # ── Fairness on the full pool (study-B Fig D) ──────────────────────────
     fair = simulate_curtailment(
-        base, pool, np.ones(pool_max, bool), _RATING_KW,
+        base,
+        pool,
+        np.ones(pool_max, bool),
+        cap,
+        rating_series=series,
         res_minutes=ANNUAL_RES_MINUTES,
     )
     unfair = simulate_curtailment(
-        base, pool, np.ones(pool_max, bool), _RATING_KW, fair=False,
+        base,
+        pool,
+        np.ones(pool_max, bool),
+        cap,
+        fair=False,
+        rating_series=series,
         res_minutes=ANNUAL_RES_MINUTES,
     )
     fairness = {
@@ -173,9 +202,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "mean_curtailed_kwh_per_ev": round(
             float(fair["curtailed_kwh_by_ev"].mean()), ROUND_DECIMALS
         ),
-        "mean_events_per_ev": round(
-            float(fair["events_by_ev"].mean()), ROUND_DECIMALS
-        ),
+        "mean_events_per_ev": round(float(fair["events_by_ev"].mean()), ROUND_DECIMALS),
         "total_curtailed_kwh": round(
             float(fair["curtailed_kwh_by_ev"].sum()), ROUND_DECIMALS
         ),

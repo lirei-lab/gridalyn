@@ -36,6 +36,7 @@ import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     ANNUAL_RES_MINUTES,
+    cold_capability_curve,
     day_mean_temps,
     firm_annual,
     load_annual_tmy,
@@ -79,32 +80,6 @@ NEVER_BINDS = "never_binds"
 FLEX_DEFERS = "flex_defers"
 NEEDS_STEEL = "needs_steel"
 BASE_CONSTRAINED = "base_constrained"
-
-
-def cold_capability_curve(temp_steps: np.ndarray) -> np.ndarray:
-    """Return K(T): usable capability per step, relative to the 30 C nameplate.
-
-    IEEE C57.91 steady-state hot-spot model at the ``TRIAGE_HOTSPOT_LIMIT_C``
-    normal-insulation-life limit. A transformer in a -22 C ambient sheds heat
-    far better than at the 30 C basis the nameplate assumes, so it carries more
-    before the same hot spot -- and in a heating-dominated feeder that extra
-    capability appears exactly in the hours the load peaks.
-
-    Args:
-        temp_steps: ``(n_steps,)`` ambient temperature per step (deg C).
-
-    Returns:
-        ``(n_steps,)`` multiplier on the nameplate rating.
-    """
-    from gridalyn.assets.modeling.transformers import TransformerThermalModel
-
-    model = TransformerThermalModel(theta_max=float(TRIAGE_HOTSPOT_LIMIT_C))
-    ref = float(model.max_load_for_temp(30.0))
-    rounded = np.round(np.asarray(temp_steps, dtype=float), 1)
-    table = {
-        t: float(model.max_load_for_temp(float(t))) / ref for t in np.unique(rounded)
-    }
-    return np.array([table[t] for t in rounded], dtype=float)
 
 
 def curtailed_fraction(
@@ -396,11 +371,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     # Both rating conventions in one run. They are not a small correction
     # apart: the nameplate judges a winter peak against a 30 C basis, while
     # K(T) credits the capability the cold ambient actually provides.
-    steps_per_hour = 60 // int(ANNUAL_RES_MINUTES)
-    temp_steps = np.repeat(temp.to_numpy(float), steps_per_hour)[
-        : base_mc[sizes[0]].shape[1]
-    ]
-    k_curve = cold_capability_curve(temp_steps)
+    k_curve = cold_capability_curve(temp, res_minutes=int(ANNUAL_RES_MINUTES))
 
     limits_by_conv: dict[str, dict[int, dict[str, Any]]] = {}
     triage: list[dict[str, Any]] = []

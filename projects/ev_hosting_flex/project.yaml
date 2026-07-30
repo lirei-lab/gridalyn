@@ -3,7 +3,9 @@ kind: StudyProject
 metadata:
   name: ev_hosting_flex
   version: 0.1.0
-  description: EV hosting-capacity flexibility study on a single radial distribution feeder.
+  description: >-
+    EV hosting capacity and flexibility across a 540-transformer distribution
+    fleet, with the transformer rating convention as a declared axis.
 spec:
   pathBase: repo
   problem:
@@ -11,9 +13,23 @@ spec:
     dataset: synthetic_trois_rivieres_distribution_twin
     environment: radial_congestion_proxy_and_peak_powerflow_validation
     objective: >-
-      Expand a feeder's annual EV hosting capacity by trading a small amount of
-      winter charging curtailment for year-round growth via per-node flexibility
-      contracts.
+      Determine, across the whole pole-transformer fleet, how many assets bind
+      as EV adoption grows from today (0.11 EV/home) to Québec saturation
+      (1.32 EV/home, every household light vehicle electrified), how many a
+      flexibility contract defers, and how many need reinforcement regardless.
+
+      The unit of analysis is the FLEET, not one feeder. Measured on this
+      network, the median asset and the tail answer differently: the governed
+      6-home unit hosts full saturation firmly, while a share of the 540 binds
+      well before it. A single-feeder headline reports whichever of those the
+      chosen feeder happens to be.
+
+      The transformer rating is a declared axis, not an assumption. Judging a
+      winter peak against a nameplate defined at a 30 °C ambient breaks the
+      coupling between load and thermal capability — in a heating-dominated
+      feeder both are driven by the same outdoor temperature and rise together.
+      On this network that choice moves more assets than the entire EV
+      transition does, so both conventions are emitted.
     model:
       type: operations_model
       name: radial_congestion_flexibility_hosting
@@ -25,6 +41,14 @@ spec:
           firm hosting limit (first line overload) that the flexible case
           expands upon.
   experiments:
+    - id: fleet_triage
+      scenario: baseline
+      objective: >-
+        Classify every pole transformer in the fleet at each adoption level and
+        adoption-clustering level, under both rating conventions: never binds /
+        flexibility defers it / needs steel / constrained by the winter heating
+        base. This is the study's primary result; the per-feeder stages below
+        are the worked example behind it.
     - id: firm_hosting_baseline
       scenario: baseline
       objective: >-
@@ -53,6 +77,7 @@ spec:
     requiredReports:
       - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
       - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+      - projects/ev_hosting_flex/outputs/reports/fleet_triage_report.json
       - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
       - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
       - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
