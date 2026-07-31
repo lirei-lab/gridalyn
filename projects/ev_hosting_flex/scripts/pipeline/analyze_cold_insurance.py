@@ -40,8 +40,10 @@ import numpy as np  # noqa: E402
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     N_DAYS,
     annual_base_realization,
+    cold_capability_curve,
     day_mean_temps,
     ev_fleet_annual,
+    feeder_rating,
     firm_annual,
     load_annual_tmy,
     simulate_curtailment,
@@ -49,13 +51,13 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ANNUAL_RES_MINUTES,
+    C_A_CURTAIL,
+    C_AVAIL_EV_YR,
+    C_RETAIL_KWH,
     CAPEX_UPGRADE,
     CREDIBILITY_EV_SALT,
     CREDIBILITY_K,
     CREDIBILITY_WEATHER_SALT,
-    C_A_CURTAIL,
-    C_AVAIL_EV_YR,
-    C_RETAIL_KWH,
     DISCOUNT_RATE,
     DTYPE,
     INSURANCE_ADOPTION_GRID,
@@ -95,6 +97,8 @@ def realization_insurance(
     hod0: int,
     adoption_grid: list[int],
     rung_ratings: list[float],
+    rating_series: np.ndarray | None = None,
+    capability_curve: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Insurance quantities for ONE realization (one weather year).
 
@@ -113,12 +117,40 @@ def realization_insurance(
 
     ``rung_ratings[0]`` is the present rating, so ``firm_by_rung[0]`` IS the
     present-rating firm count and is reused rather than recomputed.
+
+    Args:
+        base: Feeder base load (kW).
+        pool: Per-EV demand pool (kW), prefix-swept.
+        tday: Per-day mean temperatures (365,).
+        rating: Feeder usable rating (kW) at the present transformer size.
+        res: Step width in minutes.
+        hod0: LOCAL hour-of-day phase anchor.
+        adoption_grid: Target adoption levels (EV counts) to evaluate.
+        rung_ratings: Usable rating (kW) of each candidate ladder rung at
+            its nameplate; ``rung_ratings[0]`` is the present rating.
+        rating_series: Optional per-step usable rating (kW) overriding the
+            scalar ``rating`` in the curtailment simulation
+            (RATING_CONVENTION); ``None`` keeps the scalar behaviour.
+        capability_curve: Optional per-step multiplier on nameplate kW
+            (:func:`cold_capability_curve`), applied to EVERY entry of
+            ``rung_ratings`` so each candidate transformer size is judged
+            under the same temperature-dependent capability as the present
+            unit rather than its static 30 °C nameplate. ``None`` keeps
+            every rung at its static nameplate.
     """
     firm_by_rung = [
         int(
-            firm_annual(base, pool, float(rr), tday, hod0=hod0, res_minutes=res)[
-                "firm_ev_count"
-            ]
+            firm_annual(
+                base,
+                pool,
+                float(rr),
+                tday,
+                hod0=hod0,
+                res_minutes=res,
+                rating_series=(
+                    None if capability_curve is None else float(rr) * capability_curve
+                ),
+            )["firm_ev_count"]
         )
         for rr in rung_ratings
     ]
@@ -130,7 +162,12 @@ def realization_insurance(
     for a in adoption_grid:
         n = min(int(a), int(pool.shape[0]))
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, dtype=bool), float(rating), res_minutes=res
+            base,
+            pool[:n],
+            np.ones(n, dtype=bool),
+            float(rating),
+            res_minutes=res,
+            rating_series=rating_series,
         )
         ck = float(np.sum(out["curtailed_kwh_by_ev"]))
         total_ev_kwh = float(np.sum(pool[:n])) * (res / 60.0)
@@ -205,10 +242,10 @@ def aggregate_insurance(
     of the activation cost, which is the expected curtailment over ALL years
     (real-time overload does not coincide exactly with the P95 planning rule).
     """
-    shortfall = np.array([r["shortfall"] for r in rows], dtype=bool)      # (K, A)
-    covered = np.array([r["covered"] for r in rows], dtype=bool)          # (K, A)
-    ck = np.array([r["curtailed_kwh"] for r in rows], dtype=DTYPE)        # (K, A)
-    cfrac = np.array([r["curtailed_frac"] for r in rows], dtype=DTYPE)    # (K, A)
+    shortfall = np.array([r["shortfall"] for r in rows], dtype=bool)  # (K, A)
+    covered = np.array([r["covered"] for r in rows], dtype=bool)  # (K, A)
+    ck = np.array([r["curtailed_kwh"] for r in rows], dtype=DTYPE)  # (K, A)
+    cfrac = np.array([r["curtailed_frac"] for r in rows], dtype=DTYPE)  # (K, A)
     firm_rung = np.array([r["firm_by_rung"] for r in rows], dtype=DTYPE)  # (K, R)
 
     activation, coverage, residual, viable = [], [], [], []
@@ -227,9 +264,7 @@ def aggregate_insurance(
         mean_curtailed_frac.append(round(float(cfrac[:, i].mean()), ROUND_DECIMALS))
         cost_flex.append(
             round(
-                float(C_AVAIL_EV_YR) * int(a)
-                + float(C_A_CURTAIL) * mean_ck
-                + unserved,
+                float(C_AVAIL_EV_YR) * int(a) + float(C_A_CURTAIL) * mean_ck + unserved,
                 ROUND_DECIMALS,
             )
         )
@@ -289,6 +324,17 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
     hod0 = int(tmy_hour_of_day(temp))
     tday = day_mean_temps(temp)
     res = int(ANNUAL_RES_MINUTES)
+    # Each hour is judged against the capability its OWN ambient allows
+    # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
+    # `series` is what a load is actually compared against at the present rung.
+    cap, series = feeder_rating(temp)
+    # The rung ladder is ALSO a set of nameplates: the same capability
+    # multiplier applies regardless of transformer size (it is a fraction of
+    # nameplate, not an absolute kW), so scale every rung by the identical
+    # curve rather than only the present unit.
+    capability_curve = (
+        None if series is None else cold_capability_curve(temp, res_minutes=res)
+    )
     k = int(CREDIBILITY_K)
     offsets = winter_offsets(k, float(WEATHER_SIGMA_C), int(CREDIBILITY_WEATHER_SALT))
     grid = [int(a) for a in INSURANCE_ADOPTION_GRID]
@@ -324,14 +370,21 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
         )
         rows.append(
             realization_insurance(
-                base_r, pool_r, tday_r, _RATING_KW, res, hod0, grid, rung_ratings
+                base_r,
+                pool_r,
+                tday_r,
+                cap,
+                res,
+                hod0,
+                grid,
+                rung_ratings,
+                rating_series=series,
+                capability_curve=capability_curve,
             )
         )
 
     crf = capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS))
-    agg = aggregate_insurance(
-        rows, grid, rung_kvas, INSURANCE_RELIABILITY_TARGET, crf
-    )
+    agg = aggregate_insurance(rows, grid, rung_kvas, INSURANCE_RELIABILITY_TARGET, crf)
 
     # ── Part 1: the hosting-capacity distribution ────────────────────────────
     firm = np.array([row["firm"] for row in rows], dtype=DTYPE)

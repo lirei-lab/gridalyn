@@ -32,6 +32,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     annual_base_realization,
     day_mean_temps,
     ev_fleet_annual,
+    feeder_rating,
     firm_annual,
     load_annual_tmy,
     simulate_curtailment,
@@ -39,12 +40,12 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ANNUAL_RES_MINUTES,
+    C_A_CURTAIL,
+    C_AVAIL_EV_YR,
     CAPEX_UPGRADE,
     CREDIBILITY_EV_SALT,
     CREDIBILITY_K,
     CREDIBILITY_WEATHER_SALT,
-    C_A_CURTAIL,
-    C_AVAIL_EV_YR,
     DISCOUNT_RATE,
     DTYPE,
     LIFE_YEARS,
@@ -76,14 +77,36 @@ def winter_offsets(k: int, sigma: float, salt: int) -> np.ndarray:
     return out
 
 
-def _flex_count(base: np.ndarray, pool: np.ndarray, rating: float, res: int) -> int:
+def _flex_count(
+    base: np.ndarray,
+    pool: np.ndarray,
+    rating: float,
+    res: int,
+    rating_series: np.ndarray | None = None,
+) -> int:
     """Largest pool prefix n whose full-enrollment curtailment holds residual
-    congestion at the base floor (mirrors apply_curtailment_contracts)."""
-    base_floor = float((base > rating).sum()) * (res / 60.0)
+    congestion at the base floor (mirrors apply_curtailment_contracts).
+
+    Args:
+        base: Feeder base load (kW).
+        pool: Per-EV demand pool (kW), prefix-swept.
+        rating: Feeder usable rating (kW).
+        res: Step width in minutes.
+        rating_series: Optional per-step usable rating (kW) overriding the
+            scalar ``rating`` (RATING_CONVENTION); ``None`` keeps the scalar
+            behaviour.
+    """
+    limit = rating if rating_series is None else rating_series
+    base_floor = float((base > limit).sum()) * (res / 60.0)
     flexible = 0
     for n in range(1, pool.shape[0] + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, dtype=bool), rating, res_minutes=res
+            base,
+            pool[:n],
+            np.ones(n, dtype=bool),
+            rating,
+            res_minutes=res,
+            rating_series=rating_series,
         )
         if float(out["residual_hours"]) <= base_floor + 1e-9:
             flexible = n
@@ -91,15 +114,36 @@ def _flex_count(base: np.ndarray, pool: np.ndarray, rating: float, res: int) -> 
 
 
 def _breakeven_count(
-    base: np.ndarray, pool: np.ndarray, rating: float, res: int, crf: float
+    base: np.ndarray,
+    pool: np.ndarray,
+    rating: float,
+    res: int,
+    crf: float,
+    rating_series: np.ndarray | None = None,
 ) -> int:
     """Last pool prefix n where the flex contract still beats the annualized
-    reinforcement (mirrors compute_curtailment_economics)."""
+    reinforcement (mirrors compute_curtailment_economics).
+
+    Args:
+        base: Feeder base load (kW).
+        pool: Per-EV demand pool (kW), prefix-swept.
+        rating: Feeder usable rating (kW).
+        res: Step width in minutes.
+        crf: Capital recovery factor annualizing ``CAPEX_UPGRADE``.
+        rating_series: Optional per-step usable rating (kW) overriding the
+            scalar ``rating`` (RATING_CONVENTION); ``None`` keeps the scalar
+            behaviour.
+    """
     reinf_annual = float(CAPEX_UPGRADE) * float(crf)
     breakeven = 0
     for n in range(1, pool.shape[0] + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, dtype=bool), rating, res_minutes=res
+            base,
+            pool[:n],
+            np.ones(n, dtype=bool),
+            rating,
+            res_minutes=res,
+            rating_series=rating_series,
         )
         curt_kwh = float(np.sum(out["curtailed_kwh_by_ev"]))
         contract = n * float(C_AVAIL_EV_YR) + float(C_A_CURTAIL) * curt_kwh
@@ -109,21 +153,52 @@ def _breakeven_count(
 
 
 def realization_headlines(
-    base: np.ndarray, pool: np.ndarray, tday: np.ndarray, rating: float,
-    res: int, hod0: int,
+    base: np.ndarray,
+    pool: np.ndarray,
+    tday: np.ndarray,
+    rating: float,
+    res: int,
+    hod0: int,
+    rating_series: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """firm/flex/breakeven/base_peak/curtailed_pct for one realization. ``hod0``
-    is the LOCAL phase anchor (threaded so r=0 reproduces the governed firm)."""
+    is the LOCAL phase anchor (threaded so r=0 reproduces the governed firm).
+
+    Args:
+        base: Feeder base load (kW).
+        pool: Per-EV demand pool (kW), prefix-swept.
+        tday: Per-day mean temperatures (365,).
+        rating: Feeder usable rating (kW).
+        res: Step width in minutes.
+        hod0: LOCAL hour-of-day phase anchor.
+        rating_series: Optional per-step usable rating (kW) overriding the
+            scalar ``rating`` (RATING_CONVENTION): each hour is judged
+            against the capability its OWN ambient allows rather than the
+            30 °C nameplate. ``None`` keeps the scalar behaviour exactly.
+    """
     firm = int(
-        firm_annual(base, pool, rating, tday, hod0=int(hod0), res_minutes=res)[
-            "firm_ev_count"
-        ]
+        firm_annual(
+            base,
+            pool,
+            rating,
+            tday,
+            hod0=int(hod0),
+            res_minutes=res,
+            rating_series=rating_series,
+        )["firm_ev_count"]
     )
-    flex = _flex_count(base, pool, rating, res)
+    flex = _flex_count(base, pool, rating, res, rating_series=rating_series)
     crf = capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS))
-    breakeven = _breakeven_count(base, pool, rating, res, crf)
+    breakeven = _breakeven_count(
+        base, pool, rating, res, crf, rating_series=rating_series
+    )
     full = simulate_curtailment(
-        base, pool, np.ones(pool.shape[0], dtype=bool), rating, res_minutes=res
+        base,
+        pool,
+        np.ones(pool.shape[0], dtype=bool),
+        rating,
+        res_minutes=res,
+        rating_series=rating_series,
     )
     total_ev = float(np.sum(pool)) * (res / 60.0)
     curt_kwh = float(np.sum(full["curtailed_kwh_by_ev"]))
@@ -163,11 +238,19 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
     hod0 = int(tmy_hour_of_day(temp))
     tday = day_mean_temps(temp)
     res = int(ANNUAL_RES_MINUTES)
+    # Each hour is judged against the capability its OWN ambient allows
+    # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
+    # `series` is what a load is actually compared against in the kernels.
+    cap, series = feeder_rating(temp)
     k = int(CREDIBILITY_K)
     offsets = winter_offsets(k, float(WEATHER_SIGMA_C), int(CREDIBILITY_WEATHER_SALT))
 
     samples: dict[str, list[float]] = {
-        "firm": [], "flex": [], "breakeven": [], "base_peak": [], "curtailed_pct": []
+        "firm": [],
+        "flex": [],
+        "breakeven": [],
+        "base_peak": [],
+        "curtailed_pct": [],
     }
     for r in range(k):
         delta = float(offsets[r])
@@ -178,9 +261,13 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
         tday_r = tday + delta
         pool_r = ev_fleet_annual(
             np.random.default_rng(int(SEED) + int(CREDIBILITY_EV_SALT) * r),
-            int(POOL_MAX_ANNUAL), tday_r, hod0,
+            int(POOL_MAX_ANNUAL),
+            tday_r,
+            hod0,
         )
-        h = realization_headlines(base_r, pool_r, tday_r, _RATING_KW, res, hod0)
+        h = realization_headlines(
+            base_r, pool_r, tday_r, cap, res, hod0, rating_series=series
+        )
         for key in samples:
             samples[key].append(float(h[key]))
 
@@ -193,8 +280,10 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
         "weather_sigma_c": float(WEATHER_SIGMA_C),
         "n_homes": int(n_homes),
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
-        "samples": {key: [round(v, ROUND_DECIMALS) for v in vals]
-                    for key, vals in samples.items()},
+        "samples": {
+            key: [round(v, ROUND_DECIMALS) for v in vals]
+            for key, vals in samples.items()
+        },
         "firm": firm_stats,
         "flex": flex_stats,
         "breakeven": be_stats,
@@ -208,9 +297,11 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
     out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
     summary = {
-        "firm_p05": firm_stats["p05"], "firm_p50": firm_stats["p50"],
+        "firm_p05": firm_stats["p05"],
+        "firm_p50": firm_stats["p50"],
         "firm_p95": firm_stats["p95"],
-        "flex_p05": flex_stats["p05"], "flex_p50": flex_stats["p50"],
+        "flex_p05": flex_stats["p05"],
+        "flex_p50": flex_stats["p50"],
         "flex_p95": flex_stats["p95"],
         "breakeven_p50": be_stats["p50"],
         "base_peak_p50": payload["base_peak"]["p50"],
@@ -228,8 +319,10 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     figures_dir.mkdir(parents=True, exist_ok=True)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.3))
     s = payload["samples"]
-    ax1.boxplot([s["firm"], s["flex"], s["breakeven"]],
-                tick_labels=["firm", "flex", "breakeven"])
+    ax1.boxplot(
+        [s["firm"], s["flex"], s["breakeven"]],
+        tick_labels=["firm", "flex", "breakeven"],
+    )
     ax1.set_ylabel("EV count")
     ax1.set_title(f"Headline distributions (K={payload['k']})")
     ax2.hist(s["base_peak"], bins=15, color="C0", alpha=0.8)

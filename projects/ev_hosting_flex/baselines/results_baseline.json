@@ -26,7 +26,7 @@
       "tolerance": 0
     },
     {
-      "expected": 104,
+      "expected": 0,
       "id": "pf.post_ev_1p5_n_trafos_over_dynamic",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.898291,
+      "expected": 0.910944,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -48,7 +48,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 5,
+      "expected": 12,
       "id": "annual.firm_ev_count",
       "json_path": [
         "firm_ev_count"
@@ -57,7 +57,7 @@
       "tolerance": 0
     },
     {
-      "expected": 76.459668,
+      "expected": 56.063563,
       "id": "annual.base_p95_cold_evening",
       "json_path": [
         "p95_cold_evening_curve",
@@ -67,7 +67,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 73.0,
+      "expected": 17.0,
       "id": "annual.congested_hours_at_pool_top",
       "json_path": [
         "congested_hours_per_year_curve",
@@ -77,7 +77,7 @@
       "tolerance": 0
     },
     {
-      "expected": 12,
+      "expected": 16,
       "id": "annual.flexible_ev_count",
       "json_path": [
         "flexible_ev_count"
@@ -86,7 +86,7 @@
       "tolerance": 0
     },
     {
-      "expected": 1.4,
+      "expected": 0.333333,
       "id": "annual.hosting_expansion_percent",
       "json_path": [
         "hosting_expansion_percent"
@@ -95,7 +95,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.986512,
+      "expected": 0.303824,
       "id": "annual.curtailed_pct_at_pool_top",
       "json_path": [
         "curtailed_energy_percent_curve",
@@ -105,7 +105,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.999794,
+      "expected": 0.990321,
       "id": "annual.jain_fair",
       "json_path": [
         "fairness",
@@ -133,22 +133,22 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.01227,
+      "expected": 0.269939,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc",
-        "mc_firm_5ev",
+        "mc_firm_12ev",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 0.269939,
+      "expected": 0.521472,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
         "feeder_mc",
-        "mc_unmanaged_12ev",
+        "mc_unmanaged_16ev",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",
@@ -159,14 +159,14 @@
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc",
-        "mc_curtailed_12ev",
+        "mc_curtailed_16ev",
         "peak_loading_max"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 5,
+      "expected": 12,
       "id": "coldcoupling.firm_cold",
       "json_path": [
         "models",
@@ -177,7 +177,7 @@
       "tolerance": 0
     },
     {
-      "expected": 6,
+      "expected": 16,
       "id": "coldcoupling.firm_naive",
       "json_path": [
         "models",
@@ -188,7 +188,7 @@
       "tolerance": 0
     },
     {
-      "expected": 20.0,
+      "expected": 33.333333,
       "id": "coldcoupling.firm_overestimate_percent",
       "json_path": [
         "firm_overestimate_percent"
@@ -197,7 +197,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4.037905,
+      "expected": 12.065605,
       "id": "coldcoupling.curtailment_underestimate_ratio",
       "json_path": [
         "curtailment_underestimate_ratio"
@@ -206,7 +206,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 53.532985,
+      "expected": 54.438364,
       "id": "coldcoupling.cold_day_ev_energy_uplift_percent",
       "json_path": [
         "cold_day_ev_energy_uplift_percent"
@@ -226,7 +226,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.864473,
+      "expected": 3.716477,
       "id": "netchar.loss_percent_2ev",
       "json_path": [
         "losses",
@@ -258,7 +258,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.645799,
+      "expected": 0.819686,
       "id": "netchar.headroom_p50",
       "json_path": [
         "headroom",
@@ -308,7 +308,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.819979,
+      "expected": 1.667618,
       "id": "cluster.penalty_ratio",
       "json_path": [
         "penalty",
@@ -318,7 +318,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 240.394838,
+      "expected": 206.055428,
       "id": "cluster.worst_loading_clustered",
       "json_path": [
         "penalty",
@@ -328,7 +328,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 103.591901,
+      "expected": 103.531204,
       "id": "cluster.worst_loading_managed_clustered",
       "json_path": [
         "recovery",
@@ -338,7 +338,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 27.682071,
+      "expected": 22.66772,
       "id": "cluster.curtailed_energy_percent",
       "json_path": [
         "recovery",
@@ -348,7 +348,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.844659,
+      "expected": 0.86538,
       "id": "cluster.burden_gini",
       "json_path": [
         "recovery",
@@ -369,7 +369,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 7.833333,
+      "expected": 10.666667,
       "id": "flexincentive.shift_ceiling_coldest",
       "json_path": [
         "shift_ceiling_coldest"
@@ -378,7 +378,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 8.0,
+      "expected": 3.833333,
       "id": "flexincentive.shift_ceiling_warmest",
       "json_path": [
         "shift_ceiling_warmest"
@@ -396,7 +396,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 992.918159,
+      "expected": 241.874458,
       "id": "flexincentive.optimal_subsidy_coldest",
       "json_path": [
         "optimal_subsidy_coldest"
@@ -405,7 +405,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 612.925069,
+      "expected": 317.167644,
       "id": "flexincentive.optimal_subsidy_warmest",
       "json_path": [
         "optimal_subsidy_warmest"
@@ -435,7 +435,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.36311,
+      "expected": 0.377475,
       "id": "perf.flexible_share_p50",
       "json_path": [
         "flexible_share_p50"
@@ -464,7 +464,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.109816,
+      "expected": 0.000256,
       "id": "congestion.p_cong_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -474,7 +474,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 144.913968,
+      "expected": 104.932181,
       "id": "congestion.peak_max_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -484,7 +484,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 533,
+      "expected": 246,
       "id": "congestion.n_at_risk_at_ref",
       "json_path": [
         "n_at_risk_at_ref"
@@ -493,7 +493,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.0,
+      "expected": 0.609756,
       "id": "congestion.first_risk_ev_per_home",
       "json_path": [
         "first_risk_ev_per_home"
@@ -502,7 +502,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.0,
+      "expected": null,
       "id": "congestion.first_risk_g",
       "json_path": [
         "first_risk_g"
@@ -520,7 +520,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.491141,
+      "expected": 1.379878,
       "id": "phase.worst_vuf_at_ref",
       "json_path": [
         "worst_vuf_at_ref"
@@ -529,7 +529,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.014829,
+      "expected": 0.013684,
       "id": "phase.balanced_gap_pu",
       "json_path": [
         "balanced_gap_pu"
@@ -601,7 +601,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 97179.745234,
+      "expected": 9943.6519,
       "id": "nonwires.total_deferral_npv",
       "json_path": [
         "total_deferral_npv"
@@ -610,7 +610,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 297.9573,
+      "expected": 280.132892,
       "id": "nonwires.total_trafo_years_deferred",
       "json_path": [
         "total_trafo_years_deferred"
@@ -619,7 +619,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 75845.41806,
+      "expected": 0.0,
       "id": "nonwires.substation_deferral_npv",
       "json_path": [
         "substation_deferral_npv"
@@ -628,7 +628,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 2230950.0,
+      "expected": 1428450.0,
       "id": "nonwires.peak_capex_deferred",
       "json_path": [
         "peak_capex_deferred"
@@ -637,7 +637,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4.356371,
+      "expected": 5.411187,
       "id": "nonwires.first_reinforcement_year",
       "json_path": [
         "first_reinforcement_year"
@@ -646,7 +646,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.0,
+      "expected": 11.0,
       "id": "cred.firm_p05",
       "json_path": [
         "firm",
@@ -656,7 +656,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 4.0,
+      "expected": 12.0,
       "id": "cred.firm_p50",
       "json_path": [
         "firm",
@@ -666,7 +666,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 5.0,
+      "expected": 13.0,
       "id": "cred.firm_p95",
       "json_path": [
         "firm",
@@ -676,7 +676,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12.0,
+      "expected": 16.0,
       "id": "cred.flex_p05",
       "json_path": [
         "flex",
@@ -686,7 +686,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12.0,
+      "expected": 16.0,
       "id": "cred.flex_p50",
       "json_path": [
         "flex",
@@ -696,7 +696,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12.0,
+      "expected": 16.0,
       "id": "cred.flex_p95",
       "json_path": [
         "flex",
@@ -726,7 +726,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.98,
+      "expected": 0.0,
       "id": "insurance.activation_frequency_at_ref",
       "json_path": [
         "activation_frequency_at_ref"
@@ -744,7 +744,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 502.629193,
+      "expected": 480.022322,
       "id": "insurance.expected_cost_flex_at_ref",
       "json_path": [
         "expected_cost_flex_at_ref"
@@ -753,7 +753,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 696.050355,
+      "expected": 0.0,
       "id": "insurance.expected_cost_reinforce_at_ref",
       "json_path": [
         "expected_cost_reinforce_at_ref"
@@ -762,7 +762,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.22,
+      "expected": 0.28,
       "id": "insurance.short_years_if_plan_p50",
       "json_path": [
         "short_years_if_plan_p50"
@@ -771,7 +771,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 8,
+      "expected": 12,
       "id": "insurance.crossover_adoption",
       "json_path": [
         "crossover_adoption"
@@ -780,7 +780,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.423151,
+      "expected": 0.564275,
       "id": "insurance.delta_firm_correlation",
       "json_path": [
         "delta_firm_correlation"

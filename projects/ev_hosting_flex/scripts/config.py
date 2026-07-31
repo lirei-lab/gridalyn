@@ -1440,7 +1440,56 @@ TRAFO_CAPEX_PER_KVA = 107.0       # $/kVA INSTALLED reinforcement (hardware+labo
 #                                   is only ~$20-40/kVA — too low; the flex has no
 #                                   value against trivially-cheap reinforcement).
 SUBSTATION_CAPEX_PER_MVA = 25000.0  # $/MVA substation reinforcement (~$15-30k/MVA)
-RAMP_MAX_EV_PER_HOME = 2.0        # adoption ceiling of the ramp (EV/home)
+# ---------------------------------------------------------------------------
+# EV adoption anchored to Québec reality (2026-07-30)
+#
+# The previous grid (0.5 ... 3.0 EV/home) spanned scenarios that CANNOT occur:
+# 2.0 and 3.0 EV per home exceed total household vehicle ownership in Québec.
+# It also had no resolution where planning actually happens -- its LOWEST point
+# was already 4.5x today's adoption. Both ends are now anchored to published
+# figures rather than chosen.
+# ---------------------------------------------------------------------------
+
+QC_LIGHT_VEHICLES = 5_500_000
+"""Automobiles + light trucks in circulation in Québec, 2021.
+
+Source: Statistique Québec, "Véhicules en circulation".
+"""
+
+QC_RESIDENTIAL_ACCOUNTS = 4_178_346
+"""Hydro-Québec residential customer accounts, 2024.
+
+Source: Hydro-Québec Rapport annuel 2024, Operating Statistics. Used as the
+per-home denominator because it is the same "home" this study models -- an HQ
+residential service -- and it is a published hard number.
+"""
+
+QC_PLUGIN_VEHICLES_2026 = 454_922
+"""Plug-in vehicles registered in Québec, 2026 (6.15 % of the fleet).
+
+Source: SAAQ statistics compiled by AVÉQ.
+"""
+
+EV_PER_HOME_TODAY = QC_PLUGIN_VEHICLES_2026 / QC_RESIDENTIAL_ACCOUNTS
+"""Québec EV adoption TODAY: 0.109 EV per residential account."""
+
+EV_PER_HOME_SATURATION = QC_LIGHT_VEHICLES / QC_RESIDENTIAL_ACCOUNTS
+"""Ceiling: 1.32 EV/home = every household light vehicle electrified.
+
+A fleet-mean adoption above this is not a scenario, it is an impossibility.
+NOTE this bounds the fleet MEAN only -- under clustered adoption an individual
+transformer can exceed it (see ``CLUSTER_MAX_RATE``), which is precisely why
+the clustered case is the base case.
+"""
+
+RAMP_MAX_EV_PER_HOME = EV_PER_HOME_SATURATION
+"""Adoption ceiling of the ramp (EV/home).
+
+Anchored to ``EV_PER_HOME_SATURATION`` (1.32 = every household light vehicle
+electrified, 5.5M vehicles / 4,178,346 residential accounts). Was 2.0, which
+modelled a future with more EVs per home than Québec has VEHICLES per home —
+so any crossing placed above 1.32 was unreachable by construction and silently
+became 'never happens'."""
 RAMP_HORIZON_YEARS = 15           # planning horizon (years)
 RAMP_MIDPOINT_YEAR = 7.0          # logistic S-curve midpoint (year of MAX/2)
 RAMP_STEEPNESS = 0.7              # logistic growth rate
@@ -1569,47 +1618,6 @@ can read the sensitivity rather than trust this one choice.
 TRIAGE_CLUSTER_DRAWS = CLUSTER_MC_DRAWS
 """Allocation draws averaged per (adoption, dispersion) cell."""
 
-# ---------------------------------------------------------------------------
-# EV adoption anchored to Québec reality (2026-07-30)
-#
-# The previous grid (0.5 ... 3.0 EV/home) spanned scenarios that CANNOT occur:
-# 2.0 and 3.0 EV per home exceed total household vehicle ownership in Québec.
-# It also had no resolution where planning actually happens -- its LOWEST point
-# was already 4.5x today's adoption. Both ends are now anchored to published
-# figures rather than chosen.
-# ---------------------------------------------------------------------------
-
-QC_LIGHT_VEHICLES = 5_500_000
-"""Automobiles + light trucks in circulation in Québec, 2021.
-
-Source: Statistique Québec, "Véhicules en circulation".
-"""
-
-QC_RESIDENTIAL_ACCOUNTS = 4_178_346
-"""Hydro-Québec residential customer accounts, 2024.
-
-Source: Hydro-Québec Rapport annuel 2024, Operating Statistics. Used as the
-per-home denominator because it is the same "home" this study models -- an HQ
-residential service -- and it is a published hard number.
-"""
-
-QC_PLUGIN_VEHICLES_2026 = 454_922
-"""Plug-in vehicles registered in Québec, 2026 (6.15 % of the fleet).
-
-Source: SAAQ statistics compiled by AVÉQ.
-"""
-
-EV_PER_HOME_TODAY = QC_PLUGIN_VEHICLES_2026 / QC_RESIDENTIAL_ACCOUNTS
-"""Québec EV adoption TODAY: 0.109 EV per residential account."""
-
-EV_PER_HOME_SATURATION = QC_LIGHT_VEHICLES / QC_RESIDENTIAL_ACCOUNTS
-"""Ceiling: 1.32 EV/home = every household light vehicle electrified.
-
-A fleet-mean adoption above this is not a scenario, it is an impossibility.
-NOTE this bounds the fleet MEAN only -- under clustered adoption an individual
-transformer can exceed it (see ``CLUSTER_MAX_RATE``), which is precisely why
-the clustered case is the base case.
-"""
 
 TRIAGE_RATING_CONVENTIONS = ("static", "hourly_kt")
 """Rating conventions the fleet triage evaluates side by side.

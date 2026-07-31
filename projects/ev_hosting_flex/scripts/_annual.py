@@ -290,7 +290,7 @@ def climate_bin_days(
 def valley_fill_shift(
     net_load_kw: np.ndarray,
     ev_energy_kwh: np.ndarray,
-    rating_kw: float,
+    rating_kw: float | np.ndarray,
     charger_kw: np.ndarray,
 ) -> np.ndarray:
     """Redistribute enrolled EVs' daily energy into the lowest-net-load hours.
@@ -305,7 +305,10 @@ def valley_fill_shift(
     Args:
         net_load_kw: ``(H,)`` base + non-enrolled load (kW).
         ev_energy_kwh: ``(E,)`` per-enrolled-EV daily energy (kWh; hourly steps).
-        rating_kw: Feeder usable rating (kW).
+        rating_kw: Feeder usable rating (kW). May be a scalar or a
+            per-hour array when the rating follows the ambient
+            (see ``RATING_CONVENTION``); the valley is then filled
+            toward each hour's OWN limit.
         charger_kw: ``(E,)`` per-enrolled-EV charger power (kW).
 
     Returns:
@@ -321,7 +324,8 @@ def valley_fill_shift(
     for h in np.argsort(net, kind="stable"):
         if remaining <= 1e-12:
             break
-        headroom = min(max(float(rating_kw) - float(net[h]), 0.0), cap)
+        rate_h = float(np.asarray(rating_kw).reshape(-1)[h % np.asarray(rating_kw).size])
+        headroom = min(max(rate_h - float(net[h]), 0.0), cap)
         put = min(headroom, remaining)
         agg[h] = put
         remaining -= put

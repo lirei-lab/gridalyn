@@ -43,6 +43,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     annual_base_realization,
     day_mean_temps,
     ev_fleet_annual,
+    feeder_rating,
     load_annual_tmy,
     tmy_hour_of_day,
 )
@@ -108,6 +109,10 @@ def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     temp_hourly = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp_hourly)
     tday = day_mean_temps(temp_hourly)
+    # The limit a load is judged against depends on that hour's ambient
+    # (RATING_CONVENTION); `_RATING_KW` stays the nameplate for reporting.
+    _cap, series = feeder_rating(temp_hourly)
+    limit = _cap if series is None else series
 
     base = np.stack(
         [
@@ -153,11 +158,19 @@ def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "base_peak_kw": round(float(base0.max()), ROUND_DECIMALS),
         "base_peak_per_home_kw": round(float(base0.max()) / n_homes, ROUND_DECIMALS),
+        # Peak against the NAMEPLATE — a descriptive statistic, kept so the
+        # two conventions can be read side by side.
         "base_peak_pct_rating": round(
             float(base0.max()) / _RATING_KW * 100.0, ROUND_DECIMALS
         ),
+        # Peak LOADING against the capability each hour actually has. With a
+        # temperature-dependent rating the peak-load hour need not be the
+        # peak-loading hour, so this divides per step before taking the max.
+        "base_peak_pct_capability": round(
+            float((base0 / limit).max()) * 100.0, ROUND_DECIMALS
+        ),
         "base_floor_hours": round(
-            float((base0 > _RATING_KW).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS
+            float((base0 > limit).sum()) * _HOURS_PER_STEP, ROUND_DECIMALS
         ),
         "ev_pool_annual_kwh_mean": round(
             float(ev_pool.sum(axis=1).mean()) * _HOURS_PER_STEP, ROUND_DECIMALS

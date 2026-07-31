@@ -48,6 +48,7 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
     DISCOUNT_RATE,
+    RAMP_HORIZON_YEARS,
     DTYPE,
     LIFE_YEARS,
     NONWIRES_ADOPTION_GRID,
@@ -318,14 +319,22 @@ def _substation_deferral(
                 "defer_npv": 0.0, "trafo_years": 0.0}
     r = float(DISCOUNT_RATE)
     disc0 = (1.0 + r) ** (-y0)
-    disc1 = (1.0 + r) ** (-y1) if np.isfinite(y1) else 0.0
+    # If the deferred crossing falls outside the planning horizon the upgrade
+    # is AVOIDED within it, not deferred. Discounting that as `disc1 = 0` would
+    # book the entire capex as deferral value and inflate the headline several
+    # fold, while `trafo_years` correctly reported None — an internally
+    # inconsistent pair. The deferral is therefore capped AT the horizon and
+    # the fact is flagged, so a reader sees an avoided upgrade for what it is.
+    beyond = not np.isfinite(y1) or y1 > float(RAMP_HORIZON_YEARS)
+    y1_eff = float(RAMP_HORIZON_YEARS) if beyond else float(y1)
+    disc1 = (1.0 + r) ** (-y1_eff)
     defer = capex * (disc0 - disc1)
     return {
         "a0": round(float(a0), 6), "a1": round(a1, 6),
         "capex": round(capex, ROUND_DECIMALS),
         "defer_npv": round(float(defer), ROUND_DECIMALS),
-        "trafo_years": round(float(y1 - y0), ROUND_DECIMALS)
-        if np.isfinite(y1) else None,
+        "avoided_beyond_horizon": bool(beyond),
+        "trafo_years": round(float(y1_eff - y0), ROUND_DECIMALS),
     }
 
 

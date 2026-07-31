@@ -33,17 +33,16 @@ import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     annual_base_realization,
+    cold_capability_curve,
     day_mean_temps,
     ev_fleet_annual,
+    feeder_rating,
     load_annual_tmy,
     tmy_hour_of_day,
 )
 from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     _cold_day_peaks,
     congestion_stats,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ANNUAL_RES_MINUTES,
@@ -59,6 +58,9 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+    size_network_to_load,
 )
 
 _STEPS_PER_DAY = 24 * (60 // int(ANNUAL_RES_MINUTES))
@@ -131,19 +133,27 @@ def _size_congestion(
     rating_kw: float,
     g: float,
     ev_per_home: float,
+    k_curve: np.ndarray | None = None,
 ) -> dict[str, float]:
     """Congestion stats for one (size, G, ev/home) — base×EV×cold-day peaks."""
     n_evs = int(round(float(ev_per_home) * int(homes)))
+    # A cold-day peak is judged against the capability that day's ambient
+    # allows (RATING_CONVENTION): load and capability rise together here.
+    limit = rating_kw if k_curve is None else rating_kw * k_curve
     peaks: list[np.ndarray] = []
     for kb in range(base_mc.shape[0]):
         base_g = base_mc[kb] * float(g)
         if n_evs <= 0:
-            peaks.append(_cold_day_peaks(base_g, cold_mask, steps_per_day))
+            peaks.append(
+                _cold_day_peaks(base_g / limit, cold_mask, steps_per_day)
+            )
             continue
         for pool in ev_pools:
             total = base_g + pool[:n_evs].sum(axis=0)
-            peaks.append(_cold_day_peaks(total, cold_mask, steps_per_day))
-    return congestion_stats(np.concatenate(peaks), rating_kw)
+            # Divide BEFORE the daily max: with a moving limit the peak-load
+            # step is not the peak-loading step.
+            peaks.append(_cold_day_peaks(total / limit, cold_mask, steps_per_day))
+    return congestion_stats(np.concatenate(peaks), 1.0)
 
 
 def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
@@ -181,6 +191,12 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             )
         rating_by_size[h] = group.pop()
 
+    _cap, _series = feeder_rating(temp)
+    k_curve = (
+        None
+        if _series is None
+        else cold_capability_curve(temp, res_minutes=int(ANNUAL_RES_MINUTES))
+    )
     base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(CONGESTION_K_BASE))
     ev_grid = [float(e) for e in CONGESTION_EV_PER_HOME_GRID]
     g_grid = [float(g) for g in CONGESTION_G_GRID]
@@ -198,6 +214,7 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
                     _size_congestion(
                         base_mc[h], ev_pools, cold_mask, _STEPS_PER_DAY,
                         homes=h, rating_kw=rating_by_size[h], g=g, ev_per_home=e,
+                        k_curve=k_curve,
                     )
                 )
             grid.append(row)

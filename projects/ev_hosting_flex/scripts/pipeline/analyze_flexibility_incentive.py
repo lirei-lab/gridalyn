@@ -37,6 +37,7 @@ from scipy.special import ndtr, ndtri  # noqa: E402
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     aggregate_to_hourly,
     climate_bin_days,
+    feeder_rating,
     load_annual_tmy,
     tmy_hour_of_day,
     valley_fill_shift,
@@ -86,6 +87,7 @@ def _bin_p95_loading(
     rating_kw: float,
     hod0: int,
     charger_kw: np.ndarray,
+    rating_series: np.ndarray | None = None,
 ) -> float:
     """P95 over the bin's days of the WHOLE-DAY peak loading (% of rating).
 
@@ -103,6 +105,10 @@ def _bin_p95_loading(
         n_enrolled: flexible EVs (first ``n_enrolled`` of the fleet).
         policy: ``"uncontrolled" | "shift" | "curtail"``.
         rating_kw: feeder usable rating (kW).
+        rating_series: optional ``(N_days*24,)`` per-hour rating in
+            array-index order, overriding the scalar. Sliced and rolled
+            per day exactly like ``base`` so each hour is judged against
+            the capability its own ambient allows.
         hod0: LOCAL hour of array index 0 (local-hour ordering via np.roll).
         charger_kw: ``(pool,)`` per-EV charger power (kW).
 
@@ -113,6 +119,11 @@ def _bin_p95_loading(
     for d in day_indices:
         sl = slice(d * 24, (d + 1) * 24)
         base_day = np.roll(np.asarray(base[sl], dtype=DTYPE), int(hod0))
+        rating_day = (
+            rating_kw
+            if rating_series is None
+            else np.roll(np.asarray(rating_series[sl], dtype=DTYPE), int(hod0))
+        )
         fleet = pool[:n_ev, sl]
         fleet = np.roll(fleet, int(hod0), axis=1)
         enrolled = fleet[:n_enrolled]
@@ -123,33 +134,35 @@ def _bin_p95_loading(
             flex_agg = enrolled.sum(axis=0) if n_enrolled else np.zeros(24, DTYPE)
         elif policy == "curtail":
             served, _ = apply_local_curtailment(
-                base_day + free_agg, enrolled.sum(axis=0), rating_kw
+                base_day + free_agg, enrolled.sum(axis=0), rating_day
             )
             flex_agg = served
         elif policy == "shift":
             flex_agg = valley_fill_shift(
                 base_day + free_agg,
                 enrolled.sum(axis=1),  # per-EV daily energy (kWh)
-                rating_kw,
+                rating_day,
                 charger_kw[:n_enrolled],
             )
         else:
             raise ValueError(f"unknown policy {policy!r}")
         total = base_day + free_agg + flex_agg
-        peaks.append(float(total.max()))
-    return float(
-        np.percentile(np.array(peaks, dtype=DTYPE) / float(rating_kw) * 100.0, 95)
-    )
+        # Divide BEFORE the max: with a rating that follows the ambient the
+        # peak-load hour need not be the peak-loading hour.
+        peaks.append(float((total / rating_day).max()) * 100.0)
+    return float(np.percentile(np.array(peaks, dtype=DTYPE), 95))
 
 
 def _min_enrollment_feasible(
-    *, base, pool, day_indices, n_ev, policy, rating_kw, hod0, charger_kw
+    *, base, pool, day_indices, n_ev, policy, rating_kw, hod0, charger_kw,
+    rating_series=None,
 ) -> int | None:
     """Smallest enrolled count (0..n_ev) with P95 <= 100%, or None if infeasible."""
     for e in range(0, n_ev + 1):
         p95 = _bin_p95_loading(
             base=base, pool=pool, day_indices=day_indices, n_ev=n_ev,
             n_enrolled=e, policy=policy, rating_kw=rating_kw, hod0=hod0,
+            rating_series=rating_series,
             charger_kw=charger_kw,
         )
         if p95 <= 100.0:
@@ -158,13 +171,14 @@ def _min_enrollment_feasible(
 
 
 def _optimize_bin(
-    *, base, pool, bin_entry, n_ev, rating_kw, hod0, charger_kw
+    *, base, pool, bin_entry, n_ev, rating_kw, hod0, charger_kw, rating_series=None
 ) -> dict[str, Any]:
     """Return the min-subsidy feasible policy for one climate bin."""
     day_indices = bin_entry["day_indices"]
     p95_unc = _bin_p95_loading(
         base=base, pool=pool, day_indices=day_indices, n_ev=n_ev, n_enrolled=0,
         policy="uncontrolled", rating_kw=rating_kw, hod0=hod0, charger_kw=charger_kw,
+        rating_series=rating_series,
     )
     options: dict[str, dict[str, Any]] = {}
     for policy, med, sig in (
@@ -174,6 +188,7 @@ def _optimize_bin(
         e_star = _min_enrollment_feasible(
             base=base, pool=pool, day_indices=day_indices, n_ev=n_ev,
             policy=policy, rating_kw=rating_kw, hod0=hod0, charger_kw=charger_kw,
+            rating_series=rating_series,
         )
         if e_star is None:
             options[policy] = {
@@ -207,7 +222,8 @@ def _optimize_bin(
 
 
 def _policy_ceiling_ev_per_home(
-    *, base, pool, day_indices, policy, rating_kw, hod0, charger_kw, n_max
+    *, base, pool, day_indices, policy, rating_kw, hod0, charger_kw, n_max,
+    rating_series=None,
 ) -> float:
     """Max EV/home (over the 6-home feeder) this policy hosts with P95 <= 100%.
 
@@ -221,6 +237,7 @@ def _policy_ceiling_ev_per_home(
             base=base, pool=pool, day_indices=day_indices, n_ev=n,
             n_enrolled=n if policy == "shift" else 0, policy=policy,
             rating_kw=rating_kw, hod0=hod0, charger_kw=charger_kw,
+            rating_series=rating_series,
         )
         if p95 <= 100.0:
             return n / 6.0
@@ -259,6 +276,9 @@ def derive_incentive(data_dir: Path) -> dict[str, Any]:
     pool_h = np.tile(pool_1, (int(POOL_TILES), 1)).astype(DTYPE)
     temp = load_annual_tmy()
     hod0 = int(tmy_hour_of_day(temp))
+    # This stage works at HOURLY resolution, so the rating series is built at
+    # 60 min to align index-for-index with `base_h` / `pool_h`.
+    cap, series = feeder_rating(temp, res_minutes=60)
     charger_kw = pool_h.max(axis=1).astype(DTYPE)  # per-EV peak = charger rating
     n_max = pool_h.shape[0]
     target_ev_home = float(INCENTIVE_TARGET_EV_PER_HOME)
@@ -269,16 +289,17 @@ def derive_incentive(data_dir: Path) -> dict[str, Any]:
     for be in bin_entries:
         res = _optimize_bin(
             base=base_h, pool=pool_h, bin_entry=be, n_ev=n_target,
-            rating_kw=_RATING_KW, hod0=hod0, charger_kw=charger_kw,
+            rating_kw=cap, hod0=hod0, charger_kw=charger_kw,
+            rating_series=series,
         )
         shift_ceiling = _policy_ceiling_ev_per_home(
             base=base_h, pool=pool_h, day_indices=be["day_indices"],
-            policy="shift", rating_kw=_RATING_KW, hod0=hod0,
+            policy="shift", rating_kw=cap, hod0=hod0, rating_series=series,
             charger_kw=charger_kw, n_max=n_max,
         )
         unc_ceiling = _policy_ceiling_ev_per_home(
             base=base_h, pool=pool_h, day_indices=be["day_indices"],
-            policy="uncontrolled", rating_kw=_RATING_KW, hod0=hod0,
+            policy="uncontrolled", rating_kw=cap, hod0=hod0, rating_series=series,
             charger_kw=charger_kw, n_max=n_max,
         )
         res["shift_ceiling_ev_per_home"] = round(shift_ceiling, ROUND_DECIMALS)

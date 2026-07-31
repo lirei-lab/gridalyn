@@ -240,7 +240,8 @@ def apply_local_curtailment(
     Args:
         base_kw: ``(H,)`` design-day hourly base at the transformer (kW).
         ev_kw: ``(H,)`` design-day hourly EV overlay at the transformer (kW).
-        rating_kw: Transformer usable static rating (kW).
+        rating_kw: Transformer usable rating (kW); scalar, or a per-hour
+            array when the rating follows the ambient.
 
     Returns:
         ``(served_ev_kw (H,), curtailed_kwh)``: the post-curtailment EV draw and
@@ -248,7 +249,7 @@ def apply_local_curtailment(
     """
     base = np.asarray(base_kw, dtype=float)
     ev = np.asarray(ev_kw, dtype=float)
-    headroom = np.maximum(float(rating_kw) - base, 0.0)
+    headroom = np.maximum(np.asarray(rating_kw, dtype=float) - base, 0.0)
     served = np.minimum(ev, headroom)
     curtailed_kwh = float(np.sum(ev - served))
     return served, curtailed_kwh
@@ -281,7 +282,8 @@ def flex_deferral_curves(
         base_perhome_day: ``(H,)`` per-home design-day base profile (kW).
         ev_perhome_day: ``(H,)`` per-EV design-day charging profile (kW).
         n_homes: Homes on this transformer size.
-        rating_kw: Transformer usable static rating (kW).
+        rating_kw: Transformer usable rating (kW); scalar, or a per-hour
+            array when the rating follows the ambient.
         adoption_grid: ``(G,)`` adoption levels (EV/home) to evaluate.
 
     Returns:

@@ -29,6 +29,8 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+    feeder_rating,
+    load_annual_tmy,
     simulate_curtailment,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
@@ -83,6 +85,10 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
     """
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
+    # Each hour is judged against the capability its OWN ambient allows
+    # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
+    # `series` is what a load is actually compared against.
+    cap, series = feeder_rating(load_annual_tmy())
     firm = int(
         json.loads((json_dir / "firm_hosting_annual.json").read_text())["firm_ev_count"]
     )
@@ -100,8 +106,9 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
     breakeven_n = pool_max  # last n where the contract still beats reinforcement
     for n in range(1, pool_max + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, bool), _RATING_KW,
+            base, pool[:n], np.ones(n, bool), cap,
             res_minutes=ANNUAL_RES_MINUTES,
+            rating_series=series,
         )
         curt_kwh = float(out["curtailed_kwh_by_ev"].sum())
         contract = n * float(C_AVAIL_EV_YR) + float(C_A_CURTAIL) * curt_kwh

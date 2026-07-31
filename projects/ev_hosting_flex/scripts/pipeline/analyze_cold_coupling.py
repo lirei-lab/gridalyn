@@ -36,6 +36,7 @@ import numpy as np  # noqa: E402
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     N_DAYS,
     ev_fleet_annual,
+    feeder_rating,
     firm_annual,
     load_annual_tmy,
     simulate_curtailment,
@@ -59,22 +60,38 @@ _STEPS_PER_DAY = 24 * 60 // ANNUAL_RES_MINUTES
 
 
 def _flex_and_curtailment(
-    base: np.ndarray, pool: np.ndarray, tday: np.ndarray
+    base: np.ndarray,
+    pool: np.ndarray,
+    tday: np.ndarray,
+    rating_series: np.ndarray | None = None,
 ) -> dict[str, Any]:
-    """Return flexible count + total curtailed energy (kWh, % of EV energy)."""
-    base_floor = float((base > _RATING_KW).sum()) * _HOURS_PER_STEP
+    """Return flexible count + total curtailed energy (kWh, % of EV energy).
+
+    Args:
+        base: ``(horizon,)`` feeder base in kW.
+        pool: ``(pool, horizon)`` per-EV demand pool.
+        tday: ``(365,)`` per-day mean temperatures.
+        rating_series: Optional ``(horizon,)`` per-step usable rating in kW
+            (RATING_CONVENTION); each hour is then judged against the
+            capability its own ambient allows instead of the fixed nameplate.
+            ``None`` keeps the nameplate-scalar behaviour.
+    """
+    limit = _RATING_KW if rating_series is None else rating_series
+    base_floor = float((base > limit).sum()) * _HOURS_PER_STEP
     pool_max = pool.shape[0]
     flexible = 0
     for n in range(1, pool_max + 1):
         out = simulate_curtailment(
             base, pool[:n], np.ones(n, bool), _RATING_KW,
             res_minutes=ANNUAL_RES_MINUTES,
+            rating_series=rating_series,
         )
         if out["residual_hours"] <= base_floor + 1e-9:
             flexible = n
     full = simulate_curtailment(
         base, pool, np.ones(pool_max, bool), _RATING_KW,
         res_minutes=ANNUAL_RES_MINUTES,
+        rating_series=rating_series,
     )
     curt_kwh = float(full["curtailed_kwh_by_ev"].sum())
     ev_energy = float(pool.sum()) * _HOURS_PER_STEP
@@ -104,7 +121,12 @@ def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     """
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
-    hod0 = tmy_hour_of_day(load_annual_tmy())
+    temp = load_annual_tmy()
+    hod0 = tmy_hour_of_day(temp)
+    # Each hour is judged against the capability its OWN ambient allows
+    # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
+    # `series` is what a load is actually compared against.
+    cap, series = feeder_rating(temp)
     cold_days = np.where(tday < float(COLD_DAY_TMEAN_C))[0]
 
     cold_pool = ev_fleet_annual(np.random.default_rng(SEED), POOL_MAX_ANNUAL, tday, hod0)
@@ -116,9 +138,15 @@ def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     models: dict[str, Any] = {}
     for name, pool in (("cold_coupled", cold_pool), ("naive", naive_pool)):
         firm = firm_annual(
-            base, pool, _RATING_KW, tday, hod0=hod0, res_minutes=ANNUAL_RES_MINUTES
+            base,
+            pool,
+            cap,
+            tday,
+            hod0=hod0,
+            res_minutes=ANNUAL_RES_MINUTES,
+            rating_series=series,
         )
-        flex = _flex_and_curtailment(base, pool, tday)
+        flex = _flex_and_curtailment(base, pool, tday, rating_series=series)
         models[name] = {
             "firm_ev_count": int(firm["firm_ev_count"]),
             "p95_cold_evening_curve": firm["p95_curve"],
