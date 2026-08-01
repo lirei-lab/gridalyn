@@ -133,33 +133,33 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.269939,
+      "expected": 0.018405,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
-        "feeder_mc",
-        "mc_firm_12ev",
+        "feeder_mc_by_role",
+        "firm",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 0.521472,
+      "expected": 0.06135,
       "id": "pf.mc_p_overload_ac_unmanaged",
       "json_path": [
-        "feeder_mc",
-        "mc_unmanaged_16ev",
+        "feeder_mc_by_role",
+        "unmanaged",
         "p_overload_ac"
       ],
       "source": "outputs/json/powerflow_violations.json",
       "tolerance": 1e-06
     },
     {
-      "expected": 102.266424,
+      "expected": 103.704665,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
-        "feeder_mc",
-        "mc_curtailed_16ev",
+        "feeder_mc_by_role",
+        "curtailed",
         "peak_loading_max"
       ],
       "source": "outputs/json/powerflow_violations.json",

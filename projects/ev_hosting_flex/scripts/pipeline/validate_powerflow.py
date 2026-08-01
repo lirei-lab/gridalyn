@@ -47,7 +47,9 @@ import pandas as pd  # noqa: E402
 
 from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     aggregate_to_hourly,
+    cold_capability_curve,
     design_day_base_per_home,
+    feeder_rating,
     load_annual_tmy,
     simulate_curtailment,
     tmy_hour_of_day,
@@ -400,9 +402,14 @@ def build_scenario_profiles(
     # ── Feeder-unit cold-day MC: the curtailment backstop runs at the GOVERNED
     # step resolution (correct energy/headroom), then the AC layer works on the
     # HOURLY aggregate (96-step PFs would ~4x a validation cost for no gate).
+    _cap, _series = feeder_rating(temp_hourly)
     backstop = simulate_curtailment(
-        base_annual, pool[:flexible], np.ones(flexible, bool), _FEEDER_RATING_KW,
+        base_annual,
+        pool[:flexible],
+        np.ones(flexible, bool),
+        _cap,
         res_minutes=ANNUAL_RES_MINUTES,
+        rating_series=_series,
     )
     base_annual = aggregate_to_hourly(base_annual)
     pool = aggregate_to_hourly(pool)
@@ -427,10 +434,16 @@ def build_scenario_profiles(
         f"mc_unmanaged_{flexible}ev": _cold_matrix(base_annual + pool_flex),
         f"mc_curtailed_{flexible}ev": _cold_matrix(base_annual + served),
     }
+    # Capability per (cold day, hour), built with the SAME _cold_matrix so the
+    # realization -> day -> hour mapping is identical to the load variants. A
+    # daily peak is then judged against the capability of the hour it occurs
+    # in, not against a nameplate defined at 30 C.
+    k_hourly = cold_capability_curve(temp_hourly, res_minutes=60)
     mc_inputs = {
         "variants": mc_variants,
         "downstream_buses": downstream,
         "n_cold_days": int(cold_days.size),
+        "k_cold": None if _series is None else _cold_matrix(k_hourly),
     }
     meta["n_cold_days"] = int(cold_days.size)
     return profiles, meta, mc_inputs
@@ -583,7 +596,17 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     )
     mc = run_feeder_mc(subnet, mc_inputs["variants"], mv_vm_hourly)
 
-    mc_peaks = mc.groupby(["variant", "realization"])["trafo_loading_percent"].max()
+    # Divide BEFORE the max: with a rating that follows the ambient, the
+    # peak-load hour need not be the peak-loading hour. `k_cold` is (day, hour)
+    # in the same order the MC emits, so it aligns row-for-row.
+    k_cold = mc_inputs.get("k_cold")
+    if k_cold is None:
+        mc["trafo_loading_norm"] = mc["trafo_loading_percent"]
+    else:
+        mc["trafo_loading_norm"] = mc["trafo_loading_percent"] / k_cold[
+            mc["realization"].to_numpy(), mc["hour"].to_numpy()
+        ]
+    mc_peaks = mc.groupby(["variant", "realization"])["trafo_loading_norm"].max()
     mc_line_peaks = mc.groupby(["variant", "realization"])[
         "max_line_loading_percent"
     ].max()
@@ -638,6 +661,18 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
             for name, scenario_violations in sorted(violations.items())
         },
         "feeder_mc": mc_summary,
+        # Stable-named aliases for the same variants. The `feeder_mc` keys
+        # embed the EV COUNT (`mc_firm_12ev`), so a regression pin pointing at
+        # them breaks the moment the count moves — which it does whenever the
+        # rating or the pool changes, and it breaks toward a MISSING path
+        # rather than a failed comparison, which reads as "absent" instead of
+        # "wrong". A regression path must not contain a result.
+        "feeder_mc_by_role": {
+            "base": mc_summary.get("mc_base_0ev", {}),
+            "firm": mc_summary[f"mc_firm_{meta['firm_ev_count']}ev"],
+            "unmanaged": mc_summary[f"mc_unmanaged_{meta['flexible_ev_count']}ev"],
+            "curtailed": mc_summary[f"mc_curtailed_{meta['flexible_ev_count']}ev"],
+        },
         **meta,
     }
     violations_path = json_dir / "powerflow_violations.json"
