@@ -218,7 +218,11 @@ def test_governed_annual_firm_pin() -> None:
     # Re-based 2026-07-14 (DHW-tank) firm 2 -> 4, then 2026-07-16 (smooth-DHW
     # occupancy) firm 4 -> 5: the diversified DHW lowers the P95 cold-evening
     # loading further, so still more firm headroom before the crossing.
-    assert firm == 5, payload
+    # Re-based 2026-08-01 (RATING_CONVENTION = hourly_kt): the feeder is now
+    # judged against the IEEE C57.91 capability its OWN ambient allows, not a
+    # nameplate defined at 30 C, so the cold-evening P95 falls and firm rises
+    # 5 -> 12. See config.RATING_CONVENTION.
+    assert firm == 12, payload
     assert curve == sorted(curve), "P95 must be monotone in the EV count"
     assert curve[firm] <= limit < curve[firm + 1]
     hours = payload["congested_hours_per_year_curve"]
@@ -241,9 +245,13 @@ def test_governed_curtailment_headline_pins() -> None:
     (Firm dropped 3 → 2 at the governed 15-min resolution.)
     """
     payload = json.loads(_CURTAIL.read_text())
-    assert payload["firm_ev_count"] == 5
-    assert payload["flexible_ev_count"] == 12
-    assert payload["hosting_expansion_percent"] == pytest.approx(1.4)
+    # Re-based 2026-08-01 (RATING_CONVENTION = hourly_kt): the feeder is now
+    # judged against the IEEE C57.91 capability its OWN ambient allows, not a
+    # nameplate defined at 30 C, so the cold-evening P95 falls and firm rises
+    # 5 -> 12. See config.RATING_CONVENTION.
+    assert payload["firm_ev_count"] == 12
+    assert payload["flexible_ev_count"] == 16
+    assert payload["hosting_expansion_percent"] == pytest.approx(1 / 3)
     assert payload["residual_hours_curve"][payload["flexible_ev_count"]] == (
         payload["base_floor_hours"]
     )

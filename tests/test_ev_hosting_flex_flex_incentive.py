@@ -151,6 +151,24 @@ def test_governed_flexibility_incentive() -> None:
     coldest, warmest = bins[0], bins[-1]
     # shift ceiling rises with temperature (falls with cold) and beats uncontrolled
     ceils = [b["shift_ceiling_ev_per_home"] for b in bins]
+    # DELIBERATELY LEFT FAILING (2026-08-01) — this is a real open question, not
+    # a stale expected value, and relaxing it would bury the finding.
+    #
+    # The property asserted here ("the ceiling falls with cold as headroom
+    # shrinks") held under the NAMEPLATE. Under RATING_CONVENTION = hourly_kt
+    # cold raises the load AND the thermal capability together, so the monotone
+    # relation is no longer guaranteed a priori. Observed:
+    #   [10.67, 1.0, 1.0, 2.67, 1.33, 3.83]  (coldest -> warmest)
+    #
+    # Two explanations remain, and the current data cannot separate them:
+    #   (a) physical — the load/capability coupling genuinely breaks monotonicity;
+    #   (b) noise — each climate bin is evaluated on ONE median day, so the
+    #       stochastic day-to-day spread dominates. The coldest bin is also
+    #       `shift_ceiling_pool_capped`, i.e. a LOWER BOUND, so comparing it
+    #       against uncapped bins compares a floor to measurements.
+    #
+    # Separating them needs the ceiling averaged over several days per bin
+    # instead of one, which changes the metric and re-bases this stage.
     assert ceils == sorted(ceils), f"shift ceiling not rising with temp: {ceils}"
     assert coldest["shift_ceiling_ev_per_home"] < warmest["shift_ceiling_ev_per_home"]
     assert all(
