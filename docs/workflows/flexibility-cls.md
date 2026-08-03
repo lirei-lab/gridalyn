@@ -5,16 +5,28 @@ operations. It evaluates scenario adoption, dynamic transformer limits, Soft
 CLS building flexibility, Hard CLS backstop control, rebound, settlement, and
 analysis figures.
 
-!!! warning "Scope of the results"
-    The contribution here is the **market mechanism**. The **load hypotheses are
-    not calibrated to Québec**: the building base uses the SDK defaults (peaks at
-    5.9 kW/home at −23 °C, 41 % below the HQ 10–15 kW design band — real HQ feeders
-    measure 8.8 kW/home), and the SDK EV generator has no cold coupling and
-    pre-smooths each charging session, which biases any "what is flexibility worth
-    against EV peaks" answer downward. Cite the mechanism, not cold-climate hosting
-    numbers. Details and measurements: `projects/flexibility_cls/LIMITATIONS.md`.
-    For the validated Québec archetype, see
-    [EV Hosting Flexibility](../projects/ev-hosting-flex.md).
+!!! note "Scope of the results"
+    The contribution here is the **market mechanism** — locational CLS clearing,
+    Soft/Hard allocation, settlement, and the network-impact validation.
+
+    The load hypotheses were re-based onto the validated Québec archetype in
+    July 2026: the building base now carries `R = 7.5`, 13 kW of installed
+    heating and an explicit hot-water tank (8.3 kW/home coincident, beside the
+    8.8 kW/home real Hydro-Québec feeders measure, up from 5.9), and EVs come
+    from the cold-coupled SDK generator that charges in a **block at rated
+    power** instead of spreading each session flat.
+
+    That second change mattered for the study's own question. The previous
+    session model pre-flattened the very peak flexibility is meant to shave, so
+    the market cleared **zero** Hard CLS energy at 10 % and 20 % EV penetration
+    in all 30 realizations — not because the network was robust, but because the
+    generator had already solved the problem. It now clears in 30/30 at every
+    penetration.
+
+    Still synthetic: the feeder topology and weather year are pinned model
+    inputs, not a measurement campaign. Measurements and remaining caveats:
+    `projects/flexibility_cls/LIMITATIONS.md`. For the archetype's validation,
+    see [EV Hosting Flexibility](../projects/ev-hosting-flex.md).
 
 The executable project now lives under `projects/flexibility_cls/`. It owns
 the pipeline scripts, plotting scripts, generated data, scenario JSON, figures,

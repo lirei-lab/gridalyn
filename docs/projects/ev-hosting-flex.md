@@ -27,19 +27,31 @@ The study follows a deliberate arc — *diagnosis before solutions*:
    realizations spanning seeds and winter severity.
 5. **Cold-tail insurance** — the study the others were building toward, and the
    answer to *why flexibility matters if the network is robust at the median*:
-    - **Hosting capacity is a distribution, not a number.** Planning at the P50
-      leaves the feeder short **22 % of years**; the spread is weather
-      (corr(severity, firm) = +0.42), not sampling noise.
-    - **Flexibility is priced as insurance** against that cold tail and compared to
-      reinforcement **at an equal 95 % reliability target**. There is a window —
-      **4–7 EVs** — where insurance is cheaper. At 1 EV/home the feeder falls short
-      98 % of years, yet flexibility covers **100 %** of them for **$503/yr vs
-      $696/yr** to reinforce. The **crossover is 8 EVs** (7 under the project's
-      other CAPEX anchor); beyond it, reinforce.
+    - **Hosting capacity is a distribution, not a number.** Firm hosting spans
+      **11–13 EVs** (P05–P95) across weather years, and the spread is weather
+      (corr(severity, firm) = **+0.56**), not sampling noise. Planning at the P50
+      still leaves the feeder short **28 % of years**; at the P05, 4 %.
+    - **At the governed feeder there is currently nothing to insure.** Judged
+      against the capability each hour's ambient allows (see *Rating convention*
+      below), the reference adoption never falls short — activation frequency
+      **0**, and the reinforcement it would defer costs **$0/yr** because no
+      reinforcement is triggered. The crossover where reinforcing wins sits at
+      **12 EVs**, i.e. at the firm limit itself.
+    - This is a **result of the rating convention, not an absence of risk.**
+      Under the static nameplate the same feeder falls short in most years and
+      the insurance case is worth several hundred dollars a year against
+      reinforcement; under the ambient-dependent capability it never binds. The
+      convention moves the answer more than the EVs do. Set
+      `RATING_CONVENTION = "static"` and re-run to reproduce that comparison —
+      the figures are deliberately not quoted here, because a number carried
+      across a convention change is how this study previously acquired several
+      stale headlines.
     - Coverage is an **energy-service** criterion: the backstop always holds the
-      transformer, so what can fail is denied charging — which peaks at 2.1 % and is
-      **priced into** the flex cost, so the comparison is like-for-like.
-    - Flexibility therefore fails on *cost*, never on *reliability*.
+      transformer, so what can fail is denied charging, and that denied energy is
+      **priced into** the flex cost so the comparison is like-for-like.
+    - Where the value does live is the **fleet**, not this feeder — see the fleet
+      triage, which classifies all 540 transformers rather than the one the
+      headline happens to sit on.
 
 ## Why It Is Defensible
 
@@ -59,6 +71,29 @@ peak and energy and cannot satisfy both.
 
 Full calibration provenance, including five deliberate re-bases and their
 rationale, is in `projects/ev_hosting_flex/CALIBRATION.md`.
+
+## Rating Convention
+
+How a load is judged against a transformer limit is a **declared axis** of this
+study, not an assumption. `RATING_CONVENTION` in the project config decides it in
+one place, and every stage consumes it through the same helper.
+
+| Convention | What "overloaded" means |
+|---|---|
+| `static` | above the nameplate — a rating defined at a 30 °C ambient basis |
+| `hourly_kt` (default) | above the IEEE C57.91 capability at **that hour's** ambient |
+
+It matters more here than the EVs do. In a heating-dominated feeder the load
+peak and the thermal capability are driven by the same variable and rise
+together: at the design cold the capability is ~1.43× nameplate, arriving in
+exactly the hours the load peaks. Judged against the nameplate, 255 of 540
+transformers are in trouble today; judged against the ambient-dependent
+capability, none are. Choosing the convention moves more assets than
+electrifying every household vehicle in Québec would.
+
+The extra capability is not borrowed against transformer life: across the whole
+reachable adoption range the resulting hot spot stays below the 110 °C
+normal-insulation-life limit.
 
 ## Honest Findings
 
