@@ -115,12 +115,17 @@ uv run gridalyn project validate projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 ```
 
-For a larger operations example:
+For the research study — the full arc, calibrated inputs, pinned headlines:
 
 ```bash
-uv run gridalyn project run projects/flexibility_cls
-uv run gridalyn project verify projects/flexibility_cls
+uv run gridalyn project run projects/ev_hosting_flex
+uv run gridalyn project verify projects/ev_hosting_flex
 ```
+
+To exercise the flexibility market API end to end, run the
+[Flexibility CLS](projects/overview.md#capability-demonstrations) capability
+demonstration instead. Both are long-running (tens of minutes) and are verified
+by an operator rather than in CI.
 
 ## Documentation Map
 

@@ -339,11 +339,17 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         readme = (repo_root / "README.md").read_text(encoding="utf-8")
 
+        # The README must teach the CONTRACT — a fast fixture to start with and
+        # a research study for the full arc. It deliberately no longer requires
+        # `flexibility_cls`: that project is a capability demonstration, not a
+        # source of citable findings, and pinning it here is what kept it in the
+        # README's headline position.
         required = [
             "# Gridalyn",
             "utility digital-twin",
             "uv run gridalyn --help",
-            "uv run gridalyn project run projects/flexibility_cls",
+            "uv run gridalyn project run projects/minimal_grid_project",
+            "uv run gridalyn project run projects/ev_hosting_flex",
             "uv run gridalyn validate",
         ]
         missing = [phrase for phrase in required if phrase not in readme]

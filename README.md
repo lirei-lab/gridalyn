@@ -137,12 +137,18 @@ uv run gridalyn project status projects/minimal_grid_project --check-artifacts
 uv run gridalyn project verify-all
 ```
 
-Run a larger flexibility operations demo when you need the full stack:
+Run the research study when you need the full arc — calibrated inputs, pinned
+headline metrics, and reproduce-and-pin verification:
 
 ```bash
-uv run gridalyn project run projects/flexibility_cls
-uv run gridalyn project verify projects/flexibility_cls
+uv run gridalyn project run projects/ev_hosting_flex
+uv run gridalyn project verify projects/ev_hosting_flex
 ```
+
+To exercise the flexibility market API end to end instead, run
+`projects/flexibility_cls` — a capability demonstration rather than a source of
+citable findings; see its scope note. Both are long-running (tens of minutes)
+and are operator-verified, not gated in CI.
 
 Build documentation:
 

@@ -69,15 +69,16 @@ nav:
       - Operational KPIs: flexibility/economic-validation.md
       - Building Flexibility: flexibility/building-flexibility.md
   - Projects:
-      - Project Overview: projects/overview.md
+      - Projects Overview: projects/overview.md
       - Project Model: projects/project-model.md
       - Project Problem Contract: projects/problem-contract.md
       - Project Template Guide: projects/template-guide.md
       - Research Studies:
           - EV Hosting Flexibility: projects/ev-hosting-flex.md
-          - Flexibility CLS: workflows/flexibility-cls.md
           - ADMM Thermal Consensus: projects/admm-thermal-consensus.md
-      - Demo Catalog (CI contract fixtures):
+      - Capability Demonstrations:
+          - Flexibility CLS: workflows/flexibility-cls.md
+      - Contract Fixtures (gated in CI):
           - Minimal Grid Project: projects/minimal-grid-project.md
           - IEEE 33-Bus Demo: projects/ieee-33-demo.md
           - Synthetic GeoJSON Feeder: projects/synthetic-geojson-feeder.md

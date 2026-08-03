@@ -1,9 +1,14 @@
-# Flexibility CLS Project
+# Flexibility CLS — Market API Demonstration
 
-`flexibility_cls` is a larger public demo for topology-aware flexibility
-operations. It evaluates scenario adoption, dynamic transformer limits, Soft
-CLS building flexibility, Hard CLS backstop control, rebound, settlement, and
-analysis figures.
+`flexibility_cls` exercises the **flexibility market API end to end**: scenario
+adoption, dynamic transformer limits, Soft CLS building flexibility, Hard CLS
+backstop control, rebound, settlement, and the analysis figures.
+
+It is a **capability demonstration**, not a research study. It shows that the
+clearing, dispatch and settlement machinery runs and composes at substation
+scale. Domain conclusions belong to the
+[research studies](../projects/overview.md#research-studies), which carry
+calibrated inputs and pinned headlines for exactly that purpose.
 
 !!! note "Scope of the results"
     The contribution here is the **market mechanism** — locational CLS clearing,
