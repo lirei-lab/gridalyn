@@ -1,256 +1,144 @@
 # EV Hosting Flex Project
 
-This workspace is the governed project implementation for the **EV hosting-capacity
-flexibility** case study. It is a deliberately lighter, congestion-focused sibling
-of `flexibility_cls`: it has **no** monetary market, settlement ledger, or
-multi-stage stochastic clearing. The analytical focus is **line/feeder congestion**
-and **per-node flexibility contracts** that curtail EV charging only during the few
-congested winter hours.
+Governed implementation of the **study-B EV hosting-capacity** case study:
+pure Monte-Carlo over a full Trois-Rivières weather year, driven ONLY by the
+SDK stochastic generators, on a physically consistent Hydro-Québec-style twin
+(75 kVA / 240 V pole transformers, ~6 all-electric homes each). The study
+quantifies how a **curtailment contract with day-ahead notice and a fair
+real-time backstop** expands the feeder's EV hosting capacity beyond its firm
+(curtailment-free) limit, and when that contract beats reinforcing the
+transformer.
 
-**Thesis & headline.** A firm-connected EV may join the feeder only if the network
-never congests — the single worst winter hour governs the limit. An EV under a
-**flexibility contract** accepts a power cap during those few congested hours, so far
-more can connect year-round:
+Design provenance: `manuscripts/ev_hosting_flex/scripts/study_b/` (the
+authoritative sandbox) and the local migration design doc
+`docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-annual-migration.md`.
 
-```text
-hosting_expansion_percent = (flexible_ev_count - firm_ev_count) / firm_ev_count
-```
+## Generators (the model, in two pieces)
 
-The cost of that growth is `curtailed_energy_fraction` (annual curtailed EV energy /
-annual EV demand), kept under a YAML-configurable acceptability tolerance
-(primary criterion: annual curtailed-energy fraction < 1%).
+1. **Buildings — SDK agent only** (`gridalyn.assets.datagen.agents`):
+   first-order RC thermal model per dwelling with ON/OFF thermostat hysteresis
+   over an electric baseboard, plus a time-correlated AR(1) background load
+   (appliances/lighting, scaled by `BG_SCALE`), plus an explicit stochastic
+   **electric water-heater tank** (`dhw_tank_annual`: 270 L / 4.5 kW thermostatic
+   tank with draws following a **continuous occupancy profile** —
+   `dhw_draw_profile()`, an all-day baseline + smooth morning/evening Gaussians —
+   and **per-home tank diversity** (setpoint/deadband/element/volume jitter) so
+   reheats stagger and the aggregate has no coincident on/off step; 2026-07-16 fix). Base = `Σp_heat + Σp_cool +
+   BG_SCALE·Σp_bg + DHW`. Simulated at 1-min over the committed annual TMY and
+   aggregated. Recalibrated to the Québec all-electric archetype (`R_STUDY_B =
+   7.5 °C/kW`, `P_HEAT_QUEBEC = 13 kW`, `DHW_ELEMENT_KW = 4.5`, `BG_SCALE = 0.6`):
+   the 6-home feeder base is realistic in **both** power and energy — peak
+   ~11.2 kW/home (centre of the CALIBRATION.md 10–15 band) AND annual energy
+   ~29.4 MWh/home (25–30 band), with a textbook 63/14/24 % heat/DHW/appliance
+   split (2026-07-14 DHW re-base; the old `R = 5.0` hit the peak but inflated
+   energy to ~39 MWh). No parametric fallback exists — the SDK agent import
+   failing is a hard error.
+2. **EVs — the study-B cold-coupled sampler** (`scripts/_annual.py`):
+   per EV per day, plug-in probability (0.60 → 0.85) and lognormal session
+   energy (+50 % median at −25 °C) BOTH rise with the day's cold intensity, so
+   EV stress compounds with the heating peak exactly on the critical evenings;
+   charger mix {7.2: 75 %, 9.6: 20 %, 11.5: 5 %} kW, evening Gaussian arrival
+   (18 h ± 1.5, clip 16–22). One pinned nested pool (12 EVs × 8760 h); every
+   sweep uses row prefixes.
 
-The workflow generates the project data, annual profiles, congestion metrics,
-flexibility-contract accounting, peak-hour AC validation, case figures, and canonical
-reports under this workspace:
+## Pipeline (workflow.yaml)
 
-```text
-projects/ev_hosting_flex/outputs/
-```
+| Stage | What it does | Key outputs |
+|---|---|---|
+| `prepare_topology_cache` | Synthetic HQ twin via the public facade (240 V / 75 kVA / 2 % vk pole transformers) + feeder selection (idx-10, 6 homes) | `outputs/cache/*` |
+| `generate_annual_mc` | SDK annual base realizations + day-ahead forecast bases per σ + the cold-coupled EV pool | `base_annual.npy`, `fc_base_sigma_*.npy`, `ev_fleet_annual.npy` |
+| `compute_congestion_annual` | **Firm** = largest pool prefix with P95 cold-day evening loading ≤ 100 % + congested-hours curve | `firm_hosting_annual.json` |
+| `apply_curtailment_contracts` | The mechanism: day-ahead call (notice), real-time backstop (reliability), fair rotation; enrollment sweep + notice quality + fairness | `curtailment_hosting.json` |
+| `compute_curtailment_economics` | Two-part contract vs annualized reinforcement + zone of agreement + break-even adoption | `curtailment_economics.json` |
+| `analyze_credibility` | **Credibility layer** — confidence intervals on the citable headlines. Re-runs the firm/flex/breakeven chain over **K=50 realizations** varying the building seed (`SEED+r`), the EV-fleet seed, and a synthetic **winter-severity** temperature anomaly (δ~N(0, 1.5 °C), δ₀=0), reusing the governed kernels (`firm_annual`, `simulate_curtailment`). Reports P5/P50/P95 + mode + P(=governed point). Finding: **the governed firm=5 is weather-sensitive** — [P5=3, P95=5], median 4 (histogram 2:1 3:10 4:20 5:18 6:1), while **flex=12 and breakeven=6 are robust**. The realization-0 (δ=0, SEED) point reproduces the governed firm/flex/breakeven exactly (a consistency anchor). Single TMY → the weather axis is a synthetic winter-severity proxy, not measured weather years; governed feeder / pilar-1 trio only | `credibility.json`, figure |
+| `analyze_cold_insurance` | **The study that answers "why flexibility if the network is robust?"** Two parts on the credibility seeds (so both studies share one firm distribution — enforced by a test). **Part 1 (methodological):** hosting capacity is a **distribution, not a number** — planning at the P50 leaves the feeder short **22 % of years** (at the P5, 2 %), and corr(winter severity, firm) = **+0.42** shows the spread is weather, not sampling noise. **Part 2 (economic):** to host a target adoption, compare **reinforcing** (upgrade so firm ≥ A in ≥95 % of years, paid every year) against **flexibility as insurance** (availability every year + the expected activation + the value of the charging it denies) — at an equal reliability target. Finding: there is a **window** where insurance wins. At 1–3 EVs neither is needed; at **4–7 EVs flexibility is cheaper** (at the 6-EV reference the feeder falls short 98 % of years yet flexibility covers **100 %** of them for **$503/yr vs $696/yr** to reinforce — 28 % cheaper); the **crossover is 8 EVs** (1.33 EV/home), beyond which reinforcing wins. Two honesty corrections from adversarial review: coverage is an **energy-service** test (with full enrollment the backstop always holds the transformer, so what can fail is denied charging — the mean curtailed fraction peaks at **2.1 %**, far inside the 10 % tolerance), and the flex cost **prices the denied charging** at retail so the comparison is like-for-like ($3.77 of the $503 at the reference). Flexibility fails on *cost*, never on *reliability* (`flex_viability_limit` null — a finding, not pinned). The crossover is one rung fragile: **7 EVs** under the project's flat CAPEX anchor, reported as `crossover_adoption_flat_capex`. Reinforcement is lumpy (75→100→167 kVA rungs) while insurance scales smoothly — that is the shape of the argument. Synthetic climate axis; illustrative costs (the robust results are the shape and the activation frequency, not the dollars) | `cold_insurance.json`, figure |
+| `analyze_nonwires_value` | **Pilar-2: network-scale non-wires value** — the SOLUTIONS answer to the diagnostic. Per transformer SIZE (mapped to the 540) a kernel (`flex_deferral_curves`) gives the without-flex coincident-peak curve + the with-flex (valley-fill shift + local-curtailment backstop) curtailed-energy curve; the stage derives A₀ (first overload) and A₁ (adoption until flex stops being viable — reliability [curtailed > 10 %] OR economics [contract > annualized reinforcement]). A logistic adoption ramp maps A₀/A₁ to years, so **deferral NPV = CAPEX·((1+r)⁻ᵞ⁰ − (1+r)⁻ᵞ¹) − flex-contract cost**, aggregated over the 540 LV transformers (per-size × count) + the N-1 substation. Emits the ramp headline (**$72 k NPV + 286 transformer-years deferred**, DOMINATED by the substation $47 k) AND a ramp-shape-robust per-adoption snapshot (peak $1.8 M CAPEX under deferral at 0.8 EV/home). Finding: the non-wires value is **dominated by the substation** deferral — the feeders either bind **base-driven** (the realistic all-electric base alone overloads them, so EV flexibility cannot defer them) or bind late enough that reinforcement is cheaper than paying flexibility; only the early-binding sizes (5/9/10-home) defer at the feeder level. A₁ is a viability bound, not a physical crossing (curtailment always caps); base-driven overloads are honestly excluded; per-size deferral is floored at 0 (a value-negative contract is declined); CAPEX anchors illustrative ($107/kVA installed, reconciled with pilar-1); logistic ramp is one scenario (the snapshot is robust) | `nonwires_value.json`, figure |
+| `analyze_network_characterization` | Design-day full-net sweep of technical losses, the substation N-1 firm capacity (standard HQ bank of 2 identical parallel 33.3 MVA units on a common tied MV bus, ~56% loaded normally — on a single-unit contingency the survivor carries the base on its emergency rating, and the area peak crosses that N-1 emergency firm capacity at ~1.35 EV/home), and the per-transformer hosting-headroom map | `network_characterization.json`, figure |
+| `analyze_clustered_adoption` | Study 3B: non-uniform (clustered) EV adoption at a **fixed fleet** (mean-preserving lognormal draw over the 540 LV transformers, dispersion swept). The clustering **penalty** = worst-transformer loading at a fixed mean rate, uniform vs most-clustered (rises with the adoption Gini); clustering concentrates stress (fewer transformers overload but the hotspots get far worse). Then the **recovery**: per-transformer local curtailment (static-rating cap, no time-shift) pulls the worst hotspot back toward its rating, at a curtailment-energy cost concentrated (burden Gini) on the EV-heavy clusters. Phase imbalance out of scope (needs `runpp_3ph`) | `clustered_adoption.json`, figure |
+| `analyze_flexibility_incentive` | Study 1A: the vanishing valley, reframed. Bins the TMY year by daily-mean temperature and computes the **shift-hosting ceiling** per bin — the EV/home at which optimal valley-fill smart-charging exhausts the day's *distributed* headroom (pure-kW, 24-hour peak on the governed feeder). Finding: even the all-electric cold base (67–89 %, never at 100 % all day) leaves enough headroom that optimal shift hosts ~3.8 EV/home at −20 °C, rising to 8+ in mild weather — so the naive "no overnight valley → curtailment required" fear is overturned at realistic penetration; the earlier fixed-window probe underestimated optimal smart-charging. Beyond the ceiling curtailment is required; at a high-adoption target a lognormal-WTA incentive optimum migrates shift→curtail at a crossover temperature. WTA illustrative; the shift-ceiling curve is the robust headline | `flexibility_incentive.json`, figure |
+| `analyze_network_performance` | Network performance state under a load-growth hypothesis: the network is sized at G=1 and evaluated under base×G (real networks are under-reinforced — sized for an earlier load that grew). Per-transformer utilization / exceedance-hours / headroom / **growth-margin** over the 540 LV transformers, the **flexible-vs-inflexible peak share** (the ceiling on the value of EV flexibility), and the feeder **flexibility window** (uncontrolled vs optimal-shift hosting vs G). Findings: the healthy network sits ~7.6 % below the overload cliff (`growth_margin_p50`); the coincident peak is only ~31 % EV (mostly inflexible heating — why flex is bounded); flexibility is the right tool only in a narrow loadedness band `G ∈ [1.0, 1.13]` — below it over-built, above it the base overloads and reinforcement is required. Homogeneous-base approximation; pure-kW | `network_performance.json`, figure |
+| `analyze_congestion_risk` | Probabilistic congestion DIAGNOSTIC (diagnosis before solutions, no flexibility). Monte-Carlos BOTH stochastic generators — the SDK building base (per distinct transformer size, cached in `base_mc_by_size.npz`) and the EV fleet — and takes the 15-min coincident daily-max peak on cold days to estimate, per transformer, the **probability** P(cong) and **peak severity** (P95/P99/max) of congestion across a load-growth surface (G × EV/home). Finding (overturns "the network is robust"): peaks and probabilities reveal what averages and optimal-coordination assumptions hid — at 1 EV/home already **488/540 transformers (90 %)** carry >5 % cold-day congestion probability with peaks to **157 %**, and the network crosses the 10 %-at-risk planning trigger at just **0.10 EV/home** — or, on the other growth axis, **+10 % baseline electrification alone (zero EVs)**. Emits the per-transformer risk map, the at-risk count vs growth, and BOTH first-risk triggers (EV-adoption and baseline-growth). kW-proxy (power/thermal); AC voltage + phase imbalance are future layers | `congestion_risk.json`, `base_mc_by_size.npz`, figure |
+| `analyze_phase_imbalance` | Phase-imbalance DIAGNOSTIC at 25 kV MV (`runpp_3ph`) — the HQ topology the balanced model misses: the LV is single-phase 240 V split-phase, so phase imbalance lives at MV where the single-phase pole transformers are spread across the 3 phases. Rebuilds the twin as an MV 3-phase net (`to_three_phase_mv`), places each pole transformer as a single-phase load (round-robin), Monte-Carlo over which homes adopt EVs → P(any MV phase < CSA 0.917), worst voltage-unbalance factor (VUF), and the balanced-vs-unbalanced min-voltage gap. Honest finding: with round-robin assignment + Poisson adoption the imbalance is REAL but MODEST — worst VUF rises to 2.25 % at 2 EV/home, crossing the ~2 % IEC limit around 1.5 EV/home, and the worst phase sits ~0.017 pu below the balanced view, but no CSA undervoltage at ≤2 EV/home; the binding phase metric is the VUF, not undervoltage. Load per transformer is the TRUE coincident peak (base+EV summed per hour, then maxed). Zero-sequence params are standard multipliers; single-phase LV out of scope | `phase_imbalance.json`, figure |
+| `analyze_voltage_risk` | Probabilistic LV **undervoltage** DIAGNOSTIC — the AC-balanced sibling of `validate_powerflow`, made stochastic. On the governed 6-home / 75 kVA feeder subnet, Monte-Carlo over resampled EV fleets (`VOLTAGE_MC_DRAWS`) × cold days, sweeping EV adoption (`VOLTAGE_EV_GRID`); each draw×day solves one balanced `runpp` (`feeder_min_voltage`) and records the day's minimum LV bus voltage → P(min V < CSA 0.917), the voltage tail (P5/P1/worst), and `first_risk_ev_per_home`. Honest finding: the governed feeder is small and well-sized, so its LV voltage stays healthy (worst ~0.93 pu at 2 EV/home > CSA 0.917) and P(undervoltage) is ~0 — `first_risk` is None. The stage **UNDERSTATES network risk**: the network-wide undervoltage `validate_powerflow` finds (0.916 pu at 1 EV/home) sits on the LARGER / deeper feeders, not this one (surfaced as a report warning); a follow-up should target the largest feeder size. Balanced AC only (phase imbalance is `analyze_phase_imbalance`) | `voltage_risk.json`, figure |
+| `analyze_voltage_risk_network` | Probabilistic **full-network** undervoltage DIAGNOSTIC — the stochastic sibling of `validate_powerflow`. On the HQ-sized whole network (`size_network_to_load`: per-cluster kVA + LV conductors + N-1 substation), Monte-Carlo over resampled EV fleets × 163 cold days sweeping adoption (`VOLTAGE_EV_GRID`); each (draw × day × level) builds a per-load kW vector (each home = diversified per-home base of ITS cluster size + uniform EV overlay), takes the network coincident-peak hour, and solves ONE full-net AC with **lightsim2grid** → P(network min LV < CSA 0.917) + tail (P5/P1/worst) + `first_risk_ev_per_home`. Unlike the governed feeder subnet, this keeps the cumulative MV + transformer + LV drop. Honest finding: at 1 EV/home the network min sits right at the CSA edge (worst 0.918 pu, matching `validate_powerflow`'s deterministic 0.916), P(undervoltage)=0; genuine >10% risk emerges at **first-risk 1.70 EV/home** (FINITE, unlike the governed feeder's None), and the reference binding bus is on the **12-home** (largest) cluster — the risk is on the biggest feeders, as the governed stage flagged. Uniform adoption (clustered = `analyze_clustered_adoption`); deep-feeder ~0.91 residual = MV-feeder drop held by LTC/regulators | `voltage_risk_network.json`, figure |
+| `validate_powerflow` | AC validation before/after EVs: (1) design-day network family with each of the 540 LV transformers sized to its own load on the HQ standard kVA ladder + IEEE C57.91 cold dynamic rating; (2) cold-day Monte-Carlo on the 6-home feeder subnet (transformer + LV line loading + home voltage) | `powerflow_*.parquet`, `powerflow_violations.json`, figures |
+
+The kW chain runs at **15-minute resolution** (`ANNUAL_RES_MINUTES`): hourly
+means understate the sub-hourly coincidence of the few 13 kW baseboards and the
+discrete EV step, so the congestion metrics are computed at the utility
+demand-metering interval (the SDK agent already simulates 1-min, so the finer
+base aggregation is free; the AC validation layer stays hourly).
+
+## Lead finding: cold-coupled EV charging shrinks winter hosting
+
+In a cold all-electric network the winter heating peak coincides with the
+evening EV-charging peak, and EVs charge MORE on the coldest evenings (higher
+plug-in probability + larger sessions). `analyze_cold_coupling` re-runs the
+firm/flexible/curtailment analysis on a NAIVE (cold-agnostic) EV model — the
+standard hosting-study assumption of a fixed year-round profile — against the
+governed cold-coupled model:
+
+- A naive model **overestimates the firm winter hosting limit by 50 %** (3 vs
+  2 EVs on the 6-home feeder).
+- It **underestimates the curtailment the flexibility contract must deliver
+  ~2.8×** (2.2 % vs 6.1 % of EV energy).
+- Driver: the cold-coupled model puts **+54 % more EV energy on cold days**,
+  exactly when the electric-heating base also peaks.
+
+Takeaway: cold-climate EV hosting studies need cold-coupled charging demand;
+a typical/mild profile is optimistic about both the limit and the flexibility
+work. See `cold_coupling_comparison.png`.
+
+## Headlines (governed pins, `baselines/results_baseline.json`)
+
+- **Firm = 2 EVs** (P95 cold-evening rule crosses 100 % between 2 and 3 at
+  15-min resolution; hourly aggregation gave a too-generous 3).
+- **Flexible = 12 EVs (+500 %)**: the full-enrollment backstop hosts the whole
+  pool with zero residual congestion, curtailing **6.1 %** of EV energy,
+  shared fairly (Jain 0.9999).
+- **Notice**: at σ_T = 1.5 °C day-ahead forecast error, ~97 % of curtailment
+  arrives pre-notified; the backstop covers the rest (no forecast-blindness).
+- **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
+  annualized reinforcement up to **5 EVs (83 % adoption)** — the technical
+  +200 % vs the economic +25 % is the study's two-sided headline.
+- **AC network validation (HQ-realistic network)**: the LV transformers (load-
+  matched on the standard kVA ladder + C57.91 cold dynamic rating), the LV
+  secondary conductors (thermal ampacity + ≤1 %/conductor voltage drop), and the
+  substation (the standard HQ N-1 bank of 2 identical parallel 33.3 MVA 120/25 kV
+  units on a common tied MV bus, ~56 % loaded normally — sized so the lone
+  survivor carries the full load on a single-unit contingency using its 1.5×
+  emergency rating) are all matched to the Québec all-electric design-cold load.
+  The network is then fully healthy before EVs (LV min voltage 0.942 pu, no
+  overloads), and EV adoption drives undervoltage and LV line overloads (the
+  binding channels — 1.5 EV/home: min 0.900 pu, 431 lines over 100 %) while the
+  load-matched LV transformers stay robust and the substation N-1 becomes a real
+  reinforcement trigger at ~1.35 EV/home. The governed 6-home / 75 kVA feeder
+  stays fixed, so the firm/flexible headlines are unaffected.
+- **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
+  uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
+  MC shows the firm count overloading a few % of cold days (losses/reactive
+  flow push AC apparent power ~3–4 % above the kW proxy). An AC-consistent
+  governed rating is an open, deliberate study decision.
+
+## Running
 
 ```bash
 uv run gridalyn project validate projects/ev_hosting_flex
-uv run gridalyn project validate projects/ev_hosting_flex --check-artifacts
-uv run gridalyn project plan projects/ev_hosting_flex
-uv run gridalyn project run projects/ev_hosting_flex --dry-run
-uv run gridalyn project status projects/ev_hosting_flex --check-artifacts
+uv run gridalyn project run projects/ev_hosting_flex
 uv run gridalyn project regression projects/ev_hosting_flex
+# or stage by stage:
+uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
+uv run python projects/ev_hosting_flex/scripts/verify_regression.py
 ```
 
-`run` writes an execution manifest to:
+Outputs land under `projects/ev_hosting_flex/outputs/` (gitignored; every
+artifact-producing stage emits a platform report). Reproducibility contract:
+`SEED = 42`, BLAS thread caps at stage import, float64 everywhere, 1e-6
+rounding before writes; the annual chain is byte-stable across runs
+(`tests/test_ev_hosting_flex_annual_seal.py`).
 
-```text
-projects/ev_hosting_flex/outputs/manifests/project_run_manifest.json
-```
+## History
 
-`regression` compares the regenerated numerical outputs against the lightweight
-baseline in:
-
-```text
-projects/ev_hosting_flex/baselines/results_baseline.json
-```
-
-(The regression baseline is sealed in Phase 12 — see *Pipeline & status* below.)
-
-The project contract makes the case reproducible by declaring inputs, artifact
-locations, workflow stages, reports, figures, and the run manifest emitted by the
-project runner.
-
-Paths in `project.yaml` and `workflow.yaml` are relative to the repository root
-because the project sets:
-
-```yaml
-spec:
-  pathBase: repo
-```
-
-That keeps project manifests readable: `projects/ev_hosting_flex/...` and
-`configs/...` refer to repository paths instead of paths relative to the nested
-project folder.
-
-The project runtime is the Gridalyn SDK plus declared project and instance
-artifacts. Stage scripts are thin: they call the SDK through its public facades and
-keep the project-specific physics (radial downstream-sum proxy, per-node EV
-allocation, flexibility-contract accounting) in project-local helper modules.
-
-## Synthetic Network Creation
-
-The workflow starts with `prepare_workspace`, a platform-owned stage that creates
-the standard project output directories. The next stage, `prepare_topology_cache`,
-builds the project-owned synthetic network cache used by the annual profiles,
-congestion proxy, and pandapower checks.
-
-Unlike `flexibility_cls`, this study uses a **project-local** building-footprint
-GeoJSON (decision D-03) so the case is self-contained:
-
-```text
-projects/ev_hosting_flex/inputs/buildings.geojson
-```
-
-It also opts into **load-aware line/feeder sizing** through a project-local grid
-config (so the shared `configs/grid/config.json` stays byte-identical and other
-studies are unaffected):
-
-```text
-projects/ev_hosting_flex/inputs/synthetic_network_config.json   # lines.sizing.mode = load_aware
-```
-
-The cache stage runs:
-
-```bash
-uv run python projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py
-```
-
-It converts building footprints into a `PowerGridGraph` through the public
-`gridalyn.simulation` facade, builds the synthetic LV/MV/HV topology, materializes
-the pandapower model, **deterministically selects a single radial feeder**, and
-derives the per-line/per-transformer thermal ratings (kW) and the radial
-downstream-bus map the congestion proxy depends on. It writes:
-
-```text
-projects/ev_hosting_flex/outputs/cache/pg_graph_cache.pkl
-projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
-projects/ev_hosting_flex/outputs/cache/grid_cache_meta.json
-projects/ev_hosting_flex/outputs/cache/building_footprint_validation_report.json
-projects/ev_hosting_flex/outputs/cache/topology_cache_manifest.json
-projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
-projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
-projects/ev_hosting_flex/outputs/cache/feeder_selection.json
-projects/ev_hosting_flex/outputs/cache/node_nameplate_kw.json
-projects/ev_hosting_flex/outputs/cache/node_building_count.json
-```
-
-The cache stage **asserts the selected feeder is radial with no embedded
-generation** (the precondition for the downstream-sum proxy) and fails loudly with a
-located, remediating error otherwise. The topology cache manifest embeds the source
-footprint SHA-256 so downstream profiles, congestion, and validation can be traced
-back to the source building layer.
-
-To rebuild the cache after changing the footprint source or sizing config, force a
-rebuild:
-
-```bash
-uv run python projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py \
-  --force-rebuild
-```
-
-## Pipeline & status
-
-The study is the v1.2 `ev_hosting_flex` milestone and is built incrementally across
-Phases 8–12. The 7-stage `workflow.yaml` DAG:
-
-| # | Stage | Builds | Status |
-|---|-------|--------|--------|
-| 1 | `prepare_workspace` | standard `outputs/{data,json,reports,cache,figures}` dirs | live |
-| 2 | `prepare_topology_cache` | synthetic radial twin + per-line/transformer kW ratings + downstream map | live (Phase 8) |
-| 3 | `generate_annual_profiles` | deterministic 8760h winter-peaked base load + per-node EV unit load | live (Phase 9) |
-| 4 | `compute_congestion` | radial downstream-sum proxy loading, congestion metrics, **firm** hosting limit | live (Phase 9) |
-| 5 | `apply_flexibility_contracts` | per-node EV cap in congested hours, curtailment accounting, **flexible** limit | stubbed (Phase 10) |
-| 6 | `validate_powerflow` | pandapower AC at peak hours; proxy↔AC error + voltage sanity | stubbed (Phase 11) |
-| 7 | `build_study_reports` | canonical reports, figures, regression baseline | stubbed (Phase 12) |
-
-Project-local physics lives in thin helper modules consumed by the stage scripts:
-
-```text
-projects/ev_hosting_flex/scripts/_topology.py     # kW ratings, radial downstream BFS, feeder selection
-projects/ev_hosting_flex/scripts/_profiles.py     # parametric winter-peaked base + per-node EV charging
-projects/ev_hosting_flex/scripts/_congestion.py   # downstream-sum proxy, congestion metrics, firm sweep
-```
-
-## Line loading (proxy) and the firm limit
-
-For a radial feeder with no embedded generation, line/transformer flow ≈ the sum of
-demand at all downstream nodes, so:
-
-```text
-loading_percent = downstream_kw / element_rating_kw * 100
-```
-
-This lets the study sweep 8760h × N EV-penetration levels in seconds without a
-per-hour AC solve. The **firm** hosting limit (`firm_ev_count`) is the largest swept
-EV count with **zero** overloads on any line or the head transformer at any of the
-8760 hours, computed at integer `EV_SWEEP` granularity. It is the headline
-denominator; the **flexible** limit (Phase 10) is its numerator. pandapower AC power
-flow (Phase 11) validates the proxy at the worst peak hours.
-
-## Network sizing basis (diversity reconciliation)
-
-The twin is sized in **two layers that use different diversity assumptions**, and the
-feeder is deliberately re-sized so it operates cleanly **before** any EV connects — so
-the EVs, not the base load, are what cause congestion.
-
-1. **Topology layer (SDK generator).** The synthetic network is built with
-   `diversity_factor_lv = 5`, so each building's coincident contribution is
-   `max_load_per_building / 5 = 50 / 5 = 10 kW`. This 10 kW/home coincident demand
-   (≈32.35 MW twin-wide) drives the transformer **count** and the initial load-aware
-   line `max_i_ka` selection.
-
-2. **Profile layer (this study, Phase 9).** The deterministic 8760h base load
-   (`_profiles.py`) is **fully coincident** — every building follows the same
-   `nameplate × winter × daily × weekly` envelope, so they all peak in the same winter
-   evening hour. That peak reaches **≈1.764 × nameplate** (`WINTER_PEAK_FACTOR` plus the
-   daily/weekly pattern), i.e. **17.64 kW/home**, not the 10 kW the topology assumed.
-
-These two layers disagree by the **annual peak factor ≈ 1.764**, which left the
-selected feeder overloaded at **zero EVs** (the head transformer `transformer:78` was
-199.5 kW vs a 458.6 kW winter base peak → 229.9 %; interior lines such as `line:1454`
-were at 199 %). That made `firm_ev_count = 0` — a degenerate headline denominator.
-
-The fix (stage 2, project-local, `_topology.size_feeder_subtree_kw`) re-sizes **all 27
-elements of the selected feeder subtree** — the head transformer **and** the interior
-lines — to the annual winter-peak downstream demand divided by the
-`TRANSFORMER_UTILIZATION_MARGIN` (0.8):
-
-```text
-rating_kw = downstream_nameplate_kw × annual_peak_factor(≈1.764) / 0.8
-# head transformer:78  199.5 kW  →  574 kW
-```
-
-After the resize, at **0 EVs the worst element sits at ≈79.9 %** (the ~80 % target,
-recorded in `feeder_selection.json → feeder_transformer_sizing`), so the base feeder is
-healthy and congestion is **EV-driven**: `firm_ev_count = 20`, first overload at 40 EVs.
-
-> **Diversity assumption (D-01 / FUT-04).** The profile is fully coincident
-> (`diversity = 1`). For an **hourly, all-electric, cold-climate** feeder this is
-> **defensible** — space-heating load is intrinsically highly coincident (cold-driven
-> peaks line up across homes; the literature puts the heating diversity factor at
-> ≈ **1.0–1.2**, i.e. ≤ ~15 % peak reduction). It is at most *mildly* conservative —
-> **not** the 1.5–2.5 range, which applies to instantaneous thermostat cycling or mixed
-> loads, not the hourly heating envelope. The per-home winter peak (~17.6 kW) sits at the
-> high end of the realistic ~10–15 kW band for a Québec all-electric dwelling (~13 kW
-> installed baseboard + DHW/appliances). The parameter that is genuinely *inconsistent*
-> with this load type is the **topology** `diversity_factor_lv = 5` (suited to mixed
-> urban load, not all-electric heat) — but the stage-2 subtree resize already sizes the
-> feeder to the diversity-1 profile, so that knob now only affects transformer *count*.
-> See [`CALIBRATION.md`](CALIBRATION.md) for the Québec sources and the
-> `TRANSFORMER_UTILIZATION_MARGIN` / `diversity_factor_lv` calibration. Stochastic
-> per-home diversity is deferred to FUT-04.
-
-## Configuration
-
-The tunable knobs are centralized in `projects/ev_hosting_flex/scripts/config.py`
-and read by every stage (reproducibility conventions are locked here):
-
-| Knob | Default | Meaning |
-|------|---------|---------|
-| `POWER_FACTOR` | `0.95` | pf for the kW rating derivation (line & transformer) |
-| `LINE_LOADING_LIMIT_PERCENT` | `100` | congestion threshold (% loading) |
-| `WINTER_PEAK_FACTOR` / `SUMMER_TROUGH_FACTOR` | `1.6` / `0.7` | seasonal envelope of the base building load |
-| `EV_UNIT_KW` | `7.2` | per-EV charging power |
-| `CHARGING_WINDOW` | `(17, 22)` | daily charging window (overlaps the winter evening peak) |
-| `DIVERSITY_FACTOR` | `0.6` | simultaneous-draw fraction at a node |
-| `EV_SWEEP` | `(0, 20, …, 200)` | EV-penetration grid the firm/flexible sweeps walk |
-| `CALENDAR_HOURS` | `8760` | annual hourly horizon (non-leap year) |
-| `SEED` / `DTYPE` / `ROUND_DECIMALS` | `42` / `float64` / `6` | determinism + pre-write rounding (1e-6 regression tolerance) |
-| `FEEDER_ID` | `None` | feeder-selection override (default: deterministic max-downstream-load) |
-
-## Design & requirements
-
-The approved design contract and the requirement IDs this study implements:
-
-```text
-docs/superpowers/specs/2026-06-22-ev-hosting-flex-design.md   # approved design (the requirements source)
-```
-
-`flexibility_cls` is the gold-standard reference for the topology-cache pattern, the
-`ProjectScript` report contract, and the regression baseline.
+The design-day two-stage-reserve pipeline (Phases 8–17, firm=6/deferral=12 on
+the decoupled unit) was retired on 2026-07-07 in favour of this annual
+study-B model; its record lives in git history and the migration design doc.

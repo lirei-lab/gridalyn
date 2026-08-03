@@ -20,7 +20,12 @@ ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
 from gridalyn.assets.datagen.data.weather import select_peak_load_day
-from gridalyn.assets.datagen.agents import make_buildings, make_ev_chargers, simulate_buildings
+from gridalyn.assets.datagen.agents import (
+    make_buildings,
+    make_cold_coupled_ev_fleet,
+    make_dhw_tank_fleet,
+    simulate_buildings,
+)
 from projects.flexibility_cls.scripts.pipeline._summary import summarize_array
 from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 
@@ -30,9 +35,13 @@ from projects.flexibility_cls.scripts.weather_input import load_project_tmy
 # strictly coarser than the downstream Stage-01/02 floor.
 STAGE00_ROUND_DECIMALS = 3
 from projects.flexibility_cls.scripts.config import (
-    EV_CHARGER_KW,
+    BG_SCALE_CLS,
+    DHW_SEED_SALT_CLS,
+    EV_SEED_SALT_CLS,
     N_REALIZATIONS,
+    P_HEAT_QUEBEC_CLS,
     PROJECT_CACHE_DIR,
+    R_QUEBEC_CLS,
     RES_MINUTES,
     SEED,
 )
@@ -103,44 +112,57 @@ def main():
         smooth_behav_noise = gaussian_filter1d(white_noise, sigma=12) # 1-hour smoothing window
         behav_mult_trace = float(macro_rng.normal(1.0, 0.01)) + smooth_behav_noise
         
-        # A. Buildings at 5-min resolution
+        # A. Buildings — Québec all-electric archetype, simulated at 1-min
+        # (thermostat cycling is resolution-sensitive) then stepped to RES_MINUTES.
         perturbed_temp = t_out + t_offset_trace
+        perturbed_temp_1min = perturbed_temp.resample("1min").interpolate()
         buildings = make_buildings(n_buildings, seed=SEED + r)
-        b_results = simulate_buildings(buildings, perturbed_temp, random_seed=SEED + r)
-        
-        # B. EVs at 5-min resolution (same timestep as buildings)
-        # Shift EV average arrival time and vary the spread of arrivals for this specific day
-        arrival_shift = float(macro_rng.normal(0, 0.3))
-        arrival_std = float(macro_rng.uniform(0.85, 1.25))  # Narrower uniform bounds to avoid flattening the peak too much
-        
-        evs = make_ev_chargers(
-            n=n_buildings, 
-            n_evs_per_block=1, 
-            charger_kw=EV_CHARGER_KW,
-            c_soft_fraction=0.40, 
-            seed=SEED + r,
-            macro_arrival_shift_h=arrival_shift,
-            macro_arrival_std_h=arrival_std
+        for building in buildings:
+            building.R = R_QUEBEC_CLS
+            building.p_heat_max = P_HEAT_QUEBEC_CLS
+        b_results = simulate_buildings(
+            buildings, perturbed_temp_1min, burnin_hours=6, random_seed=SEED + r
         )
-        
-        agg_b_load = np.zeros(n_steps)
-        agg_ev_load = np.zeros(n_steps)
-        
-        # Aggregate building loads
-        for i in range(n_buildings):
-            agg_b_load += b_results[i]["p_total_kw"].values * behav_mult_trace
-            
-        # Pre-compute EV stochastic 30% penetration mask
+
+        # Aggregate building loads: heating + cooling + scaled ARX background.
+        # `p_total_kw` is NOT used — it embeds an implicit hot-water component
+        # that the explicit DHW tank below now models, which would double-count.
+        agg_1min = sum(
+            b_results[uid]["p_heat_kw"]
+            + b_results[uid]["p_cool_kw"]
+            + BG_SCALE_CLS * b_results[uid]["p_bg_kw"]
+            for uid in b_results
+        )
+        agg_b_load = agg_1min.resample(f"{RES_MINUTES}min").mean().to_numpy(dtype=float)
+
+        # Explicit electric hot-water tanks (feeder aggregate).
+        agg_b_load = agg_b_load + make_dhw_tank_fleet(
+            np.random.default_rng(SEED + DHW_SEED_SALT_CLS + r),
+            n_homes=n_buildings,
+            temp_series=perturbed_temp,
+            res_minutes=RES_MINUTES,
+        )
+        agg_b_load = agg_b_load * behav_mult_trace
+
+        # EVs — cold-coupled, uncontrolled block charging at rated power.
         ev_mask = np.random.default_rng(SEED + r).random(n_buildings) < 0.30
-        
-        # Aggregate EVs at 5-min steps
-        for step, ts in enumerate(ts_index):
-            current_minute_from_midnight = ts.hour * 60 + ts.minute
-            for ev_idx, ev in enumerate(evs):
-                if ev_mask[ev_idx]:
-                    res = ev.step(minute=current_minute_from_midnight, cls_active=False, dt=RES_MINUTES)
-                    agg_ev_load[step] += res["p_ev_kw"]
-        
+        n_evs = int(ev_mask.sum())
+        ev_fleet = make_cold_coupled_ev_fleet(
+            np.random.default_rng(SEED + EV_SEED_SALT_CLS + r),
+            n_evs=n_evs,
+            temp_series=perturbed_temp,
+            res_minutes=RES_MINUTES,
+        )
+        agg_ev_load = ev_fleet.sum(axis=0)
+
+        assert agg_b_load.shape == (n_steps,), (
+            f"agg_b_load has {agg_b_load.shape[0]} steps, expected {n_steps}; "
+            f"the 1-min resample/aggregate round trip changed the length."
+        )
+        assert agg_ev_load.shape == (
+            n_steps,
+        ), f"agg_ev_load has {agg_ev_load.shape[0]} steps, expected {n_steps}."
+
         df_baseline[f"realization_{r}"] = agg_b_load / 1000.0   # Convert to MW
         df_ev_total[f"realization_{r}"] = agg_ev_load / 1000.0  # Convert to MW
         

@@ -1,0 +1,256 @@
+"""Unit + governed tests for the AC power-flow validation layer (stage 7).
+
+Three tiers, mirroring the project's test conventions:
+
+1. HAND-COMPUTED KERNEL TESTS — cache-free unit tests of the violation
+   counters in ``_powerflow.py`` (no pandapower net needed).
+2. MINI-NET CONVERGENCE — a 3-bus real pandapower net through the 24-hour
+   kernel, asserting output shapes and physical sanity.
+3. GOVERNED REPRODUCE-AND-PIN — reads the EMITTED ``powerflow_violations.json``
+   (skipif absent, like the other cache-dependent tests) and asserts the
+   before/after invariants: violations grow monotonically with network-wide EV
+   adoption, and the feeder flexibility clip keeps the study transformer at or
+   under its rating.
+"""
+
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from projects.ev_hosting_flex.scripts._powerflow import (
+    N_DESIGN_HOURS,
+    count_violations,
+    extract_feeder_subnet,
+    run_design_day_powerflow,
+    run_feeder_mc,
+)
+from projects.ev_hosting_flex.scripts.config import (
+    NETWORK_PENETRATION_SCENARIOS,
+    PROJECT_OUTPUTS_DIR,
+)
+
+_VIOLATIONS_PATH = PROJECT_OUTPUTS_DIR / "json" / "powerflow_violations.json"
+_REPORT_PATH = (
+    PROJECT_OUTPUTS_DIR / "reports" / "powerflow_validation_report.json"
+)
+_SKIP_REASON = (
+    "governed powerflow artifacts (outputs/json/powerflow_violations.json / "
+    "outputs/reports/powerflow_validation_report.json) not present; run "
+    "validate_powerflow.py first (outputs are gitignored)"
+)
+
+
+# ─── 1. Hand-computed kernel tests (cache-free) ──────────────────────────
+
+
+def test_count_violations_hand_built_frames() -> None:
+    """Element counters count distinct violating elements, not violating hours."""
+    volt = pd.DataFrame(
+        {
+            "hour": [0, 1, 0, 1],
+            "bus": [1, 1, 2, 2],  # bus 1 dips twice, bus 2 stays healthy
+            "vm_pu": [0.910, 0.905, 0.960, 0.955],
+        }
+    )
+    lines = pd.DataFrame(
+        {"hour": [0, 1], "line": [0, 0], "loading_percent": [101.0, 99.0]}
+    )
+    trafos = pd.DataFrame(
+        {"hour": [0, 1], "trafo": [0, 1], "loading_percent": [120.0, 85.0]}
+    )
+    out = count_violations(
+        {"bus_voltage": volt, "line_loading": lines, "trafo_loading": trafos},
+        lv_bus_ids=np.array([1, 2]),
+        dynamic_k=1.4,
+    )
+    assert out["n_lv_buses_below_normal"] == 1  # bus 1 once, despite 2 hours
+    assert out["n_lv_buses_below_extreme"] == 0
+    assert out["n_lines_over_100"] == 1
+    # trafo 0 at 120% is over static nameplate but UNDER the 140% dynamic limit;
+    # trafo 1 at 85% is under both.
+    assert out["n_trafos_over_static"] == 1
+    assert out["n_trafos_over_dynamic"] == 0
+    assert out["min_lv_vm_pu"] == pytest.approx(0.905)
+    assert out["max_trafo_loading_percent"] == pytest.approx(120.0)
+
+
+# ─── 2. Mini-net convergence ─────────────────────────────────────────────
+
+
+def test_run_design_day_powerflow_mini_net() -> None:
+    """A 3-bus real pandapower net solves all 24 hours with sane shapes/values."""
+    import pandapower as pp
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    b_lv1 = pp.create_bus(net, vn_kv=0.24)
+    b_lv2 = pp.create_bus(net, vn_kv=0.24)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.0)
+    pp.create_transformer_from_parameters(
+        net, hv_bus=b_mv, lv_bus=b_lv1, sn_mva=0.075, vn_hv_kv=25.0,
+        vn_lv_kv=0.24, vk_percent=2.0, vkr_percent=1.2, pfe_kw=0.25,
+        i0_percent=0.4,
+    )
+    pp.create_line_from_parameters(
+        net, from_bus=b_lv1, to_bus=b_lv2, length_km=0.03,
+        r_ohm_per_km=0.3, x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.2,
+    )
+    pp.create_load(net, bus=b_lv2, p_mw=0.0)
+
+    p_kw = np.full((1, N_DESIGN_HOURS), 6.5)
+    results = run_design_day_powerflow(net, p_kw, slack_vm_pu=1.04)
+
+    assert len(results["bus_voltage"]) == 3 * N_DESIGN_HOURS
+    assert len(results["line_loading"]) == 1 * N_DESIGN_HOURS
+    assert len(results["trafo_loading"]) == 1 * N_DESIGN_HOURS
+    vm = results["bus_voltage"]["vm_pu"]
+    assert float(vm.max()) <= 1.04 + 1e-6  # nothing above the slack setpoint
+    assert float(vm.min()) > 0.95  # a 6.5 kW load barely dips this mini net
+    with pytest.raises(ValueError, match="p_kw_by_load"):
+        run_design_day_powerflow(net, np.zeros((2, N_DESIGN_HOURS)))
+
+
+def test_extract_feeder_subnet_and_mc_mini_net() -> None:
+    """Subnet extraction + MC runner on a hand-built 4-bus feeder subtree."""
+    import pandapower as pp
+
+    net = pp.create_empty_network()
+    b_mv = pp.create_bus(net, vn_kv=25.0)
+    b_lv = pp.create_bus(net, vn_kv=0.24)
+    b_h1 = pp.create_bus(net, vn_kv=0.24)
+    b_h2 = pp.create_bus(net, vn_kv=0.24)
+    pp.create_ext_grid(net, bus=b_mv, vm_pu=1.0)
+    trafo_idx = pp.create_transformer_from_parameters(
+        net, hv_bus=b_mv, lv_bus=b_lv, sn_mva=0.075, vn_hv_kv=25.0,
+        vn_lv_kv=0.24, vk_percent=2.0, vkr_percent=1.2, pfe_kw=0.25,
+        i0_percent=0.4,
+    )
+    for b in (b_h1, b_h2):
+        pp.create_line_from_parameters(
+            net, from_bus=b_lv, to_bus=b, length_km=0.02,
+            r_ohm_per_km=0.3, x_ohm_per_km=0.08, c_nf_per_km=0.0, max_i_ka=0.2,
+        )
+        pp.create_load(net, bus=b, p_mw=0.0)
+
+    subnet, load_buses, n_homes = extract_feeder_subnet(
+        net, trafo_idx, [b_lv, b_h1, b_h2]
+    )
+    assert n_homes == 2
+    assert sorted(load_buses) == [b_h1, b_h2]
+    assert len(subnet.trafo) == 1 and len(subnet.line) == 2
+
+    k = 3
+    variants = {
+        "flat_30kw": np.full((k, N_DESIGN_HOURS), 30.0),
+        "flat_80kw": np.full((k, N_DESIGN_HOURS), 80.0),  # over the 71.25 kW
+    }
+    mc = run_feeder_mc(subnet, variants, np.full(N_DESIGN_HOURS, 1.0))
+    assert len(mc) == 2 * k * N_DESIGN_HOURS
+    peak = mc.groupby("variant")["trafo_loading_percent"].max()
+    assert peak["flat_30kw"] < 100.0 < peak["flat_80kw"]
+    with pytest.raises(ValueError, match="mv_vm_pu_hourly"):
+        run_feeder_mc(subnet, variants, np.ones(3))
+
+
+# ─── 3. Governed reproduce-and-pin (skipif artifacts absent) ─────────────
+
+
+@pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
+def test_governed_network_before_after_evs() -> None:
+    """The load-matched network is healthy before EVs and congests as they grow.
+
+    With the HQ-load-matched transformers (LV + substation) and voltage-sized LV
+    conductors, the network is fully healthy at design cold before EVs (no
+    undervoltage, no overloads); EV adoption then drives undervoltage, LV line
+    overloads and transformer congestion, all escalating monotonically.
+    """
+    payload = json.loads(_VIOLATIONS_PATH.read_text())
+    scenarios = payload["scenarios"]
+    names = [f"network_pen_{p:.1f}" for p in NETWORK_PENETRATION_SCENARIOS]
+    assert all(name in scenarios for name in names), sorted(scenarios)
+    pre, post = scenarios[names[0]], scenarios[names[-1]]
+    # Before EVs the load-matched N-1 network is healthy: no undervoltage, no
+    # thermal overloads.
+    assert pre["n_lv_buses_below_normal"] == 0
+    assert pre["n_lines_over_100"] == 0
+    assert pre["n_trafos_over_dynamic"] == 0
+    # EVs drive real stress; with the load-matched fleet + N-1 substation +
+    # cold dynamic rating, the BINDING channels are voltage and LV lines
+    # (transformer dynamic overload stays rare/zero across the sweep).
+    assert post["n_lv_buses_below_normal"] > 0
+    # LV lines are stressed past their ampacity at 1.5 EV/home. This asserts
+    # the CONTINUOUS quantity, not the count over the threshold.
+    #
+    # `n_lines_over_100` is a cliff metric and must not be pinned: the max line
+    # loading sits at ~104 %, so the count collapses from ~78 to 1 on a small
+    # shift in the load. And the shift is not physical — the network overlay is
+    # built as `pool.mean(axis=0)`, so its PEAKINESS depends on POOL_MAX_ANNUAL:
+    # measured peak per-EV 3.01 kW at a 12-EV pool vs 2.52 at 16 (-16 %), and it
+    # does not converge cleanly even at 64. A larger pool samples the expected
+    # per-home profile better, so the smaller count is the better estimate --
+    # but the count itself is too brittle to assert on.
+    assert post["max_line_loading_percent"] > 100.0
+    for key in (
+        "n_trafos_over_static",
+        "n_trafos_over_dynamic",
+        "n_lv_buses_below_normal",
+        "n_lines_over_100",
+    ):
+        series = [scenarios[n][key] for n in names]
+        assert series == sorted(series), f"{key} not monotonic: {series}"
+    min_v = [scenarios[n]["min_lv_vm_pu"] for n in names]
+    assert min_v == sorted(min_v, reverse=True), f"min V not decreasing: {min_v}"
+
+
+@pytest.mark.skipif(not _VIOLATIONS_PATH.is_file(), reason=_SKIP_REASON)
+def test_governed_feeder_mc_before_after_evs() -> None:
+    """The feeder cold-day MC shows congestion + line overloads before/after EVs.
+
+    Base barely overloads; the firm count is safe in AC too (re-based 2026-07-14
+    onto the realistic DHW-tank base: firm 4 now clears the AC cold-day MC with
+    ~0 overload, where the old marginal firm 2 left a small tail); unmanaged is
+    strictly worse; the backstop removes the overload DEPTH (transformer AND line
+    peaks well below unmanaged) while enforcing the kW rating (AC peaks a few %
+    above 100).
+    """
+    payload = json.loads(_VIOLATIONS_PATH.read_text())
+    mc = payload["feeder_mc"]
+    by_prefix = {
+        name.split("_")[1]: stats for name, stats in mc.items()
+    }  # base / firm / unmanaged / curtailed
+    assert by_prefix["base"]["p_overload_ac"] < 0.02
+    assert 0.0 <= by_prefix["firm"]["p_overload_ac"] < 0.5
+    assert (
+        by_prefix["firm"]["p_overload_ac"] <= by_prefix["unmanaged"]["p_overload_ac"]
+    )
+    # Transformer overload depth removed by the backstop.
+    assert (
+        by_prefix["curtailed"]["peak_loading_max"]
+        < by_prefix["unmanaged"]["peak_loading_max"]
+    )
+    assert by_prefix["curtailed"]["peak_loading_max"] < 110.0
+    # Line overloads appear in the unmanaged tail and the backstop pulls them
+    # back (the LV lines are part of the "sobrecargas" validation).
+    assert by_prefix["unmanaged"]["max_line_loading_max"] > 100.0
+    assert (
+        by_prefix["curtailed"]["max_line_loading_max"]
+        < by_prefix["unmanaged"]["max_line_loading_max"]
+    )
+
+
+@pytest.mark.skipif(not _REPORT_PATH.is_file(), reason=_SKIP_REASON)
+def test_governed_report_contract() -> None:
+    """The stage emits a canonical platform report with the summary keys."""
+    from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+
+    report = json.loads(_REPORT_PATH.read_text())
+    for field_name in REQUIRED_REPORT_FIELDS:
+        assert field_name in report, f"missing report field {field_name}"
+    summary = report["summary"]
+    assert summary["n_powerflows"] == summary["n_scenarios"] * N_DESIGN_HOURS
+    for key in ("pre_ev_min_lv_vm_pu", "post_ev_n_trafos_over_dynamic", "slack_vm_pu"):
+        assert key in summary, sorted(summary)

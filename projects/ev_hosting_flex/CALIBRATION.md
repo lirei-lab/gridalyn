@@ -377,6 +377,341 @@ margin is correct**. The justified refinements are: **trim the per-home peak (�
 **lower EV power & energy toward the Canadian values**, and **cap/refine `EV_SWEEP`** to a
 plausible adoption range — all of which tighten the `hosting_expansion_percent` headline.
 
+## Generative-MC design-day seam (Phase 13)
+
+The v1.3 milestone replaces the project-local degree-day annual base with a
+**generative design-day Monte-Carlo seam** (`scripts/_generators.py`, GEN-01..04):
+the **SDK building agent** (`make_buildings` / `simulate_buildings`,
+`gridalyn.assets.datagen.agents`) — exactly as `flexibility_cls` uses it —
+recalibrated to the Québec all-electric archetype, plus the **project-local MDPI EV
+sampler** (kept `_stochastic._session` / the `_ev_day` draw order), run over the
+**binding cold design day** to emit the idx-62 transformer-load ensemble
+`Q_real (K, n_steps)` + the day-ahead forecast `Q_design`. The operating point below
+is **empirically locked** (2026-06-26 throwaway probes `exp_firmsweep.py` /
+`exp_genseam.py`); Phase 13 implements it byte-stably — it does **not** re-discover it.
+
+### SDK building agent ADOPTED (GEN-02)
+
+The SDK building agent replaces the project-local degree-day `tmy_base`. Its default
+calibration (`R_MEAN ≈ 11` °C/kW, `P_HEAT_MAX_KW ≤ 8` kW) **under-loads** the 7-home
+idx-62 unit to ~6.5 kW/home / ~60 % of the 71.25 kW rating. The **locked
+recalibration** overrides per `Building`:
+
+- `R = 7.0` °C/kW (`config.R_QUEBEC`)
+- `p_heat_max = 13.0` kW (`config.P_HEAT_QUEBEC`)
+
+**Anchors:** PMC/NCBI PMC11534675 Québec all-electric baseboard dwelling ~13 kW
+installed baseboard; HQ 10–15 kW/dwelling (§2 of this doc). At `R = 7.0` / baseboard
+13 the design-day EV-free feeder base lands at **~8.4 kW/home coincident / ~82–87 %
+of the 71.25 kW rating, firm = 3** (empirically verified at K=60 on the 1990-01-19
+design day; reproduced in the governed kernel at p50=82 % / p90=87 % / ~8.3 kW/home,
+pinned by `tests/test_ev_hosting_flex_generators.py`).
+
+**NO CLPU.** The heating recalibration is the dominant lever; CLPU *on top* of it
+overshoots to ~117 % / firm = 0 (congesting with zero EVs, unphysical for an HQ-sized
+unit) — so the Phase-10.3 `clpu_factor` is **dropped from the generative path**.
+`simulate_buildings` uses `ParametricArxGenerator` ONLY for the small non-HVAC
+**background** channel (which carries the morning/evening human-activity peaks; the
+feeder peaks ~18:00); the **heating** is each `Building`'s RC baseboard
+(winter-peaking), so the prior ARX-as-base rejection (quick 260625-ox4) does **not**
+apply here.
+
+### MDPI EV truth (GEN-03)
+
+EV truth = the **project-local MDPI sampler** calibrated to **Jonas, Daniels & Macht,
+*Energies* 2023, 16(4):1592** (Canada, >7000 stations): charger mix
+`{7.2:0.75, 9.6:0.20, 11.5:0.05}` kW, lognormal session energy (median 8 kWh, σ 0.5,
+floor 1 kWh), arrival `N(18, 1.5)` clipped to `(16, 22)`, plug-in probability 0.65.
+The per-EV **pinned draw order** (`rng.random` plug-in → `rng.choice` charger mix →
+`rng.lognormal` energy → `rng.normal` arrival) is the byte-stability contract. EV
+draws are **nested/cumulative** (`ev_nested_pool`): row *n* is the aggregate hourly
+draw for the first *n* EVs, so `P(overload)` is **monotonic in EV count** (adding an
+EV never removes load). The pool is drawn once per realization on a seed independent
+of the building seed and **exposed** alongside `Q_real` for the Phase-14 firm sweep
+(it is not summed into the `Q_real` building-base headline). The generic SDK EV
+session model is **not** adopted as truth; the SDK `EVCharger` **actuator** pattern
+(`dynamic_p_cap_kw` / `cls_active`) is reserved for the Phase-15 curtailment cap.
+
+### Design-day MC + forecast (GEN-01 / GEN-04)
+
+The binding cold day is selected via `select_peak_load_day` over the committed
+Trois-Rivières TMY (`config.TMY_INPUT_PATH`), empirically **1990-01-19** (occupied
+HDH proxy, −20.1 °C mean). `K` Monte-Carlo realizations (default `K_DESIGN = 60`),
+each re-seeding the SDK building agent and a smoothed day-ahead
+temperature-forecast-error offset from `SEED + r`, aggregate to
+`Q_real (K, n_steps)` at `DESIGN_DAY_RES_MINUTES = 60` (hourly → 24 steps; the
+building hourly aggregate worked in the probes). This is a **design-day generative
+statement**, not an annual 8760 h integrated risk (the latter is FUT-07).
+
+`Q_design` is the **day-ahead forecast** (`make_q_design`): a gaussian-smoothed macro
+shape of `Q_real`'s per-step mean plus a single temperature-forecast-error term
+(`config.SIGMA_DAILY` / `SIGMA_HOURLY`). It is strictly a **smoothing / forecast of
+`Q_real`'s predictable part** (corr ≥ 0.9, max deviation < 15 % of the mean peak) —
+**never** an independent load model (GEN-04).
+
+**Determinism (GEN-01, feeds SEAL-01).** A single seeded RNG from `config.SEED`
+covers the SDK building seed AND the MDPI EV draws; pinned draw order; float64
+throughout; round-before-write (`config.ROUND_DECIMALS`, callers round). Two calls
+with the same seed return byte-identical `Q_real` / `Q_design` / `ev_pool`. **No
+silent SDK fallback:** the building agent + `select_peak_load_day` are imported
+deferred in the governed path and the kernel **raises** (`ImportError`) if a required
+SDK symbol is missing — it never substitutes a hand-rolled base
+(`test_no_silent_sdk_fallback_in_source`, `test_select_design_day_raises_when_sdk_unavailable`).
+
+## RETIRE-02 framing change — energy gates → reliability-only (Phase 15, D-14)
+
+**Dated: 2026-06-26.** Phase 15 (CTRL + RETIRE-02) re-points the flexibility stage
+from the energy-fraction-gated availability sweep to the two-stage day-ahead
+controller and records the following framing changes (D-14):
+
+- **(a) Energy → reliability-only acceptability.** The retired stage gated a swept
+  EV count on an **energy-fraction** tolerance (`TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX`
+  / `TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95` / `TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`,
+  all strict-`<` 1%). Phase 15 **removes the energy gate from the acceptability
+  decision**: energy (reserve `Σr`, expected activation `E[Σa]`) is **reported, never
+  gated**. The acceptability criterion is now **realized reliability alone** — the
+  largest adoption with **realized `P(transformer overload after activation) ≤ ε`**
+  (`ε = EPS_HEADLINE = 0.05`) on a fresh out-of-sample `Q_real` ensemble (D-12). The
+  superseded energy-gate knobs are bannered/deleted per RETIRE-02 (D-13).
+
+- **(b) SDK building adoption / recalibration.** The base building load is now the
+  **SDK building agent** (`make_buildings`/`simulate_buildings`) recalibrated to the
+  Québec all-electric archetype: per-home thermal envelope **`R_QUEBEC = 7.0` °C/kW**
+  and baseboard capacity **`P_HEAT_QUEBEC = 13.0` kW** (overriding the SDK defaults
+  `R_MEAN ≈ 11` / `P_HEAT_MAX = 8.0`, which under-load the 7-home idx-62 unit). This
+  lands the EV-free design-day base at **~82–87 % of the 71.25 kW rating, firm = 3**
+  (empirically locked at K = 60 on the 1990-01-19 design day). **No CLPU** — the
+  heating recalibration is the dominant lever; CLPU on top overshoots to ~117 % /
+  firm 0 (the CLPU base-uplift knobs are deleted this phase).
+
+- **(c) MDPI EV provenance.** The EV **truth** is the project-local MDPI sampler
+  (charger mix, lognormal session energy, Gaussian evening arrivals, plug-in
+  probability), grounded in **Jonas, Daniels & Macht, *Energies* 2023, 16(4):1592**
+  (Canada, >7000 charging stations): residential charging peaks 15:00–24:00. The SDK
+  `EVCharger` **session model is NOT adopted as truth**; only its cap-actuator
+  *pattern* (`dynamic_p_cap_kw`/`cls_active`) is ported, applied to the MDPI aggregate.
+
+- **(d) Transformer-overload framing.** Acceptability is keyed on the **transformer**
+  overload probability, not the prior congestion-line proxy: `loading = (Σ building +
+  Σ EV) / rating`, **overload = loading > 1 strict** (the Phase-14 single binding-state
+  kernel, rating = `TRANSFORMER_KVA · POWER_FACTOR` = 71.25 kW). Realized
+  `P(overload)` is the mean over the K/N design-day realizations of any step
+  overloading — the citable risk statement is a **design-day `P(overload)` + risk
+  distribution**, not an annual integrated risk (the latter is FUT-07).
+
+- **(e) ROADMAP #4 vs CONTEXT D-12 divergence (explicit).** ROADMAP Phase-15 success
+  criterion #4 reads `flexible_ev_count` requires realized reliability ≤ ε **AND
+  contract cost below break-even**. **CONTEXT D-12 (later, authoritative) overrides
+  this**: in Phase 15 `flexible_ev_count` is gated on **realized reliability ALONE**;
+  the **contract-cost / break-even gate is deferred to Phase 16** (economics ledger).
+  The controller emits the `Σr` / `E[Σa]` reserve/activation totals so Phase 16
+  applies the cost gate **without re-running** the controller. CONTEXT supersedes
+  ROADMAP per GSD upstream-input precedence; the headline shift (firm 3 → flexible,
+  +%) is reported explicitly with this rationale.
+
+## Realistic residential base — DHW tank + R re-base (2026-07-14)
+
+The 4th deliberate re-base. An audit found the base **peak-calibrated but
+energy-inflated**: `R_STUDY_B = 5.0` hit the HQ winter peak (11.4 kW/home) with
+the bare RC envelope but inflated annual energy to **38.9 MWh/home** (~1.8× the
+SDK-native 20–22; QC all-electric typical 25–30).
+
+**Frontier evidence (no single R hits both):** the single-R RC model couples peak
+and energy (ratio fixed by climate); sweeping R, energy lands in band (25–30) only
+at R≈8–9 where the peak is 7.5–8.1 kW (below the 10–15 band), and the peak lands in
+band only at R≈5–6 where energy is 34–39 MWh.
+
+| R | MWh/home | peak kW/home |
+|---|---|---|
+| 5.0 | 38.9 | 11.4 (peak ✓, energy ✗) |
+| 8.0 | 28.8 | 8.1 (energy ✓, peak ✗) |
+| 11.0 (SDK native) | 24.1 | 6.6 |
+
+**Mechanism (physical):** QC all-electric homes peak higher for the same energy
+because of the **electric water-heater tank** — a ~4.5 kW element recovering after
+occupancy-clustered morning/evening draws — which the model had smoothed into the
+~1.5 kW ARX background. `dhw_tank_annual` (project-local, no SDK edit) models it as
+a single-node thermostatic tank (270 L, 4.5 kW, setpoint 60 °C, standby loss,
+seasonal 10–15 °C inlet, stochastic draws phase-anchored to the local evening via
+`hod0`); `BG_SCALE = 0.6` removes the double-counted DHW from the background. The
+base becomes `Σp_heat + Σp_cool + BG_SCALE·Σp_bg + DHW`.
+
+**Final knobs (calibrate_base.py):** `R_STUDY_B = 7.5`, `DHW_ELEMENT_KW = 4.5`
+(standard QC), `DHW_DAILY_L_MEAN = 180`, `BG_SCALE = 0.6`.
+
+**Result — realistic in BOTH:** peak **11.2 kW/home** (centre of HQ 10–15, p99
+daily-peak 10.2), energy **29.4 MWh/home**, split **63/14/24 %** heat/DHW/appliance
+(textbook QC all-electric). The peak is **preserved** vs the old R=5 (11.4 kW) so
+the congestion/voltage diagnostics survive; the energy is corrected (39→29 MWh) so
+the curtailment-energy denominator is now realistic, and the base is **peaky, not
+sustained** (high at recovery hours, lower otherwise).
+
+**Deliberate headline re-base** (every pin re-pinned, byte-stable): firm 2 → 4,
+flexible +200 %, curtailed 6.1 → 2.7 %, breakeven 5 → 6; cold-coupling naive 5 vs
+cold 4 (+25 %); substation 2×33.3 → 2×25 MVA (66/540 over static at 0 EV, 0 over
+dynamic); flex-incentive shift ≥ target in every bin (no crossover); voltage-net
+first-risk 1.70 → 1.53 EV/home; VUF 1.75 → 1.63 %.
+
+## Pilar-2 non-wires value — cost anchors (2026-07-14)
+
+The network reinforcement-deferral stage (`analyze_nonwires_value`) uses
+literature-illustrative cost anchors (like the pilar-1 WTA): the physical crossings
+A₀/A₁ are the robust result, the $ are illustrative.
+
+- **`TRAFO_CAPEX_PER_KVA = 107` $/kVA** — INSTALLED reinforcement (transformer +
+  labor + outage), reconciled with pilar-1's `CAPEX_UPGRADE = 8000` / 75 kVA ≈ 107.
+  The raw transformer hardware (~$20–40/kVA) is too low — at that level the
+  annualized reinforcement is cheaper than the flex contract everywhere and the
+  flex defers nothing (a calibration artifact, not a finding).
+- **`SUBSTATION_CAPEX_PER_MVA = 25000` $/MVA** — substation reinforcement (~$15–30k/MVA).
+- **Adoption ramp:** logistic S-curve 0 → 2 EV/home over 15 years (midpoint 7,
+  steepness 0.7) — ONE scenario; the per-adoption snapshot is ramp-shape-robust.
+- **`NONWIRES_CURTAIL_TOLERANCE = 0.10`** — the reliability side of A₁ (max EV-energy
+  fraction curtailed before flex is unacceptable).
+
+Result on the realistic DHW base: **$72 k NPV + 286 transformer-years deferred**
+network-wide, DOMINATED by the substation deferral ($47 k, 66 %). Base-driven feeder
+overloads (the all-electric base alone exceeds the rating — flexibility cannot defer
+them) are honestly excluded, and per-size deferral is floored at 0 (a value-negative
+flex contract is declined in favour of reinforcement).
+
+## Credibility layer — headline confidence intervals (2026-07-15)
+
+`analyze_credibility` re-runs the firm/flex/breakeven chain over **K=50** realizations
+varying the building seed, the EV-fleet seed, and a synthetic **winter-severity**
+temperature anomaly (`WEATHER_SIGMA_C = 1.5` °C, `δ₀=0`). **Caveat:** a single committed
+TMY → the weather axis is a synthetic winter-severity proxy (uniform per-day offset),
+NOT measured inter-annual weather years.
+
+Result on the realistic DHW base (realization 0 reproduces the governed firm/flex/
+breakeven exactly — a consistency anchor):
+
+| Headline | Governed (nominal) | P5 | P50 | P95 | robustness |
+|---|---|---|---|---|---|
+| firm | 4 | 2 | 3 | 4 | **weather-sensitive** (P(=4)=0.32; a colder winter → 2–3) |
+| flex | 12 | 12 | 12 | 12 | robust (P(=12)=1.0) |
+| breakeven | 6 | 5 | 6 | 6 | robust (P(=6)=0.70) |
+
+The citable `firm=4` is the nominal-weather value; under winter-severity uncertainty it
+is **[2, 4] with median 3** — an honest CI a reader should cite alongside the point.
+
+## DHW smooth-occupancy realism fix (2026-07-16, 5th re-base)
+
+A visual validation of the substation aggregate revealed a **near-vertical evening
+ramp** — an unphysical coincident step for a 3235-home aggregate. Serious
+verification (continuous 3-day decomposition) isolated the cause: NOT the heating
+(0.64 kW/home/h, smooth) but the **DHW tank** (5.85 kW/home/h). The old
+`DHW_DRAW_WEIGHTS` was a **sparse dict with zeros** (no hot water at 9–11h, 13–16h,
+overnight; a 0→0.10 jump at 17h) **identical across homes** → a coincident on/off
+that does not diversify away.
+
+**Fix:** (1) a continuous **`dhw_draw_profile()`** occupancy curve (all-day baseline +
+smooth morning/evening Gaussians, no zero hours) replaces the sparse dict; (2)
+**per-home tank diversity** — setpoint (±2 °C), deadband (±1.5 °C), element (±0.5 kW),
+tank volume (±30 L) jittered inside the per-home loop so reheats stagger.
+**Validation:** the hourly coincident step drops **70 %** (1.14 → 0.35 kW/home/h) and
+the near-vertical ramp is gone (see `profiles_transformer_substation.png`); the DHW
+daily energy is preserved (~11.8 kWh/home). The residual morning/evening coincidence
+is physical (real hot-water use clusters, like heating CF~0.85).
+
+**Re-calibration:** the diversified DHW lowers the coincident peak, so the P99
+typical-cold-day peak drops to ~9.8 kW (the annual coincident peak stays 11.1 kW, in
+the HQ 10–15 band; energy 29.7 MWh; split 62/14/24 %). No knob change — the lower P99
+is the honest diversification effect, not a defect. **Headline re-base:** firm 4 → 5,
+netchar `n_over_static_at_0ev` 66 → 0 (the base is now healthy before EVs — the
+base-driven overload was partly the DHW coincident peak), nonwires
+first-reinforcement-year 0 → 4.36, NPV $72k → $97k, credibility firm P50 3 → 4 [3, 5].
+
+## DHW tank validated against CREST (2026-07-17)
+
+The DHW tank was cross-checked against the **CREST demand model** lineage via
+[demod](https://github.com/epfl-herus/demod) (EPFL HERUS, GPL-3.0), whose thermal
+module ports CREST's hot-water cylinder. Parameters extracted from
+`demod/datasets/Germany/parsed_data/v0.1/heating/_heating_system_dict.json` and the
+CREST loader; `cyl_loss` confirmed to be in **W/K** with the same equation form as
+ours (`loss = UA·(T_tank − T_interior)`), so the comparison is direct.
+
+| Tank | V (L) | UA (W/K) | UA/V^⅔ | standby kWh/day | element | T_set | deadband |
+|---|---|---|---|---|---|---|---|
+| **gridalyn (ours)** | 270 | 2.5 | **0.0598** | 2.40 | 4.5 kW | 60 °C | 7 K |
+| CREST ElectricWaterHeater | 50 | 0.5 | 0.0368 | 0.36 | 2.0 kW | ~50 | 5 K |
+| CREST boiler cylinder | 125 | 1.5 | **0.0600** | 1.08 | — | ~50 | 5 K |
+
+**Findings:**
+1. **Model structure is identical** — 1R1C thermostatic tank, `C = V·cp` (cp 4200 vs
+   our 4186), `loss = UA·ΔT`. demod also randomizes the per-household cylinder
+   temperature, independently corroborating the per-home diversity we added.
+2. **Our UA is CORRECT, not high.** Normalized by surface area (∝ V^⅔, since our tank
+   is 2–5× larger), we land at **0.0598 vs CREST's 0.0600 — an exact match** with the
+   boiler cylinder. (An earlier internal review flagged UA=2.5 W/K as "high"; that
+   flag is retracted — it compared raw UA across different tank sizes.)
+3. **Remaining differences are geographic and correct for North America:** 270 L
+   (NA 60-gal standard) vs 50–125 L (European); 4.5 kW element (NA standard) vs
+   2 kW (European immersion); 60 °C setpoint (NA Legionella code) vs CREST's 42–55 °C
+   distribution.
+
+Together with the HQ-real validation (diurnal shape + aggregate smoothness), the
+building generator is now validated on three axes: **shape**, **smoothness**, and
+**DHW tank physics**.
+
+## Cold-tail insurance study — knobs and headline (2026-07-28)
+
+`analyze_cold_insurance` prices flexibility as insurance against the cold tail of
+the hosting-capacity distribution. It reuses the **credibility seeds verbatim**
+(`CREDIBILITY_K`, `WEATHER_SIGMA_C`, `CREDIBILITY_WEATHER_SALT`,
+`CREDIBILITY_EV_SALT`) so both studies report one firm distribution — enforced by
+`test_governed_firm_distribution_matches_credibility`.
+
+**Knobs:** `INSURANCE_ADOPTION_GRID` = 1..12 EVs on the 6-home feeder,
+`INSURANCE_RELIABILITY_TARGET = 0.95` (BOTH strategies must cover ≥95 % of years;
+they are compared on cost), `INSURANCE_REF_ADOPTION = 6` (1 EV/home).
+Costs reuse the illustrative `C_AVAIL_EV_YR = 80`, `C_A_CURTAIL = 0.5` and
+`TRAFO_CAPEX_PER_KVA = 107`.
+
+**Part 1 — capacity is a distribution:** firm = {2:1, 3:10, 4:20, 5:18, 6:1} over
+K=50, P5/P50/P95 = 3/4/5. Planning at the P50 leaves the feeder short **22 %** of
+years; at the P5, 2 %. `corr(winter severity, firm) = +0.42` — the spread is
+weather, not sampling noise.
+
+**Part 2 — insurance vs reinforcement at equal reliability:**
+
+| target adoption | P(short) | coverage | flex $/yr | of which unserved | mean curtailed | reinforce $/yr | kVA |
+|---|---|---|---|---|---|---|---|
+| 1–3 | ≤0.02 | 1.00 | 80–241 | ≤$0.20 | 0.0 % | 0 (present unit) | 75 |
+| 4 | 0.22 | 1.00 | 324 | $0.58 | 0.1 % | 696 | 100 |
+| **6 (ref)** | **0.98** | **1.00** | **503** | **$3.77** | **0.2 %** | **696** | 100 |
+| 8 (crossover) | 1.00 | 1.00 | 717 | $12.86 | 0.6 % | 696 | 100 |
+| 12 | 1.00 | 1.00 | 1340 | $63.29 | 2.1 % | 1162 | 167 |
+
+**Reading:** there is a **window (4–7 EVs)** where flexibility-as-insurance is
+cheaper than reinforcing. The crossover is **8 EVs** (1.33 EV/home).
+
+**Two honesty corrections applied after adversarial review — read these before
+citing the headline:**
+
+1. **Coverage is an ENERGY-service test, not a congestion one.** With full
+   enrollment the backstop can always hold the transformer under its rating (no
+   un-enrolled EV draw is left to spill), so the congestion clause is satisfied *by
+   construction*. What can fail is how much charging the backstop denies. Coverage
+   stays 100 % because the mean curtailed fraction never exceeds **2.1 %** — far
+   inside the 10 % tolerance. So flexibility fails on **cost**, never on
+   reliability (`flex_viability_limit_adoption` is null — a finding, left unpinned).
+2. **The comparison is made like-for-like by pricing the denied charging.**
+   Reinforcement delivers 100 % of the EV energy; flexibility does not. The flex
+   cost therefore includes the unserved energy at `C_RETAIL_KWH`, reported
+   separately above so the concession stays visible. It is small ($3.77 of $503 at
+   the reference) — which is what makes the cheaper headline defensible rather than
+   an artifact of delivering less.
+
+**Headline fragility (disclosed):** the crossover is an integer and the project
+carries two reinforcement anchors. At `TRAFO_CAPEX_PER_KVA × the new rung`
+(used here) it is **8 EVs**; at pilar-1's flat `CAPEX_UPGRADE = 8000` it is
+**7 EVs** (`crossover_adoption_flat_capex`). The window exists under both; its
+right edge moves by one rung.
+
+Reinforcement is lumpy (ladder rungs) while insurance scales smoothly — that shape,
+and the activation frequency, are the robust results; the dollars are illustrative.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).

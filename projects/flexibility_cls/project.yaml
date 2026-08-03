@@ -3,7 +3,12 @@ kind: StudyProject
 metadata:
   name: flexibility_cls
   version: 0.1.0
-  description: EV capacity limitation project using a synthetic distribution grid and digital twin artifacts.
+  description: >-
+    EV capacity-limitation MARKET-MECHANISM study (locational CLS clearing,
+    Soft/Hard flexibility allocation, settlement) on a synthetic distribution
+    grid and digital twin artifacts. The load hypotheses are NOT calibrated to
+    Quebec - see LIMITATIONS.md; cite the mechanism, not cold-climate hosting
+    numbers.
 spec:
   pathBase: repo
   problem:

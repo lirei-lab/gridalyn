@@ -6,7 +6,6 @@ not_in_nav: |
   superpowers/specs/*.md
   development/cleanup-inventory.md
   development/code-structure-audit.md
-  development/module-migration-plan.md
   development/release-cleanup-audit.md
   development/agent-task-templates/*.md
 nav:
@@ -72,19 +71,22 @@ nav:
       - Network Impact Verification: flexibility/network-impact-surrogate.md
       - Operational KPIs: flexibility/economic-validation.md
       - Building Flexibility: flexibility/building-flexibility.md
-  - Demos:
-      - Demo Overview: projects/overview.md
+  - Projects:
+      - Project Overview: projects/overview.md
       - Project Model: projects/project-model.md
       - Project Problem Contract: projects/problem-contract.md
       - Project Template Guide: projects/template-guide.md
-      - Demo Catalog:
+      - Research Studies:
+          - EV Hosting Flexibility: projects/ev-hosting-flex.md
+          - Flexibility CLS: workflows/flexibility-cls.md
+          - ADMM Thermal Consensus: projects/admm-thermal-consensus.md
+      - Demo Catalog (CI contract fixtures):
           - Minimal Grid Project: projects/minimal-grid-project.md
           - IEEE 33-Bus Demo: projects/ieee-33-demo.md
           - Synthetic GeoJSON Feeder: projects/synthetic-geojson-feeder.md
           - Prosumer Battery Market Demo: projects/prosumer-battery-market.md
           - DER Voltage Optimization Demo: projects/der-voltage-optimization.md
           - RL Voltage Control With LightSim2Grid: projects/rl-voltage-control-lightsim.md
-          - Flexibility CLS: workflows/flexibility-cls.md
       - Project Workflows:
           - Project Workflow Model: platform/projects-and-workflows.md
           - Workflow YAML: workflows/workflow-yaml-reference.md

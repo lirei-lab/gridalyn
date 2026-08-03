@@ -54,13 +54,17 @@ gridalyn/      canonical SDK package and import namespace
   interfaces/   stable CLI, reporting, dashboard/catalog, visualization surfaces
 
 projects/
+  # Research studies (heavy; baselines are operator-verified, not run in CI)
+  ev_hosting_flex/            EV hosting capacity + flexibility, Québec all-electric
+  flexibility_cls/            flexibility-market clearing & settlement (capacity limitation)
+  admm_thermal_consensus/     distributed ADMM thermal consensus
+  # CI contract fixtures (fast; run end-to-end + baseline-verified on every push)
   minimal_grid_project/
   ieee_33_bus_demo/
   synthetic_geojson_feeder/
   prosumer_battery_market/
   der_voltage_optimization/
   rl_voltage_control_lightsim/
-  flexibility_cls/
     project.yaml
     workflow.yaml
     scripts/

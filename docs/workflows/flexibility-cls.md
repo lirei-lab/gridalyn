@@ -5,6 +5,17 @@ operations. It evaluates scenario adoption, dynamic transformer limits, Soft
 CLS building flexibility, Hard CLS backstop control, rebound, settlement, and
 analysis figures.
 
+!!! warning "Scope of the results"
+    The contribution here is the **market mechanism**. The **load hypotheses are
+    not calibrated to Québec**: the building base uses the SDK defaults (peaks at
+    5.9 kW/home at −23 °C, 41 % below the HQ 10–15 kW design band — real HQ feeders
+    measure 8.8 kW/home), and the SDK EV generator has no cold coupling and
+    pre-smooths each charging session, which biases any "what is flexibility worth
+    against EV peaks" answer downward. Cite the mechanism, not cold-climate hosting
+    numbers. Details and measurements: `projects/flexibility_cls/LIMITATIONS.md`.
+    For the validated Québec archetype, see
+    [EV Hosting Flexibility](../projects/ev-hosting-flex.md).
+
 The executable project now lives under `projects/flexibility_cls/`. It owns
 the pipeline scripts, plotting scripts, generated data, scenario JSON, figures,
 reports, and run manifests for this demo.

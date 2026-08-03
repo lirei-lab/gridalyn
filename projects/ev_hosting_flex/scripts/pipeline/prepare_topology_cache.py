@@ -23,15 +23,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import sys
 from pathlib import Path
 
+# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top, BEFORE any import
+# that pulls numpy transitively (``_topology`` / the simulation facade) spins up
+# its thread pool — defense-in-depth so cache derivation stays deterministic.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.simulation import prepare_synthetic_topology_cache
-from projects.ev_hosting_flex.scripts.config import (
+from gridalyn.simulation import prepare_synthetic_topology_cache  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     FEEDER_ID,
     GRID_CONFIG,
     POWER_FACTOR,
@@ -39,7 +48,6 @@ from projects.ev_hosting_flex.scripts.config import (
     PROJECT_ROOT,
     ROUND_DECIMALS,
     TOPOLOGY_CACHE_MANIFEST,
-    TRANSFORMER_UTILIZATION_MARGIN,
 )
 
 
@@ -110,12 +118,10 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
         A summary dict (counts + selected feeder + selected-feeder load).
     """
     from projects.ev_hosting_flex.scripts._topology import (
-        annual_peak_base_factor,
         assert_radial_no_generation,
         build_downstream_map,
         line_rating_kw,
         select_feeder,
-        size_feeder_subtree_kw,
         trafo_rating_kw,
     )
 
@@ -170,46 +176,15 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
     )
     selected_feeder_load_kw = round(downstream_nameplate_kw, ROUND_DECIMALS)
 
-    # GAP 1 / CONG-03 (09-03): load-aware re-size the selected feeder SUBTREE (the
-    # head transformer + every interior line whose downstream set is contained in
-    # the feeder's downstream buses) to its annual winter-peak downstream base
-    # demand at the 0.8 utilization margin. The "size to peak" locked decision must
-    # cover the interior lines too: the binding element at 0 EVs is an interior
-    # line, not the head transformer (the SDK load_aware line sizing has no concept
-    # of the project's winter-peak envelope — the same mismatch the transformer
-    # resize addresses). Only the feeder subtree is touched; every line:* /
-    # transformer:* OUTSIDE the subtree keeps its SDK rating byte-unchanged.
-    peak_factor = annual_peak_base_factor()
-    nameplate_kw_by_bus = {
-        int(bus): float(p_mw) * 1000.0 for bus, p_mw in load_by_bus.items()
-    }
-    feeder_set = set(int(b) for b in feeder_downstream)
-    subtree_keys: dict[str, frozenset[int]] = {
-        feeder_key: frozenset(feeder_set)
-    }
-    for key, members in downstream_map.items():
-        if key.startswith("line:") and set(int(b) for b in members) <= feeder_set:
-            subtree_keys[key] = frozenset(int(b) for b in members)
-
-    resized_by_key = size_feeder_subtree_kw(
-        subtree_keys,
-        nameplate_kw_by_bus,
-        peak_factor=peak_factor,
-        utilization_margin=TRANSFORMER_UTILIZATION_MARGIN,
-    )
-    pre_resize_kw = {key: float(ratings[key]) for key in resized_by_key}
-    for key, kw in resized_by_key.items():
-        ratings[key] = round(float(kw), ROUND_DECIMALS)
-
-    resized_kw = resized_by_key[feeder_key]
+    # Option B (2026-07-06): the twin's LV transformers are now PHYSICALLY the
+    # study's 75 kVA unit, so the legacy GAP-1/CONG-03 winter-peak subtree resize
+    # is retired — every line:* / transformer:* rating in the JSON is the SDK
+    # physical rating (TWIN-02), including the selected feeder subtree.
+    feeder_rating_kw = float(ratings[feeder_key])
     feeder_transformer_sizing = {
-        "mode": "load_aware_annual_peak",
+        "mode": "physical_twin",
         "downstream_nameplate_kw": round(downstream_nameplate_kw, ROUND_DECIMALS),
-        "peak_factor": round(peak_factor, ROUND_DECIMALS),
-        "utilization_margin": TRANSFORMER_UTILIZATION_MARGIN,
-        "pre_resize_kw": round(float(pre_resize_kw[feeder_key]), ROUND_DECIMALS),
-        "post_resize_kw": round(float(resized_kw), ROUND_DECIMALS),
-        "n_subtree_elements_resized": len(resized_by_key),
+        "rating_kw": round(feeder_rating_kw, ROUND_DECIMALS),
     }
 
     ratings_path = _write_json(cache_dir / "line_transformer_ratings_kw.json", ratings)
@@ -248,8 +223,7 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
             "n_downstream_lines": int(n_line_downstream),
             "selected_feeder_load_kw": selected_feeder_load_kw,
             "n_load_buses": int(len(node_nameplate_kw)),
-            "feeder_transformer_post_resize_kw": round(resized_kw, ROUND_DECIMALS),
-            "annual_peak_base_factor": round(peak_factor, ROUND_DECIMALS),
+            "feeder_transformer_rating_kw": round(feeder_rating_kw, ROUND_DECIMALS),
         },
     }
 

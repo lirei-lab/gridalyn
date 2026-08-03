@@ -1,0 +1,60 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: admm_thermal_consensus
+  version: 0.1.0
+  description: >-
+    Network-validated distributed ADMM coordination of cold-climate electric-
+    heating homes with ML imputation of communication-failed agents, validated
+    on the IEEE-33 feeder with pandapower.
+spec:
+  pathBase: repo
+  problem:
+    type: distributed_consensus_demand_coordination
+    dataset: synthetic_trois_rivieres_cold_day
+    environment: ieee33_radial_powerflow_validation
+    objective: >-
+      Coordinate residential electric heating with sharing-ADMM to flatten the
+      feeder peak, keep coordination consistent under agent communication
+      failures via ML imputation, and quantify how imputation error propagates
+      into IEEE-33 voltage and line-loading violations.
+    model:
+      type: operations_model
+      name: admm_consensus_thermal_flexibility
+    scenarios:
+      - id: uncoordinated
+        role: baseline
+        description: Native heating with no coordination (firm peak baseline).
+      - id: coordinated_ideal
+        role: ideal_comms
+        description: Sharing-ADMM with all agents responsive.
+      - id: coordinated_imputed
+        role: comms_failure_sweep
+        description: ADMM with a fraction of agents imputed by the ML forecaster.
+  experiments:
+    - id: comms_failure_resilience
+      scenario: coordinated_imputed
+      objective: >-
+        Measure aggregate peak/PAR/cost and IEEE-33 min-voltage / max-line-
+        loading across the non-responsive-fraction sweep.
+  inputs:
+    weather:
+      source: synthetic
+      role: Deterministic synthetic cold-day temperature for load synthesis.
+  artifacts:
+    project:
+      data: projects/admm_thermal_consensus/outputs/data
+      json: projects/admm_thermal_consensus/outputs/json
+      reports: projects/admm_thermal_consensus/outputs/reports
+      cache: projects/admm_thermal_consensus/outputs/cache
+      figures: projects/admm_thermal_consensus/outputs/figures
+  workflow:
+    file: projects/admm_thermal_consensus/workflow.yaml
+  validation:
+    requiredReports:
+      - projects/admm_thermal_consensus/outputs/reports/agents_report.json
+      - projects/admm_thermal_consensus/outputs/reports/network_report.json
+      - projects/admm_thermal_consensus/outputs/reports/forecast_report.json
+      - projects/admm_thermal_consensus/outputs/reports/admm_report.json
+      - projects/admm_thermal_consensus/outputs/reports/powerflow_report.json
+      - projects/admm_thermal_consensus/outputs/reports/study_report.json

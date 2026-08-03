@@ -1,0 +1,83 @@
+"""Tests for the cold-coupling comparison — the study's lead finding.
+
+Tier 1 — hand-computed kernel check that the naive toggle actually removes the
+cold escalation (no cache, no SDK base). Tier 2 — governed reproduce-and-pin
+over the emitted comparison JSON (skipif absent).
+"""
+
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pytest
+
+from projects.ev_hosting_flex.scripts._annual import N_DAYS, ev_fleet_annual
+from projects.ev_hosting_flex.scripts.config import (
+    PROJECT_OUTPUTS_DIR,
+    SEED,
+)
+
+_CMP = PROJECT_OUTPUTS_DIR / "json" / "cold_coupling_comparison.json"
+_SKIP = (
+    "cold_coupling_comparison.json not present; run analyze_cold_coupling.py "
+    "first (outputs are gitignored)"
+)
+
+
+def test_naive_toggle_removes_cold_escalation() -> None:
+    """A naive fleet draws the SAME energy on cold and mild years; cold-coupled draws more."""
+    cold_year = np.full(N_DAYS, -15.0)
+    mild_year = np.full(N_DAYS, 20.0)
+    # Cold-coupled: cold year draws more than mild.
+    cc_cold = ev_fleet_annual(np.random.default_rng(SEED), 3, cold_year, hod0=0)
+    cc_mild = ev_fleet_annual(np.random.default_rng(SEED), 3, mild_year, hod0=0)
+    assert cc_cold.sum() > cc_mild.sum() * 1.2
+    # Naive (kcold=0): cold and mild years draw the SAME (no cold escalation);
+    # the only difference would be the rng stream, which is seed-identical here.
+    nv_cold = ev_fleet_annual(
+        np.random.default_rng(SEED), 3, cold_year, hod0=0,
+        plugin_kcold=0.0, ev_kwh_kcold=0.0,
+    )
+    nv_mild = ev_fleet_annual(
+        np.random.default_rng(SEED), 3, mild_year, hod0=0,
+        plugin_kcold=0.0, ev_kwh_kcold=0.0,
+    )
+    assert nv_cold.sum() == pytest.approx(nv_mild.sum())
+    # On a cold year the naive fleet draws LESS than the cold-coupled one.
+    assert nv_cold.sum() < cc_cold.sum()
+
+
+@pytest.mark.skipif(not _CMP.is_file(), reason=_SKIP)
+def test_governed_cold_coupling_headline() -> None:
+    """Governed reproduce-and-pin: naive overestimates firm hosting, underestimates curtailment.
+
+    firm cold-coupled 5 -> naive 6 (+20 %); the naive model underestimates the
+    curtailment the flexibility contract must deliver ~4x, because it misses
+    the ~54 % more EV energy the cold-coupled model puts on cold days.
+    (Re-based 2026-07-16 onto the smooth-DHW base: firm 4 -> 5.)
+    """
+    payload = json.loads(_CMP.read_text())
+    cold = payload["models"]["cold_coupled"]
+    naive = payload["models"]["naive"]
+    # The naive model overestimates the firm limit.
+    assert naive["firm_ev_count"] > cold["firm_ev_count"]
+    # Re-based 2026-08-01 (RATING_CONVENTION = hourly_kt): the feeder is now
+    # judged against the IEEE C57.91 capability its OWN ambient allows, not a
+    # nameplate defined at 30 C, so the cold-evening P95 falls and firm rises
+    # 5 -> 12. See config.RATING_CONVENTION.
+    assert cold["firm_ev_count"] == 12
+    # NOTE: the naive count of 16 IS the pool ceiling (POOL_MAX_ANNUAL),
+    # so it is a LOWER bound on the cold-agnostic overestimate, not the
+    # overestimate itself. The inequality above is the real assertion.
+    assert naive["firm_ev_count"] == 16
+    assert payload["firm_overestimate_percent"] == pytest.approx(100 / 3)
+    # More EV energy on cold days drives it; the P95 curves diverge above n=0.
+    assert payload["cold_day_ev_energy_uplift_percent"] > 40.0
+    assert cold["cold_day_ev_kwh_per_ev"] > naive["cold_day_ev_kwh_per_ev"]
+    cc, nv = cold["p95_cold_evening_curve"], naive["p95_cold_evening_curve"]
+    assert cc[0] == pytest.approx(nv[0])  # same base at 0 EV
+    assert cc[cold["firm_ev_count"] + 1] > nv[cold["firm_ev_count"] + 1]
+    # The naive model underestimates the flexibility work (curtailment energy).
+    assert payload["curtailment_underestimate_ratio"] > 1.5
+    assert cold["curtailed_energy_percent"] > naive["curtailed_energy_percent"]

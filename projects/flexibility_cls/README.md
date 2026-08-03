@@ -3,6 +3,17 @@
 This workspace is the governed project implementation for the EV capacity
 limitation case study.
 
+> **Scope — read `LIMITATIONS.md` before citing numbers.** The contribution here
+> is the **market mechanism** (locational CLS clearing, Soft/Hard flexibility
+> allocation, settlement, network-impact validation) on a *synthetic distribution
+> feeder*. The **load hypotheses are not calibrated to Québec**: the building base
+> uses the SDK defaults and peaks at 5.9 kW/home at −23 °C (41 % below the HQ
+> 10–15 kW design band; real HQ feeders measure 8.8 kW/home), and the SDK EV
+> generator has no cold coupling and pre-smooths each charging session — so
+> Québec-specific or cold-climate claims about hosting capacity, winter peak, or
+> the size of the flexibility opportunity are **not supported by this load model**.
+> For the validated Québec archetype see `projects/ev_hosting_flex/`.
+
 The workflow generates the project data, scenarios, market/dispatch outputs,
 case-analysis figures, validation JSON, operational artifacts, and canonical
 reports under this workspace:

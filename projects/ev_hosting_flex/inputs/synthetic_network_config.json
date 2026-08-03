@@ -8,7 +8,7 @@
     },
     "buses": {
         "lv": {
-            "voltage_kv": 0.4,
+            "voltage_kv": 0.24,
             "type": "b"
         },
         "mv": {
@@ -40,15 +40,14 @@
     },
     "transformers": {
         "lv_mv": {
-            "std_type": "0.21 MVA 25/0.4 kV synthetic",
-            "capacity_kva": 210,
-            "sizing_capacity_kva": 250,
+            "std_type": "0.075 MVA 25/0.24 kV synthetic",
+            "capacity_kva": 75,
             "utilization_margin": 0.80,
             "custom_type": true,
-            "vk_percent": 6.0,
-            "vkr_percent": 1.44,
-            "pfe_kw": 0.8,
-            "i0_percent": 0.32,
+            "vk_percent": 2.0,
+            "vkr_percent": 1.2,
+            "pfe_kw": 0.25,
+            "i0_percent": 0.4,
             "shift_degree": 150,
             "vector_group": "Yzn5"
         },
