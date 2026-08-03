@@ -14,6 +14,7 @@ def simulate_buildings(
     caps: dict[int, pd.Series] | None = None,
     burnin_hours: int = 6,
     random_seed: int | None = 4242,
+    control: str = "proportional",
 ) -> pd.DataFrame:
     """
     Simulate all buildings over the provided outdoor-temperature timeseries.
@@ -28,6 +29,9 @@ def simulate_buildings(
                    steady-state, eliminating cold-start correlation between realizations.
                    Temperature during burn-in = first t_out value (constant).
     random_seed  : seed for reproducible ARX non-HVAC background loads.
+    control      : heating controller passed to each Building.step. "proportional"
+                   (default) keeps the historical quantized 10-level law;
+                   "hysteresis" runs independent per-zone thermostats that latch.
 
     Returns
     -------
@@ -57,7 +61,13 @@ def simulate_buildings(
             # For burn-in, use a cyclic background loop or simply the first hour expectation
             bg_burn_slice = bg_matrix_kw[step_k % len(bg_matrix_kw), :]
             for i, b in enumerate(buildings):
-                b.step(t_out=t_burn, minute_of_day=min_of_day, p_bg_kw=bg_burn_slice[i], p_cap_kw=None)
+                b.step(
+                    t_out=t_burn,
+                    minute_of_day=min_of_day,
+                    p_bg_kw=bg_burn_slice[i],
+                    p_cap_kw=None,
+                    control=control,
+                )
 
     # ── Main simulation (recorded)
     # Calculate dt_min based on the input timeseries frequency
@@ -77,8 +87,9 @@ def simulate_buildings(
                 t_out=t_out, 
                 minute_of_day=minute_of_day, 
                 p_bg_kw=bg_slice[i],
-                p_cap_kw=cap_val, 
-                dt_min=dt_min
+                p_cap_kw=cap_val,
+                dt_min=dt_min,
+                control=control,
             )
             results[b.unit_id].append(row)
 

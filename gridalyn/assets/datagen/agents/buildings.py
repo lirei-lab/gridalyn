@@ -56,6 +56,20 @@ BG_STD_KW      = 0.6
 
 T_SET      = 21.0
 DEADBAND   = 0.8  # ±0.4°C for heating
+
+# Independent per-room thermostats in a Québec all-electric dwelling. Each zone
+# latches ON/OFF around its own setpoint, so the house total steps rather than
+# glides. Measured against the Hydro-Québec 1000-home set (all-electric subset,
+# n=215): real heating moves >2 kW between consecutive 15-min steps in 39.9% of
+# intervals and cycles with a ~83 min median period. See ``control="hysteresis"``.
+N_ZONES_MIN = 3
+N_ZONES_MAX = 6
+ZONE_SETPOINT_SPREAD_C = 1.2
+# Per-zone deadband. Kept at the whole-house DEADBAND: widening it to 1.25 °C
+# was tried to slow the cycle toward the measured ~83 min and did not -- the
+# crossing rate of the house total is set by the zone count, not the band --
+# while it pushed the swing from 5.5 to 6.6 kW against a measured 4.6.
+ZONE_DEADBAND_C = DEADBAND
 T_COOL_SET = 24.0 # A/C setpoint
 COOL_DEADBAND = 1.0 # ±0.5°C for cooling
 
@@ -105,6 +119,29 @@ class Building:
         self.T_in = float(self.rng.uniform(17.0, 25.0))
         self.heating_on = self.T_in < (T_SET - DEADBAND / 2)
         self.cooling_on = self.T_in > (T_COOL_SET + COOL_DEADBAND / 2)
+        # Per-zone thermostats, consulted only when control="hysteresis".
+        # Drawn from a SEPARATE stream keyed on unit_id: sampling them from
+        # ``self.rng`` would shift every subsequent draw and silently change the
+        # default path's initial conditions, and with them every frozen baseline.
+        zrng = np.random.default_rng(0xB0A5 + int(self.unit_id))
+        self.n_zones = int(zrng.integers(N_ZONES_MIN, N_ZONES_MAX + 1))
+        self.zone_setpoints = np.sort(
+            T_SET
+            + zrng.uniform(
+                -ZONE_SETPOINT_SPREAD_C / 2, ZONE_SETPOINT_SPREAD_C / 2, self.n_zones
+            )
+        )
+        self.zone_share = zrng.dirichlet(np.full(self.n_zones, 6.0))
+        self.zone_on = zrng.random(self.n_zones) < 0.5
+        # Each zone carries its OWN air temperature. Sharing a single node was
+        # the reason a first hysteresis attempt still glided: zones that sense
+        # the same T_in latch almost together and the ensemble degenerates into
+        # a slow proportional law (181 min cycle vs the measured 83 min). With
+        # independent states each room cycles on its own dynamics and random
+        # phase, which is what makes the house total step.
+        self.zone_T = self.T_in + zrng.uniform(
+            -ZONE_DEADBAND_C / 2, ZONE_DEADBAND_C / 2, self.n_zones
+        )
 
     # Non-HVAC loads are injected externally by the ARX background generator so
     # this object can focus on the thermostat and envelope dynamics.
@@ -117,6 +154,7 @@ class Building:
         p_cap_kw: float | None = None,
         dt_min: float = 1.0,
         integrator: str = "euler",
+        control: str = "proportional",
     ) -> dict:
         """
         Advance one simulation step by dt_min minutes.
@@ -137,6 +175,13 @@ class Building:
         -------
         dict with p_total, p_heat, p_cool, p_bg, T_in
         """
+        if control not in ("proportional", "hysteresis"):
+            raise ValueError(
+                f"Building.step: unsupported control {control!r}; allowed values "
+                "are 'proportional' (default, the quantized 10-level controller "
+                "that reproduces historical runs) and 'hysteresis' (independent "
+                "per-zone thermostats that latch, the measured behaviour)."
+            )
         if integrator not in ("euler", "exact"):
             raise ValueError(
                 f"Building.step: unsupported integrator {integrator!r}; "
@@ -151,15 +196,34 @@ class Building:
         # through stochastic initial states and building parameters.
         T_off = T_SET + DEADBAND / 2
 
-        # ── Discretized Proportional Controller (simulating 10 discrete baseboards)
-        fraction_on = (T_off - self.T_in) / DEADBAND
-        fraction_on = max(0.0, min(1.0, fraction_on))
-        
-        num_baseboards = 10.0
-        fraction_quantized = round(fraction_on * num_baseboards) / num_baseboards
-        
-        p_heat_desired = fraction_quantized * self.p_heat_max
-        self.heating_on = bool(p_heat_desired > 0)
+        if control == "hysteresis":
+            # Independent per-room thermostats, each latching around its own
+            # setpoint. Latching is the whole point: a proportional law tracks
+            # T_in continuously, so the house glides and never steps, while a
+            # real dwelling swings >2 kW between consecutive 15-min samples in
+            # ~40% of intervals with a ~83 min median cycle.
+            on_below = self.zone_setpoints - ZONE_DEADBAND_C / 2.0
+            off_above = self.zone_setpoints + ZONE_DEADBAND_C / 2.0
+            # Each thermostat senses ITS OWN room, not the house mean.
+            self.zone_on = np.where(
+                self.zone_T <= on_below,
+                True,
+                np.where(self.zone_T >= off_above, False, self.zone_on),
+            )
+            p_heat_desired = float(
+                self.p_heat_max * float(np.dot(self.zone_share, self.zone_on))
+            )
+            self.heating_on = bool(p_heat_desired > 0.0)
+        else:
+            # ── Discretized Proportional Controller (10 discrete baseboards)
+            fraction_on = (T_off - self.T_in) / DEADBAND
+            fraction_on = max(0.0, min(1.0, fraction_on))
+
+            num_baseboards = 10.0
+            fraction_quantized = round(fraction_on * num_baseboards) / num_baseboards
+
+            p_heat_desired = fraction_quantized * self.p_heat_max
+            self.heating_on = bool(p_heat_desired > 0)
 
         # ── 2b. A/C control
         T_c_on = T_COOL_SET + COOL_DEADBAND / 2
@@ -192,7 +256,22 @@ class Building:
             p_cool_actual = p_cool_desired
 
         # ── 4.  Thermal dynamics
-        if integrator == "euler":
+        if control == "hysteresis":
+            # Per-zone first-order RC. Zone i owns share_i of the envelope, so
+            # its capacitance and heater scale with the share and its resistance
+            # inversely -- the zones in parallel reproduce the whole-house R, C
+            # and p_heat_max exactly.
+            share = self.zone_share
+            c_z = self.C * share
+            r_z = self.R / share
+            p_z = self.p_heat_max * share * self.zone_on
+            if p_cap_kw is not None and p_heat_desired > 0:
+                p_z = p_z * (p_heat_actual / p_heat_desired)
+            self.zone_T = self.zone_T + (dt_min / 60.0) / c_z * (
+                (t_out - self.zone_T) / r_z + ETA_HEAT * p_z
+            )
+            self.T_in = float(np.dot(share, self.zone_T))
+        elif integrator == "euler":
             # Forward-Euler update (default, byte-identical to historical runs).
             dT = (dt_min / 60.0) / self.C * (
                 (t_out - self.T_in) / self.R
