@@ -6,7 +6,7 @@ tolerance) plus a ``content_sha256`` of the *rounded* array (an exact
 tripwire). The two together let the project regression localize drift to a
 single pipeline stage (D-01/D-02).
 
-Layer note (CLAUDE.md): this lives in the study layer
+Layer note: this lives in the study layer
 (``projects/flexibility_cls/scripts/``), never in a ``gridalyn/`` SDK layer,
 because imports flow strictly downward and this is study-only tooling.
 

@@ -16,7 +16,6 @@ folders.
 | Design an operation | [Utility Operations](../platform/operations.md) | [Locational Clearing](../flexibility/clearing.md) |
 | Create a study | [Project Model](../projects/project-model.md) | [Project Problem Contract](../projects/problem-contract.md) |
 | Publish or release | [Testing And Validation](../development/testing-and-validation.md) | [Release Readiness](../platform/release-readiness.md) |
-| Guide an AI coding agent | [AI Agent Guide](../development/ai-agent-guide.md) | [Testing And Validation](../development/testing-and-validation.md) |
 
 ## Section Meaning
 

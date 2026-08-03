@@ -4,10 +4,7 @@ docs_dir: .
 not_in_nav: |
   superpowers/plans/*.md
   superpowers/specs/*.md
-  development/cleanup-inventory.md
   development/code-structure-audit.md
-  development/release-cleanup-audit.md
-  development/agent-task-templates/*.md
 nav:
   - Home: index.md
   - Start:
@@ -103,7 +100,6 @@ nav:
       - Testing And Validation: development/testing-and-validation.md
   - Development:
       - Development Overview: development/overview.md
-      - AI Agent Guide: development/ai-agent-guide.md
       - Repository Layout: development/core-package-architecture.md
       - Module Boundaries: development/module-boundaries.md
       - Contribution Workflow: development/developer-workflow.md

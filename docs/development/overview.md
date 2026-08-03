@@ -14,12 +14,6 @@ avoid committing generated noise, and how to verify changes before publication.
 Common commands, generated-file rules, documentation rules, and commit hygiene.
 </a>
 
-<a class="landing-card" href="ai-agent-guide/">
-<h3>AI Agent Guide</h3>
-
-Task boundaries, verification expectations, project commands, and safe editing
-rules for coding agents.
-</a>
 
 <a class="landing-card" href="core-package-architecture/">
 <h3>Repository Layout</h3>
