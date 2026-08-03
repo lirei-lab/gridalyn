@@ -79,7 +79,7 @@ Current Compose mounts:
 
 ```text
 instances/default/digital_twin/
-projects/flexibility_cls/outputs/
+projects/ev_hosting_flex/outputs/
 projects/ieee_33_bus_demo/outputs/
 ```
 

@@ -11,7 +11,7 @@ Prefer importing platform-level helpers from `gridalyn.foundation`,
 ```python
 from gridalyn import foundation, projects, twin
 
-project = projects.load_project("projects/flexibility_cls")
+project = projects.load_project("projects/ev_hosting_flex")
 workspace = foundation.validate_workspace(".")
 repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```

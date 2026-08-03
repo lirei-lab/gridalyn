@@ -116,7 +116,7 @@ load generation, transformer limits, market clearing, and plots. `select_cold_da
 is for absolute-temperature stress tests. `select_peak_load_day` is for scenarios
 where unmanaged heating demand should drive the study window.
 
-The `flexibility_cls` demo uses `select_peak_load_day(..., duration_hours=28)`
+The `ev_hosting_flex` demo uses `select_peak_load_day(..., duration_hours=28)`
 so building loads, EV capability, thermal limits, and CLS visualizations stay
 anchored to the same ambient-temperature trace.
 

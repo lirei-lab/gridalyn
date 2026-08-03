@@ -20,7 +20,12 @@ from gridalyn.simulation.simulators.powerflow.transformer_validation import (
     TransformerPeakValidationConfig,
     validate_transformer_peak_scenarios,
 )
-from projects.flexibility_cls.scripts._serialize import scenario_label
+
+
+def scenario_label(index: int, ev_percent: int) -> str:
+    """Return the canonical EV scenario label used by study reports."""
+
+    return f"S{int(index)}_{int(ev_percent)}pct"
 
 
 def _mc_frame(values: list[list[float]]) -> pd.DataFrame:

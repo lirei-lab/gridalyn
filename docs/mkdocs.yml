@@ -76,8 +76,6 @@ nav:
       - Research Studies:
           - EV Hosting Flexibility: projects/ev-hosting-flex.md
           - ADMM Thermal Consensus: projects/admm-thermal-consensus.md
-      - Capability Demonstrations:
-          - Flexibility CLS: workflows/flexibility-cls.md
       - Contract Fixtures (gated in CI):
           - Minimal Grid Project: projects/minimal-grid-project.md
           - IEEE 33-Bus Demo: projects/ieee-33-demo.md

@@ -7,7 +7,7 @@ real-time local market.
 ## Why This Demo Exists
 
 The IEEE 33-bus demo shows the basic model-simulation-report loop. The
-Flexibility CLS project shows a larger network-aware flexibility workflow. This
+EV Hosting Flexibility project shows a larger network-aware flexibility workflow. This
 prosumer demo sits between them: it is small enough for fast tests but includes
 market participants, offers, dispatch, battery state of charge, and post-market
 power-flow verification.

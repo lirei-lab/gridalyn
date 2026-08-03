@@ -74,7 +74,7 @@ registry = twin.default_network_adapter_registry()
 available = registry.list_descriptors()
 adapter = registry.create(
     "synthetic_pandapower",
-    cache_dir=Path("projects/flexibility_cls/outputs/cache"),
+    cache_dir=Path("projects/ev_hosting_flex/outputs/cache"),
     config_path=Path("configs/grid/config.json"),
 )
 result = adapter.export(out_dir=Path("instances/default/digital_twin/base"), root=Path("."))
@@ -243,7 +243,7 @@ from pathlib import Path
 from gridalyn.twin.io import get_baseline_building_load_all
 
 baseline_kw = get_baseline_building_load_all(
-    data_dir=Path("projects/flexibility_cls/outputs/data"),
+    data_dir=Path("projects/ev_hosting_flex/outputs/data"),
 )
 ```
 
@@ -304,7 +304,7 @@ Prefer importing the module that owns the responsibility:
 ```python
 from gridalyn import assets, foundation, operations, projects, simulation, twin
 
-project = projects.load_project("projects/flexibility_cls")
+project = projects.load_project("projects/ev_hosting_flex")
 workspace = foundation.workspace_from_path(".")
 repository = twin.NetworkModelRepository.from_parquet("instances/default/digital_twin/base")
 registry = operations.build_provider_registry(...)

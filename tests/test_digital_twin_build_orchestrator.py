@@ -73,7 +73,7 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
 
         self.assertTrue(commands)
         self.assertFalse(
-            any("projects/flexibility_cls" in command for command in commands.values()),
+            any("projects/" in command for command in commands.values()),
             commands,
         )
         self.assertIn(

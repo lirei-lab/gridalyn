@@ -7,7 +7,7 @@ ready.
 
 Gridalyn includes multiple demo projects. Start with
 `projects/minimal_grid_project/` or `projects/ieee_33_bus_demo/` when learning
-the workflow contract; use `projects/flexibility_cls/` only when you need the
+the workflow contract; use `projects/ev_hosting_flex/` only when you need the
 larger flexibility operations stack.
 
 ## Why Projects Exist

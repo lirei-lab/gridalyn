@@ -6,8 +6,16 @@ services:
     container_name: gridalyn-dashboard
     ports:
       - "8081:80"
+    environment:
+      # Which governed project the dashboard reads. Any project under
+      # `projects/` that emits operational artifacts works; see
+      # `dashboard/src/projectSource.js`.
+      VITE_GRIDALYN_PROJECT: "${GRIDALYN_PROJECT:-ev_hosting_flex}"
     volumes:
       - ../instances/default/digital_twin:/usr/share/nginx/html/instances/default/digital_twin:ro
-      - ../projects/flexibility_cls/outputs:/usr/share/nginx/html/projects/flexibility_cls/outputs:ro
-      - ../projects/ieee_33_bus_demo/outputs:/usr/share/nginx/html/projects/ieee_33_bus_demo/outputs:ro
+      # The WHOLE projects tree, read-only. Mounting one project per line meant
+      # pointing the dashboard at a different study required editing this file,
+      # while the dev server (vite.config.js) already served all of them — so
+      # production was the only place the project set was frozen.
+      - ../projects:/usr/share/nginx/html/projects:ro
     restart: unless-stopped

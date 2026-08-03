@@ -26,7 +26,7 @@ For the stricter project-artifact and regression path:
 ```bash
 uv run gridalyn validate --check-project-artifacts
 uv run gridalyn validate \
-  --project projects/flexibility_cls \
+  --project projects/ev_hosting_flex \
   --check-project-artifacts \
   --regression
 ```
@@ -34,7 +34,7 @@ uv run gridalyn validate \
 ## Larger Workflow Regression
 
 ```bash
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project regression projects/ev_hosting_flex
 ```
 
 ## Project Sense Checks
@@ -65,7 +65,6 @@ Use it after regenerating project outputs. Examples of objective-level checks:
 | `prosumer_battery_market` | rolling horizon is consistent, peak import does not increase, voltage remains safe. |
 | `der_voltage_optimization` | solver is optimal, PV accounting balances, verified voltage limit is met. |
 | `rl_voltage_control_lightsim` | LightSim2Grid backend, reward improves, control reduces voltage deviation. |
-| `flexibility_cls` | five EV scenarios, dynamic limit explicit, Soft/Hard CLS energy present, settlement non-negative and positive when CLS is active. |
 
 ## Agent-Friendly Project Verification
 
@@ -91,8 +90,8 @@ uv run gridalyn project verify-all
 ## Project Contract Check
 
 ```bash
-uv run gridalyn project validate projects/flexibility_cls --check-artifacts
-uv run gridalyn project status projects/flexibility_cls --check-artifacts
+uv run gridalyn project validate projects/ev_hosting_flex --check-artifacts
+uv run gridalyn project status projects/ev_hosting_flex --check-artifacts
 ```
 
 ## When To Run Which Check

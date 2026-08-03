@@ -30,16 +30,6 @@ to be cited.
 | [EV Hosting Flexibility](ev-hosting-flex.md) | 21 | 81 | EV hosting capacity and flexibility across a 540-transformer Québec fleet, with the transformer rating convention as a declared axis. |
 | [ADMM Thermal Consensus](admm-thermal-consensus.md) | 13 | KPI set | Distributed ADMM coordination of cold-climate electric-heating homes, with ML imputation for failed communication, on the IEEE-33 feeder. |
 
-### Capability demonstrations
-
-End-to-end exercises of a platform capability. They show that the machinery runs
-and composes. They are **not** sources of citable domain findings — read their
-own scope notes before quoting anything from them.
-
-| Project | Stages | Pins | What it demonstrates |
-| --- | --- | --- | --- |
-| [Flexibility CLS](../workflows/flexibility-cls.md) | 26 | 74 | The flexibility market API: locational CLS clearing, Soft/Hard allocation, settlement, and network-impact validation, at substation scale. |
-
 ### Contract fixtures
 
 Small, fast projects that gate the `StudyProject → Workflow → report → baseline`

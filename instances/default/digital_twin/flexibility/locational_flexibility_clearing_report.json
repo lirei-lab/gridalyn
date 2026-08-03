@@ -1,8 +1,9 @@
 {
   "artifacts": {
-    "events": "locational_clearing_events.parquet",
-    "selections": "locational_clearing_selections.parquet",
-    "summary": "locational_clearing_summary.json"
+    "events": "instances/default/digital_twin/flexibility/locational_clearing_events.parquet",
+    "report": "instances/default/digital_twin/flexibility/locational_flexibility_clearing_report.json",
+    "selections": "instances/default/digital_twin/flexibility/locational_clearing_selections.parquet",
+    "summary": "instances/default/digital_twin/flexibility/locational_clearing_summary.json"
   },
   "clearing_method": "surrogate",
   "clearing_policy": "independent transformer constraint-event clearing; Soft CLS is preferred before Hard CLS and providers are ranked by local deliverability-adjusted offer cost",

@@ -207,7 +207,7 @@ def test_project_scripts_scan_corpus_is_non_vacuous() -> None:
     unexpected CWD — those loops execute zero iterations and pass *vacuously while
     scanning nothing*. This corpus-floor asserts the scans cannot silently
     self-disable: the corpus must be non-empty and span the expected number of
-    distinct projects. The project count (9) is the stable invariant — the
+    distinct projects. The project count (8) is the stable invariant — the
     per-project file count is intentionally not hardcoded (brittle). The distinct
     count is derived from ``_PROJECT_SCRIPTS`` itself (the path component directly
     under ``projects/``), so it also catches a single project's scripts vanishing.
@@ -218,7 +218,7 @@ def test_project_scripts_scan_corpus_is_non_vacuous() -> None:
     projects_seen = {
         path.relative_to(_REPO_ROOT / "projects").parts[0] for path in _PROJECT_SCRIPTS
     }
-    assert len(projects_seen) == 9, sorted(projects_seen)
+    assert len(projects_seen) == 8, sorted(projects_seen)
 
 
 def test_guard01_predicate_flags_phase6_breach_and_passes_public_facade() -> None:

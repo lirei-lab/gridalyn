@@ -56,7 +56,6 @@ gridalyn/      canonical SDK package and import namespace
 projects/
   # Research studies (heavy; baselines are operator-verified, not run in CI)
   ev_hosting_flex/            EV hosting capacity + flexibility, Québec all-electric
-  flexibility_cls/            flexibility-market clearing & settlement (capacity limitation)
   admm_thermal_consensus/     distributed ADMM thermal consensus
   # CI contract fixtures (fast; run end-to-end + baseline-verified on every push)
   minimal_grid_project/
@@ -145,10 +144,9 @@ uv run gridalyn project run projects/ev_hosting_flex
 uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
-To exercise the flexibility market API end to end instead, run
-`projects/flexibility_cls` — a capability demonstration rather than a source of
-citable findings; see its scope note. Both are long-running (tens of minutes)
-and are operator-verified, not gated in CI.
+That study also exercises the flexibility market API end to end: locational
+clearing, provider registry, and settlement run inside its contract stage. It is
+long-running (tens of minutes) and operator-verified, not gated in CI.
 
 Build documentation:
 
@@ -213,7 +211,7 @@ uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn validate --check-project-artifacts
 uv run gridalyn project verify-all
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project regression projects/ev_hosting_flex
 node --test dashboard/src/*.test.js
 (cd dashboard && npm run build)
 ```

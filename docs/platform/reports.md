@@ -82,7 +82,7 @@ The resulting JSON follows this shape:
   "report_id": "stage_4_realtime_dispatch",
   "schema_version": "1.0",
   "created_at": "2026-05-10T00:00:00Z",
-  "source_domain": "flexibility_cls",
+  "source_domain": "ev_hosting_flex",
   "project": {},
   "inputs": [],
   "artifacts": [],

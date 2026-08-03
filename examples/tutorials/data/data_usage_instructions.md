@@ -10,7 +10,7 @@ offline tutorials and tests. Generated tutorial outputs belong under
 | --- | --- |
 | `minimal/` | Tiny contract dataset used by smoke tests and introductory tutorials. |
 | `example_buildings.geojson` | Small building-footprint sample for clipping examples. Covers the CLI polygon smoke test and the Trois-Rivieres tutorial wrapper. |
-| `buildings_inside_polygon.geojson` | Clipped Trois-Rivieres footprint sample used by `projects/flexibility_cls`. |
+| `buildings_inside_polygon.geojson` | Clipped Trois-Rivieres footprint sample used by `projects/ev_hosting_flex`. |
 
 Use the dataset helper when code needs a stable path:
 

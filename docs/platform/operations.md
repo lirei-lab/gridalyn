@@ -119,7 +119,7 @@ Today Gridalyn has reusable building blocks for:
 - project-owned operation run records and operations catalogs;
 - synthetic topology-cache manifests and building-footprint validation reports.
 
-The larger `projects/flexibility_cls` workflow is one stress test of those
+The larger `projects/ev_hosting_flex` workflow is one stress test of those
 contracts. Its project scripts now mostly bind project paths and constants to
 native SDK utilities such as `build_congestion_forecast`,
 `run_cls_capacity_allocation`, `prepare_cls_market_replay_context`,

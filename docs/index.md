@@ -122,10 +122,9 @@ uv run gridalyn project run projects/ev_hosting_flex
 uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
-To exercise the flexibility market API end to end, run the
-[Flexibility CLS](projects/overview.md#capability-demonstrations) capability
-demonstration instead. Both are long-running (tens of minutes) and are verified
-by an operator rather than in CI.
+That study also exercises the flexibility market API end to end. It is
+long-running (tens of minutes) and is verified by an operator rather than in
+CI.
 
 ## Documentation Map
 

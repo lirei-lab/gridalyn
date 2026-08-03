@@ -382,7 +382,7 @@ plausible adoption range — all of which tighten the `hosting_expansion_percent
 The v1.3 milestone replaces the project-local degree-day annual base with a
 **generative design-day Monte-Carlo seam** (`scripts/_generators.py`, GEN-01..04):
 the **SDK building agent** (`make_buildings` / `simulate_buildings`,
-`gridalyn.assets.datagen.agents`) — exactly as `flexibility_cls` uses it —
+`gridalyn.assets.datagen.agents`) — used exactly as the SDK exposes it —
 recalibrated to the Québec all-electric archetype, plus the **project-local MDPI EV
 sampler** (kept `_stochastic._session` / the `_ev_day` draw order), run over the
 **binding cold design day** to emit the idx-62 transformer-load ensemble

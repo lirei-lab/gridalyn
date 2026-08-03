@@ -340,10 +340,8 @@ class ProjectHygieneTest(unittest.TestCase):
         readme = (repo_root / "README.md").read_text(encoding="utf-8")
 
         # The README must teach the CONTRACT — a fast fixture to start with and
-        # a research study for the full arc. It deliberately no longer requires
-        # `flexibility_cls`: that project is a capability demonstration, not a
-        # source of citable findings, and pinning it here is what kept it in the
-        # README's headline position.
+        # a research study for the full arc. It deliberately pins no single
+        # project in the headline position.
         required = [
             "# Gridalyn",
             "utility digital-twin",
@@ -593,10 +591,12 @@ class ProjectHygieneTest(unittest.TestCase):
 
         for path in sorted(package_root.rglob("*.py")):
             text = path.read_text(encoding="utf-8")
-            if "projects/flexibility_cls" in text or (
-                '"projects"' in text and '"flexibility_cls"' in text
-            ):
-                violations.append(f"{path.relative_to(repo_root)} references projects/flexibility_cls")
+            # `projects/*/` globs are project-agnostic by design; a concrete
+            # project name hardcoded in the SDK is the leak this guards against.
+            if re.search(r"projects/(?!\*)[\w.-]+/", text):
+                violations.append(
+                    f"{path.relative_to(repo_root)} hardcodes a concrete project path"
+                )
             if "from projects." in text or "import projects." in text:
                 violations.append(f"{path.relative_to(repo_root)} imports from projects")
             if "sys.path.insert" in text:
@@ -787,7 +787,7 @@ class ProjectHygieneTest(unittest.TestCase):
     def test_project_runtime_does_not_depend_on_examples_generated_cache(self):
         repo_root = Path(__file__).resolve().parents[1]
         scanned_roots = [
-            repo_root / "projects" / "flexibility_cls",
+            repo_root / "projects" / "ev_hosting_flex",
             repo_root / "gridalyn" / "workflows",
         ]
         offenders = []
@@ -814,7 +814,7 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         legacy_token = "ev" "case"
         offenders = []
-        for path in sorted((repo_root / "projects" / "flexibility_cls").rglob("*")):
+        for path in sorted((repo_root / "projects" / "ev_hosting_flex").rglob("*")):
             if not path.is_file() or path.suffix not in {".py", ".yaml", ".yml", ".md", ".sh"}:
                 continue
             text = path.read_text(encoding="utf-8")
@@ -959,7 +959,7 @@ class ProjectHygieneTest(unittest.TestCase):
                 "examples/generated/outputs/power_grid_map.html",
                 "examples/generated/cache/tmy_trois_rivieres.pkl",
                 "examples/generated/cache/raw_response.json",
-                "projects/flexibility_cls/outputs/reports/study_run_manifest.json",
+                "projects/ev_hosting_flex/outputs/reports/study_run_manifest.json",
                 "instances/default/digital_twin/timeseries/S4_ev_load.parquet",
                 "manuscripts/ev_capacity_limitation/paper/main.pdf",
             ],
@@ -972,7 +972,7 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         roots = [
             repo_root / "gridalyn",
-            repo_root / "projects" / "flexibility_cls" / "scripts",
+            repo_root / "projects" / "ev_hosting_flex" / "scripts",
         ]
         forbidden_snippets = [
             'ROOT / "instances" / "default" / "digital_twin"',

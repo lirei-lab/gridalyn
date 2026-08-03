@@ -19,7 +19,7 @@ larger flexibility workflow only when you want an end-to-end operations example.
 | `projects/prosumer_battery_market` | Demonstrates prosumer assets, forecasts, and market clearing. |
 | `projects/der_voltage_optimization` | Demonstrates CVXPY plus pandapower verification. |
 | `projects/rl_voltage_control_lightsim` | Demonstrates a Gridalyn voltage-control environment backed by LightSim2Grid. |
-| `projects/flexibility_cls` | Larger flexibility/CLS workflow for operations, clearing, verification, and reports. |
+| `projects/ev_hosting_flex` | EV hosting capacity and flexibility on a Québec all-electric feeder. |
 
 ## Common Commands
 
@@ -92,29 +92,30 @@ projects/<name>/outputs/operations/
 Not every project uses every folder. Small demos may only write reports and one
 figure; operations demos usually write `outputs/operations/` as well.
 
-## Larger Flexibility Workflow
+## Larger Research Workflow
 
-The Flexibility CLS project is a comprehensive technical demo. It starts from
-project-declared inputs, builds a synthetic topology cache, generates
-stochastic profiles, computes dynamic thermal limits, clears flexibility,
-validates selected actions with pandapower, writes figures, materializes
-operation artifacts, and produces canonical reports.
+The EV Hosting Flexibility project is a comprehensive research arc. It starts
+from project-declared inputs, builds a synthetic topology cache, generates
+stochastic building and EV profiles, computes dynamic thermal limits, clears
+locational flexibility contracts, validates selected actions with pandapower,
+writes figures, materializes operation artifacts, and produces canonical
+reports.
 
 Run it only when you need the full stack:
 
 ```bash
-uv run gridalyn project run projects/flexibility_cls
-uv run gridalyn project verify projects/flexibility_cls
+uv run gridalyn project run projects/ev_hosting_flex
+uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
 Its generated artifacts live under:
 
 ```text
-projects/flexibility_cls/outputs/
+projects/ev_hosting_flex/outputs/
 ```
 
-The project remains useful as a technical stress test, but it is not the
-identity of Gridalyn.
+It is the repo's flagship study, and it is long-running: expect tens of
+minutes.
 
 ## Synthetic Network Inputs
 

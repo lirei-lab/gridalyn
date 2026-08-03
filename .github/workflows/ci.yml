@@ -42,8 +42,8 @@ jobs:
     # reproduce-and-pin tests SKIP in CI — without this job nothing would actually
     # exercise StudyProject YAML -> Workflow runner -> platform report -> regression
     # baseline. These six studies run in ~75 s total, so CI can prove the whole
-    # contract end-to-end on every push. (The research studies — ev_hosting_flex,
-    # flexibility_cls, admm_thermal_consensus — are far too heavy for CI: their
+    # contract end-to-end on every push. (The research studies — ev_hosting_flex
+    # and admm_thermal_consensus — are far too heavy for CI: their
     # baselines stay operator-verified, see docs/projects/.)
     name: Governed project contracts
     runs-on: ubuntu-latest

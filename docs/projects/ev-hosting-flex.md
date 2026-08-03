@@ -130,7 +130,6 @@ before trusting a green test run.
 
 ## Related
 
-- `projects/flexibility_cls` — the sibling market study (capacity-limitation
   contracts and the canonical clearing/settlement API). Same synthetic
   Trois-Rivières twin, different mechanism.
 - `docs/projects/overview.md` — the project contract these studies implement.

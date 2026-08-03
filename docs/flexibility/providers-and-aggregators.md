@@ -53,7 +53,7 @@ provider row should answer:
 - what cost, priority, reliability, or role metadata should influence
   selection.
 
-In the current Flexibility CLS demo this includes:
+In the current study this includes:
 
 - Soft CLS building providers from `soft_cls_participant`;
 - Hard CLS EV providers from `has_ev` and `hard_cls_enabled`;
@@ -63,7 +63,7 @@ In the current Flexibility CLS demo this includes:
 - selection priority;
 - source lineage.
 
-Current generated counts for the larger Flexibility CLS workflow:
+Current generated counts for the larger governed workflow:
 
 | Scenario | Providers | Soft building providers | Hard EV providers |
 | --- | ---: | ---: | ---: |
@@ -253,7 +253,7 @@ locational provider selector without changing market-clearing behavior:
 uv run gridalyn market shadow-report \
   --scenario-id S4 \
   --top-constraints 3 \
-  --out-path projects/flexibility_cls/outputs/reports/provider_selection_shadow_report.json
+  --out-path instances/default/digital_twin/flexibility/provider_selection_shadow_report.json
 ```
 
 The report uses the top transformer constraints from

@@ -1,4 +1,7 @@
-const DEFAULT_OPERATIONS_CATALOG_PATH = '/projects/flexibility_cls/outputs/operations/operations_catalog.json';
+import { operationsCatalogPath } from './projectSource.js';
+
+// Resolved per call, not frozen at import: the operating project is
+// configuration, so a runtime override must be able to win.
 
 async function loadJsonOrNull(fetchImpl, path) {
   const res = await fetchImpl(path);
@@ -21,7 +24,7 @@ function normalizeScenarioOperation(scenarioId, spec = {}) {
   };
 }
 
-export function normalizeOperationsCatalog(catalog = null, path = DEFAULT_OPERATIONS_CATALOG_PATH) {
+export function normalizeOperationsCatalog(catalog = null, path = operationsCatalogPath()) {
   if (!catalog?.scenarios) return null;
   const scenarios = {};
   for (const [scenarioId, spec] of Object.entries(catalog.scenarios || {})) {
@@ -39,7 +42,7 @@ export function normalizeOperationsCatalog(catalog = null, path = DEFAULT_OPERAT
   };
 }
 
-export async function loadOperationsCatalog(fetchImpl = fetch, path = DEFAULT_OPERATIONS_CATALOG_PATH) {
+export async function loadOperationsCatalog(fetchImpl = fetch, path = operationsCatalogPath()) {
   const catalog = await loadJsonOrNull(fetchImpl, path);
   return normalizeOperationsCatalog(catalog, path);
 }

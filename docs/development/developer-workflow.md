@@ -25,7 +25,7 @@ Embed the platform from Python:
 ```python
 from gridalyn import foundation, projects
 
-project = projects.load_project("projects/flexibility_cls")
+project = projects.load_project("projects/ev_hosting_flex")
 report = projects.validate_project(project.path)
 stages = projects.plan_project(project)
 artifact_report = foundation.check_artifact_policy(".")
@@ -83,12 +83,6 @@ uv run gridalyn market locational-clearing \
   --top-constraints 3
 ```
 
-Build current Flexibility CLS project reports:
-
-```bash
-uv run python projects/flexibility_cls/scripts/reports/build_study_reports.py
-```
-
 Build digital twin reports:
 
 ```bash
@@ -107,7 +101,7 @@ Large simulation runs update many generated outputs:
 
 - `instances/default/digital_twin/reports/canonical/`;
 - `instances/default/digital_twin/semantic/`;
-- `projects/flexibility_cls/outputs/`;
+- `projects/ev_hosting_flex/outputs/`;
 - root `site/` when MkDocs builds.
 
 Generated project figures should remain under governed output folders.
@@ -132,7 +126,6 @@ When adding a new subsystem, update at least one of:
 - `platform/architecture.md` for system-level placement;
 - `platform/digital-twin.md` for canonical data layout;
 - `platform/projects-and-workflows.md` for project contract behavior;
-- `workflows/flexibility-cls.md` for the larger flexibility workflow;
 - `platform/reports.md` for report contract changes;
 - `semantic-layer/semantic-graph.md` for ontology or graph changes;
 - `platform/dashboard.md` for visualization and catalog changes.

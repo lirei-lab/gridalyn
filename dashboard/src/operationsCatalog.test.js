@@ -25,11 +25,11 @@ test('normalizeOperationsCatalog exposes available operation metrics by scenario
           selected_provider_count: 7,
         },
         artifacts: {
-          dispatchInstructions: '/projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet',
+          dispatchInstructions: '/projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet',
         },
         reports: {
-          operationRun: '/projects/flexibility_cls/outputs/operations/operation_run.json',
-          operationalKpis: '/projects/flexibility_cls/outputs/reports/operational_kpi_report.json',
+          operationRun: '/projects/ev_hosting_flex/outputs/operations/operation_run.json',
+          operationalKpis: '/projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json',
         },
       },
     },
@@ -42,11 +42,11 @@ test('normalizeOperationsCatalog exposes available operation metrics by scenario
   assert.equal(normalized.scenarios.S4.summary.delivered_mwh, 1.25);
   assert.equal(
     normalized.scenarios.S4.artifacts.dispatchInstructions,
-    '/projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet',
+    '/projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet',
   );
   assert.equal(
     normalized.scenarios.S4.reports.operationRun,
-    '/projects/flexibility_cls/outputs/operations/operation_run.json',
+    '/projects/ev_hosting_flex/outputs/operations/operation_run.json',
   );
 });
 

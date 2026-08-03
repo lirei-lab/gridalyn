@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadClearingScorecard, normalizeClearingScorecard } from './clearingScorecard.js';
+import { FALLBACK_PROJECT, operatingProject, operationalKpiReportPath } from './projectSource.js';
 
 test('normalizeClearingScorecard exposes scenario policies and summary', () => {
   const normalized = normalizeClearingScorecard({
@@ -43,5 +44,18 @@ test('loadClearingScorecard loads the canonical report path', async () => {
   const loaded = await loadClearingScorecard(fetchImpl);
 
   assert.equal(loaded.scenarioId, 'S4');
-  assert.deepEqual(requested, ['/projects/flexibility_cls/outputs/reports/operational_kpi_report.json']);
+  // Asserts the RESOLUTION, not a literal project. This test previously
+  // pinned the path to one study by name, which is what kept the dashboard
+  // wired to it: changing the operating project meant changing this file.
+  assert.deepEqual(requested, [operationalKpiReportPath()]);
+  assert.ok(requested[0].startsWith(`/projects/${FALLBACK_PROJECT}/`));
+});
+
+test('the operating project is configurable, not baked in', () => {
+  assert.equal(
+    operationalKpiReportPath('some_other_study'),
+    '/projects/some_other_study/outputs/reports/operational_kpi_report.json',
+  );
+  assert.equal(operatingProject({ VITE_GRIDALYN_PROJECT: 'from_env' }), 'from_env');
+  assert.equal(operatingProject({}), FALLBACK_PROJECT);
 });

@@ -5,9 +5,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from projects.flexibility_cls.scripts.pipeline.materialize_operational_artifacts import (
-    materialize_operational_artifacts,
+from gridalyn.operations.artifacts import (
+    materialize_flexibility_operation_artifacts,
 )
+
+
+# The study that used to wrap this materialiser was retired; the wrapper only
+# bound ``project_id``, so the SDK entry point is exercised directly against
+# the project that ships it today.
+PROJECT_ID = "ev_hosting_flex"
 
 
 class EvProjectOperationalArtifactsTest(unittest.TestCase):
@@ -18,7 +24,7 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
             input_dir.mkdir(parents=True)
             base_dir = root / "instances" / "default" / "digital_twin" / "base"
             base_dir.mkdir(parents=True)
-            manifests_dir = root / "projects" / "flexibility_cls" / "outputs" / "manifests"
+            manifests_dir = root / "projects" / PROJECT_ID / "outputs" / "manifests"
             manifests_dir.mkdir(parents=True)
 
             (base_dir / "metadata.json").write_text(
@@ -126,10 +132,12 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
             selections.to_parquet(input_dir / "locational_clearing_selections.parquet", index=False)
             impact.to_parquet(input_dir / "network_impact_predictions.parquet", index=False)
 
-            result = materialize_operational_artifacts(root=root, scenario_id="S4")
+            result = materialize_flexibility_operation_artifacts(
+                root=root, project_id=PROJECT_ID, scenario_id="S4"
+            )
 
-            operations_dir = root / "projects" / "flexibility_cls" / "outputs" / "operations"
-            report_path = root / "projects" / "flexibility_cls" / "outputs" / "reports" / "operational_kpi_report.json"
+            operations_dir = root / "projects" / PROJECT_ID / "outputs" / "operations"
+            report_path = root / "projects" / PROJECT_ID / "outputs" / "reports" / "operational_kpi_report.json"
             catalog_path = operations_dir / "operations_catalog.json"
             operation_run_path = operations_dir / "operation_run.json"
             for name in [
@@ -165,15 +173,15 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
             self.assertEqual(catalog["scenarios"]["S4"]["status"], "available")
             self.assertEqual(
                 catalog["scenarios"]["S4"]["reports"]["operationRun"],
-                "/projects/flexibility_cls/outputs/operations/operation_run.json",
+                "/projects/ev_hosting_flex/outputs/operations/operation_run.json",
             )
             self.assertEqual(
                 catalog["scenarios"]["S4"]["reports"]["operationalKpis"],
-                "/projects/flexibility_cls/outputs/reports/operational_kpi_report.json",
+                "/projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json",
             )
             self.assertEqual(
                 catalog["scenarios"]["S4"]["artifacts"]["dispatchInstructions"],
-                "/projects/flexibility_cls/outputs/operations/dispatch_instructions.parquet",
+                "/projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet",
             )
             self.assertEqual(catalog["scenarios"]["S4"]["summary"]["delivered_mwh"], 0.002)
 

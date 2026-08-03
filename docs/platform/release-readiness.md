@@ -54,7 +54,7 @@ uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 uv run gridalyn platform check-artifacts --summary-only
 uv run gridalyn project verify-all
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project regression projects/ev_hosting_flex
 node --test dashboard/src/*.test.js
 (cd dashboard && npm run build)
 ```

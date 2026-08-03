@@ -15,9 +15,6 @@ from gridalyn.foundation.platform.reports import (
 )
 from gridalyn.interfaces.reporting.digital_twin import build_digital_twin_reports
 from gridalyn.interfaces.reporting.schemas import report_input
-from projects.flexibility_cls.scripts.reports.build_study_reports import (
-    build_study_reports,
-)
 
 
 class PlatformReportContractTest(unittest.TestCase):
@@ -128,82 +125,6 @@ class CanonicalReportsTest(unittest.TestCase):
         self.assertEqual(item["path"], "sample.json")
         self.assertEqual(item["bytes"], 13)
         self.assertEqual(len(item["sha256"]), 64)
-
-    def test_build_study_reports_emits_platform_contract_reports(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            json_dir = root / "projects" / "flexibility_cls" / "outputs" / "json"
-            data_dir = root / "projects" / "flexibility_cls" / "outputs" / "data"
-            out_dir = root / "projects" / "flexibility_cls" / "outputs" / "reports"
-            json_dir.mkdir(parents=True)
-            data_dir.mkdir(parents=True)
-            out_dir.mkdir(parents=True)
-            (json_dir / "ev_summary_results.json").write_text(
-                """{
-                  "S4_40pct": {
-                    "n_ev": 1294,
-                    "unmanaged_peak_mw": 21.2,
-                    "managed_peak_mw": 19.4,
-                    "soft_cls_mw": 1.0,
-                    "hard_cls_mw": 1.4,
-                    "total_market_settlement_usd": 25000.0,
-                    "total_market_penalties_usd": 2100.0
-                  },
-                  "dynamic_limit_min_mw": 19.3,
-                  "dynamic_limit_max_mw": 20.4,
-                  "dynamic_limit_mean_mw": 20.0,
-                  "thermal_model": "IEEE C57.91 steady-state inverse"
-                }""",
-                encoding="utf-8",
-            )
-            (json_dir / "flex_requirements.json").write_text(
-                """{
-                  "D_tar_mw": 0.33,
-                  "dynamic_limit_min_mw": 19.3,
-                  "dynamic_limit_max_mw": 20.4,
-                  "dynamic_limit_mean_mw": 20.0,
-                  "prob_limit": [0.1, 0.9],
-                  "ev_pct_list": [0, 40]
-                }""",
-                encoding="utf-8",
-            )
-            (json_dir / "pandapower_validation.json").write_text(
-                '{"scenarios": [{"label": "S4_40pct", "p_peak_mw": 21.2}]}',
-                encoding="utf-8",
-            )
-            (json_dir / "spatial_cls_powerflow_validation.json").write_text(
-                '{"scenario_id": "S4", "spatial_delivered_mwh": {"soft": 2.4}}',
-                encoding="utf-8",
-            )
-            dispatch = pd.DataFrame(
-                {
-                    "t_hours": [0.0, 0.5],
-                    "p_soft_cls_mw": [1.0, 1.0],
-                    "p_hard_cls_mw": [0.5, 0.5],
-                    "p_rebound_mw": [0.25, 0.25],
-                    "p_limit_trace_mw": [20.0, 20.2],
-                }
-            )
-            dispatch.to_parquet(data_dir / "market_dispatch_timeseries.parquet", index=False)
-
-            manifest = build_study_reports(root=root, out_dir=out_dir)
-
-            for report_name in (
-                "study_run_manifest",
-                "output_consistency",
-                "stage_4_realtime_dispatch",
-            ):
-                report_path = out_dir / f"{report_name}_report.json"
-                if report_name == "study_run_manifest":
-                    report_path = out_dir / "study_run_manifest.json"
-                payload = json.loads(report_path.read_text(encoding="utf-8"))
-                self.assertEqual(validate_report(payload), [], report_name)
-                self.assertEqual(payload["source_domain"], "flexibility_cls")
-                self.assertEqual(payload["project"]["name"], "flexibility_cls")
-                self.assertIsInstance(payload["artifacts"], list)
-                self.assertIn("summary", payload)
-
-            self.assertIn("stage_4_realtime_dispatch", manifest["summary"]["reports"])
 
     def test_build_digital_twin_reports_standardizes_network_and_semantic_reports(self):
         with tempfile.TemporaryDirectory() as tmp:

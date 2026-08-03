@@ -16,10 +16,10 @@ from gridalyn.foundation.platform.reports import file_reference
 from gridalyn.projects.models import StudyProject, WorkflowStage
 
 # SINGLE canonical source for the clearing-engine name recorded in run
-# provenance (REPRO-04). The flexibility_cls baseline is authored on the
-# two-stage ``engine_mode`` (MarketSimulationEngine) path. This is the only
-# source-literal occurrence of the token; the provenance test imports THIS
-# constant (never a duplicated literal).
+# provenance (REPRO-04). Clearing runs on the two-stage ``engine_mode``
+# (MarketSimulationEngine) path. This is the only source-literal occurrence of
+# the token; the provenance test imports THIS constant (never a duplicated
+# literal).
 CLEARING_ENGINE_NAME = "engine_mode"
 
 # The canonical baseline-authoring clearing-mode set, derived from the real

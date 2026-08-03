@@ -1,3 +1,4 @@
+import { projectOutputsPath } from './projectSource.js';
 export const WORKSPACES = [
   {
     id: 'ieee_33_bus_demo',
@@ -74,7 +75,7 @@ async function fetchText(fetchImpl, path) {
   return response.text();
 }
 
-export async function loadIeee33Dashboard(fetchImpl = fetch, basePath = '/projects/ieee_33_bus_demo/outputs') {
+export async function loadIeee33Dashboard(fetchImpl = fetch, basePath = projectOutputsPath([], 'ieee_33_bus_demo')) {
   const [powerflowReport, scenarioReport, scenarioCsv, voltageCsv] = await Promise.all([
     fetchJson(fetchImpl, `${basePath}/reports/ieee33_powerflow_report.json`),
     fetchJson(fetchImpl, `${basePath}/reports/ieee33_scenario_comparison_report.json`),

@@ -40,7 +40,7 @@ uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project regression projects/ev_hosting_flex
 uv run gridalyn project sense-check projects/minimal_grid_project
 uv run gridalyn project verify projects/minimal_grid_project
 uv run gridalyn project verify-all
@@ -62,13 +62,13 @@ configured flexibility regression:
 ```bash
 uv run gridalyn validate --check-project-artifacts
 uv run gridalyn validate \
-  --project projects/flexibility_cls \
+  --project projects/ev_hosting_flex \
   --check-project-artifacts \
   --regression
 ```
 
 For a larger operations workflow, replace `projects/minimal_grid_project` with
-`projects/flexibility_cls`.
+`projects/ev_hosting_flex`.
 
 Create a runnable project scaffold:
 

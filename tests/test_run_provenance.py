@@ -88,7 +88,7 @@ class TestRunProvenance(unittest.TestCase):
             self.assertIsInstance(provenance["input_hashes"], dict)
 
     def test_input_hashes_carry_sha256_for_existing_files(self) -> None:
-        # The flexibility_cls study commits a TMY CSV and a regression baseline;
+        # A governed study commits a TMY CSV and a regression baseline;
         # when the runner can see them it records a sha256 per file_reference.
         with tempfile.TemporaryDirectory() as tmp:
             target = _grid_study_project(tmp)

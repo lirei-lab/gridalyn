@@ -2,7 +2,7 @@
 
 These cover the additive, default-OFF hardening of the synthetic load-profile
 generator: the default code path must stay byte-identical to the pinned
-reference (so ``flexibility_cls``'s frozen baseline cannot drift), while the new
+reference (so the frozen default-path baseline cannot drift), while the new
 ``mean_preserving_diversity`` flag de-biases the log-normal diversity factor.
 """
 
@@ -18,7 +18,7 @@ from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
 
 # Reference values captured from the CURRENT generator (analytical fallback,
 # random_seed=4242, 96-step 15-min day, temp = linspace(-10, 5, 96), 4 houses).
-# These pin the DEFAULT path so the frozen flexibility_cls baseline cannot drift.
+# These pin the DEFAULT path so frozen study baselines cannot drift.
 _REF_HEAT = np.array(
     [
         [3.5091800391497534, 3.2258326176712138],

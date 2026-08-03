@@ -240,6 +240,7 @@ def clear_one_adoption(
     # measures its SIZE, not the congestion. Only the active rows are events.
     active = requirements.loc[requirements["required_kw"].astype(float) > 0.0]
     n_ev_total = int(sum(ev_count.values()))
+    frames = {"events": _events, "selections": selections, "providers": providers}
     served_kw = float(selections["selected_kw"].sum()) if len(selections) else 0.0
     curtailed_kwh = served_kw * _HOURS_PER_STEP
     requested_kwh = n_ev_total * float(EV_KWH_PER_YEAR)
@@ -263,7 +264,62 @@ def clear_one_adoption(
         "clearing_summary": {
             k: v for k, v in summary.items() if isinstance(v, (int, float, str, bool))
         },
+        "_frames": frames,
+        "_summary": summary,
+        "_scenario_id": scenario,
     }
+
+
+def _persist_operational(result: dict[str, Any]) -> dict[str, Path]:
+    """Write the clearing into the twin, then materialise operational artifacts.
+
+    The saturation case is the one persisted: it is the design point where the
+    contracts actually clear, so the operational view shows a populated market
+    rather than an empty one.
+
+    Args:
+        result: One entry from ``clear_one_adoption`` (carries the frames).
+
+    Returns:
+        Mapping of artifact name to the path written.
+    """
+    from gridalyn.operations.artifacts import (
+        materialize_flexibility_operation_artifacts,
+    )
+    from gridalyn.operations.clearing.selection import (
+        write_locational_clearing_outputs,
+    )
+
+    frames = result.pop("_frames")
+    summary = result.pop("_summary")
+    scenario_id = result.pop("_scenario_id")
+
+    # Project-local, deliberately: `ArtifactLayout(root).flexibility` is a single
+    # workspace-wide directory, so two studies clearing into it overwrite each
+    # other's artifacts. The writers were never the constraint -- both take an
+    # explicit directory -- so each study keeps its clearing under its own
+    # outputs and the twin stays whatever the twin stage put there.
+    flex_dir = PROJECT_OUTPUTS_DIR / "flexibility"
+    flex_dir.mkdir(parents=True, exist_ok=True)
+    written = write_locational_clearing_outputs(
+        out_dir=flex_dir,
+        events=frames["events"],
+        selections=frames["selections"],
+        report=summary,
+    )
+    registry_path = flex_dir / "provider_registry.parquet"
+    frames["providers"].to_parquet(registry_path, index=False)
+    written["provider_registry"] = registry_path
+
+    written.update(
+        materialize_flexibility_operation_artifacts(
+            root=ROOT,
+            project_id="ev_hosting_flex",
+            scenario_id=scenario_id,
+            flexibility_dir=flex_dir,
+        )
+    )
+    return written
 
 
 def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
@@ -320,7 +376,19 @@ def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, An
         for a in TRIAGE_ADOPTION_GRID
     ]
 
+    # Persist the operational scenario into the shared digital twin and
+    # materialise the project-local operational artifacts. This is what makes
+    # the twin and the dashboard consume THIS study: the SDK writers are
+    # project-agnostic, they were simply never called from here.
+    operational = _persist_operational(results[-1])
+    # Every other cell still carries its DataFrames; they exist to be persisted,
+    # never to be serialised, and the payload is written as JSON.
+    for cell in results:
+        for key in ("_frames", "_summary", "_scenario_id"):
+            cell.pop(key, None)
+
     payload: dict[str, Any] = {
+        "operational_artifacts": {k: str(v) for k, v in operational.items()},
         "n_transformers": len(homes_by_trafo),
         "n_cold_days": int(cold_days.size),
         "dispersion": float(TRIAGE_BASE_DISPERSION),

@@ -6,7 +6,7 @@ smooth background trace understates annual consumption and erases the
 short, high-power reheat bursts that dominate a feeder's fine structure.
 
 Validated against the CREST demand-model lineage; see
-``projects/ev_hosting_flex/CALIBRATION.md``.
+the ev_hosting_flex study's CALIBRATION notes.
 """
 
 from __future__ import annotations

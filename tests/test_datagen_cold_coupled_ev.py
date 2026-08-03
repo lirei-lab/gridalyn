@@ -91,7 +91,7 @@ def test_is_deterministic():
 
 
 def test_supports_a_partial_28_hour_window():
-    """The flexibility_cls case: a 28-hour window starting mid-day."""
+    """A 28-hour window starting mid-day."""
     res = 5
     idx = pd.date_range("2020-01-15 12:00", periods=28 * 12, freq="5min")
     temp = pd.Series(np.full(len(idx), -20.0), index=idx)

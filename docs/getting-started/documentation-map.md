@@ -65,9 +65,9 @@ another facade.
 
 ```bash
 uv run gridalyn platform check-artifacts --summary-only
-uv run gridalyn project validate projects/flexibility_cls --check-artifacts
-uv run gridalyn project verify projects/flexibility_cls
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project validate projects/ev_hosting_flex --check-artifacts
+uv run gridalyn project verify projects/ev_hosting_flex
+uv run gridalyn project regression projects/ev_hosting_flex
 uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```

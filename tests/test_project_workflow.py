@@ -5,7 +5,7 @@ import unittest
 import json
 from pathlib import Path
 
-from projects.flexibility_cls.scripts.pipeline.prepare_topology_cache import (
+from projects.ev_hosting_flex.scripts.pipeline.prepare_topology_cache import (
     prepare_topology_cache,
 )
 
@@ -668,11 +668,11 @@ spec:
 
 class ProjectApiTest(unittest.TestCase):
     def test_public_project_api_loads_validates_and_plans_project(self) -> None:
-        project = public_load_project(Path("projects/flexibility_cls"))
+        project = public_load_project(Path("projects/ev_hosting_flex"))
         report = validate_project(project.path)
         stages = plan_project(project)
 
-        self.assertEqual(project.name, "flexibility_cls")
+        self.assertEqual(project.name, "ev_hosting_flex")
         self.assertTrue(report.valid, "\n".join(report.errors))
         self.assertGreater(len(stages), 10)
 
@@ -905,41 +905,6 @@ spec:
 
 
 class EVCapacityLimitationProjectTest(unittest.TestCase):
-    def test_flexibility_cls_project_contract_is_valid(self) -> None:
-        report = validate_project_file(
-            Path("projects/flexibility_cls/project.yaml")
-        )
-
-        self.assertTrue(report.valid, "\n".join(report.errors))
-
-    def test_flexibility_cls_declares_building_footprint_contract(self) -> None:
-        project = load_project(Path("projects/flexibility_cls/project.yaml"))
-        footprints = project.raw["spec"]["inputs"].get("buildingFootprints", {})
-
-        self.assertEqual(
-            "examples/tutorials/data/buildings_inside_polygon.geojson",
-            footprints.get("source"),
-        )
-        self.assertEqual("GeoJSON FeatureCollection", footprints.get("format"))
-        self.assertIn("osm", footprints.get("replacement", {}))
-        self.assertIn("microsoft", footprints.get("replacement", {}))
-        self.assertIn("topologyStage", footprints.get("replacement", {}))
-
-    def test_flexibility_cls_workflow_exposes_pipeline_stages(self) -> None:
-        project = load_project(Path("projects/flexibility_cls/project.yaml"))
-        stage_ids = [stage.id for stage in plan_stages(project)]
-
-        self.assertIn("prepare_topology_cache", stage_ids)
-        self.assertIn("generate_stochastic_profiles", stage_ids)
-        self.assertIn("congestion_forecast", stage_ids)
-        self.assertIn("market_allocation", stage_ids)
-        self.assertIn("plot_stage_2_grid_exceedance", stage_ids)
-        self.assertIn("pandapower_validation", stage_ids)
-        self.assertIn("validate_study_outputs", stage_ids)
-        self.assertIn("materialize_operational_artifacts", stage_ids)
-        self.assertIn("build_study_reports", stage_ids)
-        self.assertGreater(len(stage_ids), 10)
-
     def test_topology_cache_manifest_records_footprint_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cache_dir = Path(tmp) / "cache"
@@ -967,100 +932,10 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
                 validation_report["source"]["sha256"],
             )
 
-    def test_flexibility_cls_workflow_keeps_only_case_analysis_plots(self) -> None:
-        project = load_project(Path("projects/flexibility_cls/project.yaml"))
-        stage_ids = [stage.id for stage in plan_stages(project)]
-
-        self.assertFalse(
-            any(stage_id.startswith("plot_concept_") for stage_id in stage_ids),
-            stage_ids,
-        )
-        self.assertFalse(
-            any(stage_id.startswith("plot_model_") for stage_id in stage_ids),
-            stage_ids,
-        )
-        self.assertIn("plot_stage_1_stacked_ev", stage_ids)
-        self.assertIn("plot_stage_2_grid_exceedance", stage_ids)
-        self.assertIn("plot_stage_3_day_ahead", stage_ids)
-        self.assertIn("plot_stage_4_realization", stage_ids)
-        self.assertIn("plot_stage_5_settlement", stage_ids)
-
-    def test_flexibility_cls_public_outputs_are_study_local(self) -> None:
-        project = load_project(Path("projects/flexibility_cls/project.yaml"))
-        stage_outputs = [
-            output for stage in project.workflow.stages for output in stage.outputs
-        ]
-        validation_paths = (
-            project.raw["spec"].get("validation", {}).get("requiredReports", [])
-            + project.raw["spec"].get("validation", {}).get("requiredFigures", [])
-        )
-        project_artifacts = project.raw["spec"]["artifacts"]["project"]
-
-        self.assertTrue(stage_outputs)
-        self.assertTrue(
-            all(
-                output.startswith("projects/flexibility_cls/outputs/")
-                for output in stage_outputs
-            ),
-            stage_outputs,
-        )
-        self.assertTrue(
-            all(
-                path.startswith("projects/flexibility_cls/outputs/")
-                for path in validation_paths
-            ),
-            validation_paths,
-        )
-        self.assertEqual(
-            project_artifacts["reports"],
-            "projects/flexibility_cls/outputs/reports",
-        )
-        self.assertEqual(
-            project_artifacts["operations"],
-            "projects/flexibility_cls/outputs/operations",
-        )
-        self.assertEqual(
-            project_artifacts["cache"],
-            "projects/flexibility_cls/outputs/cache",
-        )
-        self.assertEqual(
-            project_artifacts["figures"],
-            "projects/flexibility_cls/outputs/figures",
-        )
-        legacy_token = "ev" "case"
-        self.assertFalse(
-            any(str(path).startswith(f"{legacy_token}/") for path in project_artifacts.values()),
-            project_artifacts,
-        )
-
-    def test_flexibility_cls_workflow_does_not_write_to_legacy_ev_runtime(self) -> None:
-        workflow_text = Path("projects/flexibility_cls/workflow.yaml").read_text(
-            encoding="utf-8"
-        )
-        legacy_token = "ev" "case"
-
-        self.assertNotIn(f"{legacy_token}/", workflow_text)
-        self.assertNotIn(f"../{legacy_token}", workflow_text)
-
-    def test_flexibility_cls_uses_repo_relative_paths(self) -> None:
-        project_path = Path("projects/flexibility_cls/project.yaml")
-        workflow_path = Path("projects/flexibility_cls/workflow.yaml")
-
-        project = load_project(project_path)
-
-        self.assertEqual(project.path_base, "repo")
-        self.assertEqual(project.base_dir, Path.cwd().resolve())
-        self.assertNotIn("../../", project_path.read_text(encoding="utf-8"))
-        self.assertNotIn("../../", workflow_path.read_text(encoding="utf-8"))
-
-    def test_flexibility_cls_regression_baseline_matches_outputs(self) -> None:
-        report = project_regression(Path("projects/flexibility_cls"))
-
-        self.assertTrue(report["valid"], report)
-        self.assertEqual(report["project"], "flexibility_cls")
-        self.assertEqual(report["checked_count"], 74)
-        self.assertFalse(report["errors"])
-
+    @unittest.skipUnless(
+        Path("projects/ev_hosting_flex/outputs/json").is_dir(),
+        "ev_hosting_flex outputs are gitignored; regenerate them to run this",
+    )
     def test_gridalyn_project_regression_cli_reports_json(self) -> None:
         result = subprocess.run(
             [
@@ -1068,7 +943,7 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
                 "-m",
                 "gridalyn.interfaces.cli.project",
                 "regression",
-                "projects/flexibility_cls",
+                "projects/ev_hosting_flex",
             ],
             check=False,
             capture_output=True,
@@ -1078,7 +953,7 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(payload["valid"], payload)
-        self.assertEqual(payload["checked_count"], 74)
+        self.assertEqual(payload["checked_count"], 81)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
   "available_scenarios": [
     "S4"
   ],
-  "created_at": "2026-05-10T19:39:14.464512+00:00",
+  "created_at": "2026-08-03T19:52:21.549215+00:00",
   "expected_scenarios": [
     "S0",
     "S1",
@@ -39,10 +39,8 @@
     "S4": {
       "reason": null,
       "reports": {
-        "physicsLabels": "/digital_twin/flexibility/network_impact_physics_labels_report.json",
-        "physicsSurrogate": "/digital_twin/flexibility/network_impact_physics_surrogate_report.json",
-        "physicsVerification": "/projects/flexibility_cls/outputs/reports/network_impact_physics_verification_report.json",
-        "topologyVerification": "/projects/flexibility_cls/outputs/reports/network_impact_verification_report.json"
+        "physicsLabels": "/instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json",
+        "physicsSurrogate": "/instances/default/digital_twin/flexibility/network_impact_physics_surrogate_report.json"
       },
       "scenario_id": "S4",
       "status": "available"

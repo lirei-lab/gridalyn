@@ -69,7 +69,7 @@ validated against the network model.
 | `operation_run.json` | Durable audit record for the market operation. |
 
 These names are currently materialized most completely by the
-`projects/flexibility_cls` workflow, but the contracts are general enough for
+`projects/ev_hosting_flex` workflow, but the contracts are general enough for
 prosumer battery markets and future transactive products.
 
 ## SDK Surfaces
@@ -88,7 +88,7 @@ scenario lists, and parameter values. Reusable product logic belongs in the SDK.
 
 ## CLS As One Specialized Product
 
-The Flexibility CLS workflow implements one market product:
+The EV hosting flexibility workflow implements one market product:
 
 - firm day-ahead building flexibility;
 - real-time recourse for residual uncertainty;

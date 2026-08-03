@@ -85,7 +85,7 @@ contract must not treat them as part of this surface:
 
 Alongside the frozen single entry point, `gridalyn.operations` also exposes a
 small set of **staged-pipeline** building blocks. These are the additive,
-canonical public surface that the `flexibility_cls` proving-ground study composes
+canonical public surface that the `ev_hosting_flex` proving-ground study composes
 to run its multi-stage day-ahead / capacity-allocation / Stage-2 replay pipeline.
 They are reachable the same way as the frozen surface — directly via
 `from gridalyn.operations import ...` (the lazy `__getattr__` facade) — and are
@@ -108,9 +108,8 @@ API is not pinned against drift by the contract test — it is documented as the
 supported public composition surface for staged studies.
 
 The pure serialization/labeling helpers `json_default`, `relpath`, and
-`scenario_label` are **not** part of this surface. They are study-local helpers
-(they live in `projects/flexibility_cls/scripts/_serialize.py`), not SDK public
-API, and must not be imported from `gridalyn.operations`.
+`scenario_label` are **not** part of this surface. They are study-local helpers,
+not SDK public API, and must not be imported from `gridalyn.operations`.
 
 ## Internal / Provisional (Not Frozen)
 

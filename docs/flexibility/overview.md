@@ -35,7 +35,7 @@ Gridalyn should support several operation families through the same contracts:
 | Family | Examples | Current demos |
 | --- | --- | --- |
 | Planning and hosting studies | scenario screening, DER hosting capacity, transformer overload analysis | `ieee_33_bus_demo`, `synthetic_geojson_feeder` |
-| Flexibility and local markets | congestion relief, demand response, aggregator portfolios, locational procurement | `flexibility_cls` |
+| Flexibility and local markets | congestion relief, demand response, aggregator portfolios, locational procurement | `ev_hosting_flex` |
 | Transactive energy | prosumer schedules, price-based coordination, local battery markets | `prosumer_battery_market` |
 | Optimization-based control | DER voltage support, battery dispatch, constrained setpoints | `der_voltage_optimization` |
 | Learning-based control | RL voltage control, policy comparison, simulator-backed environments | `rl_voltage_control_lightsim` |
@@ -86,7 +86,7 @@ The documentation and SDK should keep these distinctions explicit:
   contracts are operational signals, not just accounting artifacts.
 - **Physical verification is mandatory.** Fast ranking, ML, or RL can propose
   actions, but powerflow or an accepted simulator remains the validation layer.
-- **Projects are examples, not architecture.** `flexibility_cls` is one
+- **Projects are examples, not architecture.** `ev_hosting_flex` is one
   flexibility product; `prosumer_battery_market`, `der_voltage_optimization`,
   and `rl_voltage_control_lightsim` exercise other operational families.
 

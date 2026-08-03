@@ -15,7 +15,6 @@ PROJECTS = [
     "prosumer_battery_market",
     "der_voltage_optimization",
     "rl_voltage_control_lightsim",
-    "flexibility_cls",
 ]
 
 

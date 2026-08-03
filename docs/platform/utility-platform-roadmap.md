@@ -143,7 +143,7 @@ projects/
   prosumer_battery_market/
   der_voltage_optimization/
   rl_voltage_control_lightsim/
-  flexibility_cls/
+  ev_hosting_flex/
     project.yaml
     workflow.yaml
     scripts/
@@ -183,7 +183,7 @@ evolves.
 - `uv run --with pytest python -m pytest -q`
 - `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml`
 - `uv run gridalyn platform check-artifacts --summary-only`
-- `uv run gridalyn project regression projects/flexibility_cls`
+- `uv run gridalyn project regression projects/ev_hosting_flex`
 
 ### Phase 1: Foundation And Governance Contracts
 
@@ -471,7 +471,7 @@ reading study scripts.
 Active implementation lives in:
 
 - `gridalyn` for reusable platform logic;
-- `projects/flexibility_cls` for executable study workflows;
+- `projects/ev_hosting_flex` for executable study workflows;
 - optional publication or presentation material outside executable platform
   workflows.
 
@@ -500,10 +500,10 @@ The migration must preserve:
 3. Continue hardening provider, clearing, and network impact modules in
    `gridalyn.operations.market` and `gridalyn.simulation.analytics`.
 4. Move canonical report schemas into `gridalyn.interfaces.reporting`.
-5. Keep study pipeline scripts under `projects/flexibility_cls`.
+5. Keep study pipeline scripts under `projects/ev_hosting_flex`.
 6. Keep publication-only notes and illustrative plots outside executable
    workflows.
-7. Keep generated project outputs under `projects/flexibility_cls/outputs`.
+7. Keep generated project outputs under `projects/ev_hosting_flex/outputs`.
 8. Continue hardening the `gridalyn.twin` repository with Parquet backend.
 9. Refactor digital twin scripts to consume `NetworkModelRepository`.
 10. Promote dashboard to Network Explorer semantics.

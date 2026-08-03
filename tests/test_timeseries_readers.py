@@ -58,9 +58,3 @@ def test_core_timeseries_readers_use_explicit_data_dir(tmp_path):
     )
 
 
-def test_project_data_api_delegates_to_core_reader():
-    from gridalyn.twin.io.timeseries import get_baseline_building_load_all as core_reader
-    from projects.flexibility_cls.scripts import data_api as project_data_api
-
-    assert project_data_api.get_baseline_building_load_all.__wrapped__ is core_reader
-

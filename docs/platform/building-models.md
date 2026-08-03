@@ -129,9 +129,8 @@ metadata = thermal_forecast_metadata(forecast)
 ```
 
 Study projects may wrap this API to pin their own transformer rating, thermal
-limit, weather profile, and resolution. The larger flexibility demo does that
-under `projects/flexibility_cls/scripts/thermal_forecast.py` and reuses the same
-peak-demand weather selector as its stochastic load generator.
+limit, weather profile, and resolution, reusing the same peak-demand weather
+selector as their stochastic load generator.
 
 ## Profile
 

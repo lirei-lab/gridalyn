@@ -19,13 +19,13 @@ The project also exposes installed script entrypoints:
 uv run gridalyn-dt build --dry-run
 uv run gridalyn-flex verify-clearing \
   --scenario-id S4 \
-  --cache-dir projects/flexibility_cls/outputs/cache \
-  --market-dispatch-path projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet
+  --cache-dir projects/ev_hosting_flex/outputs/cache \
+  --market-dispatch-path projects/ev_hosting_flex/outputs/data/market_dispatch_timeseries.parquet
 uv run gridalyn-semantic validate
 uv run gridalyn-dashboard catalog
 ```
 
-The `verify-clearing` smoke command assumes `projects/flexibility_cls` has been
+The `verify-clearing` smoke command assumes `projects/ev_hosting_flex` has been
 run. The shorter `gridalyn-flex verify-clearing --scenario-id S4` form targets a
 materialized `instances/default/digital_twin/` instance.
 

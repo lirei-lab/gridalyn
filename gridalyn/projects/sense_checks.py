@@ -399,57 +399,6 @@ def _check_rl(project: StudyProject, checks: CheckList) -> None:
     _check(checks, "rl_policy_tables_non_empty", not q_table.empty and not policy.empty, {"q_table": len(q_table), "policy": len(policy)}, "non-empty")
 
 
-def _check_flexibility(project: StudyProject, checks: CheckList) -> None:
-    consistency = _summary(project, "outputs/reports/output_consistency_report.json")
-    stage1 = _summary(project, "outputs/reports/stage_1_stochastic_load_report.json")
-    stage2 = _summary(project, "outputs/reports/stage_2_thermal_forecast_report.json")
-    stage3 = _summary(project, "outputs/reports/stage_3_market_clearing_report.json")
-    stage4 = _summary(project, "outputs/reports/stage_4_realtime_dispatch_report.json")
-    kpi = _summary(project, "outputs/reports/operational_kpi_report.json")
-    settlement = _summary(project, "outputs/reports/stage_5_settlement_report.json")
-    realization = _read_json(project, "outputs/reports/stage_4_realtime_realization_selection.json")
-    _check(checks, "flexibility_has_five_scenarios", consistency.get("pandapower_scenario_count") == 5 and stage1.get("scenario_count") == 5, {"consistency": consistency.get("pandapower_scenario_count"), "stage1": stage1.get("scenario_count")}, 5)
-    _check(checks, "flexibility_ev_counts_monotonic", _scenario_values_monotonic(stage1, "n_ev"), [v.get("n_ev") for v in stage1.get("scenarios", {}).values()], "monotonic increasing")
-    _check(checks, "flexibility_dynamic_limit_explicit", stage2.get("dynamic_limit_mw", {}).get("min", 0) > 0 and stage2.get("dynamic_limit_mw", {}).get("max", 0) > stage2.get("dynamic_limit_mw", {}).get("min", 0), stage2.get("dynamic_limit_mw"), "positive min/max")
-    _check(checks, "flexibility_prob_limit_increases_with_ev", _list_monotonic(stage2.get("prob_limit", [])), stage2.get("prob_limit"), "monotonic increasing")
-    s4 = stage1.get("scenarios", {}).get("S4_40pct", {})
-    _check(checks, "flexibility_s4_managed_below_unmanaged", float(s4.get("managed_peak_mw", 999)) < float(s4.get("unmanaged_peak_mw", 0)), {"managed": s4.get("managed_peak_mw"), "unmanaged": s4.get("unmanaged_peak_mw")}, "managed < unmanaged")
-    _check(checks, "flexibility_clearing_has_soft_and_hard_energy", stage3.get("dispatch_timeseries", {}).get("soft_cls_mwh", 0) > 0 and stage3.get("dispatch_timeseries", {}).get("hard_cls_mwh", 0) > 0, stage3.get("dispatch_timeseries"), "soft and hard CLS > 0")
-    _check(checks, "flexibility_kpi_delivery_ratio_plausible", _between(kpi.get("delivery_ratio"), 0.0, 1.05), kpi.get("delivery_ratio"), "0 <= ratio <= 1.05")
-    _check(checks, "flexibility_shortfall_non_negative", float(kpi.get("shortfall_mwh", -1)) >= 0, kpi.get("shortfall_mwh"), ">= 0")
-    _check(checks, "flexibility_dispatch_operation_completed", stage4.get("operation_run", {}).get("status") == "completed", stage4.get("operation_run", {}).get("status"), "completed")
-    _check(checks, "flexibility_realization_balances_soft_hard", realization.get("selected_realization", {}).get("soft_cls_mwh", 0) > 0 and realization.get("selected_realization", {}).get("hard_cls_mwh", 0) > 0, realization.get("selected_realization", {}), "soft and hard energy > 0")
-    settlements = settlement.get("total_market_settlement_usd", {})
-    scenarios = stage1.get("scenarios", {})
-    active_scenarios = [
-        scenario_id
-        for scenario_id, values in scenarios.items()
-        if float(values.get("total_soft_cls_mwh", 0.0)) > 0
-        or float(values.get("total_hard_cls_mwh", 0.0)) > 0
-    ]
-    settlement_ok = all(float(v) >= 0 for v in settlements.values()) and all(
-        float(settlements.get(scenario_id, 0.0)) > 0
-        for scenario_id in active_scenarios
-    )
-    _check(
-        checks,
-        "flexibility_settlement_positive_when_cls_active",
-        settlement_ok,
-        {"settlement_usd": settlements, "active_scenarios": active_scenarios},
-        ">= 0 for all scenarios and > 0 when CLS is active",
-    )
-
-
-def _list_monotonic(values: list[Any]) -> bool:
-    return all(float(a) <= float(b) for a, b in zip(values, values[1:], strict=False))
-
-
-def _scenario_values_monotonic(stage_summary: dict[str, Any], key: str) -> bool:
-    scenarios = stage_summary.get("scenarios", {})
-    ordered = [scenarios[name][key] for name in sorted(scenarios)]
-    return _list_monotonic(ordered)
-
-
 _PROJECT_CHECKERS: dict[str, Callable[[StudyProject, CheckList], None]] = {
     "minimal_grid_project": _check_minimal,
     "ieee_33_bus_demo": _check_ieee33,
@@ -457,7 +406,6 @@ _PROJECT_CHECKERS: dict[str, Callable[[StudyProject, CheckList], None]] = {
     "prosumer_battery_market": _check_prosumer,
     "der_voltage_optimization": _check_der,
     "rl_voltage_control_lightsim": _check_rl,
-    "flexibility_cls": _check_flexibility,
 }
 
 _PROJECT_OBJECTIVE_ARTIFACTS: dict[str, tuple[str, ...]] = {
@@ -496,16 +444,6 @@ _PROJECT_OBJECTIVE_ARTIFACTS: dict[str, tuple[str, ...]] = {
         "outputs/reports/rl_voltage_control_report.json",
         "outputs/operations/q_table.csv",
         "outputs/operations/learned_policy.csv",
-    ),
-    "flexibility_cls": (
-        "outputs/reports/output_consistency_report.json",
-        "outputs/reports/stage_1_stochastic_load_report.json",
-        "outputs/reports/stage_2_thermal_forecast_report.json",
-        "outputs/reports/stage_3_market_clearing_report.json",
-        "outputs/reports/stage_4_realtime_dispatch_report.json",
-        "outputs/reports/operational_kpi_report.json",
-        "outputs/reports/stage_5_settlement_report.json",
-        "outputs/reports/stage_4_realtime_realization_selection.json",
     ),
 }
 

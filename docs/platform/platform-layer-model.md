@@ -252,7 +252,7 @@ This layer packages reusable platform capability into reproducible work.
 
 - `gridalyn.projects`
 - `gridalyn.projects.workflows`
-- `projects/flexibility_cls`
+- `projects/ev_hosting_flex`
 - `projects/ieee_33_bus_demo`
 - `projects/*/baselines`
 

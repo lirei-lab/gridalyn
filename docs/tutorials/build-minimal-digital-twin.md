@@ -41,5 +41,5 @@ Run a larger project when you need flexibility operations, reports, figures,
 and dashboard-facing outputs:
 
 ```bash
-uv run gridalyn project run projects/flexibility_cls
+uv run gridalyn project run projects/ev_hosting_flex
 ```

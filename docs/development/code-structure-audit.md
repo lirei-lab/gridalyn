@@ -26,7 +26,7 @@ be avoided unless they represent a durable platform capability.
 
 - Public code is concentrated in `gridalyn/` instead of being hidden inside
   individual project scripts.
-- Projects such as `projects/flexibility_cls`,
+- Projects such as `projects/ev_hosting_flex`,
   `projects/ieee_33_bus_demo`, and other demos now use project manifests and
   workflow contracts.
 - Publication-only figure generators are kept out of `projects/*/scripts` and
@@ -44,7 +44,7 @@ be avoided unless they represent a durable platform capability.
 
 Recent cleanup moved the generic Network Impact, locational clearing,
 scorecard, dashboard extension, topology-cache, and workspace-validation
-defaults away from `projects/flexibility_cls`. Generic Gridalyn code now uses
+defaults away from individual study directories. Generic Gridalyn code now uses
 `instances/default/digital_twin/cache`, `instances/default/digital_twin/flexibility`, and `instances/default/digital_twin/operations`
 as platform artifact roots. Project-specific routes must be supplied by project
 workflows, CLI arguments, or project manifests.

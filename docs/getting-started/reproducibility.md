@@ -13,13 +13,13 @@ A reproducible run must have:
 | Source environment | dependencies installed through `uv` | `uv run gridalyn --help` |
 | Clean artifact policy | generated data and caches are not accidentally tracked | `uv run gridalyn platform check-artifacts --summary-only` |
 | Valid project contract | `project.yaml` and `workflow.yaml` are readable and complete | `uv run gridalyn project validate projects/minimal_grid_project` |
-| Stable results | key numerical outputs match the baseline for larger workflows | `uv run gridalyn project regression projects/flexibility_cls` |
+| Stable results | key numerical outputs match the baseline for larger workflows | `uv run gridalyn project regression projects/ev_hosting_flex` |
 | Healthy code | tests pass | `uv run --with pytest python -m pytest -q` |
 | Published docs | MkDocs builds strictly | `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml` |
 
 ## 0. The Canonical Reproducible Install (Pinned 3.12, Frozen Lock)
 
-A citable `flexibility_cls` result must be rebuildable bit-for-bit on a stranger's
+A citable `ev_hosting_flex` result must be rebuildable bit-for-bit on a stranger's
 machine. Two pins make that possible and are non-negotiable:
 
 - **Interpreter pin** — the repo commits `.python-version` (`3.12`) at the root.
@@ -45,7 +45,7 @@ reproducing a published result.
 > `uv sync --frozen` installs **base deps only**, leaving the optional `sim`
 > (`lightsim2grid`) and `ops` (`cvxpy`, `lightgbm`) capabilities uninstalled —
 > `gridalyn doctor` then reports `cvxpy=false`, `lightgbm=false`,
-> `lightsim2grid=false`. The `flexibility_cls` study **silently degrades** onto
+> `lightsim2grid=false`. The `ev_hosting_flex` study **silently degrades** onto
 > fallback code paths (still exit 0) and **moves 51/74 regression metrics**
 > (only 23/74 valid). The `sim` + `ops` extras are required to reproduce the
 > committed baseline; `dev` provides `pytest` for the determinism leg. This is a
@@ -54,7 +54,7 @@ reproducing a published result.
 
 ### Stage `uv run` invocation (no mid-run re-resolve)
 
-The `flexibility_cls` workflow runs each stage as a separate `uv run python ...`
+The `ev_hosting_flex` workflow runs each stage as a separate `uv run python ...`
 subprocess. To stop any of those 25 stage commands from re-resolving the
 environment mid-run, run the whole workflow inside the already-frozen
 environment so each stage `uv run` no-ops against the same interpreter and lock:
@@ -63,7 +63,7 @@ environment so each stage `uv run` no-ops against the same interpreter and lock:
 # Activate the frozen environment once, then run the workflow.
 uv sync --frozen --extra sim --extra ops --extra dev
 source .venv/bin/activate           # stage `uv run`s now reuse this env
-gridalyn project run projects/flexibility_cls
+gridalyn project run projects/ev_hosting_flex
 ```
 
 Equivalently, pass `--frozen` / `--no-sync` to the stage invocations
@@ -78,7 +78,7 @@ must reproduce bit-for-bit.
 
 ```bash
 # 1. Build a clean, frozen environment on pinned 3.12 WITH the required extras.
-#    The citable flexibility_cls numbers depend on the optional `sim`
+#    The citable ev_hosting_flex numbers depend on the optional `sim`
 #    (lightsim2grid) and `ops` (cvxpy, lightgbm) capabilities; `dev` provides
 #    pytest for the determinism leg below. A bare `uv sync --frozen` installs
 #    base deps only — the study then silently degrades and moves 51/74 metrics
@@ -99,12 +99,12 @@ uv run gridalyn doctor
 #    subprocess (25 of them) reuses this exact interpreter+lock and cannot
 #    re-resolve the environment mid-run (Pitfall 2). Then run the study.
 source .venv/bin/activate
-gridalyn project run projects/flexibility_cls            # expect exit 0
+gridalyn project run projects/ev_hosting_flex            # expect exit 0
 #    Equivalent without activating: prefix each stage with `uv run --frozen`
 #    (or `--no-sync`) so no stage can silently re-resolve the lock.
 
 # 3. Regression gate — this is the DoD. The committed baseline must reproduce.
-gridalyn project regression projects/flexibility_cls     # expect "valid": true (74/74)
+gridalyn project regression projects/ev_hosting_flex     # expect "valid": true (81/81)
 
 # 4. Determinism leg — the baseline must be byte-identical under two
 #    PYTHONHASHSEED values (independent hash randomization, same numbers).
@@ -180,7 +180,7 @@ uv run gridalyn project run projects/minimal_grid_project
 For larger workflows with a regression baseline, run:
 
 ```bash
-uv run gridalyn project regression projects/flexibility_cls
+uv run gridalyn project regression projects/ev_hosting_flex
 ```
 
 Expected regression result:

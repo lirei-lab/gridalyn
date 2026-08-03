@@ -14,7 +14,7 @@ class NetworkImpactCatalogTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             labels = root / "instances" / "default" / "digital_twin" / "flexibility" / "labels.json"
-            verification = root / "projects" / "flexibility_cls" / "outputs" / "reports" / "verification.json"
+            verification = root / "projects" / "ev_hosting_flex" / "outputs" / "reports" / "verification.json"
             labels.parent.mkdir(parents=True)
             verification.parent.mkdir(parents=True)
             labels.write_text(json.dumps({"scenario_id": "S4", "summary": {"n_samples": 10}}))
@@ -38,7 +38,7 @@ class NetworkImpactCatalogTest(unittest.TestCase):
         )
         self.assertEqual(
             catalog["scenarios"]["S4"]["reports"]["physicsVerification"],
-            "/projects/flexibility_cls/outputs/reports/verification.json",
+            "/projects/ev_hosting_flex/outputs/reports/verification.json",
         )
 
     def test_write_catalog_creates_parent_directory(self):

@@ -104,7 +104,7 @@ subpackage:
 ```python
 from gridalyn import foundation, projects, twin
 
-project = projects.load_project("projects/flexibility_cls")
+project = projects.load_project("projects/ev_hosting_flex")
 report = foundation.check_artifact_policy(".")
 repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 ```

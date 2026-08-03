@@ -147,9 +147,9 @@ Pick one path based on what you need to prove:
 | Compact market operation | `uv run gridalyn project verify projects/prosumer_battery_market` | [Prosumer Battery Market Demo](../projects/prosumer-battery-market.md) |
 | Optimization and physical verification | `uv run gridalyn project verify projects/der_voltage_optimization` | [DER Voltage Optimization Demo](../projects/der-voltage-optimization.md) |
 | Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](../projects/rl-voltage-control-lightsim.md) |
-| Larger operations workflow | `uv run gridalyn project verify projects/flexibility_cls` | [Run Demo Projects](run-demo-projects.md) |
+| Larger operations workflow | `uv run gridalyn project verify projects/ev_hosting_flex` | [Run Demo Projects](run-demo-projects.md) |
 
-The larger Flexibility CLS workflow is useful as an end-to-end stress test for
+The larger EV hosting flexibility workflow is useful as an end-to-end stress test for
 operations, clearing, dispatch, settlement, reports, and figures. Run it when
 you need the full operations stack, not as the first proof that Gridalyn works.
 

@@ -161,7 +161,6 @@ Use the examples as a progression:
 | [Prosumer Battery Market Demo](prosumer-battery-market.md) | Asset modeling, market clearing, dispatch, and feeder verification. |
 | [DER Voltage Optimization Demo](der-voltage-optimization.md) | Optimization setpoints verified against AC power flow. |
 | [RL Voltage Control With LightSim2Grid](rl-voltage-control-lightsim.md) | Learning-control environment over reusable modeling assets. |
-| [Flexibility CLS](../workflows/flexibility-cls.md) | Larger operations workflow for clearing, dispatch, settlement, reports, and figures. |
 
 See [Workflow YAML](../workflows/workflow-yaml-reference.md) and
 [Project Template Guide](template-guide.md).

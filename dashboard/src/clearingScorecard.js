@@ -1,4 +1,6 @@
-const DEFAULT_SCORECARD_PATH = '/projects/flexibility_cls/outputs/reports/operational_kpi_report.json';
+import { operationalKpiReportPath } from './projectSource.js';
+
+// Resolved per call, not frozen at import (see projectSource.js).
 
 async function loadJsonOrNull(fetchImpl, path) {
   const res = await fetchImpl(path);
@@ -6,7 +8,7 @@ async function loadJsonOrNull(fetchImpl, path) {
   return res.json();
 }
 
-export function normalizeClearingScorecard(report = null, path = DEFAULT_SCORECARD_PATH) {
+export function normalizeClearingScorecard(report = null, path = operationalKpiReportPath()) {
   if (!report) return null;
   return {
     scenarioId: report.scenario_id || null,
@@ -18,7 +20,7 @@ export function normalizeClearingScorecard(report = null, path = DEFAULT_SCORECA
   };
 }
 
-export async function loadClearingScorecard(fetchImpl = fetch, path = DEFAULT_SCORECARD_PATH) {
+export async function loadClearingScorecard(fetchImpl = fetch, path = operationalKpiReportPath()) {
   const report = await loadJsonOrNull(fetchImpl, path);
   return normalizeClearingScorecard(report, path);
 }

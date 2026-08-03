@@ -69,9 +69,9 @@ uv run gridalyn project verify projects/ieee_33_bus_demo
 If you need the full operations stack, inspect the larger flexibility workflow:
 
 ```bash
-uv run gridalyn project plan projects/flexibility_cls
-uv run gridalyn project status projects/flexibility_cls --check-artifacts
-uv run gridalyn project verify projects/flexibility_cls
+uv run gridalyn project plan projects/ev_hosting_flex
+uv run gridalyn project status projects/ev_hosting_flex --check-artifacts
+uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
 The first command shows what will run. The second command checks whether the

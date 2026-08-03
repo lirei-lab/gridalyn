@@ -30,7 +30,7 @@ Each operation should publish a report that links:
 
 ## CLS Example
 
-The Flexibility CLS workflow is one example of this KPI pattern. It evaluates
+The EV hosting flexibility workflow is one example of this KPI pattern. It evaluates
 the economic efficiency of a **Soft-CLS firm day-ahead contract with sub-period
 clearing** under Monte Carlo uncertainty.
 
