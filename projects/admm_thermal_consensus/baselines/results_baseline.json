@@ -1,295 +1,118 @@
 {
-  "aggregate_kpis": {
-    "coordinated_ideal": {
-      "comfort_mae_kw": 0.2548335451107322,
-      "comfort_max_dT_c": 1.0258218273601187,
-      "comfort_median_dT_c": 0.698663639030573,
-      "energy_cost_cad": 896.0535834203304,
-      "mean_kw": 362.21709092586724,
-      "par": 1.0044326310948115,
-      "peak_kw": 363.82266566617744
-    },
-    "imputed_rho_000": {
-      "energy_cost_cad": 896.0535834203304,
-      "imputation_rmse_kw": 0.0,
-      "mean_kw": 362.21709092586724,
-      "n_non_responsive": 0,
-      "non_responsive_fraction": 0.0,
-      "par": 1.0044326310948115,
-      "peak_kw": 363.82266566617744
-    },
-    "imputed_rho_020": {
-      "energy_cost_cad": 896.2601180568865,
-      "imputation_rmse_kw": 0.24298725290098044,
-      "mean_kw": 362.21709092586644,
-      "n_non_responsive": 15,
-      "non_responsive_fraction": 0.2,
-      "par": 1.0058169692855221,
-      "peak_kw": 364.3240966184734
-    },
-    "imputed_rho_040": {
-      "energy_cost_cad": 896.517320618201,
-      "imputation_rmse_kw": 0.23118575376258346,
-      "mean_kw": 362.21709092586707,
-      "n_non_responsive": 30,
-      "non_responsive_fraction": 0.4,
-      "par": 1.0074914941584057,
-      "peak_kw": 364.93063814661286
-    },
-    "imputed_rho_060": {
-      "energy_cost_cad": 896.9353040777628,
-      "imputation_rmse_kw": 0.2449674934090654,
-      "mean_kw": 362.21709092586593,
-      "n_non_responsive": 44,
-      "non_responsive_fraction": 0.6,
-      "par": 1.0102128169251976,
-      "peak_kw": 365.91634776266943
-    },
-    "imputed_rho_070": {
-      "energy_cost_cad": 897.4894431865512,
-      "imputation_rmse_kw": 0.2403526071163965,
-      "mean_kw": 362.217090925866,
-      "n_non_responsive": 52,
-      "non_responsive_fraction": 0.7,
-      "par": 1.0138835288496268,
-      "peak_kw": 367.24594235756314
-    },
-    "imputed_rho_080": {
-      "energy_cost_cad": 898.9997568176373,
-      "imputation_rmse_kw": 0.3668357986763404,
-      "mean_kw": 362.2170909258659,
-      "n_non_responsive": 59,
-      "non_responsive_fraction": 0.8,
-      "par": 1.035235957417413,
-      "peak_kw": 374.9801569175889
-    },
-    "imputed_rho_082": {
-      "energy_cost_cad": 900.0662963325217,
-      "imputation_rmse_kw": 0.3642337065978694,
-      "mean_kw": 362.2170909258657,
-      "n_non_responsive": 61,
-      "non_responsive_fraction": 0.82,
-      "par": 1.047754696490294,
-      "peak_kw": 379.51465816662767
-    },
-    "imputed_rho_085": {
-      "energy_cost_cad": 901.1931011888007,
-      "imputation_rmse_kw": 0.35960556758477935,
-      "mean_kw": 362.21709092586553,
-      "n_non_responsive": 63,
-      "non_responsive_fraction": 0.85,
-      "par": 1.0576115855695056,
-      "peak_kw": 383.0849918544784
-    },
-    "imputed_rho_088": {
-      "energy_cost_cad": 902.440811807691,
-      "imputation_rmse_kw": 0.3553199387927479,
-      "mean_kw": 362.21709092586553,
-      "n_non_responsive": 65,
-      "non_responsive_fraction": 0.88,
-      "par": 1.0654364895791069,
-      "peak_kw": 385.91930582161035
-    },
-    "imputed_rho_090": {
-      "energy_cost_cad": 904.0789471974922,
-      "imputation_rmse_kw": 0.35225408282457865,
-      "mean_kw": 362.2170909258653,
-      "n_non_responsive": 67,
-      "non_responsive_fraction": 0.9,
-      "par": 1.0756364485048244,
-      "peak_kw": 389.61390527124684
-    },
-    "imputed_rho_095": {
-      "energy_cost_cad": 906.3198428067702,
-      "imputation_rmse_kw": 0.36807567972830485,
-      "mean_kw": 362.21709092586525,
-      "n_non_responsive": 70,
-      "non_responsive_fraction": 0.95,
-      "par": 1.0911954839938258,
-      "peak_kw": 395.2496538436851
-    },
-    "imputed_rho_100": {
-      "energy_cost_cad": 909.3773808777507,
-      "imputation_rmse_kw": 0.36302460629674177,
-      "mean_kw": 362.217090925865,
-      "n_non_responsive": 74,
-      "non_responsive_fraction": 1.0,
-      "par": 1.1095365487638973,
-      "peak_kw": 401.893100969183
-    },
-    "uncoordinated": {
-      "energy_cost_cad": 909.5103838454539,
-      "mean_kw": 362.2170909258671,
-      "par": 1.1086010558671595,
-      "peak_kw": 401.5542494535472
-    }
+  "metric_tolerance": {
+    "relative_note": "Tolerances are RTOL=1e-3 x max(|expected|, 1), matching the project's own verify_regression.py. The ADMM solve is not bit-reproducible: values drift ~1e-5 relative between runs, so tighter pins would fail on the next run and say nothing about correctness."
   },
-  "config": {
-    "deferrability_alpha": 0.5,
-    "n_agents": 74,
-    "n_steps": 96,
-    "rho_sweep": [
-      0.0,
-      0.2,
-      0.4,
-      0.6,
-      0.7,
-      0.8,
-      0.82,
-      0.85,
-      0.88,
-      0.9,
-      0.95,
-      1.0
-    ],
-    "transformer_kva": 400.0
-  },
-  "forecast_cv": {
-    "cv_mae_kw_mean": 0.2547038326162355,
-    "cv_rmse_kw_mean": 0.30408137945969693,
-    "cv_rmse_kw_std": 0.27945013020654713,
-    "heating_std_kw": 0.7356201232495948
-  },
-  "network_feasibility": [
+  "project": "admm_thermal_consensus",
+  "metrics": [
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 401.5542494535472,
-      "scenario": "uncoordinated",
-      "transformer_violation": true,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9634044234582955,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 109.55219333972283
+      "expected": 363.82534530628465,
+      "id": "summary.coordinated_ideal_peak_kw",
+      "json_path": [
+        "summary",
+        "coordinated_ideal_peak_kw"
+      ],
+      "source": "outputs/reports/admm_report.json",
+      "tolerance": 0.36382534530628463
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 363.82266566617744,
-      "scenario": "coordinated_ideal",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9670168906644646,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 98.93412859711673
+      "expected": 401.5542494535472,
+      "id": "summary.uncoordinated_peak_kw",
+      "json_path": [
+        "summary",
+        "uncoordinated_peak_kw"
+      ],
+      "source": "outputs/reports/admm_report.json",
+      "tolerance": 0.4015542494535472
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 363.82266566617744,
-      "scenario": "imputed_rho_000",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9670168906644646,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 98.93412859711673
+      "expected": 0.09395717813621873,
+      "id": "summary.ideal_peak_reduction_fraction",
+      "json_path": [
+        "summary",
+        "ideal_peak_reduction_fraction"
+      ],
+      "source": "outputs/reports/admm_report.json",
+      "tolerance": 0.001
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 364.3240966184734,
-      "scenario": "imputed_rho_020",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9669691431871972,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 99.07473175501363
+      "expected": 1.0044400289790483,
+      "id": "summary.ideal_par",
+      "json_path": [
+        "summary",
+        "ideal_par"
+      ],
+      "source": "outputs/reports/admm_report.json",
+      "tolerance": 0.0010044400289790482
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 364.93063814661286,
-      "scenario": "imputed_rho_040",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9669113775388675,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 99.24482633020938
+      "expected": 1.1086010558671595,
+      "id": "summary.uncoordinated_par",
+      "json_path": [
+        "summary",
+        "uncoordinated_par"
+      ],
+      "source": "outputs/reports/admm_report.json",
+      "tolerance": 0.0011086010558671595
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 365.91634776266943,
-      "scenario": "imputed_rho_060",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9668174790792283,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 99.52129442857817
+      "expected": 0.966611945214959,
+      "id": "summary.ideal_worst_min_voltage_pu",
+      "json_path": [
+        "summary",
+        "ideal_worst_min_voltage_pu"
+      ],
+      "source": "outputs/reports/powerflow_report.json",
+      "tolerance": 0.001
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 367.24594235756314,
-      "scenario": "imputed_rho_070",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9666907796347018,
-      "worst_step": 72,
-      "worst_transformer_loading_pct": 99.89429668118657
+      "expected": 98.96687753436491,
+      "id": "summary.ideal_worst_transformer_loading_pct",
+      "json_path": [
+        "summary",
+        "ideal_worst_transformer_loading_pct"
+      ],
+      "source": "outputs/reports/powerflow_report.json",
+      "tolerance": 0.09896687753436491
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 374.9801569175889,
-      "scenario": "imputed_rho_080",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9659528005444495,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 102.06592587931789
+      "expected": 0.9629545581614045,
+      "id": "summary.uncoordinated_worst_min_voltage_pu",
+      "json_path": [
+        "summary",
+        "uncoordinated_worst_min_voltage_pu"
+      ],
+      "source": "outputs/reports/powerflow_report.json",
+      "tolerance": 0.001
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 379.51465816662767,
-      "scenario": "imputed_rho_082",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9655193562120005,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 103.34063410131247
+      "expected": 0.30408137945969693,
+      "id": "summary.cv_rmse_kw_mean",
+      "json_path": [
+        "summary",
+        "cv_rmse_kw_mean"
+      ],
+      "source": "outputs/reports/forecast_report.json",
+      "tolerance": 0.001
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 383.0849918544784,
-      "scenario": "imputed_rho_085",
-      "transformer_violation": false,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9651776708952826,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 104.34508601397059
+      "expected": 0.2547038326162355,
+      "id": "summary.cv_mae_kw_mean",
+      "json_path": [
+        "summary",
+        "cv_mae_kw_mean"
+      ],
+      "source": "outputs/reports/forecast_report.json",
+      "tolerance": 0.001
     },
     {
-      "nonconverged_steps": 0,
-      "peak_kw": 385.91930582161035,
-      "scenario": "imputed_rho_088",
-      "transformer_violation": true,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9649061695426651,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 105.14296454652843
-    },
-    {
-      "nonconverged_steps": 0,
-      "peak_kw": 389.61390527124684,
-      "scenario": "imputed_rho_090",
-      "transformer_violation": true,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9645519223706965,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 106.18367611380779
-    },
-    {
-      "nonconverged_steps": 0,
-      "peak_kw": 395.2496538436851,
-      "scenario": "imputed_rho_095",
-      "transformer_violation": true,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9640108134821561,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 107.77261557536839
-    },
-    {
-      "nonconverged_steps": 0,
-      "peak_kw": 401.893100969183,
-      "scenario": "imputed_rho_100",
-      "transformer_violation": true,
-      "voltage_violation": false,
-      "worst_min_voltage_pu": 0.9633718000974597,
-      "worst_step": 70,
-      "worst_transformer_loading_pct": 109.64790176687194
+      "expected": 14,
+      "id": "summary.n_scenarios",
+      "json_path": [
+        "summary",
+        "n_scenarios"
+      ],
+      "source": "outputs/reports/study_report.json",
+      "tolerance": 0
     }
   ]
 }

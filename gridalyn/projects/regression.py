@@ -89,6 +89,18 @@ def build_regression_report(
         for metric in baseline.get("metrics", [])
     ]
     errors = [check["error"] for check in checks if not check["valid"]]
+    if not checks:
+        # A baseline carrying no `metrics` used to report valid=True having
+        # verified nothing, so a study could lose every pin -- or never have had
+        # one in the contract's format -- and still show green. Vacuous success
+        # is worse than failure here: the whole point of the baseline is to make
+        # a change in results impossible to miss.
+        errors = [
+            f"{baseline_path.name} declares no 'metrics' to check, so this "
+            "project's results are NOT pinned. Add a 'metrics' list (see any "
+            "fixture project's baseline for the shape), or remove the baseline "
+            "file if the project is deliberately unverified."
+        ]
     return {
         "report_id": f"{baseline.get('project', project_root.name)}_regression",
         "schema_version": "1.0",
