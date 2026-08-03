@@ -258,6 +258,25 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/fleet_triage.png
         - projects/ev_hosting_flex/outputs/reports/fleet_triage_report.json
 
+    - id: analyze_locational_contracts
+      needs: [analyze_fleet_triage]
+      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py
+        - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
+        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+        - projects/ev_hosting_flex/scripts/_annual.py
+        - projects/ev_hosting_flex/scripts/_powerflow.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/locational_contracts.json
+        - projects/ev_hosting_flex/outputs/figures/locational_contracts.png
+        - projects/ev_hosting_flex/outputs/reports/locational_contracts_report.json
+
     - id: analyze_nonwires_value
       needs: [analyze_network_characterization, analyze_congestion_risk]
       command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
