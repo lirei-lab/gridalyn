@@ -138,6 +138,33 @@ When adding a new subsystem, update at least one of:
 - `platform/dashboard.md` for visualization and catalog changes.
 - `development/artifact-policy.md` for Git, data, and generated-output policy.
 
+## Code Quality Checks
+
+Formatting, linting and type checking run through a pre-commit framework, so
+they gate the commit rather than being remembered by hand.
+
+| Tool | Role |
+|---|---|
+| `black` | formatter, line length 88 |
+| `isort` | import ordering, `--profile black` |
+| `flake8` | PEP 8, bugbear, docstring conventions |
+| `mypy` | static types, `--disallow-untyped-defs` |
+
+Run everything manually before pushing:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+Failures are reported to the console and must be fixed before the commit
+succeeds. Two caveats worth knowing:
+
+- The tree does **not** currently pass `flake8` in full. CI lints only the files
+  a pull request changes, so match the conventions of the code around you rather
+  than assuming a clean baseline.
+- `mypy` runs in local pre-commit but is **skipped in CI** for speed. Do not
+  rely on CI to catch type errors.
+
 ## Commit Hygiene
 
 Recommended flow:

@@ -17,7 +17,7 @@ or the entry-point signature.
 
 These ten symbols are the canonical clearing/settlement contract. All are
 importable directly from `gridalyn.operations` (via the lazy `__getattr__`
-facade — see [Import Purity](#import-purity)).
+facade — see [Stable Facade](public-contract.md#stable-facade)).
 
 | Symbol | Kind | Owning module |
 | --- | --- | --- |
