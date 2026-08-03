@@ -219,6 +219,19 @@ node --test dashboard/src/*.test.js
 These checks cover unit tests, documentation, tracked-artifact hygiene, and the
 project verification/regression baseline plus dashboard health.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the architectural rules the
+tests enforce, and what to do when a change moves a study's pinned baseline.
+Participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md), and
+[SECURITY.md](SECURITY.md) covers how to report a vulnerability.
+
+## Citing
+
+If you use Gridalyn or its studies in your research, please cite it. GitHub
+renders [CITATION.cff](CITATION.cff) as a "Cite this repository" button, which
+gives you BibTeX and APA directly.
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).

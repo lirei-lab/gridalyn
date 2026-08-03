@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "Gridalyn: a governed SDK for distribution-network digital twins and flexibility studies"
+message: "If you use this software or its studies in your research, please cite it."
+type: software
+authors:
+  - family-names: Henao
+    given-names: Nilson
+    affiliation: "LIREI, Université du Québec à Trois-Rivières"
+    email: nilson.henao@uqtr.ca
+repository-code: "https://github.com/lirei-uqtr/gridalyn"
+url: "https://lirei-uqtr.github.io/gridalyn"
+abstract: >-
+  Gridalyn models, simulates and optimizes multi-scale electric distribution
+  systems and their distributed energy resources: flexible building loads, EV
+  chargers and storage. Declarative YAML StudyProject and Workflow contracts
+  drive synthetic data generation, a digital twin, pandapower/lightsim power
+  flow and flexibility-market operations, emitting governed report artifacts
+  with regression baselines so that a published result can be re-derived from
+  its configuration.
+keywords:
+  - distribution networks
+  - digital twin
+  - electric vehicles
+  - hosting capacity
+  - demand flexibility
+  - power systems
+  - reproducible research
+license: MIT
+version: 0.1.0
