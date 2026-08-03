@@ -139,7 +139,6 @@ cython_debug/
 .windsurf/
 .vscode/
 docs/superpowers/
-.gitlab-ci.yml
 
 scratch/
 data/twins/
