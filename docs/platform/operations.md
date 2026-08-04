@@ -137,4 +137,3 @@ project calls them.
 - [Markets, Clearing, And Transactions](../flexibility/clearing.md)
 - [Network Impact Verification](../flexibility/network-impact-surrogate.md)
 - [Operational KPIs](../flexibility/economic-validation.md)
-- [Building Flexibility](../flexibility/building-flexibility.md)

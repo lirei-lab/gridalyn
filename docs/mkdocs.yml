@@ -65,7 +65,6 @@ nav:
       - Control And Optimization: flexibility/control.md
       - Network Impact Verification: flexibility/network-impact-surrogate.md
       - Operational KPIs: flexibility/economic-validation.md
-      - Building Flexibility: flexibility/building-flexibility.md
   - Projects:
       - Projects Overview: projects/overview.md
       - Project Model: projects/project-model.md
