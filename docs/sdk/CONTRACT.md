@@ -21,16 +21,16 @@ facade — see [Stable Facade](public-contract.md#stable-facade)).
 
 | Symbol | Kind | Owning module |
 | --- | --- | --- |
-| `run_flexibility_clearing_operation` | function (entry point) | `flexibility/clearing.py` |
-| `build_operation_context` | function (constructor) | `flexibility/contracts.py` |
-| `validate_flexibility_operation_inputs` | function (validator) | `flexibility/contracts.py` |
-| `FlexibilityOffer` | frozen dataclass | `flexibility/domain.py` |
-| `AggregatorPortfolio` | frozen dataclass | `flexibility/domain.py` |
-| `DispatchInstruction` | frozen dataclass | `flexibility/domain.py` |
-| `SettlementRecord` | frozen dataclass | `flexibility/domain.py` |
-| `NetworkConstraint` | frozen dataclass | `flexibility/constraints.py` |
-| `FlexibilityOperationContext` | frozen dataclass | `flexibility/contracts.py` |
-| `FlexibilityOperationValidation` | frozen dataclass | `flexibility/contracts.py` |
+| `run_flexibility_clearing_operation` | function (entry point) | `clearing/clearing.py` |
+| `build_operation_context` | function (constructor) | `clearing/contracts.py` |
+| `validate_flexibility_operation_inputs` | function (validator) | `clearing/contracts.py` |
+| `FlexibilityOffer` | frozen dataclass | `clearing/domain.py` |
+| `AggregatorPortfolio` | frozen dataclass | `clearing/domain.py` |
+| `DispatchInstruction` | frozen dataclass | `clearing/domain.py` |
+| `SettlementRecord` | frozen dataclass | `clearing/domain.py` |
+| `NetworkConstraint` | frozen dataclass | `clearing/constraints.py` |
+| `FlexibilityOperationContext` | frozen dataclass | `clearing/contracts.py` |
+| `FlexibilityOperationValidation` | frozen dataclass | `clearing/contracts.py` |
 
 The seven frozen dataclasses are guaranteed to be `@dataclass(frozen=True)` and
 to keep their core identifying fields. Field sets may grow in later phases (a

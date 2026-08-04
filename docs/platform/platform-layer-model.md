@@ -224,7 +224,7 @@ the twin and asset models into decisions.
 **Current Gridalyn surface:**
 
 - `gridalyn.operations`
-- `gridalyn.operations.market`
+- `gridalyn.operations`
 - `instances/default/digital_twin/flexibility`
 - `projects/*/outputs/json/ev_summary_results.json`
 - `projects/*/outputs/reports/stage_4_realtime_dispatch_report.json`

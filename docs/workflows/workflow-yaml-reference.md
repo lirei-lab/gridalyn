@@ -58,9 +58,9 @@ spec:
         - outputs/reports
         - outputs/cache
 
-    - id: run_powerflow
+    - id: run_minimal_powerflow
       needs: [prepare_workspace]
-      command: uv run python projects/minimal_grid_project/scripts/run_powerflow.py
+      command: python scripts/run_minimal_powerflow.py
       inputs: []
       outputs:
         - projects/minimal_grid_project/outputs/reports/minimal_grid_report.json

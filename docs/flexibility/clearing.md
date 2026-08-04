@@ -79,9 +79,9 @@ projects do not need to reimplement market-study logic in local scripts:
 
 | Function | Module | Purpose |
 | --- | --- | --- |
-| `build_congestion_forecast` | `gridalyn.operations.flexibility` | Convert stochastic baseline and EV traces into thermal requirements, exceedance probabilities, and temporal bounds. |
-| `run_cls_capacity_allocation` | `gridalyn.operations.flexibility` | Run an EV-adoption sweep through the Soft/Hard CLS market engine and return summary metrics plus dispatch time series. |
-| `materialize_flexibility_operation_artifacts` | `gridalyn.operations.flexibility` | Promote clearing events and selections into constraints, offers, dispatch, settlement, KPI reports, operation runs, and dashboard catalogs. |
+| `build_congestion_forecast` | `gridalyn.operations` | Convert stochastic baseline and EV traces into thermal requirements, exceedance probabilities, and temporal bounds. |
+| `run_cls_capacity_allocation` | `gridalyn.operations` | Run an EV-adoption sweep through the Soft/Hard CLS market engine and return summary metrics plus dispatch time series. |
+| `materialize_flexibility_operation_artifacts` | `gridalyn.operations` | Promote clearing events and selections into constraints, offers, dispatch, settlement, KPI reports, operation runs, and dashboard catalogs. |
 
 Project scripts should call these functions with project-specific paths,
 scenario lists, and parameter values. Reusable product logic belongs in the SDK.
@@ -90,9 +90,10 @@ scenario lists, and parameter values. Reusable product logic belongs in the SDK.
 
 The EV hosting flexibility workflow implements one market product:
 
-- firm day-ahead building flexibility;
-- real-time recourse for residual uncertainty;
-- locational provider selection and AC replay;
+- Hard CLS only -- EV charging curtailment. Soft CLS (building thermal
+  flexibility) is deliberately not offered there, so every provider it registers
+  carries `soft_cls_participant: False`;
+- locational provider selection against per-transformer constraints;
 - settlement and operational KPI reports.
 
 It should be read as a detailed example of a two-stage local flexibility

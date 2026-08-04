@@ -8,7 +8,7 @@ offers, locational clearing, dispatch, settlement, and operational scorecards.
 | Layer | Responsibility |
 | --- | --- |
 | `gridalyn.operations` | Public operations facade plus provider registry, clearing, dispatch, settlement, and scorecards. |
-| `gridalyn.operations.market` | Lower-level market mechanics used by workflows and the facade. |
+| `gridalyn.operations` | Lower-level market mechanics used by workflows and the facade. |
 | `gridalyn.simulation.analytics` | Network-impact features, predictions, and validation helpers. |
 | `gridalyn.foundation` | Stable governance and report contracts that applications and projects can call. |
 
@@ -29,7 +29,7 @@ project needs rolling-horizon forecast, offer ranking, battery dispatch, and
 power-flow verification:
 
 ```python
-from gridalyn.operations.market import (
+from gridalyn.operations import (
     ProsumerRealtimeMarketConfig,
     run_prosumer_realtime_market,
 )

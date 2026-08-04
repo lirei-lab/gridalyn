@@ -1,7 +1,7 @@
 # Projects
 
 A Gridalyn project is an executable, reproducible study. Every project — from a
-two-stage smoke test to a twenty-one-stage research arc — declares the same
+two-stage smoke test to a twenty-two-stage research arc — declares the same
 contract:
 
 | File | Role |
@@ -28,7 +28,7 @@ to be cited.
 | Project | Stages | Pins | What it studies |
 | --- | --- | --- | --- |
 | [EV Hosting Flexibility](ev-hosting-flex.md) | 22 | 81 | EV hosting capacity and flexibility across a 540-transformer Québec fleet, with the transformer rating convention as a declared axis. |
-| [ADMM Thermal Consensus](admm-thermal-consensus.md) | 13 | 11 | Distributed ADMM coordination of cold-climate electric-heating homes, with ML imputation for failed communication, on the IEEE-33 feeder. |
+| [ADMM Thermal Consensus](admm-thermal-consensus.md) | 13 | 13 | Distributed ADMM coordination of cold-climate electric-heating homes, with ML imputation for failed communication, on the IEEE-33 feeder. |
 
 ### Contract fixtures
 

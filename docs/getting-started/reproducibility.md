@@ -96,7 +96,7 @@ uv run python --version
 uv run gridalyn doctor
 
 # 2. Activate the frozen environment ONCE so every stage `uv run python ...`
-#    subprocess (25 of them) reuses this exact interpreter+lock and cannot
+#    subprocess (20 of them) reuses this exact interpreter+lock and cannot
 #    re-resolve the environment mid-run (Pitfall 2). Then run the study.
 source .venv/bin/activate
 gridalyn project run projects/ev_hosting_flex            # expect exit 0
@@ -106,16 +106,15 @@ gridalyn project run projects/ev_hosting_flex            # expect exit 0
 # 3. Regression gate — this is the DoD. The committed baseline must reproduce.
 gridalyn project regression projects/ev_hosting_flex     # expect "valid": true (81/81)
 
-# 4. Determinism leg — the baseline must be byte-identical under two
+# 4. Determinism leg — the study's generators must be byte-identical under two
 #    PYTHONHASHSEED values (independent hash randomization, same numbers).
-PYTHONHASHSEED=0 python -m pytest -q tests/test_repro_dod.py   # expect 0 exit
-PYTHONHASHSEED=1 python -m pytest -q tests/test_repro_dod.py   # expect 0 exit
+PYTHONHASHSEED=0 python -m pytest -q tests/ -k ev_hosting_flex   # expect 0 exit
+PYTHONHASHSEED=1 python -m pytest -q tests/ -k ev_hosting_flex   # expect 0 exit
 
 # 5. Network-free leg — the run must NOT depend on a live PVGIS fetch: the
 #    committed TMY CSV (inputs/tmy_trois_rivieres.csv) is the only weather
 #    source, `download_tmy` is never called, and an "auto" source is guarded.
-#    tests/test_repro_dod.py::test_run_is_network_free asserts this; you can
-#    also confirm no PVGIS fetch appears in the stage logs and that the run
+#    Confirm no PVGIS fetch appears in the stage logs and that the run
 #    manifest `provenance.python_version` records 3.12.x.
 ```
 

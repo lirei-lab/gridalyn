@@ -168,7 +168,7 @@ KPI reports, network-constraint summaries, and the prosumer real-time market
 runner:
 
 ```python
-from gridalyn.operations.market import (
+from gridalyn.operations import (
     ProsumerRealtimeMarketConfig,
     run_prosumer_realtime_market,
 )

@@ -279,7 +279,7 @@ network-impact analytics, and market mechanics behind stable contracts.
 - `gridalyn.operations` exports the flexibility operation facade for
   applications and future service APIs; `foundation` remains focused on
   governance, reports, workspace, and artifact contracts.
-- Existing `gridalyn.operations.market.locational_clearing` remains the clearing engine;
+- Existing `gridalyn.operations.locational_clearing` remains the clearing engine;
   the operation layer wraps it with governance and validation.
 - The same layer now exposes `AggregatorPortfolio`, `FlexibilityOffer`,
   `DispatchInstruction`, and `SettlementRecord` tabular contracts.
@@ -498,7 +498,7 @@ The migration must preserve:
 2. Keep digital-twin build logic in `gridalyn/twin` and project workflow
    orchestration in `gridalyn/projects/workflows`.
 3. Continue hardening provider, clearing, and network impact modules in
-   `gridalyn.operations.market` and `gridalyn.simulation.analytics`.
+   `gridalyn.operations` and `gridalyn.simulation.analytics`.
 4. Move canonical report schemas into `gridalyn.interfaces.reporting`.
 5. Keep study pipeline scripts under `projects/ev_hosting_flex`.
 6. Keep publication-only notes and illustrative plots outside executable

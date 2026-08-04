@@ -4,7 +4,7 @@
 electric vehicles a Québec all-electric distribution feeder can host, where the
 network actually binds, and what EV flexibility is worth against reinforcement.
 
-It is a governed `StudyProject` (19 workflow stages, ~9.7k lines of study code)
+It is a governed `StudyProject` (22 workflow stages, ~9.7k lines of study code)
 whose distinguishing property is that **its generators are validated against real
 data** and its headlines are reported **with uncertainty**.
 
@@ -28,15 +28,15 @@ The study follows a deliberate arc — *diagnosis before solutions*:
 5. **Cold-tail insurance** — the study the others were building toward, and the
    answer to *why flexibility matters if the network is robust at the median*:
     - **Hosting capacity is a distribution, not a number.** Firm hosting spans
-      **11–13 EVs** (P05–P95) across weather years, and the spread is weather
-      (corr(severity, firm) = **+0.56**), not sampling noise. Planning at the P50
-      still leaves the feeder short **28 % of years**; at the P05, 4 %.
+      **10–13 EVs** (P05–P95) across weather years, and the spread is weather
+      (corr(severity, firm) = **+0.42**), not sampling noise. Planning at the P50
+      still leaves the feeder short **26 % of years**.
     - **At the governed feeder there is currently nothing to insure.** Judged
       against the capability each hour's ambient allows (see *Rating convention*
       below), the reference adoption never falls short — activation frequency
       **0**, and the reinforcement it would defer costs **$0/yr** because no
       reinforcement is triggered. The crossover where reinforcing wins sits at
-      **12 EVs**, i.e. at the firm limit itself.
+      **11 EVs**, i.e. at the firm limit itself.
     - This is a **result of the rating convention, not an absence of risk.**
       Under the static nameplate the same feeder falls short in most years and
       the insurance case is worth several hundred dollars a year against
@@ -69,7 +69,7 @@ than hitting one at the cost of the other. Reaching that required modelling the
 electric water-heater tank explicitly, since a single-R envelope model couples
 peak and energy and cannot satisfy both.
 
-Full calibration provenance, including five deliberate re-bases and their
+Full calibration provenance, including six deliberate re-bases and their
 rationale, is in `projects/ev_hosting_flex/CALIBRATION.md`.
 
 ## Rating Convention
@@ -130,6 +130,4 @@ before trusting a green test run.
 
 ## Related
 
-  contracts and the canonical clearing/settlement API). Same synthetic
-  Trois-Rivières twin, different mechanism.
 - `docs/projects/overview.md` — the project contract these studies implement.

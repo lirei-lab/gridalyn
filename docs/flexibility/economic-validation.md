@@ -28,63 +28,18 @@ Each operation should publish a report that links:
 - settlement or score;
 - warnings, shortfalls, and residual risk.
 
-## CLS Example
+## A Note On Worked Examples
 
-The EV hosting flexibility workflow is one example of this KPI pattern. It evaluates
-the economic efficiency of a **Soft-CLS firm day-ahead contract with sub-period
-clearing** under Monte Carlo uncertainty.
+This page previously carried a worked two-stage CLS example -- Soft-CLS firm
+day-ahead settlement, delivery penalties and Hard-CLS recourse, with Monte Carlo
+cost figures. Those numbers came from a study that has since been retired, and
+they were briefly re-attributed here to `ev_hosting_flex` during that removal.
+That attribution was wrong: `ev_hosting_flex` offers **Hard CLS only** -- its
+contract stage states plainly that "Soft CLS (building thermal flexibility) is
+deliberately absent", and every provider it registers carries
+`soft_cls_participant: False`.
 
-The evaluation assesses the behavior of building aggregators (firm Soft-CLS,
-Stage 1) and the residual recourse cost from EV interruptions (Hard-CLS, Stage
-2) under stochastic load variability.
-
-## Two-Stage Cost Structure
-
-The total expected cost decomposes into:
-
-1. **Soft-CLS Settlement (Stage 1 — Firm DA Cost):** The cost of firm capacity contracted with buildings in the Day-Ahead sub-period clearing. This is a deterministic cost — once contracted, it is paid regardless of the realized scenario.
-2. **Soft-CLS Penalties (Stage 1 — Delivery Failures):** Financial penalties collected from aggregators whose buildings fail to deliver their firm commitments (due to EMS failures or thermal exhaustion).
-3. **Hard-CLS Penalty (Stage 2 — Recourse Cost):** The cost of real-time EV interruptions activated when the realized load exceeds the thermal limit even after Soft-CLS execution. This is the stochastic recourse cost that varies by scenario.
-
-## Monte Carlo Simulation Results (100 Scenarios)
-
-```text
---- Soft-CLS Firm DA Contract (Sub-period Clearing) ---
-Expected Operational Cost: $44,337.22
-  ├─ Soft-CLS DA Settlement (Firm): $14,898.27
-  ├─ Soft-CLS Delivery Penalties:   $549.90
-  └─ Hard-CLS Recourse Penalty:     $29,438.95
-Expected Soft Flexibility Procured: 6,708.36 kWh
-Expected Hard Interruption Volume:  2,943.89 kWh
-```
-
-## Analysis: Sub-period Clearing Efficiency
-
-> [!TIP]
-> **Precise DA Procurement**
-> The sub-period clearing allocates firm capacity that tracks the exact shape of the expected congestion curve. This avoids over-procurement during the "tails" of the congestion window, reducing the DA settlement cost to $14.8k — matching only the capacity mathematically needed per sub-period.
-
-> [!NOTE]
-> **Minimal Delivery Penalties ($549.90)**
-> Because the sub-period clearing demands flexibility only when needed and rotates aggregators via the merit-order mechanism, buildings maintain their thermal state and avoid failure. The near-zero penalty level confirms that the firm contracts are physically viable — buildings can deliver what they commit to.
-
-> [!IMPORTANT]
-> **Hard-CLS Recourse as Uncertainty Absorber**
-> The Hard-CLS cost ($29.4k) represents the expected cost of real-time recourse across 100 stochastic scenarios. This is the price of uncertainty — scenarios where the realized load exceeds the expected load $\mu$ require additional EV interruptions beyond what the DA-planned Soft-CLS can cover. In the two-stage framework, this recourse cost is explicitly optimized: the Newsvendor formulation in Stage 1 dimensions the Soft-CLS contracts to minimize the sum of firm DA cost and expected recourse cost.
-
-## Two-Stage Cost Decomposition
-
-| Cost Component | Nature | Stage | Value |
-|----------------|--------|-------|-------|
-| Soft-CLS DA Settlement | Deterministic (firm) | Stage 1 | $14,898.27 |
-| Soft-CLS Penalties | Stochastic (delivery risk) | Stage 1 | $549.90 |
-| Hard-CLS Recourse | Stochastic (scenario-dependent) | Stage 2 | $29,438.95 |
-| **Total Expected Cost** | | | **$44,337.22** |
-
-## Conclusion
-
-The simulation validates the core thesis of the two-stage stochastic CLS:
-
-1. **Firm DA contracts (Soft-CLS)** with sub-period granularity provide cost-efficient, physically viable flexibility from buildings by respecting their dynamic thermal constraints and rotating dispatch via merit-order.
-2. **Real-time recourse (Hard-CLS)** absorbs the residual uncertainty between expected and realized load at the margin, activated only when physically necessary.
-3. The Newsvendor-optimal dimensioning of Stage 1 contracts minimizes the **total expected system cost** — neither over-procuring expensive firm capacity nor under-procuring and relying excessively on costly recourse actions.
+Rather than restate figures no committed baseline can reproduce, the example is
+removed. The KPI families and report pattern above are the durable content; for
+live numbers, read a study's own `outputs/reports/operational_kpi_report.json`
+and its pinned baseline.
