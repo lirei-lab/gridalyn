@@ -40,9 +40,9 @@ description = "Utility digital-twin platform for distribution networks, governed
 readme = "README.md"
 
 [project.urls]
-Documentation = "https://lirei-uqtr.github.io/gridalyn"
-Source = "https://github.com/lirei-uqtr/gridalyn"
-Tracker = "https://github.com/lirei-uqtr/gridalyn/issues"
+Documentation = "https://lirei-lab.github.io/gridalyn"
+Source = "https://github.com/lirei-lab/gridalyn"
+Tracker = "https://github.com/lirei-lab/gridalyn/issues"
 
 [project.scripts]
 gridalyn = "gridalyn.interfaces.cli.gridalyn:main"

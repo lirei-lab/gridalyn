@@ -6,7 +6,7 @@ know before opening a pull request.
 ## Setup
 
 ```bash
-git clone https://github.com/lirei-uqtr/gridalyn
+git clone https://github.com/lirei-lab/gridalyn
 cd gridalyn
 pip install -e ".[dev]"
 pre-commit install

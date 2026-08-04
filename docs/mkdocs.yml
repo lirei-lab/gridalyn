@@ -2,8 +2,6 @@ site_name: Gridalyn
 site_dir: ../site
 docs_dir: .
 not_in_nav: |
-  superpowers/plans/*.md
-  superpowers/specs/*.md
   development/code-structure-audit.md
 nav:
   - Home: index.md
@@ -135,7 +133,7 @@ extra_javascript:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lirei-uqtr/gridalyn
+      link: https://github.com/lirei-lab/gridalyn
 markdown_extensions:
   - attr_list
   - md_in_html

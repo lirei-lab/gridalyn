@@ -7,8 +7,8 @@ authors:
     given-names: Nilson
     affiliation: "LIREI, Université du Québec à Trois-Rivières"
     email: nilson.henao@uqtr.ca
-repository-code: "https://github.com/lirei-uqtr/gridalyn"
-url: "https://lirei-uqtr.github.io/gridalyn"
+repository-code: "https://github.com/lirei-lab/gridalyn"
+url: "https://lirei-lab.github.io/gridalyn"
 abstract: >-
   Gridalyn models, simulates and optimizes multi-scale electric distribution
   systems and their distributed energy resources: flexible building loads, EV
