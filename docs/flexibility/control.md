@@ -82,5 +82,5 @@ operators or project reviewers.
 - [Operational Functions](overview.md)
 - [Markets And Transactions](clearing.md)
 - [Network Impact Verification](network-impact-surrogate.md)
-- [DER Voltage Optimization Demo](../projects/der-voltage-optimization.md)
-- [RL Voltage Control With LightSim2Grid](../projects/rl-voltage-control-lightsim.md)
+- [DER Voltage Optimization Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/der_voltage_optimization)
+- [RL Voltage Control With LightSim2Grid](https://github.com/lirei-lab/gridalyn/tree/main/projects/rl_voltage_control_lightsim)

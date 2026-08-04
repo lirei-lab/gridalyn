@@ -118,7 +118,7 @@ Expected outcome: a five-bus feeder, one AC power-flow run, CSV tables, one
 JSON report, one voltage-profile figure, a run manifest, and a passing
 project-level verification.
 
-More detail is in [Minimal Grid Project](../projects/minimal-grid-project.md).
+More detail is in [Minimal Grid Project](https://github.com/lirei-lab/gridalyn/tree/main/projects/minimal_grid_project).
 
 ## 4. Inspect The Platform Surfaces
 
@@ -142,11 +142,11 @@ Pick one path based on what you need to prove:
 
 | Goal | Command | Read next |
 | --- | --- | --- |
-| Benchmark feeder smoke test | `uv run gridalyn project verify projects/ieee_33_bus_demo` | [IEEE 33-Bus Demo](../projects/ieee-33-demo.md) |
-| Geospatial model generation | `uv run gridalyn project verify projects/synthetic_geojson_feeder` | [Synthetic GeoJSON Feeder](../projects/synthetic-geojson-feeder.md) |
-| Compact market operation | `uv run gridalyn project verify projects/prosumer_battery_market` | [Prosumer Battery Market Demo](../projects/prosumer-battery-market.md) |
-| Optimization and physical verification | `uv run gridalyn project verify projects/der_voltage_optimization` | [DER Voltage Optimization Demo](../projects/der-voltage-optimization.md) |
-| Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](../projects/rl-voltage-control-lightsim.md) |
+| Benchmark feeder smoke test | `uv run gridalyn project verify projects/ieee_33_bus_demo` | [IEEE 33-Bus Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/ieee_33_bus_demo) |
+| Geospatial model generation | `uv run gridalyn project verify projects/synthetic_geojson_feeder` | [Synthetic GeoJSON Feeder](https://github.com/lirei-lab/gridalyn/tree/main/projects/synthetic_geojson_feeder) |
+| Compact market operation | `uv run gridalyn project verify projects/prosumer_battery_market` | [Prosumer Battery Market Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/prosumer_battery_market) |
+| Optimization and physical verification | `uv run gridalyn project verify projects/der_voltage_optimization` | [DER Voltage Optimization Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/der_voltage_optimization) |
+| Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](https://github.com/lirei-lab/gridalyn/tree/main/projects/rl_voltage_control_lightsim) |
 | Larger operations workflow | `uv run gridalyn project verify projects/ev_hosting_flex` | [Run Demo Projects](run-demo-projects.md) |
 
 The larger EV hosting flexibility workflow is useful as an end-to-end stress test for

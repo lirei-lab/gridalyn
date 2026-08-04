@@ -155,12 +155,12 @@ Use the examples as a progression:
 
 | Project | Platform contract it demonstrates |
 | --- | --- |
-| [Minimal Grid Project](minimal-grid-project.md) | Smallest project contract, report, figure, and sense-check loop. |
-| [IEEE 33-Bus Demo](ieee-33-demo.md) | Benchmark feeder workflow with deterministic scenario outputs. |
-| [Synthetic GeoJSON Feeder](synthetic-geojson-feeder.md) | GeoJSON-to-network generation with validation artifacts. |
-| [Prosumer Battery Market Demo](prosumer-battery-market.md) | Asset modeling, market clearing, dispatch, and feeder verification. |
-| [DER Voltage Optimization Demo](der-voltage-optimization.md) | Optimization setpoints verified against AC power flow. |
-| [RL Voltage Control With LightSim2Grid](rl-voltage-control-lightsim.md) | Learning-control environment over reusable modeling assets. |
+| [Minimal Grid Project](https://github.com/lirei-lab/gridalyn/tree/main/projects/minimal_grid_project) | Smallest project contract, report, figure, and sense-check loop. |
+| [IEEE 33-Bus Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/ieee_33_bus_demo) | Benchmark feeder workflow with deterministic scenario outputs. |
+| [Synthetic GeoJSON Feeder](https://github.com/lirei-lab/gridalyn/tree/main/projects/synthetic_geojson_feeder) | GeoJSON-to-network generation with validation artifacts. |
+| [Prosumer Battery Market Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/prosumer_battery_market) | Asset modeling, market clearing, dispatch, and feeder verification. |
+| [DER Voltage Optimization Demo](https://github.com/lirei-lab/gridalyn/tree/main/projects/der_voltage_optimization) | Optimization setpoints verified against AC power flow. |
+| [RL Voltage Control With LightSim2Grid](https://github.com/lirei-lab/gridalyn/tree/main/projects/rl_voltage_control_lightsim) | Learning-control environment over reusable modeling assets. |
 
 See [Workflow YAML](../workflows/workflow-yaml-reference.md) and
 [Project Template Guide](template-guide.md).

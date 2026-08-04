@@ -18,35 +18,39 @@ same verification decides whether a result still holds.
 ## The Catalog
 
 Projects differ in what they are *for*, and that determines how much weight a
-number from one of them can carry.
+number from one of them can carry. Each project documents itself: read its
+`README.md` in the repository for what it studies, how to run it, and what its
+results mean. This section documents the **contract they all share**, not the
+individual studies.
 
 ### Research studies
 
 Full arcs with calibrated inputs, pinned headline metrics, and findings intended
-to be cited.
+to be cited. They Monte-Carlo an annual horizon, take tens of minutes, and are
+verified by an operator rather than by CI.
 
-| Project | Stages | Pins | What it studies |
-| --- | --- | --- | --- |
-| [EV Hosting Flexibility](ev-hosting-flex.md) | 22 | 81 | EV hosting capacity and flexibility across a 540-transformer Québec fleet, with the transformer rating convention as a declared axis. |
-| [ADMM Thermal Consensus](admm-thermal-consensus.md) | 13 | 13 | Distributed ADMM coordination of cold-climate electric-heating homes, with ML imputation for failed communication, on the IEEE-33 feeder. |
+| Project | Stages | Pins |
+| --- | --- | --- |
+| `projects/ev_hosting_flex` | 22 | 81 |
+| `projects/admm_thermal_consensus` | 13 | 14 |
 
 ### Contract fixtures
 
 Small, fast projects that gate the `StudyProject → Workflow → report → baseline`
-contract on every push. They run end to end in CI in about 78 seconds, which is
-what makes them useful: a break in the contract shows up immediately.
+contract on every push. A break in the contract shows up immediately, which is
+what makes them useful. They are **not** sources of citable domain findings.
 
-| Project | Stages | Pins | Primary lesson |
-| --- | --- | --- | --- |
-| [Minimal Grid Project](minimal-grid-project.md) | 2 | 3 | The smallest complete project contract. |
-| [IEEE 33-Bus Demo](ieee-33-demo.md) | 4 | 7 | A familiar benchmark feeder with planning-style metrics. |
-| [Synthetic GeoJSON Feeder](synthetic-geojson-feeder.md) | 3 | 4 | Building a feeder from building-footprint GeoJSON. |
-| [Prosumer Battery Market](prosumer-battery-market.md) | 3 | 4 | Forecast-aware real-time market with distributed prosumers. |
-| [DER Voltage Optimization](der-voltage-optimization.md) | 3 | 4 | CVXPY optimization followed by pandapower verification. |
-| [RL Voltage Control](rl-voltage-control-lightsim.md) | 3 | 5 | A learning-control environment over platform modeling assets. |
+| Project | Stages | Pins |
+| --- | --- | --- |
+| `projects/minimal_grid_project` | 2 | 3 |
+| `projects/ieee_33_bus_demo` | 4 | 7 |
+| `projects/synthetic_geojson_feeder` | 3 | 4 |
+| `projects/prosumer_battery_market` | 3 | 4 |
+| `projects/der_voltage_optimization` | 3 | 4 |
+| `projects/rl_voltage_control_lightsim` | 3 | 5 |
 
-Start with **Minimal Grid Project** to see the contract, then **IEEE 33-Bus** for
-a recognizable network.
+Start with `minimal_grid_project` to see the contract in its smallest complete
+form, then `ieee_33_bus_demo` for a recognizable network.
 
 ## Running Any Project
 
