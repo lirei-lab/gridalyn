@@ -6,50 +6,31 @@ need to understand the vocabulary before using commands or APIs.
 
 ## Concept Map
 
-<div class="landing-grid landing-grid--cards" markdown>
-
+<div class="landing-grid landing-grid--cards">
 <a class="landing-card" href="../platform/digital-twin/">
 <h3>Digital Twin Core</h3>
-
-The canonical artifact layer for network, asset, scenario, time-series,
-semantic, report, and application data.
+<p>The canonical artifact layer for network, asset, scenario, time-series, semantic, report, and application data.</p>
 </a>
-
 <a class="landing-card" href="network-model/">
 <h3>Network Model</h3>
-
-Connectivity nodes, line segments, transformers, loads, feeders, and utility
-topology identity.
+<p>Connectivity nodes, line segments, transformers, loads, feeders, and utility topology identity.</p>
 </a>
-
 <a class="landing-card" href="data-and-artifact-model/">
 <h3>Artifacts</h3>
-
-The Parquet, JSON, report, manifest, and figure conventions that make outputs
-traceable and reproducible.
+<p>The Parquet, JSON, report, manifest, and figure conventions that make outputs traceable and reproducible.</p>
 </a>
-
 <a class="landing-card" href="scenarios/">
 <h3>Scenarios</h3>
-
-How Gridalyn represents changes in demand, assets, operations, forecasts, and
-simulation assumptions.
+<p>How Gridalyn represents changes in demand, assets, operations, forecasts, and simulation assumptions.</p>
 </a>
-
 <a class="landing-card" href="model-states/">
 <h3>Model States</h3>
-
-How generated data, validated data, operational states, and application-ready
-states are separated.
+<p>How generated data, validated data, operational states, and application-ready states are separated.</p>
 </a>
-
 <a class="landing-card" href="../semantic-layer/semantic-graph/">
 <h3>Semantic Graph</h3>
-
-North America-oriented ontology alignment for grid assets, buildings, DER,
-telemetry metadata, and flexibility operations.
+<p>North America-oriented ontology alignment for grid assets, buildings, DER, telemetry metadata, and flexibility operations.</p>
 </a>
-
 </div>
 
 ## Reading Order
