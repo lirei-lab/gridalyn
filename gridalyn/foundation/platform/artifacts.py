@@ -54,6 +54,16 @@ DEFAULT_FORBIDDEN_TRACKED_PATTERNS = (
     "*.npz",
 )
 
+# Paths that LOOK like generated artifacts but are shipped package data. The
+# blanket "*.pkl" above exists to keep run outputs out of the tree; the trained
+# macro weights are neither generated per run nor optional -- pyproject declares
+# them as package-data, and without them ParametricArxGenerator silently falls
+# back to the analytical model, so a clone reproduces the fixture baselines 5.6%
+# off. Shipping them is what makes the baselines mean anything.
+DEFAULT_ALLOWED_TRACKED_PATTERNS = (
+    "gridalyn/assets/datagen/models/weights/*.pkl",
+)
+
 DEFAULT_REQUIRED_GITIGNORE_PATTERNS = (
     "_build/",
     "/site",
@@ -94,6 +104,7 @@ class ArtifactPolicy:
     minimal_dataset: str = "examples/tutorials/data/minimal"
     max_demo_dataset_bytes: int = DEFAULT_MAX_DEMO_DATASET_BYTES
     forbidden_tracked_patterns: tuple[str, ...] = DEFAULT_FORBIDDEN_TRACKED_PATTERNS
+    allowed_tracked_patterns: tuple[str, ...] = DEFAULT_ALLOWED_TRACKED_PATTERNS
     required_gitignore_patterns: tuple[str, ...] = DEFAULT_REQUIRED_GITIGNORE_PATTERNS
     required_minimal_dataset_files: tuple[str, ...] = DEFAULT_MINIMAL_DATASET_FILES
 
@@ -183,6 +194,7 @@ def check_artifact_policy(
         path
         for path in tracked
         if _matches_any(path, artifact_policy.forbidden_tracked_patterns)
+        and not _matches_any(path, artifact_policy.allowed_tracked_patterns)
     ]
     errors.extend(f"forbidden generated artifact is tracked: {path}" for path in forbidden_tracked)
 
