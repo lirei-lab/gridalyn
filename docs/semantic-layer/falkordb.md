@@ -12,6 +12,7 @@ Here are the most powerful capabilities FalkorDB gives your `gridalyn` Digital T
 When a breaker opens or a line faults, you need to instantly know exactly which buildings lose power to update the API or UI.
 
 **Scenario:** A tree falls on `Feeder_Line_X`. What drops offline?
+
 ```cypher
 MATCH (switch:Breaker {name: "SW_22"})-[*1..15]->(b:Building)
 RETURN b.name, b.load_kw
@@ -25,6 +26,7 @@ RETURN b.name, b.load_kw
 If a primary feeder fails, operators look for "Tie-Switches" (normally open switches) to backfeed power from a neighboring substation. You can ask FalkorDB to find the optimal path to reconnect a stranded transformer.
 
 **Scenario:** Find the shortest backup path from `Substation_B` to the stranded `Transformer_MV1`.
+
 ```cypher
 MATCH p = shortestPath((sub:Substation {name: 'Substation_B'})-[*]-(t:Transformer {name: 'Trafo_MV1'}))
 RETURN p, length(p) AS hops
@@ -38,6 +40,7 @@ RETURN p, length(p) AS hops
 FalkorDB supports built-in advanced Graph Algorithms. You can identify the most "vulnerable" or "critical" pieces of infrastructure in your grid (bottleneck nodes).
 
 **Scenario:** Which transformer, if it fails, causes the most cascading damage across the network?
+
 ```cypher
 // Using standard betweenness centrality algorithms
 CALL algo.betweenness() YIELD nodeId, centrality
@@ -52,6 +55,7 @@ ORDER BY centrality DESC LIMIT 5
 Because FalkorDB represents properties natively, you can easily combine Spatial Data (clustering zones) with Electrical Data (Voltage, kW).
 
 **Scenario:** Find all heavily loaded transformers ($> 500$ kW) within a specific geographic cluster that have more than 50 downstream buildings attached.
+
 ```cypher
 MATCH (t:Transformer {cluster: "Zone_A"})
 WHERE t.load_kw > 500
