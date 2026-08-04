@@ -146,6 +146,12 @@ def main() -> None:
                               "loading_pct": loading_of(pk),
                               "violation": loading_of(pk) > C.LINE_LOADING_LIMIT_PCT})
 
+    # Coordinated loading with every agent responding (rho = 0): the headroom
+    # the schedule leaves before any communication failure is considered.
+    ideal_loading_pct = loading_of(
+        min(c["peak_kw"] for c in curves[METHODS[0]] if c["rho"] == 0.0)
+    )
+
     # Monte-Carlo P(violation) per method at the representative fraction
     rep = C.COMPARISON_REP_RHO
     n_down = int(round(rep * C.N_AGENTS))
@@ -195,7 +201,33 @@ def main() -> None:
             "methods": list(METHODS),
             "intrinsic_rmse_kw": {m: intrinsic[m]["rmse_kw"] for m in ESTIMATING_METHODS},
             "rep_rho": rep,
+            # Realized peak is the discriminating metric, and P(violation) is
+            # reported beside it as a saturated one -- see `violation_margin_pct`
+            # below. Methods separate cleanly on the peak they actually cause
+            # (~35 kW between the best imputer and no imputation) while every
+            # method exceeds the thermal limit, so a probability-of-violation
+            # table alone would read as "no method helps", which is false.
+            "realized_peak_kw_at_rep": {
+                m: mc[m]["realized_peak_kw_mean"] for m in METHODS
+            },
+            "realized_loading_pct_at_rep": {
+                m: mc[m]["realized_loading_pct_mean"] for m in METHODS
+            },
             "prob_violation_at_rep": {m: mc[m]["prob_violation"] for m in METHODS},
+            "violation_metric_saturated": all(
+                mc[m]["prob_violation"] >= 1.0 for m in METHODS
+            ),
+            # Headroom the coordinated schedule leaves when every agent responds.
+            # With the Québec all-electric calibration this is ~0.5 points, so
+            # any communication failure violates regardless of imputation. That
+            # is the finding, not a defect in the imputers.
+            "coordinated_headroom_pct": float(
+                C.TRANSFORMER_LOADING_LIMIT_PCT - ideal_loading_pct
+            ),
+            "peak_spread_kw": float(
+                max(mc[m]["realized_peak_kw_mean"] for m in METHODS)
+                - min(mc[m]["realized_peak_kw_mean"] for m in METHODS)
+            ),
         },
     )
     best = min(ESTIMATING_METHODS, key=lambda m: intrinsic[m]["rmse_kw"])

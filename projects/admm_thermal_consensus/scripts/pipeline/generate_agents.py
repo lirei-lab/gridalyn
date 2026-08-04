@@ -12,7 +12,6 @@ import pandas as pd
 ROOT = Path(__file__).parents[4]
 sys.path.insert(0, str(ROOT))
 
-from gridalyn.assets.datagen.core import GridLoadFacade
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
@@ -24,16 +23,47 @@ def main() -> None:
         download_tmy(source=C.WEATHER_SOURCE), duration_hours=C.DURATION_HOURS
     )
     temperature = window["temp_air"]
-    heat_kw, bg_kw = GridLoadFacade.generate_loads(
-        generator_type=C.GENERATOR,
-        df_weather=temperature,
-        n_houses=C.N_AGENTS,
-        resolution_minutes=C.RESOLUTION_MINUTES,
-        seed=C.SEED,
+    # The SDK agent is driven directly rather than through GridLoadFacade: the
+    # facade takes no calibration overrides and integrates at the output
+    # resolution, while the Québec operating point needs the envelope/capacity
+    # overrides and a 1-min integration (latching thermostats resolved at
+    # 15 min would smear their cycling into the very average they should break).
+    from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
+    from gridalyn.assets.datagen.agents.dhw import make_dhw_tank_fleet
+
+    minutely = temperature.resample("1min").interpolate()
+    buildings = make_buildings(C.N_AGENTS, seed=C.SEED)
+    for building in buildings:
+        building.R = C.R_STUDY_B
+        building.p_heat_max = C.P_HEAT_QUEBEC
+    results = simulate_buildings(
+        buildings, minutely, random_seed=C.SEED, control=C.HEATING_CONTROL
     )
-    # GridLoadFacade returns (T, N); store agents as rows (N, T)
-    heat = np.asarray(heat_kw).T[:, : C.N_STEPS]
-    bg = np.asarray(bg_kw).T[:, : C.N_STEPS]
+    step = f"{C.RESOLUTION_MINUTES}min"
+    heat = np.column_stack(
+        [results[u]["p_heat_kw"].resample(step).mean().to_numpy() for u in results]
+    ).T[:, : C.N_STEPS]
+    # The electric water-heater tank is NOT dispatchable here -- the coordinator
+    # schedules space heating only -- so it rides with the uncontrollable
+    # background, which is where its ~4.5 kW recovery peaks actually land.
+    background = np.column_stack(
+        [
+            C.BG_SCALE * results[u]["p_bg_kw"].resample(step).mean().to_numpy()
+            for u in results
+        ]
+    ).T[:, : C.N_STEPS]
+    dhw = np.column_stack(
+        [
+            make_dhw_tank_fleet(
+                np.random.default_rng(C.SEED + C.DHW_SEED_SALT + 1000 * i),
+                1,
+                temperature,
+                res_minutes=C.RESOLUTION_MINUTES,
+            )
+            for i in range(C.N_AGENTS)
+        ]
+    ).T[:, : C.N_STEPS]
+    bg = background + dhw[:, : background.shape[1]]
     temp = (
         temperature.resample(f"{C.RESOLUTION_MINUTES}min").mean().to_numpy()[: C.N_STEPS]
     )

@@ -5,27 +5,27 @@
   "project": "admm_thermal_consensus",
   "metrics": [
     {
-      "expected": 363.82534530628465,
+      "expected": 478.2381236244512,
       "id": "summary.coordinated_ideal_peak_kw",
       "json_path": [
         "summary",
         "coordinated_ideal_peak_kw"
       ],
       "source": "outputs/reports/admm_report.json",
-      "tolerance": 0.36382534530628463
+      "tolerance": 0.47823812362445123
     },
     {
-      "expected": 401.5542494535472,
+      "expected": 572.2238985502208,
       "id": "summary.uncoordinated_peak_kw",
       "json_path": [
         "summary",
         "uncoordinated_peak_kw"
       ],
       "source": "outputs/reports/admm_report.json",
-      "tolerance": 0.4015542494535472
+      "tolerance": 0.5722238985502208
     },
     {
-      "expected": 0.09395717813621873,
+      "expected": 0.1642465041461757,
       "id": "summary.ideal_peak_reduction_fraction",
       "json_path": [
         "summary",
@@ -35,27 +35,27 @@
       "tolerance": 0.001
     },
     {
-      "expected": 1.0044400289790483,
+      "expected": 1.0053398541972487,
       "id": "summary.ideal_par",
       "json_path": [
         "summary",
         "ideal_par"
       ],
       "source": "outputs/reports/admm_report.json",
-      "tolerance": 0.0010044400289790482
+      "tolerance": 0.0010053398541972488
     },
     {
-      "expected": 1.1086010558671595,
+      "expected": 1.2029143272325424,
       "id": "summary.uncoordinated_par",
       "json_path": [
         "summary",
         "uncoordinated_par"
       ],
       "source": "outputs/reports/admm_report.json",
-      "tolerance": 0.0011086010558671595
+      "tolerance": 0.0012029143272325425
     },
     {
-      "expected": 0.966611945214959,
+      "expected": 0.9616694635233888,
       "id": "summary.ideal_worst_min_voltage_pu",
       "json_path": [
         "summary",
@@ -65,17 +65,17 @@
       "tolerance": 0.001
     },
     {
-      "expected": 98.96687753436491,
+      "expected": 104.48451217611823,
       "id": "summary.ideal_worst_transformer_loading_pct",
       "json_path": [
         "summary",
         "ideal_worst_transformer_loading_pct"
       ],
       "source": "outputs/reports/powerflow_report.json",
-      "tolerance": 0.09896687753436491
+      "tolerance": 0.10448451217611823
     },
     {
-      "expected": 0.9629545581614045,
+      "expected": 0.9536273395773512,
       "id": "summary.uncoordinated_worst_min_voltage_pu",
       "json_path": [
         "summary",
@@ -85,24 +85,24 @@
       "tolerance": 0.001
     },
     {
-      "expected": 0.30408137945969693,
+      "expected": 2.2058047349412813,
       "id": "summary.cv_rmse_kw_mean",
       "json_path": [
         "summary",
         "cv_rmse_kw_mean"
       ],
       "source": "outputs/reports/forecast_report.json",
-      "tolerance": 0.001
+      "tolerance": 0.0022058047349412815
     },
     {
-      "expected": 0.2547038326162355,
+      "expected": 1.8934461285635014,
       "id": "summary.cv_mae_kw_mean",
       "json_path": [
         "summary",
         "cv_mae_kw_mean"
       ],
       "source": "outputs/reports/forecast_report.json",
-      "tolerance": 0.001
+      "tolerance": 0.0018934461285635014
     },
     {
       "expected": 14,
@@ -113,6 +113,26 @@
       ],
       "source": "outputs/reports/study_report.json",
       "tolerance": 0
+    },
+    {
+      "expected": 35.925998272485856,
+      "id": "summary.peak_spread_kw",
+      "json_path": [
+        "summary",
+        "peak_spread_kw"
+      ],
+      "source": "outputs/reports/imputer_comparison_report.json",
+      "tolerance": 0.035925998272485854
+    },
+    {
+      "expected": 0.515401334883336,
+      "id": "summary.coordinated_headroom_pct",
+      "json_path": [
+        "summary",
+        "coordinated_headroom_pct"
+      ],
+      "source": "outputs/reports/imputer_comparison_report.json",
+      "tolerance": 0.001
     }
   ]
 }
