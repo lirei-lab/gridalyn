@@ -4,8 +4,16 @@
 scenario workflows, flexibility-market analysis, semantic graph exports, and
 traceable reports.**
 
+[![Documentation](https://img.shields.io/badge/docs-lirei.ca%2Fgridalyn-2f6f4e)](https://lirei.ca/gridalyn/)
+[![CI](https://github.com/lirei-lab/gridalyn/actions/workflows/ci.yml/badge.svg)](https://github.com/lirei-lab/gridalyn/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue)](https://www.python.org/)
+
+📖 **[Documentation](https://lirei.ca/gridalyn/)** ·
+[Quickstart](https://lirei.ca/gridalyn/getting-started/quickstart/) ·
+[Projects](https://lirei.ca/gridalyn/projects/overview/) ·
+[Python SDK](https://lirei.ca/gridalyn/sdk/overview/) ·
+[Contributing](CONTRIBUTING.md)
 
 Gridalyn is built for two audiences at once:
 

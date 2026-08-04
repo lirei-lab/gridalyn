@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://lirei.ca/gridalyn/
+    about: Quickstart, the project contract, the SDK surface and the operations model.
+  - name: Reporting a vulnerability
+    url: https://github.com/lirei-lab/gridalyn/blob/main/SECURITY.md
+    about: Please report security issues privately rather than in a public issue.
