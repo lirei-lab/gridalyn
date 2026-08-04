@@ -173,6 +173,13 @@ projects/*/outputs/
 # Gridalyn generated digital twin artifacts
 instances/*/digital_twin/**/*.parquet
 instances/*/digital_twin/**/*.pkl
+# ...except the packaged macro weights. pyproject declares them as package-data,
+# so shipping them was always the intent; the blanket *.pkl rule above silently
+# defeated it. Without them ParametricArxGenerator falls back to the analytical
+# macro model and every generated profile differs -- the fixture baselines were
+# built WITH the weights and a fresh clone reproduced them 5.6% off on daily
+# energy, which is the opposite of what a regression baseline is for.
+!gridalyn/assets/datagen/models/weights/*.pkl
 instances/*/digital_twin/**/*.npy
 instances/*/digital_twin/**/*.npz
 instances/*/digital_twin/timeseries/
