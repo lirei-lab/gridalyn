@@ -1,6 +1,7 @@
 {
   "metric_tolerance": {
-    "absolute": 1e-06
+    "absolute": 1e-06,
+    "note": "Float pins carry a 1e-5 relative tolerance because they are derived from a power-flow solve, which is not bit-reproducible across BLAS builds and solver versions: the same commit drifts ~2e-6 relative between a developer machine and a GitHub runner. At 1e-6 absolute the fixtures passed locally and failed in CI. 1e-5 still catches any modelling change, which moves these values by percent, not by parts per million."
   },
   "metrics": [
     {

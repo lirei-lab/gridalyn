@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 from gridalyn.projects import project_sense_check
@@ -18,6 +19,17 @@ PROJECTS = [
 ]
 
 
+# A sense check reads a project's emitted reports, and `outputs/` is not
+# committed. In CI the unit-test job runs without having executed anything, so
+# these skip there; the dedicated `projects` job runs all six studies end to end
+# and verifies their baselines, which is where this is really gated.
+_OUTPUTS_PRESENT = all(
+    (Path("projects") / name / "outputs" / "reports").is_dir() for name in PROJECTS
+)
+_SKIP_REASON = "project outputs absent; run the studies first (CI: `projects` job)"
+
+
+@pytest.mark.skipif(not _OUTPUTS_PRESENT, reason=_SKIP_REASON)
 def test_project_sense_checks_pass_for_all_demo_projects() -> None:
     for project_name in PROJECTS:
         report = project_sense_check(Path("projects") / project_name, write=True)
@@ -31,6 +43,7 @@ def test_project_sense_checks_pass_for_all_demo_projects() -> None:
         assert (Path("projects") / project_name / "outputs" / "reports" / "project_sense_check_report.json").exists()
 
 
+@pytest.mark.skipif(not _OUTPUTS_PRESENT, reason=_SKIP_REASON)
 def test_project_sense_check_report_flags_objective_specific_regressions(tmp_path) -> None:
     project_root = Path("projects/rl_voltage_control_lightsim")
     report_path = project_root / "outputs" / "reports" / "rl_voltage_control_report.json"

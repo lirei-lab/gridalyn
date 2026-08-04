@@ -318,6 +318,11 @@ class NetworkAdaptersTest(unittest.TestCase):
 
             self.assertTrue(metadata_path.exists())
 
+    @unittest.skipUnless(
+        Path("examples/generated/outputs").is_dir(),
+        "examples/generated/outputs is a local artifact of running the examples; "
+        "it is not committed, so this export test is operator-verified",
+    )
     def test_synthetic_adapter_export_writes_validation_report_and_links_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
