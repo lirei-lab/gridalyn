@@ -154,7 +154,7 @@ a.md-button.md-button--primary:hover {
   border-radius: 0.65rem;
   background:
     linear-gradient(90deg, rgb(var(--gridalyn-navy-deep-rgb) / 0.96), rgb(var(--gridalyn-navy-deep-rgb) / 0.84)),
-    url("../assets/micro-grid.png") center right / cover no-repeat;
+    url("../assets/feeder-hero.png") center right / cover no-repeat;
   color: #fff;
 }
 
@@ -469,7 +469,7 @@ a.landing-card:hover {
     padding: 1.45rem;
     background:
       linear-gradient(180deg, rgb(var(--gridalyn-navy-deep-rgb) / 0.96), rgb(var(--gridalyn-navy-deep-rgb) / 0.86)),
-      url("../assets/micro-grid.png") center / cover no-repeat;
+      url("../assets/feeder-hero.png") right center / cover no-repeat;
   }
 
   .home-grid,
