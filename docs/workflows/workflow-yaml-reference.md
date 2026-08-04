@@ -14,15 +14,32 @@ metadata:
   version: 0.1.0
   description: Minimal Gridalyn project.
 spec:
-  pathBase: repo
+  pathBase: project
+  problem:
+    type: powerflow_validation
+    dataset: five_bus_teaching_feeder
+    environment: pandapower_powerflow
+    objective: Validate the smallest reproducible project contract.
+    model:
+      type: simulation_model
+      name: pandapower
+    scenarios:
+      - id: baseline
+        role: deterministic_baseline
+        description: Five-bus feeder with fixed loads.
   inputs: {}
   artifacts: {}
   workflow:
-    file: projects/minimal_grid_project/workflow.yaml
+    file: workflow.yaml
   validation:
     requiredReports: []
     requiredFigures: []
 ```
+
+`spec.problem` is **required** — the schema demands it and the loader reads it
+unguarded, so an example without it produces a project that cannot load. The
+example above is modelled on the real `projects/minimal_grid_project/project.yaml`
+and validates.
 
 ### Fields
 
@@ -31,7 +48,7 @@ spec:
 | `apiVersion` | yes | Version of the Gridalyn project resource schema. |
 | `kind` | yes | Must be `StudyProject`. |
 | `metadata.name` | yes | Stable project identifier. |
-| `metadata.version` | recommended | Project contract version. |
+| `metadata.version` | required | Project contract version. |
 | `spec.pathBase` | recommended | `repo` resolves paths from repository root; default behavior may resolve from the project folder. |
 | `spec.inputs` | yes | Raw geography, grid configuration, external datasets, and assumptions. |
 | `spec.artifacts` | yes | Canonical artifact locations. |

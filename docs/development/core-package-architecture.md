@@ -40,9 +40,9 @@ rules.
 | `foundation` | `platform`, `data` |
 | `twin` | `network`, `adapters`, `core`, `io`, `semantic`, `db`, `geoprocess` |
 | `assets` | `modeling`, `datagen` |
-| `simulation` | `simulators`, `analytics` |
-| `operations` | `flexibility`, `market`, operation-run contracts |
-| `projects` | project manifest loader/runner, `workflows` |
+| `simulation` | `simulators`, `analytics`, `control`, `environments` |
+| `operations` | `clearing`, settlement, verification, operation-run contracts |
+| `projects` | project manifest loader/runner, `workflows`, `schemas` |
 | `interfaces` | `cli`, `reporting`, `viz` |
 
 Further moves should happen only when they reduce ambiguity for users or give

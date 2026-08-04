@@ -122,7 +122,8 @@ uv run gridalyn project run projects/ev_hosting_flex
 uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
-That study also exercises the flexibility market API end to end. It is
+That study also exercises the locational clearing API — provider registry,
+constraint events and contract selection. It is
 long-running (tens of minutes) and is verified by an operator rather than in
 CI.
 
@@ -136,7 +137,7 @@ CI.
 | [Core Concepts](concepts/overview.md) | Durable vocabulary for network models, artifacts, scenarios, states, and semantics. |
 | [SDK](sdk/overview.md) | Public Python surfaces for models, adapters, simulation, operations, reporting, and semantics. |
 | [Operations](platform/operations.md) | Flexibility providers, market clearing, dispatch, settlement, verification, and KPIs. |
-| [Demos](projects/overview.md) | Executable projects that demonstrate platform capabilities at different levels of complexity. |
+| [Projects](projects/overview.md) | Executable projects that demonstrate platform capabilities at different levels of complexity. |
 | [Reference](reference/overview.md) | CLI, YAML, report schemas, semantic graph, artifact policy, and validation rules. |
 | [Development](development/overview.md) | Repository structure, contribution workflow, testing, release readiness, and AI-agent guidance. |
 

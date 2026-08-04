@@ -195,7 +195,7 @@ This layer answers the physical question: what happens to the grid?
 - `gridalyn.simulation`
 - `gridalyn.simulation.simulators`
 - `gridalyn.simulation.analytics.network_impact`
-- `projects/*/outputs/json/pandapower_validation.json`
+- `projects/*/outputs/reports/<stage>_report.json`
 - `instances/default/digital_twin/flexibility/network_impact_*`
 
 **Design rule:** market logic may use fast estimates, but final operational
@@ -224,10 +224,10 @@ the twin and asset models into decisions.
 **Current Gridalyn surface:**
 
 - `gridalyn.operations`
-- `gridalyn.operations`
+- `gridalyn.operations.clearing`
 - `instances/default/digital_twin/flexibility`
-- `projects/*/outputs/json/ev_summary_results.json`
-- `projects/*/outputs/reports/stage_4_realtime_dispatch_report.json`
+- `projects/*/outputs/reports/<stage>_report.json`
+- `projects/*/outputs/reports/<stage>_report.json`
 
 **Design rule:** an aggregator is not just a price curve. It is a portfolio of
 providers with spatial location, network sensitivities, delivery risk, and

@@ -20,6 +20,7 @@ larger flexibility workflow only when you want an end-to-end operations example.
 | `projects/der_voltage_optimization` | Demonstrates CVXPY plus pandapower verification. |
 | `projects/rl_voltage_control_lightsim` | Demonstrates a Gridalyn voltage-control environment backed by LightSim2Grid. |
 | `projects/ev_hosting_flex` | EV hosting capacity and flexibility on a Québec all-electric feeder. |
+| `projects/admm_thermal_consensus` | Distributed ADMM coordination of cold-climate electric heating, on a 500 kVA LV feeder. |
 
 ## Common Commands
 
@@ -98,8 +99,9 @@ The EV Hosting Flexibility project is a comprehensive research arc. It starts
 from project-declared inputs, builds a synthetic topology cache, generates
 stochastic building and EV profiles, computes dynamic thermal limits, clears
 locational flexibility contracts, validates selected actions with pandapower,
-writes figures, materializes operation artifacts, and produces canonical
-reports.
+writes figures and materializes operation artifacts. Its final
+`build_study_reports` stage is still a stub — the canonical study report is
+pending.
 
 Run it only when you need the full stack:
 

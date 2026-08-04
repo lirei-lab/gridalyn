@@ -149,9 +149,9 @@ Pick one path based on what you need to prove:
 | Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](https://github.com/lirei-lab/gridalyn/tree/main/projects/rl_voltage_control_lightsim) |
 | Larger operations workflow | `uv run gridalyn project verify projects/ev_hosting_flex` | [Run Demo Projects](run-demo-projects.md) |
 
-The larger EV hosting flexibility workflow is useful as an end-to-end stress test for
-operations, clearing, dispatch, settlement, reports, and figures. Run it when
-you need the full operations stack, not as the first proof that Gridalyn works.
+The larger EV hosting flexibility workflow is useful as an end-to-end stress
+test for locational clearing, operation artifacts and figures. Run it when you
+need the full arc, not as the first proof that Gridalyn works.
 
 ## 6. Validate Code And Documentation
 

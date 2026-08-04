@@ -23,10 +23,10 @@ folders.
 | --- | --- |
 | Start | Step-by-step commands for installing, running, viewing, and reproducing. |
 | Platform | Product identity, architecture, digital twin core, application surfaces, roadmap. |
-| Core Concepts | Durable vocabulary for network models, scenarios, states, artifacts, and semantic relationships. |
+| Platform | Durable vocabulary for network models, scenarios, states, artifacts, and semantic relationships. |
 | SDK | Python package surfaces and reusable development interfaces. |
 | Operations | Flexibility and utility operations: providers, clearing, dispatch, validation, KPIs. |
-| Demos | Executable project examples plus the project/workflow contract. |
+| Projects | Executable project examples plus the project/workflow contract. |
 | Reference | Commands, schemas, semantic graph, artifact rules, and validation. |
 | Development | Repository structure, contribution workflow, tests, release checks, and AI-agent guidance. |
 
@@ -65,11 +65,17 @@ another facade.
 
 ```bash
 uv run gridalyn platform check-artifacts --summary-only
-uv run gridalyn project validate projects/ev_hosting_flex --check-artifacts
-uv run gridalyn project verify projects/ev_hosting_flex
-uv run gridalyn project regression projects/ev_hosting_flex
+uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
+uv run gridalyn project run projects/minimal_grid_project
+uv run gridalyn project verify projects/minimal_grid_project
+uv run gridalyn project regression projects/minimal_grid_project
 uv run --with pytest python -m pytest -q
 uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 If one command fails, fix that layer before moving to the next command.
+
+The ladder uses `minimal_grid_project` because it runs in seconds. `verify` and
+`regression` read a project's emitted reports, and `outputs/` is not committed —
+so they fail on a fresh clone until that project has been run. Substituting a
+research study here means budgeting tens of minutes for the `run` step.

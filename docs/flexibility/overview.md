@@ -65,13 +65,12 @@ instructions and verification evidence.
 | Contract | Meaning |
 | --- | --- |
 | `NetworkConstraint` | A grid condition that requires action, such as overload, voltage violation, hosting limit, or operator-defined margin. |
-| `Provider` | A controllable resource or portfolio participant with location, capacity, availability, and role metadata. |
-| `Offer` | A market-facing quantity/price/quality statement from a provider or aggregator. |
-| `ControlCandidate` | A control-facing setpoint, envelope, or action alternative. |
+| _provider registry rows_ | Controllable resources are carried as registry rows from `build_provider_registry`, not as a class. |
+| `FlexibilityOffer` | A market-facing quantity/price/quality statement from a provider or aggregator. |
 | `DispatchInstruction` | The selected action to execute or replay. |
 | `OperationRun` | Audit object linking model version, method, scenario, inputs, outputs, validation, and status. |
 | `SettlementRecord` | Financial or contractual evidence of delivery, payment, penalty, or obligation. |
-| `OperationalKPIReport` | Mechanism-level performance summary. |
+| `build_operational_kpi_report` | Function producing the mechanism-level performance summary. |
 
 ## Literature-Informed Design Direction
 

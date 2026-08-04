@@ -58,12 +58,10 @@ All should still produce traceable operation records.
 | Object | Meaning |
 | --- | --- |
 | `NetworkConstraint` | A voltage, thermal, topology, reliability, or operator-defined limit requiring action. |
-| `FlexibilityProvider` | A controllable resource or group of resources that can change injection, demand, or operating envelope. |
+| `FlexibilityOffer` | Quantity, price, availability and location metadata submitted to a mechanism, demand, or operating envelope. |
 | `AggregatorPortfolio` | A commercial or logical grouping of providers under one market/control participant. |
-| `Offer` | Quantity, price, availability, quality, and location metadata submitted to a mechanism. |
-| `ClearingResult` | Accepted offers, prices, residual shortfall, and rule metadata. |
+| _(provider registry)_ | Controllable resources are carried as registry rows, not as a class,. |
 | `DispatchInstruction` | Provider-level action: setpoint, cap, curtailment, storage charge/discharge, or availability request. |
-| `DeliveryRecord` | Measured or simulated delivery against the dispatch instruction. |
 | `SettlementRecord` | Payment, penalty, obligation, and counterparty evidence. |
 | `OperationRun` | Durable audit object linking model version, scenario, inputs, outputs, method, status, and validation. |
 
@@ -120,13 +118,17 @@ Today Gridalyn has reusable building blocks for:
 - synthetic topology-cache manifests and building-footprint validation reports.
 
 The larger `projects/ev_hosting_flex` workflow is one stress test of those
-contracts. Its project scripts now mostly bind project paths and constants to
-native SDK utilities such as `build_congestion_forecast`,
-`run_cls_capacity_allocation`, `prepare_cls_market_replay_context`,
-`validate_cls_output_consistency`,
-`validate_transformer_peak_scenarios`, and
-`materialize_flexibility_operation_artifacts`; they should be read as
+contracts. Its stage scripts bind project paths and constants to SDK entry
+points -- `materialize_flexibility_operation_artifacts` and the locational
+clearing chain in `gridalyn.operations.clearing` -- and should be read as
 orchestration wrappers, not as the definition of the operations layer.
+
+The CLS primitives `build_congestion_forecast`, `run_cls_capacity_allocation`,
+`prepare_cls_market_replay_context`, `validate_cls_output_consistency` and
+`validate_transformer_peak_scenarios` are part of the SDK surface but are
+currently exercised only by `tests/test_flexibility_platform_extraction.py`.
+They were extracted from a study that has since been retired, and no surviving
+project calls them.
 
 ## What To Read Next
 

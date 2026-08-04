@@ -21,14 +21,24 @@ single demo's internal structure.
 Use this direction when deciding where new code belongs:
 
 ```text
-projects -> interfaces / SDK modules
-interfaces -> foundation + twin + assets + simulation + operations + projects
-operations -> foundation + twin
+projects   -> foundation + twin + assets + simulation + operations + interfaces
+interfaces -> foundation + twin + projects
+operations -> foundation + assets + simulation
 simulation -> foundation + twin + assets
-assets -> foundation
-twin -> foundation
+assets     -> foundation + twin
+twin       -> foundation
 foundation -> standard library and external primitives only
 ```
+
+This is the graph the code actually forms, measured by walking every import in
+`gridalyn/`. Two entries used to be stated more narrowly than reality: `assets`
+does import `twin` (`assets/modeling/artifacts.py`), and `operations` imports
+`assets` and `simulation` while never importing `twin` at all.
+
+What is *enforced* is narrower still: `tests/test_project_hygiene.py`
+`test_core_layers_do_not_import_orchestration_layers` bans upward imports only —
+no core layer may import `projects` or `interfaces`, and `foundation` may import
+no layer. The sideways edges above are description, not rule.
 
 The important rule is that new reusable code should move toward this graph.
 Project scripts may compose all SDK modules, but SDK modules should not import

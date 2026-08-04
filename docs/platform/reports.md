@@ -32,13 +32,17 @@ projects/<project>/outputs/reports/
 
 Common project report files include:
 
-- `study_run_manifest.json`;
-- `stage_1_stochastic_load_report.json`;
-- `stage_2_thermal_forecast_report.json`;
-- `stage_3_market_clearing_report.json`;
-- `stage_4_realtime_dispatch_report.json`;
-- `stage_5_settlement_report.json`;
-- `output_consistency_report.json`.
+- `study_run_manifest.json` -- always, one per run;
+- one report per artifact-producing stage, named after the stage. In
+  `ev_hosting_flex` these are `annual_mc_report.json`,
+  `annual_congestion_report.json`, `curtailment_contracts_report.json`,
+  `curtailment_economics_report.json`, `fleet_triage_report.json`,
+  `cold_coupling_report.json`, `credibility_report.json`,
+  `powerflow_validation_report.json` and their siblings.
+
+The filenames are not fixed by the platform -- the contract fixes the report
+*shape*, and each stage names its own. Read a project's `outputs/reports/`
+directory for the set it actually emits.
 
 Digital twin canonical reports live under:
 
@@ -79,7 +83,7 @@ The resulting JSON follows this shape:
 
 ```json
 {
-  "report_id": "stage_4_realtime_dispatch",
+  "report_id": "annual_mc_report",
   "schema_version": "1.0",
   "created_at": "2026-05-10T00:00:00Z",
   "source_domain": "ev_hosting_flex",
@@ -87,7 +91,8 @@ The resulting JSON follows this shape:
   "inputs": [],
   "artifacts": [],
   "summary": {},
-  "validation": {}
+  "validation": {},
+  "governance": {}
 }
 ```
 
@@ -107,7 +112,7 @@ from gridalyn.foundation import write_manifest
 
 write_manifest(
     "projects/my_case/outputs/manifests/report_manifest.json",
-    reports=[stage_1_report, stage_2_report],
+    reports=[first_report, second_report],
     root="projects/my_case",
     report_paths={
         "stage_1": "projects/my_case/outputs/reports/stage_1.json",

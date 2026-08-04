@@ -148,6 +148,7 @@ projects/
     workflow.yaml
     scripts/
     outputs/
+  admm_thermal_consensus/
 
 instances/default/digital_twin/
   base/
@@ -274,17 +275,17 @@ network-impact analytics, and market mechanics behind stable contracts.
 
 **Status:**
 
-- `gridalyn.operations.flexibility` provides the first validated operation
+- `gridalyn.operations` provides the first validated operation
   facade.
 - `gridalyn.operations` exports the flexibility operation facade for
   applications and future service APIs; `foundation` remains focused on
   governance, reports, workspace, and artifact contracts.
-- Existing `gridalyn.operations.locational_clearing` remains the clearing engine;
+- Existing `gridalyn.operations.clearing` remains the clearing engine;
   the operation layer wraps it with governance and validation.
 - The same layer now exposes `AggregatorPortfolio`, `FlexibilityOffer`,
   `DispatchInstruction`, and `SettlementRecord` tabular contracts.
 - It also exposes `NetworkConstraint` normalization and
-  `OperationalKPIReport` generation for mechanism-intelligence metrics.
+  `build_operational_kpi_report` generation for mechanism-intelligence metrics.
 
 ### Phase 3: Asset And Flexibility Modeling Contracts
 

@@ -79,9 +79,12 @@ Current Compose mounts:
 
 ```text
 instances/default/digital_twin/
-projects/ev_hosting_flex/outputs/
-projects/ieee_33_bus_demo/outputs/
+projects/                      # the whole tree, read-only
 ```
+
+The projects tree is mounted whole on purpose: mounting one project per line
+meant that pointing the dashboard at a different study required editing the
+compose file, while the dev server already served all of them.
 
 ## Optional Operations Inputs
 
@@ -163,7 +166,7 @@ After compose deployment:
 
 ```bash
 curl -I http://localhost:8081/
-curl -s http://localhost:8081/data/scenarios/scenario_index.json
+curl -s http://localhost:8081/instances/default/digital_twin/scenarios/index.json
 ```
 
 If a dashboard change touches scenario discovery or semantic metadata, test both

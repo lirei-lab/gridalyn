@@ -46,8 +46,8 @@ reproducing a published result.
 > (`lightsim2grid`) and `ops` (`cvxpy`, `lightgbm`) capabilities uninstalled —
 > `gridalyn doctor` then reports `cvxpy=false`, `lightgbm=false`,
 > `lightsim2grid=false`. The `ev_hosting_flex` study **silently degrades** onto
-> fallback code paths (still exit 0) and **moves 51/74 regression metrics**
-> (only 23/74 valid). The `sim` + `ops` extras are required to reproduce the
+> fallback code paths (still exit 0) and moves most of the **81** regression
+> metrics. The `sim` + `ops` extras are required to reproduce the
 > committed baseline; `dev` provides `pytest` for the determinism leg. This is a
 > D-07 pinning/recipe correction (the install recipe was the defect) — **not** a
 > re-baseline and **not** a tolerance change.
@@ -55,7 +55,7 @@ reproducing a published result.
 ### Stage `uv run` invocation (no mid-run re-resolve)
 
 The `ev_hosting_flex` workflow runs each stage as a separate `uv run python ...`
-subprocess. To stop any of those 25 stage commands from re-resolving the
+subprocess. To stop any of those 20 stage commands from re-resolving the
 environment mid-run, run the whole workflow inside the already-frozen
 environment so each stage `uv run` no-ops against the same interpreter and lock:
 
@@ -81,7 +81,7 @@ must reproduce bit-for-bit.
 #    The citable ev_hosting_flex numbers depend on the optional `sim`
 #    (lightsim2grid) and `ops` (cvxpy, lightgbm) capabilities; `dev` provides
 #    pytest for the determinism leg below. A bare `uv sync --frozen` installs
-#    base deps only — the study then silently degrades and moves 51/74 metrics
+#    base deps only — the study then silently degrades and moves most of the 81 metrics
 #    (see the D-07 note above and the doctor check on the next line).
 rm -rf .venv
 uv sync --frozen --extra sim --extra ops --extra dev

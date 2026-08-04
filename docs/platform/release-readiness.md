@@ -28,7 +28,7 @@ capabilities. None of them is the platform boundary.
 | Network model | Repository API over generated `instances/default/digital_twin/base` Parquet artifacts, with endpoint and connectivity validation. |
 | Adapters | Synthetic pandapower adapter and CIM-like Parquet adapter with descriptor metadata. |
 | Project workflows | `project.yaml` and `workflow.yaml` contracts using `apiVersion`, `kind`, `metadata`, and `spec`. |
-| Demo workflows | `projects/*` cover minimal grids, benchmark feeders, GeoJSON synthesis, prosumer markets, DER optimization, RL voltage control, and flexibility operations. |
+| Demo workflows | `projects/*` cover minimal grids, benchmark feeders, GeoJSON synthesis, prosumer markets, DER optimization, RL voltage control, and flexibility operations., plus the ev_hosting_flex and admm_thermal_consensus research studies. |
 | Semantic layer | North America profile using CIM, ASHRAE 223/Brick, OpenADR, IEEE 2030.5, EFOnt, and local CLS extensions. |
 | Reports | Canonical JSON manifests and validation reports with lineage and artifact checks. |
 | Dashboard integration | Dashboard catalog metadata can consume project, digital twin, semantic, and network-impact outputs. |

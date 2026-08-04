@@ -155,7 +155,7 @@ succeeds. Two caveats worth knowing:
 - The tree does **not** currently pass `flake8` in full. CI lints only the files
   a pull request changes, so match the conventions of the code around you rather
   than assuming a clean baseline.
-- `mypy` runs in local pre-commit but is **skipped in CI** for speed. Do not
+`mypy` runs in pre-commit, and the CI `lint` job runs the full pre-commit hook set on pull-request-changed files -- so mypy does run in CI. The `ci: skip: []` key in `.pre-commit-config.yaml` is read by pre-commit.ci, not by GitHub Actions.
   rely on CI to catch type errors.
 
 ## Commit Hygiene

@@ -21,16 +21,16 @@ facade — see [Stable Facade](public-contract.md#stable-facade)).
 
 | Symbol | Kind | Owning module |
 | --- | --- | --- |
-| `run_flexibility_clearing_operation` | function (entry point) | `clearing/clearing.py` |
-| `build_operation_context` | function (constructor) | `clearing/contracts.py` |
-| `validate_flexibility_operation_inputs` | function (validator) | `clearing/contracts.py` |
-| `FlexibilityOffer` | frozen dataclass | `clearing/domain.py` |
-| `AggregatorPortfolio` | frozen dataclass | `clearing/domain.py` |
-| `DispatchInstruction` | frozen dataclass | `clearing/domain.py` |
-| `SettlementRecord` | frozen dataclass | `clearing/domain.py` |
-| `NetworkConstraint` | frozen dataclass | `clearing/constraints.py` |
-| `FlexibilityOperationContext` | frozen dataclass | `clearing/contracts.py` |
-| `FlexibilityOperationValidation` | frozen dataclass | `clearing/contracts.py` |
+| `run_flexibility_clearing_operation` | function (entry point) | `clearing/selection.py` |
+| `build_operation_context` | function (constructor) | `contracts.py` |
+| `validate_flexibility_operation_inputs` | function (validator) | `contracts.py` |
+| `FlexibilityOffer` | frozen dataclass | `domain.py` |
+| `AggregatorPortfolio` | frozen dataclass | `domain.py` |
+| `DispatchInstruction` | frozen dataclass | `domain.py` |
+| `SettlementRecord` | frozen dataclass | `domain.py` |
+| `NetworkConstraint` | frozen dataclass | `constraints.py` |
+| `FlexibilityOperationContext` | frozen dataclass | `contracts.py` |
+| `FlexibilityOperationValidation` | frozen dataclass | `contracts.py` |
 
 The seven frozen dataclasses are guaranteed to be `@dataclass(frozen=True)` and
 to keep their core identifying fields. Field sets may grow in later phases (a
@@ -113,7 +113,7 @@ not SDK public API, and must not be imported from `gridalyn.operations`.
 
 ## Internal / Provisional (Not Frozen)
 
-The `operations/market/*` builders (e.g. `build_locational_clearing`,
+The `gridalyn.operations` (see `clearing/selection.py`, `settlement.py`, `verification.py`, `clearing/allocation.py`) builders (e.g. `build_locational_clearing`,
 `build_provider_registry`, `build_flexibility_clearing_scorecard`,
 `build_locational_clearing_verification_report`, `apply_spatial_cls`, and the
 related scorecard / verification / spatial helpers) are **interior and
@@ -125,9 +125,7 @@ them as a stable surface — reach the clearing path only through
 ## Determinism Promises
 
 The canonical clearing contract **promises** a deterministic, unique clearing
-result. These guarantees are a **future obligation** of the contract, **to be
-enforced in Phase 3 (CLEAR-03)** — they are recorded here as part of the public
-surface but are **not yet enforced** in the current implementation:
+result, and these guarantees are **enforced** — CLEAR-03 landed in Phase 3:
 
 - a **total sort with an explicit tie-break** so provider selection ordering is
   unique and reproducible;
@@ -135,10 +133,8 @@ surface but are **not yet enforced** in the current implementation:
 - a **pinned solver with pinned tolerances** so numerical results are stable
   across runs and environments.
 
-Until CLEAR-03 lands, do not rely on the implementation being deterministic. The
-forward marker for this obligation is the `xfail` placeholder
-`test_clearing_is_deterministic` in `tests/test_operations_contract.py`, which
-Phase 3 will turn green.
+`test_clearing_is_deterministic` in `tests/test_operations_contract.py` asserts
+this and passes; it is no longer an `xfail` placeholder.
 
 ## See Also
 

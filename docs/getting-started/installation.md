@@ -1,6 +1,6 @@
 # Installation
 
-This repository is a Python and TypeScript workspace for Gridalyn: the core
+This repository is a Python workspace with a JavaScript dashboard for Gridalyn: the core
 digital-twin SDK, governed project workflows, semantic graph exports, canonical
 reports, and the dashboard. Use the `gridalyn` CLI for all local workflows.
 

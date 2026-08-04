@@ -67,7 +67,7 @@ flowchart LR
 | Flexibility provider layer | Network-aware Soft/Hard CLS provider registry and sensitivity | `instances/default/digital_twin/flexibility/*` |
 | Network impact surrogate | GNN-ready graph/features and fast provider impact predictions | `network_impact_*.parquet`, `network_graph_*.parquet` |
 | Semantic graph | North America ontology-aligned relationship index | `instances/default/digital_twin/semantic/*` |
-| Project layer | Public reproducibility contract for executable case projects | `projects/*`, including minimal, IEEE 33-bus, GeoJSON, DER, market, RL, and flexibility demos |
+| Project layer | Public reproducibility contract for executable case projects | `projects/*`, including minimal, IEEE 33-bus, GeoJSON, DER, market and RL fixtures, plus the ev_hosting_flex and admm_thermal_consensus research studies |
 | Reports | Canonical JSON summaries with input hashes | `instances/default/digital_twin/reports/canonical`, `projects/*/outputs/reports` |
 | Dashboard | Static browser visualization served by Nginx | `dashboard/` |
 
