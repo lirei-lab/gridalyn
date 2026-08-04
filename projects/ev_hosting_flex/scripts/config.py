@@ -952,6 +952,22 @@ diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
 # TRANSFORMER_KVA, POWER_FACTOR, TMY_INPUT_PATH, CHARGER_MIX, CAPEX_UPGRADE,
 # DISCOUNT_RATE, LIFE_YEARS (do NOT redefine them).
 
+# ─── Heating controller ────────────────────────────────────────────────
+# Per-zone latching thermostats (SDK ``control="hysteresis"``). The historical
+# "proportional" law glides where a real dwelling steps, so its homes arrive
+# pre-diversified and an aggregate of a FEW of them comes out too smooth --
+# which is exactly the regime this study works in (6-home pole transformers).
+#
+# Measured on the full TMY year against the Hydro-Québec all-electric subset
+# (n=215), peak kW per home at 6 dwellings:
+#     real 11.82 | proportional 10.23 (-13.4%) | hysteresis 11.19 (-5.3%)
+# A negative bias understates base load and therefore OVERSTATES EV hosting
+# capacity. Annual energy is unchanged by the swap (29.9 -> 30.0 MWh/home), so
+# the R_STUDY_B energy calibration below stands as-is.
+#
+# Residual bias is -5.3%, not zero: the base remains mildly optimistic.
+HEATING_CONTROL = "hysteresis"
+
 R_STUDY_B = 7.5
 """Per-home thermal envelope resistance (deg C/kW), study-B all-electric base.
 

@@ -70,6 +70,7 @@ from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # no
 )
 
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
+_EPOCH = pd.Timestamp("2024-01-01 00:00:00")
 _STEPS_PER_DAY = 24 * 60 // int(ANNUAL_RES_MINUTES)
 
 
@@ -101,6 +102,11 @@ def transformer_loading_frame(
     keep = np.concatenate(
         [np.arange(d * _STEPS_PER_DAY, (d + 1) * _STEPS_PER_DAY) for d in cold_days]
     )
+    # Real timestamps, not step indices: the SDK infers the settlement interval
+    # from the gap between them (``infer_dt_h``), and ``pd.to_datetime`` reads a
+    # bare integer as nanoseconds since the epoch -- which silently collapses
+    # dt_h to ~1e-13 h and scales every energy and cost KPI by ~1e-12.
+    stamps = _EPOCH + pd.to_timedelta(keep * float(ANNUAL_RES_MINUTES), unit="m")
     rows: list[pd.DataFrame] = []
     for trafo, homes in homes_by_trafo.items():
         rating = float(rating_by_trafo[trafo])
@@ -112,7 +118,7 @@ def transformer_loading_frame(
         rows.append(
             pd.DataFrame(
                 {
-                    "timestamp": keep,
+                    "timestamp": stamps,
                     "trafo_idx": int(trafo),
                     "loading_percent": loading,
                     "sn_mva": rating / float(POWER_FACTOR) / 1000.0,

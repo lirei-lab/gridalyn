@@ -4,7 +4,7 @@
   },
   "metrics": [
     {
-      "expected": 0.951321,
+      "expected": 0.950781,
       "id": "pf.pre_ev_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -37,7 +37,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.910944,
+      "expected": 0.911345,
       "id": "pf.post_ev_1p5_min_lv_vm_pu",
       "json_path": [
         "scenarios",
@@ -48,7 +48,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12,
+      "expected": 11,
       "id": "annual.firm_ev_count",
       "json_path": [
         "firm_ev_count"
@@ -57,7 +57,7 @@
       "tolerance": 0
     },
     {
-      "expected": 56.063563,
+      "expected": 60.43506,
       "id": "annual.base_p95_cold_evening",
       "json_path": [
         "p95_cold_evening_curve",
@@ -67,7 +67,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 17.0,
+      "expected": 20.25,
       "id": "annual.congested_hours_at_pool_top",
       "json_path": [
         "congested_hours_per_year_curve",
@@ -86,7 +86,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.333333,
+      "expected": 0.454545,
       "id": "annual.hosting_expansion_percent",
       "json_path": [
         "hosting_expansion_percent"
@@ -95,7 +95,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.303824,
+      "expected": 0.386786,
       "id": "annual.curtailed_pct_at_pool_top",
       "json_path": [
         "curtailed_energy_percent_curve",
@@ -105,7 +105,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.990321,
+      "expected": 0.995782,
       "id": "annual.jain_fair",
       "json_path": [
         "fairness",
@@ -133,7 +133,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.018405,
+      "expected": 0.0,
       "id": "pf.mc_p_overload_ac_at_firm",
       "json_path": [
         "feeder_mc_by_role",
@@ -155,7 +155,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 103.704665,
+      "expected": 103.369748,
       "id": "pf.mc_curtailed_peak_loading_max",
       "json_path": [
         "feeder_mc_by_role",
@@ -166,7 +166,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12,
+      "expected": 11,
       "id": "coldcoupling.firm_cold",
       "json_path": [
         "models",
@@ -188,7 +188,7 @@
       "tolerance": 0
     },
     {
-      "expected": 33.333333,
+      "expected": 45.454545,
       "id": "coldcoupling.firm_overestimate_percent",
       "json_path": [
         "firm_overestimate_percent"
@@ -197,7 +197,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12.065605,
+      "expected": 10.538267,
       "id": "coldcoupling.curtailment_underestimate_ratio",
       "json_path": [
         "curtailment_underestimate_ratio"
@@ -215,7 +215,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.242878,
+      "expected": 3.233504,
       "id": "netchar.loss_percent_0ev",
       "json_path": [
         "losses",
@@ -226,7 +226,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.716477,
+      "expected": 3.679268,
       "id": "netchar.loss_percent_2ev",
       "json_path": [
         "losses",
@@ -237,7 +237,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 56.868539,
+      "expected": 57.932456,
       "id": "netchar.substation_peak_0ev",
       "json_path": [
         "substation",
@@ -258,7 +258,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.819686,
+      "expected": 0.79451,
       "id": "netchar.headroom_p50",
       "json_path": [
         "headroom",
@@ -298,7 +298,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 55.674595,
+      "expected": 56.678611,
       "id": "netchar.substation_normal_loading",
       "json_path": [
         "substation",
@@ -308,7 +308,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.667618,
+      "expected": 1.669114,
       "id": "cluster.penalty_ratio",
       "json_path": [
         "penalty",
@@ -318,7 +318,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 206.055428,
+      "expected": 205.238808,
       "id": "cluster.worst_loading_clustered",
       "json_path": [
         "penalty",
@@ -328,7 +328,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 103.531204,
+      "expected": 103.534382,
       "id": "cluster.worst_loading_managed_clustered",
       "json_path": [
         "recovery",
@@ -338,7 +338,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 22.66772,
+      "expected": 19.806341,
       "id": "cluster.curtailed_energy_percent",
       "json_path": [
         "recovery",
@@ -348,7 +348,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.86538,
+      "expected": 0.877467,
       "id": "cluster.burden_gini",
       "json_path": [
         "recovery",
@@ -378,7 +378,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 3.833333,
+      "expected": 2.5,
       "id": "flexincentive.shift_ceiling_warmest",
       "json_path": [
         "shift_ceiling_warmest"
@@ -405,7 +405,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 317.167644,
+      "expected": 1268.670576,
       "id": "flexincentive.optimal_subsidy_warmest",
       "json_path": [
         "optimal_subsidy_warmest"
@@ -414,7 +414,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 22.785315,
+      "expected": 21.810071,
       "id": "perf.growth_margin_p50",
       "json_path": [
         "panel",
@@ -435,7 +435,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.377475,
+      "expected": 0.375821,
       "id": "perf.flexible_share_p50",
       "json_path": [
         "flexible_share_p50"
@@ -464,7 +464,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.000256,
+      "expected": 0.000613,
       "id": "congestion.p_cong_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -474,7 +474,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 104.932181,
+      "expected": 108.29814,
       "id": "congestion.peak_max_g1_1ev",
       "json_path": [
         "reference_feeder",
@@ -484,7 +484,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 246,
+      "expected": 252,
       "id": "congestion.n_at_risk_at_ref",
       "json_path": [
         "n_at_risk_at_ref"
@@ -493,7 +493,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.609756,
+      "expected": 0.45,
       "id": "congestion.first_risk_ev_per_home",
       "json_path": [
         "first_risk_ev_per_home"
@@ -502,7 +502,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": null,
+      "expected": 1.19,
       "id": "congestion.first_risk_g",
       "json_path": [
         "first_risk_g"
@@ -520,7 +520,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.379878,
+      "expected": 1.383615,
       "id": "phase.worst_vuf_at_ref",
       "json_path": [
         "worst_vuf_at_ref"
@@ -529,7 +529,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.013684,
+      "expected": 0.013737,
       "id": "phase.balanced_gap_pu",
       "json_path": [
         "balanced_gap_pu"
@@ -547,7 +547,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.980585,
+      "expected": 0.980885,
       "id": "voltage.min_v_p05_at_ref",
       "json_path": [
         "min_v_p05_at_ref"
@@ -556,7 +556,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.967362,
+      "expected": 0.96704,
       "id": "voltage.min_v_worst_at_ref",
       "json_path": [
         "min_v_worst_at_ref"
@@ -565,7 +565,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.000767,
+      "expected": 0.0,
       "id": "voltage_net.p_undervolt_at_ref",
       "json_path": [
         "p_undervolt_at_ref"
@@ -574,7 +574,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.929577,
+      "expected": 0.929993,
       "id": "voltage_net.min_v_p05_at_ref",
       "json_path": [
         "min_v_p05_at_ref"
@@ -583,7 +583,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.917,
+      "expected": 0.918941,
       "id": "voltage_net.min_v_worst_at_ref",
       "json_path": [
         "min_v_worst_at_ref"
@@ -592,7 +592,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 1.561365,
+      "expected": 1.575295,
       "id": "voltage_net.first_risk_ev_per_home",
       "json_path": [
         "first_risk_ev_per_home"
@@ -601,7 +601,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 9943.6519,
+      "expected": 6807.30723,
       "id": "nonwires.total_deferral_npv",
       "json_path": [
         "total_deferral_npv"
@@ -610,7 +610,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 280.132892,
+      "expected": 267.257832,
       "id": "nonwires.total_trafo_years_deferred",
       "json_path": [
         "total_trafo_years_deferred"
@@ -637,7 +637,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 5.411187,
+      "expected": 5.375358,
       "id": "nonwires.first_reinforcement_year",
       "json_path": [
         "first_reinforcement_year"
@@ -646,7 +646,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 11.0,
+      "expected": 10.0,
       "id": "cred.firm_p05",
       "json_path": [
         "firm",
@@ -656,7 +656,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12.0,
+      "expected": 11.0,
       "id": "cred.firm_p50",
       "json_path": [
         "firm",
@@ -716,7 +716,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 60.774124,
+      "expected": 66.097572,
       "id": "cred.base_peak_p50",
       "json_path": [
         "base_peak",
@@ -744,7 +744,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 480.022322,
+      "expected": 480.063433,
       "id": "insurance.expected_cost_flex_at_ref",
       "json_path": [
         "expected_cost_flex_at_ref"
@@ -762,7 +762,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 0.28,
+      "expected": 0.26,
       "id": "insurance.short_years_if_plan_p50",
       "json_path": [
         "short_years_if_plan_p50"
@@ -771,7 +771,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 12,
+      "expected": 11,
       "id": "insurance.crossover_adoption",
       "json_path": [
         "crossover_adoption"
@@ -780,7 +780,7 @@
       "tolerance": 0
     },
     {
-      "expected": 0.564275,
+      "expected": 0.421249,
       "id": "insurance.delta_firm_correlation",
       "json_path": [
         "delta_firm_correlation"

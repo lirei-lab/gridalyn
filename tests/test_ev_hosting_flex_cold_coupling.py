@@ -66,12 +66,12 @@ def test_governed_cold_coupling_headline() -> None:
     # judged against the IEEE C57.91 capability its OWN ambient allows, not a
     # nameplate defined at 30 C, so the cold-evening P95 falls and firm rises
     # 5 -> 12. See config.RATING_CONVENTION.
-    assert cold["firm_ev_count"] == 12
+    assert cold["firm_ev_count"] == 11
     # NOTE: the naive count of 16 IS the pool ceiling (POOL_MAX_ANNUAL),
     # so it is a LOWER bound on the cold-agnostic overestimate, not the
     # overestimate itself. The inequality above is the real assertion.
     assert naive["firm_ev_count"] == 16
-    assert payload["firm_overestimate_percent"] == pytest.approx(100 / 3)
+    assert payload["firm_overestimate_percent"] == pytest.approx(500 / 11)
     # More EV energy on cold days drives it; the P95 curves diverge above n=0.
     assert payload["cold_day_ev_energy_uplift_percent"] > 40.0
     assert cold["cold_day_ev_kwh_per_ev"] > naive["cold_day_ev_kwh_per_ev"]

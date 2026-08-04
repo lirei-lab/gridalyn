@@ -726,3 +726,60 @@ and the activation frequency, are the robust results; the dollars are illustrati
 
 *Verified with a 3-vote adversarial panel (2026-06-23). Québec-specific figures remain
 inferences — no metered per-house kW or published HQ sizing rule was found directly.*
+
+## Latching thermostats — diversity re-base (2026-08-04)
+
+The 6th deliberate re-base, and the first driven by a defect in the *dynamics*
+rather than the levels.
+
+**What was wrong.** The base was validated on two AGGREGATE properties — diurnal
+shape and aggregate smoothness — and both hold. Neither constrains what a single
+dwelling does. Measured against the Hydro-Québec 1000-home set (all-electric
+subset: electric heating >= 60% of annual energy, n=215; windows matched on mean
+outdoor temperature), real heating moves >2 kW between consecutive 15-min samples
+in **39.9%** of intervals, mean |Δ| **2.60 kW**, cycling with a **~83 min** median
+period. The SDK's `proportional` controller — a 10-level quantized law whose
+docstring claimed ON/OFF hysteresis — produced **0.0%** and **0.05 kW**, cycling
+every ~42 h. It does not cycle; it follows the outdoor temperature.
+
+**Why it matters here.** Dwellings that never step arrive pre-diversified, so an
+aggregate of a FEW of them is too smooth. Peak per home, full TMY year:
+
+| homes | measured | proportional | hysteresis |
+| --- | --- | --- | --- |
+| 1 | 17.95 kW | −27.7% | −10.2% |
+| **6** | **11.82 kW** | **−13.4%** | **−5.3%** |
+| 12 | 10.83 kW | −13.9% | −7.8% |
+| 60 | 9.38 kW | −10.2% | −7.4% |
+
+Six is the pole-transformer size this study sizes. A negative bias understates
+base load and therefore OVERSTATES hosting capacity — the headline.
+
+Validating on a single cold week gave −9.6% at 6 homes; the full year gives
+−13.4%. The weekly figure understated the defect by a third.
+
+**The fix.** SDK `control="hysteresis"`: 3–6 zones per dwelling, each with its own
+thermostat, setpoint and **air temperature**. The own-temperature part is what
+makes it work — a first attempt shared one node, the zones latched together and
+the ensemble degenerated back into a slow proportional law (181 min cycle). With
+independent states, mean |Δ| is 2.65 kW against 2.60 measured.
+
+**Energy is unchanged** (29.9 → 30.0 MWh/home over the TMY year), so `R_STUDY_B`
+and the annual-energy anchor (~29 MWh against 28.3 measured for the all-electric
+subset) stand as-is. This re-base moves dynamics only.
+
+**Headline effect.** 50 of 81 pins moved. Firm hosting capacity **12 → 11 EVs**
+(−8.3%); credibility p50 12 → 11, p05 11 → 10; deferral NPV −31.5%; flexibility
+expansion 0.333 → 0.455 (firm is lower, so the relative gain from flexibility is
+larger). A static-rating estimate had suggested ~35% — the realized effect is
+much smaller because the study rates on the hourly K(T) curve, not nameplate.
+
+**Residual.** The bias is −5.3% at 6 homes, not zero: the base remains mildly
+optimistic. The mechanism is known and unfixed — `minute_of_day` is a dead
+parameter in the building model and `occupancy_offset_min` is sampled but never
+read, so the thermal model has no time-of-day dependence. Real dwellings hold
+long high/low regimes driven by occupancy; the model jitters inside a narrow
+band. Any future work on this base should start there.
+
+Determinism verified: the recalibrated base hashes identically across repeat
+invocations and across `PYTHONHASHSEED`. Regression: 81/81.

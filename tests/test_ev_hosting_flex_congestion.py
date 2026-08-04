@@ -122,14 +122,20 @@ def test_governed_congestion_risk() -> None:
     # both first-risk triggers are reported (EV-axis and growth-axis); either
     # alone can trip the planning threshold
     assert p["first_risk_ev_per_home"] is not None
-    # Re-based 2026-08-01 (RATING_CONVENTION = hourly_kt): the growth-axis
-    # trigger is now None — with the feeder judged against the capability its
-    # own ambient allows, baseline electrification growth alone never trips the
-    # threshold within the swept grid. That is the RESULT, not a missing value:
-    # under the nameplate 252 transformers were "base-constrained" and under
-    # K(T) none are. The EV-axis trigger stays finite, so the diagnostic still
-    # reports a first-risk adoption.
-    assert p["first_risk_g"] is None
+    # Re-based 2026-08-04 (latching thermostats): the growth-axis trigger is
+    # FINITE again, and this is a qualitative flip worth stating.
+    #
+    # Under the 2026-08-01 re-base it was None: with the feeder judged against
+    # the capability its own ambient allows, baseline electrification growth
+    # alone never tripped the threshold. That conclusion rested on a base whose
+    # dwellings never cycled — pre-diversified, so a 6-home aggregate came out
+    # ~13% below measured. With per-zone latching thermostats the base carries
+    # its real peaks and growth alone DOES trip the threshold, at g ~= 1.19.
+    #
+    # So K(T) does not, on its own, absorb baseline electrification growth. It
+    # absorbed it only in company with a generator that under-peaked.
+    assert p["first_risk_g"] is not None
+    assert 1.0 < p["first_risk_g"] < 2.0, p["first_risk_g"]
 
 
 @pytest.mark.skipif(not _REPORT.is_file(), reason=_SKIP)

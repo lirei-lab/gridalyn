@@ -31,6 +31,7 @@ from projects.ev_hosting_flex.scripts.config import (
     ARRIVAL_MEAN_ANNUAL_H,
     ARRIVAL_STD_ANNUAL_H,
     BG_SCALE,
+    HEATING_CONTROL,
     CALENDAR_HOURS,
     CHARGER_MIX,
     COLD_DAY_TMEAN_C,
@@ -426,7 +427,9 @@ def annual_base_realization(
         building.R = R_STUDY_B
         building.p_heat_max = P_HEAT_QUEBEC
     results = simulate_buildings(
-        buildings, temp_1min, burnin_hours=6, random_seed=int(seed)
+        buildings, temp_1min, burnin_hours=6,
+        random_seed=int(seed),
+        control=HEATING_CONTROL,
     )
     agg = sum(
         results[uid]["p_heat_kw"]
@@ -500,7 +503,9 @@ def design_day_base_per_home(
         building.R = R_STUDY_B
         building.p_heat_max = P_HEAT_QUEBEC
     results = simulate_buildings(
-        buildings, window_1min, burnin_hours=6, random_seed=int(seed)
+        buildings, window_1min, burnin_hours=6,
+        random_seed=int(seed),
+        control=HEATING_CONTROL,
     )
     agg = sum(
         results[uid]["p_heat_kw"]
