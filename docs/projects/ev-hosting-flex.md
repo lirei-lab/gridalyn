@@ -60,8 +60,19 @@ The building base generator is validated on three independent axes:
 | Axis | Validated against | Result |
 |---|---|---|
 | Diurnal shape | Real Hydro-Québec 1000-home dataset (`datasets/hq/`) | Same dual morning/evening peak |
-| Aggregate smoothness | Same HQ dataset | 0.35 vs 0.41 kW/home/h coincident step |
+| Aggregate smoothness | Same HQ dataset | Needs revalidation — see note |
 | DHW tank physics | CREST model lineage (via `demod`) | Surface-normalized UA matches (0.0598 vs 0.0600) |
+
+!!! warning "The smoothness axis is stale"
+
+    This axis was measured at the 5th re-base as 0.35 kW/home/h coincident step
+    against an HQ reference of 0.41. Neither figure survives scrutiny today: the
+    0.41 reference appears nowhere in the repository, and the 0.35 predates the
+    6th re-base, which gave dwellings latching thermostats and deliberately
+    raised per-dwelling stepping. An attempt to recompute it did not reproduce
+    the original definition — the home count, window and normalisation were not
+    recorded — so the numbers are withdrawn rather than replaced with new ones
+    that would be equally unverifiable. The other two axes are unaffected.
 
 The base is realistic in **both** dimensions at once — ~11 kW/home coincident peak
 (inside the Hydro-Québec 10–15 kW design band) **and** ~29 MWh/home/year — rather

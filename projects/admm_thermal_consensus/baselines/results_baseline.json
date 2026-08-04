@@ -133,6 +133,16 @@
       ],
       "source": "outputs/reports/imputer_comparison_report.json",
       "tolerance": 0.001
+    },
+    {
+      "expected": 125.94109469465255,
+      "id": "summary.uncoordinated_worst_transformer_loading_pct",
+      "json_path": [
+        "summary",
+        "uncoordinated_worst_transformer_loading_pct"
+      ],
+      "source": "outputs/reports/powerflow_report.json",
+      "tolerance": 0.12594109469465256
     }
   ]
 }

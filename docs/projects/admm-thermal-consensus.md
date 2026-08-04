@@ -71,6 +71,13 @@ inflates the forecast error the coordinator works against.
 calibration was propagated here (it was ~38% below before). The residual is the
 same one `ev_hosting_flex` documents.
 
+The percentages in these last two paragraphs come from a comparison against the
+Hydro-Québec 1000-home set on temperature-matched days. That dataset is not
+committed (`datasets/hq/`, gitignored), so unlike every other number on this
+page they are **not** backed by a pinned baseline and cannot be re-derived from
+a clone. They are reported as measurements taken during calibration, not as
+study outputs.
+
 **The transformer is sized 500 kVA, not 400.** With realistic dwellings, 74
 homes would load a 400 kVA unit to ~150% — not a design any utility installs, so
 the scenario would have rested on an asset that does not exist.
