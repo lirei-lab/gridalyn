@@ -662,7 +662,8 @@ mutation probes against `gridalyn/twin/network/metadata.py` (all reverted):
 | B | Second write of `metadata` **inside** the already-pinned `write_base_metadata` | **fails** — `...::write_base_metadata::metadata#1` unclassified; `examined` 76 → 77; message names the sibling line |
 | C | New call to the pinned helper `write_json` | **fails** — helper-routed site unclassified; helper-routed `examined` 22 → 23 |
 
-Two tests read this document. `.planning/` is untracked, so on a checkout lacking it those
-tests **fail with a message naming the missing path** rather than erroring or skipping — the
-pins are only meaningful alongside the rationale recorded here. Whether `.planning/` should
-be committed is a separate decision, surfaced to the operator.
+Two tests read this document, which is why it is tracked here in `docs/development/` rather
+than alongside the workflow notes that produced it: those are excluded from the published
+repository, and a test may not depend on a path a fresh checkout does not carry. If the file
+is missing the tests **fail with a message naming the missing path** rather than erroring or
+skipping — the pins are only meaningful alongside the rationale recorded here.

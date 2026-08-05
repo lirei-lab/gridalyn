@@ -17,12 +17,12 @@ Five cases:
 
 * :meth:`DocPathReferenceTests.test_no_unwaived_broken_references` is the gate.
   Every stale ``SOURCE`` and every ``UNCLASSIFIED`` reference must appear in
-  :data:`_ALLOWLIST` or under the one documented tree waiver.
+  :data:`_ALLOWLIST`, per reference. There is no tree-level waiver.
 * :meth:`DocPathReferenceTests.test_allowlist_entries_still_match` fails when a
   pinned entry stops matching, so a reference that later gets fixed cannot
   leave a silent standing permission behind. Entries whose file is absent from
-  the checkout are skipped rather than failed -- ``CLAUDE.md``, ``AGENTS.md``
-  and ``docs/superpowers/`` are git-ignored, so CI genuinely does not have them.
+  the checkout are skipped rather than failed -- ``CLAUDE.md`` and ``AGENTS.md``
+  are git-ignored, so CI genuinely does not have them.
 * :meth:`DocPathReferenceTests.test_classifier_is_not_vacuous` is the
   non-vacuity guard. A scanner that extracted nothing would report "no stale
   references" while proving nothing, so each class carries a floor.
@@ -105,18 +105,12 @@ _MIN_PER_CLASS: dict[str, int] = {
 # the wrong three, not that the docs got worse.
 _MAX_UNCLASSIFIED = 30
 
-# One documented tree waiver.
-#
-# Unlike the per-reference entries below, this one names a directory. That is a
-# deliberate, bounded exception rather than the house rule: docs/superpowers/
-# is an untracked tree of historical AI-assistant design records, absent from
-# every clean checkout and from CI, describing repo states that were
-# intentionally superseded (`projects/flexibility_cls` was retired,
-# `gridalyn/workflows/` was relocated). Its 68 broken references are a record
-# of history, not debt, and Plan 04-04 deletes the tree wholesale. Pinning them
-# individually would enter history into the ledger and then delete the ledger.
-# test_tree_waiver_still_matches keeps it from becoming a silent permission.
-_WAIVED_TREE = "docs/superpowers/"
+# There is no tree waiver. There was one -- docs/superpowers/, an untracked tree
+# of historical AI-assistant design records whose 68 broken references described
+# repo states that had been intentionally superseded. That tree was deleted, so
+# the waiver was deleted with it rather than left behind as a standing
+# permission over a path that no longer exists. Every exception is now
+# per-reference, below.
 
 # Per-reference allowlist for the enforced surface, keyed by
 # ``(document, reference)`` -- never by line number, because CLAUDE.md is
@@ -125,6 +119,21 @@ _WAIVED_TREE = "docs/superpowers/"
 # Plan 04-04 empties this dict. Every entry is a real stale reference that this
 # plan deliberately did not fix.
 _ALLOWLIST: dict[tuple[str, str], str] = {
+    (
+        "docs/development/report-contract-audit.md",
+        "projects/flexibility_cls",
+    ): "quoted inside the sentence that states the study was retired 2026-08-03; "
+    "the reference is the subject of the correction, not a live link",
+    (
+        "docs/development/report-contract-audit.md",
+        "out_dir/locational_clearing_summary.json",
+    ): "`out_dir` is the caller-supplied output-directory argument, not a tracked "
+    "directory; the destination only exists once a study has run",
+    (
+        "docs/development/report-contract-audit.md",
+        ".../locational_clearing_verification_report.json",
+    ): "deliberately elided runtime destination; the caller chooses `report_path`, "
+    "so no fixed prefix exists to resolve it against",
     (
         "CLAUDE.md",
         "operations/settlement",
@@ -204,8 +213,8 @@ def _fabricate(path: str) -> str:
 
 
 def _is_waived(key: tuple[str, str]) -> bool:
-    """Return True when a finding is covered by the allowlist or tree waiver."""
-    return key in _ALLOWLIST or key[0].startswith(_WAIVED_TREE)
+    """Return True when a finding is covered by the per-reference allowlist."""
+    return key in _ALLOWLIST
 
 
 def _floor_failures(report: object) -> list[str]:
@@ -302,30 +311,6 @@ class DocPathReferenceTests(unittest.TestCase):
             "these allowlist entries no longer match a broken reference; the "
             "reference has been fixed, so delete the entry rather than leave a "
             "standing permission:\n" + "\n".join(stale_entries),
-        )
-
-    def test_tree_waiver_still_matches(self) -> None:
-        """The one directory waiver must still cover real findings, or go.
-
-        It is broader than a per-reference entry, so it is held to the same
-        rule: once ``docs/superpowers/`` is deleted the waiver has nothing left
-        to excuse and must be removed with it.
-        """
-        tree = _REPO_ROOT / _WAIVED_TREE
-        broken = self.report.stale + self.report.unclassified
-        covered = [f for f in broken if f.reference.file.startswith(_WAIVED_TREE)]
-        if not tree.is_dir():
-            self.assertEqual(
-                [],
-                covered,
-                f"{_WAIVED_TREE} is gone; delete the waiver",
-            )
-            return
-        self.assertGreater(
-            len(covered),
-            0,
-            f"{_WAIVED_TREE} exists but no longer contains a broken reference; "
-            "delete the waiver rather than leave a standing permission",
         )
 
     # -- non-vacuity ------------------------------------------------------

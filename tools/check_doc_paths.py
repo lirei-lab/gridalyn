@@ -177,6 +177,9 @@ _ARTIFACT_DIRS: frozenset[str] = frozenset(
         "models",
         "digital_twin",
         "semantic",
+        # instances/<name>/digital_twin/base/ -- the twin's own model-version
+        # lineage directory, named bare as ``base/metadata.json``.
+        "base",
     }
 )
 _ARTIFACT_LEAF_EXTENSIONS: frozenset[str] = frozenset(
@@ -298,6 +301,9 @@ def _shorthand_prefixes(root: Path) -> tuple[str, ...]:
     2. ``docs/`` -- documentation cross-links routinely omit it.
     3. ``projects/<study>/`` -- study write-ups write ``scripts/config.py`` and
        ``baselines/results_baseline.json`` relative to their own directory.
+    4. ``projects/`` -- cross-study write-ups cannot be relative to any one
+       study, so they name it: ``<study>/scripts/generate_x.py``. Symmetric
+       with family 1, where ``gridalyn/`` covers ``<layer>/module.py``.
     """
     prefixes = ["gridalyn"]
     prefixes += [f"gridalyn/{layer}" for layer in _package_layers(root)]
@@ -305,6 +311,7 @@ def _shorthand_prefixes(root: Path) -> tuple[str, ...]:
         prefixes.append(_DOCS_DIR)
     studies = root / "projects"
     if studies.is_dir():
+        prefixes.append("projects")
         prefixes += sorted(
             f"projects/{child.name}"
             for child in studies.iterdir()
