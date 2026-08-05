@@ -1096,6 +1096,7 @@ dependencies = [
     { name = "geopy" },
     { name = "jsonschema" },
     { name = "leafmap" },
+    { name = "lightgbm" },
     { name = "matplotlib" },
     { name = "networkx" },
     { name = "numba" },
@@ -1123,7 +1124,6 @@ all = [
     { name = "geopandas" },
     { name = "geopy" },
     { name = "leafmap" },
-    { name = "lightgbm" },
     { name = "lightsim2grid" },
     { name = "matplotlib" },
     { name = "numba" },
@@ -1163,7 +1163,6 @@ dev = [
     { name = "isort" },
     { name = "jupyterlab" },
     { name = "leafmap" },
-    { name = "lightgbm" },
     { name = "lightsim2grid" },
     { name = "matplotlib" },
     { name = "mkdocs" },
@@ -1205,7 +1204,6 @@ geo = [
 ]
 ops = [
     { name = "cvxpy" },
-    { name = "lightgbm" },
     { name = "numba" },
     { name = "scikit-learn" },
 ]
@@ -1220,6 +1218,11 @@ sim = [
     { name = "pvlib" },
     { name = "scipy" },
     { name = "timeout-decorator" },
+]
+test = [
+    { name = "hypothesis" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
 ]
 
 [package.metadata]
@@ -1252,6 +1255,7 @@ requires-dist = [
     { name = "geopy", marker = "extra == 'dev'", specifier = ">=2.2.0" },
     { name = "geopy", marker = "extra == 'geo'", specifier = ">=2.2.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.123.16,<7.0.0" },
+    { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.123.16,<7.0.0" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.8.0" },
     { name = "jsonschema", specifier = ">=4.0.0" },
@@ -1260,9 +1264,7 @@ requires-dist = [
     { name = "leafmap", marker = "extra == 'all'", specifier = ">=0.51.0" },
     { name = "leafmap", marker = "extra == 'dashboard'", specifier = ">=0.51.0" },
     { name = "leafmap", marker = "extra == 'dev'", specifier = ">=0.51.0" },
-    { name = "lightgbm", marker = "extra == 'all'", specifier = ">=4.6.0" },
-    { name = "lightgbm", marker = "extra == 'dev'", specifier = ">=4.6.0" },
-    { name = "lightgbm", marker = "extra == 'ops'", specifier = ">=4.6.0" },
+    { name = "lightgbm", specifier = ">=4.6.0" },
     { name = "lightsim2grid", marker = "extra == 'all'", specifier = ">=0.12.2" },
     { name = "lightsim2grid", marker = "extra == 'dev'", specifier = ">=0.12.2" },
     { name = "lightsim2grid", marker = "extra == 'sim'", specifier = ">=0.12.2" },
@@ -1304,7 +1306,9 @@ requires-dist = [
     { name = "pvlib", marker = "extra == 'dev'", specifier = ">=0.10.0" },
     { name = "pvlib", marker = "extra == 'sim'", specifier = ">=0.10.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.4" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.4" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=2.8.0" },
+    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=2.8.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rdflib", specifier = ">=7.1.0" },
     { name = "rdflib", marker = "extra == 'all'", specifier = ">=7.1.0" },
@@ -1336,7 +1340,7 @@ requires-dist = [
     { name = "timeout-decorator", marker = "extra == 'sim'", specifier = ">=0.5.0,<1.0.0" },
     { name = "tqdm", specifier = ">=4.67.1,<5.0.0" },
 ]
-provides-extras = ["geo", "sim", "ops", "dashboard", "semantic", "all", "cim", "docs", "dev"]
+provides-extras = ["geo", "sim", "ops", "dashboard", "semantic", "all", "cim", "docs", "test", "dev"]
 
 [[package]]
 name = "gridappsd-python"

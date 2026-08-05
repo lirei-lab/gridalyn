@@ -140,6 +140,16 @@ docs = [
     "mkdocs-material>=9.6.17",
     "mkdocstrings[python]>=0.30.0",
 ]
+# What it takes to RUN the suite, and nothing else. CI installs ".[all,test]"
+# rather than ".[dev]" because the dev extra is assembled for a human at a
+# keyboard -- it carries JupyterLab, the docs toolchain, Sphinx/furo and the
+# linters, 97 packages that no test imports. Keep this list minimal: anything
+# added here is installed three times on every push.
+test = [
+    "pytest>=8.3.4",
+    "pytest-cov>=2.8.0",
+    "hypothesis<7.0.0,>=6.123.16",
+]
 dev = [
     "black>=21.0",
     "contextily>=1.7.0",
