@@ -9,7 +9,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace projects/admm_thermal_consensus
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace projects/admm_thermal_consensus"
       outputs:
         - projects/admm_thermal_consensus/outputs/data
         - projects/admm_thermal_consensus/outputs/json

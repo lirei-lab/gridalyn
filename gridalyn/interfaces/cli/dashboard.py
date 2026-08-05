@@ -10,14 +10,22 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.interfaces.cli.script_runner import run_module_as_script
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
+
+from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = (
+            f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        )
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler
@@ -37,6 +45,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn dashboard`` command group.
+
+    Dispatches ``catalog`` (generate the digital-twin dashboard catalog) and
+    ``verify`` (check dashboard consistency), after confirming the optional
+    ``dashboard`` capability is installed.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand, or ``2`` if the ``dashboard``
+        capability is missing.
+    """
     from gridalyn.foundation.platform.capabilities import (
         MissingCapabilityError,
         require_capabilities,

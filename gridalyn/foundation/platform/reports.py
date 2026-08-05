@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import hashlib
 import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 SCHEMA_VERSION = "1.0"
 REQUIRED_REPORT_FIELDS = (
@@ -25,6 +24,23 @@ REQUIRED_REPORT_FIELDS = (
 
 @dataclass(frozen=True)
 class ReportMetadata:
+    """Identity and provenance header for a platform report.
+
+    Every artifact-producing run emits a report through :func:`write_report`,
+    and this frozen record supplies the non-payload half of that envelope: what
+    the report is called, which domain produced it, and the governance ids that
+    let a result be traced back to the model version and study run it came from.
+
+    Attributes:
+        report_id: Stable identifier for this report within its domain.
+        source_domain: Producing layer or domain, e.g. ``"simulation"``.
+        schema_version: Report contract version; defaults to
+            :data:`SCHEMA_VERSION`.
+        project: Project descriptor (name, paths) carried into the envelope.
+        model_version_id: Governance id of the model version used, if tracked.
+        study_run_id: Governance id tying this report to one study run.
+    """
+
     report_id: str
     source_domain: str
     schema_version: str = SCHEMA_VERSION
@@ -82,8 +98,7 @@ def build_report(
         "inputs": inputs or [],
         "artifacts": artifacts or [],
         "summary": summary or {},
-        "validation": validation
-        or {"valid": True, "errors": [], "warnings": []},
+        "validation": validation or {"valid": True, "errors": [], "warnings": []},
     }
 
 
@@ -164,7 +179,9 @@ def write_manifest(
         "created_at": _utc_now(),
         "report_count": len(reports),
         "reports": {
-            report["report_id"]: _relative(Path(locations[report["report_id"]]), root_path)
+            report["report_id"]: _relative(
+                Path(locations[report["report_id"]]), root_path
+            )
             for report in reports
             if report.get("report_id") in locations
         },

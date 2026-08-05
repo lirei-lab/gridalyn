@@ -10,16 +10,25 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.interfaces.cli.script_runner import run_module_as_script
-from gridalyn.projects.workflows.flexibility import locational_verification
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
 
+from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
+from gridalyn.projects.workflows.flexibility import (  # noqa: E402
+    locational_verification,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = (
+            f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        )
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler
@@ -44,7 +53,9 @@ def build_parser() -> argparse.ArgumentParser:
         subcommand.set_defaults(handler=_script_handler(script_name))
 
     verify_clearing = subparsers.add_parser("verify-clearing")
-    verify_clearing.set_defaults(handler=_workflow_handler(locational_verification.main))
+    verify_clearing.set_defaults(
+        handler=_workflow_handler(locational_verification.main)
+    )
     return parser
 
 
@@ -56,6 +67,19 @@ def _workflow_handler(main_func):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn market`` command group.
+
+    Dispatches the flexibility and network-impact commands, currently
+    ``verify-clearing``, after confirming the optional ``ops`` capability is
+    installed.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand, or ``2`` if the ``ops``
+        capability is missing.
+    """
     from gridalyn.foundation.platform.capabilities import (
         MissingCapabilityError,
         require_capabilities,

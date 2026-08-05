@@ -10,7 +10,13 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.projects.api import (
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
+
+from gridalyn.projects.api import (  # noqa: E402
     init_project,
     list_projects,
     load_project,
@@ -218,7 +224,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument(
         "--no-write",
         action="store_true",
-        help="Run verification without writing outputs/reports/project_sense_check_report.json.",
+        help="Run verification without writing "
+        "outputs/reports/project_sense_check_report.json.",
     )
     verify_parser.set_defaults(handler=_verify)
 
@@ -228,12 +235,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_all_parser = subparsers.add_parser("verify-all")
     verify_all_parser.add_argument("--root", default=".")
-    verify_all_parser.add_argument("--write", action="store_true", help="Write project sense-check reports.")
+    verify_all_parser.add_argument(
+        "--write", action="store_true", help="Write project sense-check reports."
+    )
     verify_all_parser.set_defaults(handler=_verify_all)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn project`` command group.
+
+    Dispatches the project-workspace lifecycle commands — ``init``,
+    ``validate``, ``plan``, ``run``, ``prepare-workspace``, ``status``,
+    ``regression``, ``sense-check``, ``verify``, ``verify-all`` and ``list``.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand handler.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.handler(args)

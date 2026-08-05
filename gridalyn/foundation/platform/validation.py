@@ -54,9 +54,29 @@ def validate_workspace(
     project_paths = (
         list(projects)
         if projects is not None
-        else [path.relative_to(repo_root).as_posix() for path in workspace.project_paths()]
+        else [
+            path.relative_to(repo_root).as_posix() for path in workspace.project_paths()
+        ]
     )
     for project_path in project_paths:
+        # LAYER-DIRECTION EXCEPTION: foundation -> gridalyn.projects.api.
+        # This facade composes a repo-level check (artifact policy) with a
+        # per-project contract check, so it spans both layers by construction.
+        # It lives in `foundation` because that is where its published entry
+        # point is: `gridalyn.foundation.validate_workspace`
+        # (docs/sdk/public-contract.md) exported via two `_LAZY_EXPORTS` maps
+        # and imported directly by `gridalyn.interfaces.cli.gridalyn`.
+        # The import is kept inside this loop on purpose: importing this
+        # module, or validating a workspace with no projects, pulls no
+        # `gridalyn.projects` module into `sys.modules`.
+        # Inverting it (injecting the validator, or moving this loop up into
+        # the `projects` layer) is the right fix but is not a local edit --
+        # it must relocate the published symbol and update
+        # `gridalyn/foundation/__init__.py`,
+        # `gridalyn/foundation/platform/__init__.py` and
+        # `gridalyn/interfaces/cli/gridalyn.py`. Doing that removes this
+        # exception; nothing less does.
+        # Registered in tests/test_layer_direction.py::_DOCUMENTED_EXCEPTIONS.
         project_api = import_module("gridalyn.projects.api")
 
         report = project_api.validate_project(

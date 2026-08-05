@@ -21,7 +21,10 @@ _LAZY_EXPORTS = {
     "init_project": ("gridalyn.projects.api", "init_project"),
     "list_projects": ("gridalyn.projects.api", "list_projects"),
     "load_project": ("gridalyn.projects.api", "load_project"),
-    "load_der_dispatch_assets": ("gridalyn.projects.model_inputs", "load_der_dispatch_assets"),
+    "load_der_dispatch_assets": (
+        "gridalyn.projects.model_inputs",
+        "load_der_dispatch_assets",
+    ),
     "load_generated_bus_loads_mw": (
         "gridalyn.projects.model_inputs",
         "load_generated_bus_loads_mw",
@@ -34,9 +37,15 @@ _LAZY_EXPORTS = {
         "gridalyn.projects.model_inputs",
         "load_generated_load_profiles",
     ),
-    "load_numeric_profile_array": ("gridalyn.projects.model_inputs", "load_numeric_profile_array"),
+    "load_numeric_profile_array": (
+        "gridalyn.projects.model_inputs",
+        "load_numeric_profile_array",
+    ),
     "load_prosumer_assets": ("gridalyn.projects.model_inputs", "load_prosumer_assets"),
-    "load_radial_feeder_spec": ("gridalyn.projects.model_inputs", "load_radial_feeder_spec"),
+    "load_radial_feeder_spec": (
+        "gridalyn.projects.model_inputs",
+        "load_radial_feeder_spec",
+    ),
     "load_voltage_control_der_spec": (
         "gridalyn.projects.model_inputs",
         "load_voltage_control_der_spec",
@@ -47,7 +56,10 @@ _LAZY_EXPORTS = {
     "project_script": ("gridalyn.projects.scripting", "project_script"),
     "project_regression": ("gridalyn.projects.api", "project_regression"),
     "project_input": ("gridalyn.projects.model_inputs", "project_input"),
-    "run_project_regression": ("gridalyn.projects.regression", "run_project_regression"),
+    "run_project_regression": (
+        "gridalyn.projects.regression",
+        "run_project_regression",
+    ),
     "project_sense_check": ("gridalyn.projects.api", "project_sense_check"),
     "project_status": ("gridalyn.projects.api", "project_status"),
     "project_verify": ("gridalyn.projects.api", "project_verify"),
@@ -100,3 +112,13 @@ def __getattr__(name: str):
         globals()[name] = value
         return value
     raise AttributeError(f"module 'gridalyn.projects' has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module namespace plus every lazily exported public name.
+
+    Returns:
+        Sorted names, so ``dir()`` and :func:`inspect.getmembers` see the
+        lazy exports that ``__getattr__`` resolves on demand.
+    """
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

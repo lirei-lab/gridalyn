@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,7 +16,7 @@ spec:
     - id: build_der_feeder
       needs:
         - prepare_workspace
-      command: python scripts/build_der_feeder.py
+      command: "{python} scripts/build_der_feeder.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv
@@ -27,7 +27,7 @@ spec:
     - id: solve_voltage_optimization
       needs:
         - build_der_feeder
-      command: python scripts/solve_voltage_optimization.py
+      command: "{python} scripts/solve_voltage_optimization.py"
       inputs:
         - outputs/data/der_assets.csv
       outputs:

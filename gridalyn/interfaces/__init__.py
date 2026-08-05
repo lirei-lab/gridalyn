@@ -7,8 +7,14 @@ from importlib import import_module
 _LAZY_EXPORTS = {
     "GridPlotter": ("gridalyn.interfaces.viz.interactive", "GridPlotter"),
     "apply_hour_axis": ("gridalyn.interfaces.viz", "apply_hour_axis"),
-    "build_dashboard_catalog": ("gridalyn.interfaces.reporting", "build_dashboard_catalog"),
-    "build_digital_twin_reports": ("gridalyn.interfaces.reporting", "build_digital_twin_reports"),
+    "build_dashboard_catalog": (
+        "gridalyn.interfaces.reporting",
+        "build_dashboard_catalog",
+    ),
+    "build_digital_twin_reports": (
+        "gridalyn.interfaces.reporting",
+        "build_digital_twin_reports",
+    ),
     "canonical_report": ("gridalyn.interfaces.reporting", "canonical_report"),
     "dashboard_main": ("gridalyn.interfaces.cli.dashboard", "main"),
     "digital_twin_main": ("gridalyn.interfaces.cli.digital_twin", "main"),
@@ -24,7 +30,10 @@ _LAZY_EXPORTS = {
     "save_figure_pair": ("gridalyn.interfaces.viz", "save_figure_pair"),
     "semantic_main": ("gridalyn.interfaces.cli.semantic", "main"),
     "style_timeseries_axis": ("gridalyn.interfaces.viz", "style_timeseries_axis"),
-    "write_dashboard_catalog": ("gridalyn.interfaces.reporting", "write_dashboard_catalog"),
+    "write_dashboard_catalog": (
+        "gridalyn.interfaces.reporting",
+        "write_dashboard_catalog",
+    ),
     "write_json": ("gridalyn.interfaces.reporting", "write_json"),
     "write_report": ("gridalyn.interfaces.reporting", "write_report"),
 }
@@ -39,3 +48,13 @@ def __getattr__(name: str):
         globals()[name] = value
         return value
     raise AttributeError(f"module 'gridalyn.interfaces' has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module namespace plus every lazily exported public name.
+
+    Returns:
+        Sorted names, so ``dir()`` and :func:`inspect.getmembers` see the
+        lazy exports that ``__getattr__`` resolves on demand.
+    """
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

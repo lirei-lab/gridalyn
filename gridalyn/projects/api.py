@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
 
+from gridalyn.foundation.platform.reports import read_json_report, validate_report
 from gridalyn.projects.loader import load_project as _load_project
 from gridalyn.projects.models import StudyProject, ValidationReport, WorkflowStage
 from gridalyn.projects.outputs import prepare_project_workspace
@@ -14,11 +15,21 @@ from gridalyn.projects.runner import default_manifest_path, plan_stages, run_pro
 from gridalyn.projects.sense_checks import project_sense_check as _project_sense_check
 from gridalyn.projects.templates import TEMPLATES
 from gridalyn.projects.validation import validate_project_file
-from gridalyn.foundation.platform.reports import read_json_report, validate_report
 
 
 @dataclass(frozen=True)
 class CreatedProject:
+    """Paths to the workspace :func:`init_project` just wrote.
+
+    Returned so a caller can go straight from scaffolding a project to loading
+    or running it, without re-deriving the two YAML paths from the root.
+
+    Attributes:
+        root: Project workspace directory that was created or populated.
+        project_file: Path to the generated ``project.yaml``.
+        workflow_file: Path to the generated ``workflow.yaml``.
+    """
+
     root: Path
     project_file: Path
     workflow_file: Path
@@ -121,7 +132,12 @@ def project_verify(path: Path | str, write: bool = True) -> dict:
     contract = validate_project(project.path, check_artifacts=True)
     status = project_status(project.path, check_artifacts=True)
     sense = project_sense_check(project.path, write=write)
-    valid = bool(contract.valid and status["valid"] and status["reports"]["ready"] and sense["valid"])
+    valid = bool(
+        contract.valid
+        and status["valid"]
+        and status["reports"]["ready"]
+        and sense["valid"]
+    )
     return {
         "project": project.name,
         "valid": valid,
@@ -140,7 +156,9 @@ def project_verify(path: Path | str, write: bool = True) -> dict:
             "failed_count": sense["failed_count"],
             "errors": sense.get("validation", {}).get("errors", []),
             "warnings": sense.get("validation", {}).get("warnings", []),
-            "report": str(project.root / "outputs/reports/project_sense_check_report.json"),
+            "report": str(
+                project.root / "outputs/reports/project_sense_check_report.json"
+            ),
         },
     }
 
@@ -148,7 +166,9 @@ def project_verify(path: Path | str, write: bool = True) -> dict:
 def list_projects(root: Path | str = ".") -> list[dict[str, object]]:
     """List governed project workspaces under a repository or projects folder."""
     root_path = Path(root)
-    projects_root = root_path if root_path.name == "projects" else root_path / "projects"
+    projects_root = (
+        root_path if root_path.name == "projects" else root_path / "projects"
+    )
     records: list[dict[str, object]] = []
     if not projects_root.exists():
         return records
@@ -233,9 +253,7 @@ def project_status(path: Path | str, check_artifacts: bool = False) -> dict:
 
 def _project_report_summary(project: StudyProject) -> dict:
     required = (
-        project.raw.get("spec", {})
-        .get("validation", {})
-        .get("requiredReports", [])
+        project.raw.get("spec", {}).get("validation", {}).get("requiredReports", [])
     )
     records = []
     for relative in required:
@@ -257,7 +275,9 @@ def _project_report_summary(project: StudyProject) -> dict:
             }
         )
     found_count = sum(1 for record in records if record["exists"])
-    invalid_count = sum(1 for record in records if record["exists"] and not record["valid"])
+    invalid_count = sum(
+        1 for record in records if record["exists"] and not record["valid"]
+    )
     return {
         "expected_count": len(records),
         "found_count": found_count,

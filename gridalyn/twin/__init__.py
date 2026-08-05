@@ -17,15 +17,27 @@ _LAZY_EXPORTS = {
     "NetworkSnapshot": ("gridalyn.twin.adapters", "NetworkSnapshot"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters", "NetworkSourceAdapter"),
     "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
-    "SyntheticPandapowerAdapter": ("gridalyn.twin.adapters", "SyntheticPandapowerAdapter"),
-    "UnknownNetworkAdapterError": ("gridalyn.twin.adapters", "UnknownNetworkAdapterError"),
+    "SyntheticPandapowerAdapter": (
+        "gridalyn.twin.adapters",
+        "SyntheticPandapowerAdapter",
+    ),
+    "UnknownNetworkAdapterError": (
+        "gridalyn.twin.adapters",
+        "UnknownNetworkAdapterError",
+    ),
     "build_network_adapter_validation_report": (
         "gridalyn.twin.adapters",
         "build_network_adapter_validation_report",
     ),
     "build_semantic_graph": ("gridalyn.twin.semantic", "build_semantic_graph"),
-    "default_network_adapter_registry": ("gridalyn.twin.adapters", "default_network_adapter_registry"),
-    "describe_network_source_adapter": ("gridalyn.twin.adapters", "describe_network_source_adapter"),
+    "default_network_adapter_registry": (
+        "gridalyn.twin.adapters",
+        "default_network_adapter_registry",
+    ),
+    "describe_network_source_adapter": (
+        "gridalyn.twin.adapters",
+        "describe_network_source_adapter",
+    ),
     "north_america_profile": ("gridalyn.twin.semantic", "north_america_profile"),
     "validate_semantic_graph": ("gridalyn.twin.semantic", "validate_semantic_graph"),
     "write_network_adapter_validation_report": (
@@ -44,3 +56,13 @@ def __getattr__(name: str):
         globals()[name] = value
         return value
     raise AttributeError(f"module 'gridalyn.twin' has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module namespace plus every lazily exported public name.
+
+    Returns:
+        Sorted names, so ``dir()`` and :func:`inspect.getmembers` see the
+        lazy exports that ``__getattr__`` resolves on demand.
+    """
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

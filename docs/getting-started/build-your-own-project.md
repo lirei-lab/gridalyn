@@ -97,14 +97,27 @@ contract and are stamped with the project name automatically.
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
     - id: run_study
       needs:
         - prepare_workspace
-      command: python scripts/run_study.py
+      command: "{python} scripts/run_study.py"
       outputs:
         - outputs/reports/my_study_report.json
 ```
+
+`{python}` is a placeholder the runner replaces with the interpreter running
+the workflow (`sys.executable`), quoted for the shell. Write it in preference
+to a bare `python`: stage commands execute through a shell, where `python` is
+resolved against `PATH`, and on a virtualenv or a `python3`-only system there
+is no such executable — every stage then dies with exit 127. Quote the value,
+since a leading `{` starts a YAML flow mapping.
+
+Contracts written before the placeholder existed keep working: if a command
+carries no `{python}`, the runner rewrites a *leading* bare `python` token to
+the same interpreter. That fallback is compatibility, not the form to teach —
+it only ever touches the first token, so `uv run python …` and a script named
+`python_helper.py` are deliberately left alone.
 
 Run the full workflow, or just one stage and its dependencies while iterating:
 

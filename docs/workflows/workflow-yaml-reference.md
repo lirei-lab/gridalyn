@@ -66,7 +66,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -77,18 +77,35 @@ spec:
 
     - id: run_minimal_powerflow
       needs: [prepare_workspace]
-      command: python scripts/run_minimal_powerflow.py
+      command: "{python} scripts/run_minimal_powerflow.py"
       inputs: []
       outputs:
         - projects/minimal_grid_project/outputs/reports/minimal_grid_report.json
 ```
+
+### The `{python}` Placeholder
+
+Stage commands run through a shell, so a bare `python` is resolved against
+`PATH`. On a virtualenv or a `python3`-only system there is no such executable
+and the stage dies with exit 127. Write `{python}` instead: the runner replaces
+every occurrence with the interpreter executing the workflow
+(`sys.executable`), shell-quoted so an interpreter path containing spaces
+survives. Quote the whole scalar in YAML — a leading `{` would otherwise start
+a flow mapping.
+
+A compatibility fallback keeps older contracts running: when a command contains
+no `{python}`, a *leading* bare `python` token is rewritten to the same
+interpreter. It applies to the first token only, so `uv run python …`, an
+argument named `python`, and a script named `python_helper.py` are
+never touched. Treat the fallback as support for contracts already written, and
+`{python}` as the form to author.
 
 ### Stage Fields
 
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | yes | Stable stage identifier used in logs and run manifests. |
-| `command` | yes | Shell command executed from repository root when `pathBase: repo`. |
+| `command` | yes | Shell command executed from repository root when `pathBase: repo`. Use `{python}` for the interpreter. |
 | `needs` | optional | Stage IDs that should run before this stage. |
 | `inputs` | optional | Files consumed by the stage. |
 | `outputs` | optional | Files produced by the stage. |
