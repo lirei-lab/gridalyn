@@ -8,7 +8,12 @@ import importlib.util
 OPTIONAL_CAPABILITY_MODULES: dict[str, list[str]] = {
     "geo": ["geopandas", "osmnx", "shapely"],
     "sim": ["pandapower", "lightsim2grid"],
-    "ops": ["cvxpy", "lightgbm"],
+    # lightgbm is NOT here: it is a base dependency, because the packaged
+    # macro weights are LightGBM models and a missing runtime silently
+    # swaps the generator to a different macro model. Listing a base
+    # dependency as an optional capability makes a check that can never
+    # fail on a supported install.
+    "ops": ["cvxpy"],
     "semantic": ["rdflib", "falkordb"],
     "dashboard": ["folium", "leafmap"],
 }

@@ -43,9 +43,12 @@ reproducing a published result.
 
 > **The extras are not optional for the citable numbers.** A bare
 > `uv sync --frozen` installs **base deps only**, leaving the optional `sim`
-> (`lightsim2grid`) and `ops` (`cvxpy`, `lightgbm`) capabilities uninstalled —
-> `gridalyn doctor` then reports `cvxpy=false`, `lightgbm=false`,
-> `lightsim2grid=false`. The `ev_hosting_flex` study **silently degrades** onto
+> (`lightsim2grid`) and `ops` (`cvxpy`) capabilities uninstalled —
+> `gridalyn doctor` then reports `cvxpy=false`, `lightsim2grid=false`.
+> (`lightgbm` used to be in this list. It is now a base dependency, because a
+> missing runtime silently swapped the load generator onto a different macro
+> model — the worst shape of degradation, since it changed numbers without
+> failing.) The `ev_hosting_flex` study **silently degrades** onto
 > fallback code paths (still exit 0) and moves most of the **81** regression
 > metrics. The `sim` + `ops` extras are required to reproduce the
 > committed baseline; `dev` provides `pytest` for the determinism leg. This is a
@@ -79,7 +82,7 @@ must reproduce bit-for-bit.
 ```bash
 # 1. Build a clean, frozen environment on pinned 3.12 WITH the required extras.
 #    The citable ev_hosting_flex numbers depend on the optional `sim`
-#    (lightsim2grid) and `ops` (cvxpy, lightgbm) capabilities; `dev` provides
+#    (lightsim2grid) and `ops` (cvxpy) capabilities; `dev` provides
 #    pytest for the determinism leg below. A bare `uv sync --frozen` installs
 #    base deps only — the study then silently degrades and moves most of the 81 metrics
 #    (see the D-07 note above and the doctor check on the next line).
@@ -89,7 +92,7 @@ uv sync --frozen --extra sim --extra ops --extra dev
 # uv selects 3.12 from the committed .python-version; a different version here
 # means the pin is not being honoured and the numbers will move.
 uv run python --version
-# Capability tripwire: cvxpy, lightgbm, and lightsim2grid MUST all be true here.
+# Capability tripwire: cvxpy and lightsim2grid MUST all be true here.
 # If any reads false, the extras above did not install and the regression will
 # go red on degraded fallback paths — that is a recipe defect (D-07), not a
 # baseline change.

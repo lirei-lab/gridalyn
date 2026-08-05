@@ -24,9 +24,13 @@ class TestMissingCapabilityModules(unittest.TestCase):
         with mock.patch.object(
             capabilities.importlib.util, "find_spec", return_value=None
         ):
+            # lightgbm is deliberately absent: it moved to base dependencies
+            # because a missing runtime silently swaps the load generator's
+            # macro model, and a base dependency listed as an optional
+            # capability is a check that can never fail.
             self.assertEqual(
                 capabilities.missing_capability_modules("ops"),
-                ["cvxpy", "lightgbm"],
+                ["cvxpy"],
             )
 
 
