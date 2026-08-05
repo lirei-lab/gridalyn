@@ -43,17 +43,26 @@ repos:
       - id: flake8
         additional_dependencies: [poetry, flake8-bugbear, flake8-docstrings]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+  # Deliberately `repo: local` + `language: system`, so this runs the mypy that
+  # is installed in the project environment -- the same one CI runs. A
+  # mirrors-mypy hook builds its own isolated env, which cannot see the
+  # project's third-party stubs and therefore reports a *different* number for
+  # the same tree (roughly 126 against 145). Two versions, two truths, and a
+  # hook that approves what the gate rejects.
+  #
+  # It is also a ratchet, not a pass/fail check. mypy follows imports, so
+  # checking one edited file pulls in its whole closure: a clean file measured
+  # 21 errors across 10 other files. A hook that fails on someone else's debt
+  # is a hook people bypass.
+  - repo: local
     hooks:
-      - id: mypy
-        # pre-push only -- see the header. In CI this hook is skipped outright
-        # (SKIP=mypy in the lint job) because the dedicated `typecheck` job
-        # owns type checking there, with a pinned analyser, a pinned stub set
-        # and a baseline that can only ratchet down.
+      - id: mypy-ratchet
+        name: mypy (ratchet against .mypy-baseline)
+        entry: python3 tools/mypy_ratchet.py
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]
-        additional_dependencies: [poetry, types-requests, types-PyYAML]
-        args: [--ignore-missing-imports, --disallow-untyped-defs]
 
 ci:
   autofix_commit_msg: "style: Auto-format code and docs [skip ci]"

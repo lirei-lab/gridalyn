@@ -90,31 +90,26 @@ jobs:
           done
 
   typecheck:
-    # Type checking was claimed but never enforced: CLAUDE.md states mypy runs
+    # Type checking was claimed but never enforced: CLAUDE.md stated mypy ran
     # with --disallow-untyped-defs, yet it existed only as a local pre-commit
     # hook. The "skipped in CI because it can be slow" justification does not
-    # survive a stopwatch — mypy costs 16.3 s cold over all 183 files, against a
+    # survive a stopwatch -- mypy costs ~16 s cold over all 183 files, against a
     # test job budgeted 40 minutes and a projects job that runs six end-to-end
-    # studies in ~78 s. Measurement and full error inventory:
-    # .planning/phases/03-verification-net/03-03-TYPECHECK-EVIDENCE.md
+    # studies in ~78 s.
     #
-    # THIS JOB REPORTS; IT DOES NOT BLOCK THE CURRENT TREE. The baseline is 147
-    # errors, not zero, and a gate that fails on day one gets turned off. It
-    # fails only when the count RISES above the baseline, so new type errors
-    # cannot enter silently while the existing ones are paid down deliberately.
+    # THIS JOB REPORTS; IT DOES NOT BLOCK THE CURRENT TREE. The baseline is a
+    # real backlog, not zero, and a gate that fails on day one gets turned off.
+    # It fails only when the count RISES, so new type errors cannot enter
+    # silently while the existing ones are paid down deliberately.
+    #
+    # The comparison itself lives in tools/mypy_ratchet.py and the number in
+    # .mypy-baseline, so this job and the pre-push hook run the same logic
+    # against the same figure. They previously duplicated it -- inline bash here
+    # and a plain mypy hook there -- which is how the hook came to approve what
+    # this job rejected.
     name: Type check (ratchet)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      # Ratchet. LOWER this as errors are fixed; never raise it to make CI pass.
-      # Measured with the dev extra AND types-requests installed, which is what
-      # the step below installs. Reproduce it locally with exactly that pair or
-      # the count will not match: types-requests alone moves it by one, and the
-      # pre-commit hook's isolated env, which sees neither, reports 21 fewer
-      # (126) for the same tree. Every one of those figures is real; they differ
-      # by stub visibility alone, which is why the baseline names its
-      # environment instead of just its number.
-      MYPY_BASELINE: "145"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,58 +121,19 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install package with runtime and test extras
-        # ".[all,test]" not ".[dev]": the dev extra additionally pulls
-        # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
-        # packages (282 -> 185) that nothing under test imports, installed once
-        # per job on every push.
+      - name: Install package with runtime, test and typing extras
+        # The baseline is only meaningful alongside the environment it was
+        # measured in: mypy's reading depends on which third-party stubs
+        # resolve, and the same tree reports 145 here against roughly 126 in an
+        # isolated env that cannot see them. ".[all,test,typing]" is that
+        # environment, and it is what tools/mypy_ratchet.py expects locally too.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,test]"
+          python -m pip install -e ".[all,test,typing]"
 
-      - name: Install mypy pinned to the pre-commit rev
-        # Pinned to the rev in .pre-commit-config.yaml so local and CI run the
-        # same analyser and the baseline count stays reproducible. The dev extra
-        # does not carry mypy; installing it here keeps the type-check tool out
-        # of every other job's dependency resolution.
-        run: python -m pip install "mypy==1.9.0" types-requests
-
-      - name: Run mypy against the baseline
+      - name: Run the ratchet
         run: |
-          set -uo pipefail
-          python -m mypy --ignore-missing-imports --disallow-untyped-defs \
-            gridalyn > mypy.log 2>&1 || true
-          cat mypy.log
-
-          # Parse the summary line rather than counting matches, and fail loudly
-          # if it is absent: a crashed mypy prints no errors, and "no errors"
-          # must never be mistaken for "clean".
-          if grep -qE '^Success: no issues found' mypy.log; then
-            count=0
-          elif grep -qE '^Found [0-9]+ errors? in ' mypy.log; then
-            count=$(sed -nE 's/^Found ([0-9]+) errors? in .*/\1/p' mypy.log | tail -1)
-          else
-            echo "::error::mypy produced no recognisable summary line — it most"
-            echo "::error::likely crashed. Refusing to report this as a pass."
-            exit 1
-          fi
-
-          echo "mypy errors: ${count} (baseline ${MYPY_BASELINE})"
-          echo "### mypy: ${count} errors (baseline ${MYPY_BASELINE})" \
-            >> "${GITHUB_STEP_SUMMARY}"
-
-          if [ "${count}" -gt "${MYPY_BASELINE}" ]; then
-            echo "::error::mypy error count rose from ${MYPY_BASELINE} to ${count}."
-            echo "::error::Fix the new type errors listed above. Do not raise"
-            echo "::error::MYPY_BASELINE in .github/workflows/ci.yml to go green."
-            exit 1
-          fi
-
-          if [ "${count}" -lt "${MYPY_BASELINE}" ]; then
-            echo "::notice::mypy error count dropped to ${count}. Lower"
-            echo "::notice::MYPY_BASELINE in .github/workflows/ci.yml to ${count}"
-            echo "::notice::to lock the improvement in."
-          fi
+          python tools/mypy_ratchet.py | tee -a "${GITHUB_STEP_SUMMARY}"
 
   lint:
     # Lints only the files changed in the pull request, mirroring the local
