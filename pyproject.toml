@@ -69,6 +69,10 @@ exclude = ["tests*"]
 [tool.setuptools.package-data]
 gridalyn = [
     "assets/datagen/models/weights/*.pkl",
+    # Read at runtime by gridalyn/projects/validation.py via
+    # `SCHEMA_DIR = Path(__file__).parent / "schemas"`. Without this glob
+    # `validate_project` raises FileNotFoundError on a pip-installed gridalyn.
+    "projects/schemas/*.json",
 ]
 
 [project.optional-dependencies]
