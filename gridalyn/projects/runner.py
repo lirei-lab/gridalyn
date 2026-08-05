@@ -4,6 +4,7 @@ import importlib.metadata
 import importlib.util
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -221,6 +222,62 @@ def _echo(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
 
+# The token a workflow declares to mean "the interpreter running this study".
+# Stage commands go through ``shell=True``, where a bare ``python`` resolves
+# against ``PATH`` — and on a venv or a ``python3``-only system there is no such
+# executable, so every stage dies with exit 127. Workflows declare
+# ``{python}`` instead and the runner substitutes ``sys.executable``.
+_INTERPRETER_PLACEHOLDER = "{python}"
+
+# The bare token rewritten by the compatibility fallback, for workflows
+# authored before the placeholder existed (including the ones ``templates.py``
+# still generates and any user-authored contract).
+_BARE_INTERPRETER_TOKEN = "python"
+
+
+def _resolve_interpreter(command: str) -> str:
+    """Bind a stage command to the interpreter running this process.
+
+    Two independent mechanisms, in precedence order:
+
+    1. *Explicit form* — every occurrence of ``{python}`` is replaced with
+       :data:`sys.executable`.
+    2. *Fallback form* — otherwise, if the command's **leading** whitespace
+       delimited token is exactly ``python``, that one token is replaced. A
+       ``python`` appearing later (as an argument, inside a path such as
+       ``scripts/python_helper.py``, or after a launcher such as ``uv run``) is
+       never touched.
+
+    The two mechanisms are mutually exclusive by construction: a command
+    carrying the placeholder never reaches the fallback, and the fallback never
+    inspects the placeholder. Neither can mask a defect in the other.
+
+    Args:
+        command: The stage command exactly as the workflow contract declares it.
+
+    Returns:
+        The command with the interpreter bound, or the input unchanged when
+        neither mechanism applies.
+    """
+    # ``shell=True`` re-parses the string, and ``sys.executable`` may contain
+    # spaces (e.g. a venv under "Application Support"), so it must be quoted.
+    interpreter = shlex.quote(sys.executable)
+
+    if _INTERPRETER_PLACEHOLDER in command:
+        return command.replace(_INTERPRETER_PLACEHOLDER, interpreter)
+
+    stripped = command.lstrip()
+    leading_whitespace = command[: len(command) - len(stripped)]
+    head = stripped.split(None, 1)
+    if head and head[0] == _BARE_INTERPRETER_TOKEN:
+        # Slice rather than re-join so the original inter-token spacing and any
+        # trailing whitespace survive verbatim.
+        remainder = stripped[len(_BARE_INTERPRETER_TOKEN) :]
+        return f"{leading_whitespace}{interpreter}{remainder}"
+
+    return command
+
+
 def run_project(
     project: StudyProject,
     dry_run: bool = False,
@@ -276,8 +333,11 @@ def run_project(
             if echo:
                 _echo(f"[{index}/{total}] {stage.id}: {stage.command}")
             stage_started = time.monotonic()
+            # The manifest and the echoed lines keep ``stage.command`` verbatim,
+            # so a run record still shows what the contract declared; only the
+            # string handed to the shell is interpreter-bound.
             result = subprocess.run(
-                stage.command,
+                _resolve_interpreter(stage.command),
                 cwd=project.base_dir,
                 shell=True,
                 check=False,

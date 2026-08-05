@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,14 +16,14 @@ spec:
     - id: generate_building_footprints
       needs:
         - prepare_workspace
-      command: python scripts/generate_building_footprints.py
+      command: "{python} scripts/generate_building_footprints.py"
       outputs:
         - outputs/data/building_footprints.geojson
         - outputs/reports/building_footprints_report.json
     - id: build_synthetic_feeder
       needs:
         - generate_building_footprints
-      command: python scripts/build_synthetic_feeder.py
+      command: "{python} scripts/build_synthetic_feeder.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv

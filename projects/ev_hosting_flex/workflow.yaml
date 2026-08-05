@@ -12,7 +12,7 @@ spec:
   stages:
     # ── Stage 1: workspace scaffolding (live) ────────────────────────────
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace projects/ev_hosting_flex
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace projects/ev_hosting_flex"
       outputs:
         - projects/ev_hosting_flex/outputs/data
         - projects/ev_hosting_flex/outputs/json

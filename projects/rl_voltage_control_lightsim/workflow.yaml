@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,7 +16,7 @@ spec:
     - id: build_rl_feeder
       needs:
         - prepare_workspace
-      command: python scripts/build_rl_feeder.py
+      command: "{python} scripts/build_rl_feeder.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv
@@ -27,7 +27,7 @@ spec:
     - id: train_rl_voltage_agent
       needs:
         - build_rl_feeder
-      command: python scripts/train_rl_agent.py
+      command: "{python} scripts/train_rl_agent.py"
       inputs:
         - outputs/data/rl_assets.csv
       outputs:

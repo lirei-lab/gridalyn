@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,7 +16,7 @@ spec:
     - id: build_synthetic_feeder
       needs:
         - prepare_workspace
-      command: python scripts/build_synthetic_feeder.py
+      command: "{python} scripts/build_synthetic_feeder.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv
@@ -27,7 +27,7 @@ spec:
     - id: run_realtime_prosumer_market
       needs:
         - build_synthetic_feeder
-      command: python scripts/run_realtime_market.py
+      command: "{python} scripts/run_realtime_market.py"
       inputs:
         - outputs/data/prosumers.csv
       outputs:

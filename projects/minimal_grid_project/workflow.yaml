@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,7 +16,7 @@ spec:
     - id: run_minimal_powerflow
       needs:
         - prepare_workspace
-      command: python scripts/run_minimal_powerflow.py
+      command: "{python} scripts/run_minimal_powerflow.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv

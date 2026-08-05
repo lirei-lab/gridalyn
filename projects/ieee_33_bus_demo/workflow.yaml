@@ -5,7 +5,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -16,7 +16,7 @@ spec:
     - id: run_ieee33_powerflow
       needs:
         - prepare_workspace
-      command: python scripts/build_ieee33_demo.py
+      command: "{python} scripts/build_ieee33_demo.py"
       outputs:
         - outputs/data/buses.csv
         - outputs/data/lines.csv
@@ -26,7 +26,7 @@ spec:
     - id: generate_operational_scenarios
       needs:
         - run_ieee33_powerflow
-      command: python scripts/generate_operational_scenarios.py
+      command: "{python} scripts/generate_operational_scenarios.py"
       outputs:
         - outputs/data/scenarios.csv
         - outputs/data/scenario_results.csv
@@ -35,7 +35,7 @@ spec:
     - id: run_daily_timeseries
       needs:
         - run_ieee33_powerflow
-      command: python scripts/run_daily_timeseries.py
+      command: "{python} scripts/run_daily_timeseries.py"
       outputs:
         - outputs/data/daily_bus_load_profiles.csv
         - outputs/data/daily_timeseries_results.csv
