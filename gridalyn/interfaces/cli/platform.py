@@ -54,6 +54,17 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn platform`` command group.
+
+    Dispatches the governance commands, currently ``check-artifacts``, which
+    checks the Git artifact policy and the minimal demo dataset contract.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand handler.
+    """
     args, _extra_args = parse_args(argv)
     return args.handler(args)
 

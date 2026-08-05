@@ -234,6 +234,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn project`` command group.
+
+    Dispatches the project-workspace lifecycle commands — ``init``,
+    ``validate``, ``plan``, ``run``, ``prepare-workspace``, ``status``,
+    ``regression``, ``sense-check``, ``verify``, ``verify-all`` and ``list``.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand handler.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.handler(args)

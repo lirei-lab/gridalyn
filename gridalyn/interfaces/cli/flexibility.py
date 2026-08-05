@@ -56,6 +56,19 @@ def _workflow_handler(main_func):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn market`` command group.
+
+    Dispatches the flexibility and network-impact commands, currently
+    ``verify-clearing``, after confirming the optional ``ops`` capability is
+    installed.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand, or ``2`` if the ``ops``
+        capability is missing.
+    """
     from gridalyn.foundation.platform.capabilities import (
         MissingCapabilityError,
         require_capabilities,

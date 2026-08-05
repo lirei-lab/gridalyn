@@ -37,6 +37,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn dashboard`` command group.
+
+    Dispatches ``catalog`` (generate the digital-twin dashboard catalog) and
+    ``verify`` (check dashboard consistency), after confirming the optional
+    ``dashboard`` capability is installed.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand, or ``2`` if the ``dashboard``
+        capability is missing.
+    """
     from gridalyn.foundation.platform.capabilities import (
         MissingCapabilityError,
         require_capabilities,

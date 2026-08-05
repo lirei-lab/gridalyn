@@ -1,6 +1,17 @@
 site_name: Gridalyn
 site_dir: ../site
 docs_dir: .
+# ``docs_dir: .`` means every markdown file beneath docs/ is built, whether or
+# not it appears in ``nav``. ``superpowers/`` holds AI-assistant plan and spec
+# records that are git-ignored, so a CI build (which checks out from git) never
+# sees them -- but a local ``mkdocs build`` or ``gh-deploy`` would sweep 41
+# such pages onto the published site. This repo deliberately purged
+# AI-assistant material in the 2026-08-04 history rewrite; excluding the tree
+# keeps a local deploy from undoing that, without deleting a contributor's
+# untracked working files. The pattern is gitignore-style and matches nothing
+# in a clean checkout, which is why it is silent rather than an error there.
+exclude_docs: |
+  superpowers/
 not_in_nav: |
   development/code-structure-audit.md
 nav:
@@ -77,6 +88,7 @@ nav:
           - Project Regression: development/testing-and-validation.md
   - Reference:
       - Reference Overview: reference/overview.md
+      - Python API Reference: reference/api.md
       - CLI Reference: reference/cli.md
       - YAML Reference: workflows/workflow-yaml-reference.md
       - Report Schemas: platform/reports.md
@@ -140,3 +152,26 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 plugins:
   - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - ..
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            # The layer facades expose their public names through a lazy
+            # ``__getattr__`` over ``_LAZY_EXPORTS``. Static analysis cannot see
+            # those names, so the handler must inspect the imported module.
+            force_inspection: true
+            show_root_heading: true
+            show_root_full_path: true
+            show_source: false
+            show_submodules: false
+            show_if_no_docstring: false
+            show_labels: false
+            members_order: alphabetical
+            filters:
+              - "!^_"
+            heading_level: 2

@@ -25,6 +25,23 @@ REQUIRED_REPORT_FIELDS = (
 
 @dataclass(frozen=True)
 class ReportMetadata:
+    """Identity and provenance header for a platform report.
+
+    Every artifact-producing run emits a report through :func:`write_report`,
+    and this frozen record supplies the non-payload half of that envelope: what
+    the report is called, which domain produced it, and the governance ids that
+    let a result be traced back to the model version and study run it came from.
+
+    Attributes:
+        report_id: Stable identifier for this report within its domain.
+        source_domain: Producing layer or domain, e.g. ``"simulation"``.
+        schema_version: Report contract version; defaults to
+            :data:`SCHEMA_VERSION`.
+        project: Project descriptor (name, paths) carried into the envelope.
+        model_version_id: Governance id of the model version used, if tracked.
+        study_run_id: Governance id tying this report to one study run.
+    """
+
     report_id: str
     source_domain: str
     schema_version: str = SCHEMA_VERSION

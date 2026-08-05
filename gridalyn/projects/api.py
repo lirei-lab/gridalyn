@@ -19,6 +19,17 @@ from gridalyn.foundation.platform.reports import read_json_report, validate_repo
 
 @dataclass(frozen=True)
 class CreatedProject:
+    """Paths to the workspace :func:`init_project` just wrote.
+
+    Returned so a caller can go straight from scaffolding a project to loading
+    or running it, without re-deriving the two YAML paths from the root.
+
+    Attributes:
+        root: Project workspace directory that was created or populated.
+        project_file: Path to the generated ``project.yaml``.
+        workflow_file: Path to the generated ``workflow.yaml``.
+    """
+
     root: Path
     project_file: Path
     workflow_file: Path

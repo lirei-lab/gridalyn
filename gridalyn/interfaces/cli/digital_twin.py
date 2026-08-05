@@ -174,6 +174,17 @@ def handle_prepare_microsoft_buildings(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn twin`` command group.
+
+    Dispatches ``build`` (assemble twin artifacts), ``clip-buildings``, and
+    ``download-osm-buildings`` to their handlers.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand handler.
+    """
     args, _extra_args = parse_args(argv)
     return args.handler(args)
 

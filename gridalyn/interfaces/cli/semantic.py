@@ -37,6 +37,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ``gridalyn semantic`` command group.
+
+    Dispatches ``build`` (generate the digital-twin semantic graph) and
+    ``validate`` (check the graph against the ontology profile), after
+    confirming the optional ``semantic`` capability is installed.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected subcommand, or ``2`` if the ``semantic``
+        capability is missing.
+    """
     from gridalyn.foundation.platform.capabilities import (
         MissingCapabilityError,
         require_capabilities,

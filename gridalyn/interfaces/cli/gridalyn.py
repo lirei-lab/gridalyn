@@ -209,6 +209,19 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the root ``gridalyn`` command.
+
+    Handles the top-level ``quickstart``, ``validate`` and ``doctor`` commands,
+    and otherwise delegates to the domain CLI registered in
+    :data:`DOMAIN_MODULES` — ``twin``, ``project``, ``market``, ``semantic``,
+    ``dashboard`` or ``platform`` — including their aliases and ``--help``.
+
+    Args:
+        argv: Argument list to parse; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        Exit code from the selected command or delegated domain CLI.
+    """
     delegated_help = _delegate_domain_help(argv)
     if delegated_help is not None:
         return delegated_help

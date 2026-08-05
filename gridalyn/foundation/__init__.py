@@ -40,3 +40,13 @@ def __getattr__(name: str):
         globals()[name] = value
         return value
     raise AttributeError(f"module 'gridalyn.foundation' has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """List the module namespace plus every lazily exported public name.
+
+    Returns:
+        Sorted names, so ``dir()`` and :func:`inspect.getmembers` see the
+        lazy exports that ``__getattr__`` resolves on demand.
+    """
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

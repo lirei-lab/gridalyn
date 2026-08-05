@@ -5,6 +5,14 @@ import osmnx as ox
 
 
 class BuildingDownloader:
+    """Fetch OpenStreetMap building footprints for a geographic area.
+
+    Wraps ``osmnx`` feature queries and writes the polygon footprints out as
+    GeoJSON, which is the ingest format the synthetic-network builders read.
+    Non-polygon and untagged features are dropped, and an empty result raises
+    rather than writing an empty file.
+    """
+
     def __init__(self, config_path: str = "configs/geography/tr01.json") -> None:
         self.config_path = config_path
 

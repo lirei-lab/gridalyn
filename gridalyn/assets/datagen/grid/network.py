@@ -88,8 +88,21 @@ def load_mv_network_config(config_path: Path | str = DEFAULT_GRID_CONFIG_PATH) -
 
 @dataclass
 class Feeder:
+    """One radial MV branch of an :class:`MVNetwork`.
+
+    A feeder is sized by the number of load blocks hanging off it; the block
+    count times ``MVNetwork.n_units_per_block`` gives the dwellings it serves,
+    which is what the network's aggregate demand and thermal-limit checks are
+    computed from. The default network is four 40-block feeders.
+
+    Attributes:
+        name: Feeder label used in artifacts and per-feeder reporting.
+        n_blocks: Number of load blocks connected along the branch.
+        impedance_pu: Series impedance in per unit, on the network base.
+    """
+
     name: str
-    n_blocks: int          
+    n_blocks: int
     impedance_pu: float = 0.02   
 
 
