@@ -81,6 +81,89 @@ jobs:
             echo "::endgroup::"
           done
 
+  typecheck:
+    # Type checking was claimed but never enforced: CLAUDE.md states mypy runs
+    # with --disallow-untyped-defs, yet it existed only as a local pre-commit
+    # hook. The "skipped in CI because it can be slow" justification does not
+    # survive a stopwatch — mypy costs 16.3 s cold over all 183 files, against a
+    # test job budgeted 40 minutes and a projects job that runs six end-to-end
+    # studies in ~78 s. Measurement and full error inventory:
+    # .planning/phases/03-verification-net/03-03-TYPECHECK-EVIDENCE.md
+    #
+    # THIS JOB REPORTS; IT DOES NOT BLOCK THE CURRENT TREE. The baseline is 147
+    # errors, not zero, and a gate that fails on day one gets turned off. It
+    # fails only when the count RISES above the baseline, so new type errors
+    # cannot enter silently while the existing ones are paid down deliberately.
+    name: Type check (ratchet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Ratchet. LOWER this as errors are fixed; never raise it to make CI pass.
+      # Measured with the dev extra installed, so third-party stubs (lightgbm,
+      # rdflib) resolve. The pre-commit hook's isolated env cannot see them and
+      # reports 21 fewer (126) for the same tree — both figures are real, they
+      # differ by stub visibility alone.
+      MYPY_BASELINE: "147"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package with dev extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Install mypy pinned to the pre-commit rev
+        # Pinned to the rev in .pre-commit-config.yaml so local and CI run the
+        # same analyser and the baseline count stays reproducible. The dev extra
+        # does not carry mypy; installing it here keeps the type-check tool out
+        # of every other job's dependency resolution.
+        run: python -m pip install "mypy==1.9.0" types-requests
+
+      - name: Run mypy against the baseline
+        run: |
+          set -uo pipefail
+          python -m mypy --ignore-missing-imports --disallow-untyped-defs \
+            gridalyn > mypy.log 2>&1 || true
+          cat mypy.log
+
+          # Parse the summary line rather than counting matches, and fail loudly
+          # if it is absent: a crashed mypy prints no errors, and "no errors"
+          # must never be mistaken for "clean".
+          if grep -qE '^Success: no issues found' mypy.log; then
+            count=0
+          elif grep -qE '^Found [0-9]+ errors? in ' mypy.log; then
+            count=$(sed -nE 's/^Found ([0-9]+) errors? in .*/\1/p' mypy.log | tail -1)
+          else
+            echo "::error::mypy produced no recognisable summary line — it most"
+            echo "::error::likely crashed. Refusing to report this as a pass."
+            exit 1
+          fi
+
+          echo "mypy errors: ${count} (baseline ${MYPY_BASELINE})"
+          echo "### mypy: ${count} errors (baseline ${MYPY_BASELINE})" \
+            >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ "${count}" -gt "${MYPY_BASELINE}" ]; then
+            echo "::error::mypy error count rose from ${MYPY_BASELINE} to ${count}."
+            echo "::error::Fix the new type errors listed above. Do not raise"
+            echo "::error::MYPY_BASELINE in .github/workflows/ci.yml to go green."
+            exit 1
+          fi
+
+          if [ "${count}" -lt "${MYPY_BASELINE}" ]; then
+            echo "::notice::mypy error count dropped to ${count}. Lower"
+            echo "::notice::MYPY_BASELINE in .github/workflows/ci.yml to ${count}"
+            echo "::notice::to lock the improvement in."
+          fi
+
   lint:
     # Lints only the files changed in the pull request, mirroring the local
     # pre-commit hook behavior; the full tree does not yet pass all hooks.
