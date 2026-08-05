@@ -142,7 +142,7 @@ cython_debug/
 # AI-assistant working files: useful locally, not part of the published SDK.
 CLAUDE.md
 AGENTS.md
-docs/superpowers/
+.planning/
 docs/development/ai-agent-guide.md
 docs/development/agent-task-templates/
 docs/development/cleanup-inventory.md
