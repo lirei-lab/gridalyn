@@ -14,9 +14,17 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.foundation.platform.capabilities import OPTIONAL_CAPABILITY_MODULES
-from gridalyn.foundation.platform.validation import validate_workspace
-from gridalyn.projects.api import list_projects
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
+
+from gridalyn.foundation.platform.capabilities import (  # noqa: E402
+    OPTIONAL_CAPABILITY_MODULES,
+)
+from gridalyn.foundation.platform.validation import validate_workspace  # noqa: E402
+from gridalyn.projects.api import list_projects  # noqa: E402
 
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
     "twin": (

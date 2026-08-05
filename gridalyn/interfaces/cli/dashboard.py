@@ -10,7 +10,13 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.interfaces.cli.script_runner import run_module_as_script
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
+
+from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 

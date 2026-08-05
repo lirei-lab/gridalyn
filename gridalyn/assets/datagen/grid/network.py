@@ -257,13 +257,13 @@ if __name__ == "__main__":
         f"= {NETWORK.n_units:,} virtual customers"
     )
     print(
-        f"  P_rated={NETWORK.p_rated_kw/1000:.2f} MW  "
-        f"P_LIMIT={NETWORK.p_limit_kw/1000:.1f} MW  "
+        f"  P_rated={NETWORK.p_rated_kw / 1000:.2f} MW  "
+        f"P_LIMIT={NETWORK.p_limit_kw / 1000:.1f} MW  "
         f"I_max={I_MAX_A:.0f} A @ {VOLTAGE_MV_KV} kV"
     )
     for p in [15_000, 20_000, 25_000, 30_000]:
         r = NETWORK.check_constraint(p)
         print(
-            f"  P={p/1000:.0f} MW → {r['status'].upper()}  "
+            f"  P={p / 1000:.0f} MW → {r['status'].upper()}  "
             f"(loading={r['loading_pct']:.1f}%)"
         )

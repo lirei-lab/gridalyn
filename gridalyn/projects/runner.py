@@ -278,6 +278,69 @@ def _resolve_interpreter(command: str) -> str:
     return command
 
 
+def _execute_stage(
+    stage: WorkflowStage,
+    record: dict[str, Any],
+    *,
+    project: StudyProject,
+    index: int,
+    total: int,
+    output_path: Path,
+    echo: bool,
+) -> None:
+    """Run one stage as a subprocess and record its outcome into ``record``.
+
+    Deliberately does not touch the run-level manifest status. On failure it
+    raises, and ``run_project``'s ``except`` clause promotes the run from
+    ``running`` to ``failed`` -- which is what it already did for every other
+    exception, so the single-stage path and the unexpected-error path now agree
+    instead of setting the same field from two places.
+
+    Args:
+        stage: The workflow stage to run.
+        record: The stage's manifest entry, mutated in place.
+        project: The owning project, supplying the subprocess working directory.
+        index: 1-based position of this stage, for progress output.
+        total: Number of stages planned, for progress output.
+        output_path: Manifest location, echoed on failure so it can be inspected.
+        echo: Whether to write progress lines to stderr.
+
+    Raises:
+        subprocess.CalledProcessError: If the stage exits non-zero.
+    """
+    if echo:
+        _echo(f"[{index}/{total}] {stage.id}: {stage.command}")
+    stage_started = time.monotonic()
+    # The manifest and the echoed lines keep ``stage.command`` verbatim, so a
+    # run record still shows what the contract declared; only the string handed
+    # to the shell is interpreter-bound.
+    result = subprocess.run(
+        _resolve_interpreter(stage.command),
+        cwd=project.base_dir,
+        shell=True,
+        check=False,
+    )
+    elapsed = time.monotonic() - stage_started
+    record["ended_at"] = _utc_now()
+    record["exit_code"] = result.returncode
+    if result.returncode != 0:
+        record["status"] = "failed"
+        if echo:
+            _echo(
+                f"[{index}/{total}] {stage.id} FAILED "
+                f"(exit {result.returncode}) after {elapsed:.1f}s"
+            )
+            _echo(f"Inspect the run manifest: {output_path}")
+            _echo(
+                "Re-run just this stage with: gridalyn project run "
+                f"{project.root} --stage {stage.id}"
+            )
+        raise subprocess.CalledProcessError(result.returncode, stage.command)
+    record["status"] = "completed"
+    if echo:
+        _echo(f"[{index}/{total}] {stage.id} completed in {elapsed:.1f}s")
+
+
 def run_project(
     project: StudyProject,
     dry_run: bool = False,
@@ -330,38 +393,15 @@ def run_project(
                     _echo(f"[{index}/{total}] {stage.id} (planned): {stage.command}")
                 continue
 
-            if echo:
-                _echo(f"[{index}/{total}] {stage.id}: {stage.command}")
-            stage_started = time.monotonic()
-            # The manifest and the echoed lines keep ``stage.command`` verbatim,
-            # so a run record still shows what the contract declared; only the
-            # string handed to the shell is interpreter-bound.
-            result = subprocess.run(
-                _resolve_interpreter(stage.command),
-                cwd=project.base_dir,
-                shell=True,
-                check=False,
+            _execute_stage(
+                stage,
+                record,
+                project=project,
+                index=index,
+                total=total,
+                output_path=output_path,
+                echo=echo,
             )
-            elapsed = time.monotonic() - stage_started
-            record["ended_at"] = _utc_now()
-            record["exit_code"] = result.returncode
-            if result.returncode != 0:
-                record["status"] = "failed"
-                manifest["status"] = "failed"
-                if echo:
-                    _echo(
-                        f"[{index}/{total}] {stage.id} FAILED "
-                        f"(exit {result.returncode}) after {elapsed:.1f}s"
-                    )
-                    _echo(f"Inspect the run manifest: {output_path}")
-                    _echo(
-                        "Re-run just this stage with: gridalyn project run "
-                        f"{project.root} --stage {stage.id}"
-                    )
-                raise subprocess.CalledProcessError(result.returncode, stage.command)
-            record["status"] = "completed"
-            if echo:
-                _echo(f"[{index}/{total}] {stage.id} completed in {elapsed:.1f}s")
     except Exception:
         if manifest["status"] == "running":
             manifest["status"] = "failed"

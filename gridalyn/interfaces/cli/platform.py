@@ -9,8 +9,14 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
 
-from gridalyn.foundation.platform.artifacts import check_artifact_policy
-from gridalyn.foundation.platform.workspace import workspace_from_path
+# The imports below deliberately follow that call, so the E402 they raise is
+# waived per-line rather than silenced file-wide. configure_cli_environment()
+# sets MPLCONFIGDIR, and matplotlib reads it once at import time -- hoisting
+# these imports above the call would leave the variable set too late to have
+# any effect, which is a silent failure rather than a loud one.
+
+from gridalyn.foundation.platform.artifacts import check_artifact_policy  # noqa: E402
+from gridalyn.foundation.platform.workspace import workspace_from_path  # noqa: E402
 
 
 def _check_artifacts(args: argparse.Namespace) -> int:

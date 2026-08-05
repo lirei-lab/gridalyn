@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import ArtifactLayout  # noqa: E402
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
@@ -31,11 +31,11 @@ DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 # `projects` (`twin` suffices, given its only import) and updating its
 # importers -- outside this change's scope.
 # Registered in tests/test_layer_direction.py::_DOCUMENTED_EXCEPTIONS.
-from gridalyn.interfaces.reporting.dashboard_catalog import (
+from gridalyn.interfaces.reporting.dashboard_catalog import (  # noqa: E402
     build_dashboard_catalog,
     write_dashboard_catalog,
 )
-from gridalyn.twin.network import NetworkModelRepository
+from gridalyn.twin.network import NetworkModelRepository  # noqa: E402
 
 DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base

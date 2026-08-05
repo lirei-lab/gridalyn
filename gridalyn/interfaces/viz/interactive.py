@@ -411,7 +411,8 @@ class GridPlotter:
         ext_mean = ext_arr.mean(axis=0)
         ext_std = ext_arr.std(axis=0).mean()
         print(
-            f"Stochastic Bounds: Average Realization Standard Deviation around mean is {ext_std:.3f} MW"
+            "Stochastic Bounds: Average Realization Standard Deviation "
+            f"around mean is {ext_std:.3f} MW"
         )
 
         ext_5 = np.percentile(ext_arr, 5, axis=0)
