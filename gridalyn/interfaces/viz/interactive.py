@@ -392,7 +392,9 @@ class GridPlotter:
 
         return m
 
-    def plot_stochastic_bounds(self, mc_ext_p_mw, mc_raw_p_mw, mc_max_line, resolution_minutes, output_path):
+    def plot_stochastic_bounds(
+        self, mc_ext_p_mw, mc_raw_p_mw, mc_max_line, resolution_minutes, output_path
+    ):
         """
         Creates the Stochastic boundary plot matrix for Monte Carlo simulations.
         """
@@ -401,56 +403,114 @@ class GridPlotter:
         import numpy as np
 
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-        
+
         time_steps = len(mc_ext_p_mw[0])
         time_axis = np.linspace(0, 24, time_steps)
-        
+
         ext_arr = np.array(mc_ext_p_mw)
         ext_mean = ext_arr.mean(axis=0)
         ext_std = ext_arr.std(axis=0).mean()
-        print(f"Stochastic Bounds: Average Realization Standard Deviation around mean is {ext_std:.3f} MW")
-        
+        print(
+            f"Stochastic Bounds: Average Realization Standard Deviation around mean is {ext_std:.3f} MW"
+        )
+
         ext_5 = np.percentile(ext_arr, 5, axis=0)
         ext_95 = np.percentile(ext_arr, 95, axis=0)
-        
+
         # Shade the region instead of trying to draw 30 tiny microscopic lines that merge
-        ax1.fill_between(time_axis, ext_5, ext_95, color="tab:green", alpha=0.2, label="5th - 95th Percentile Band")
-        
+        ax1.fill_between(
+            time_axis,
+            ext_5,
+            ext_95,
+            color="tab:green",
+            alpha=0.2,
+            label="5th - 95th Percentile Band",
+        )
+
         # Draw some ghost traces
         for sim_idx, ext_traj in enumerate(ext_arr[:3]):
             label = "Individual Realizations" if sim_idx == 0 else None
-            ax1.plot(time_axis, ext_traj, color="tab:green", alpha=0.4, linewidth=0.5, label=label)
-            
-        ax1.plot(time_axis, ext_mean, label="Substation Import (Mean)", color="#27ae60", linewidth=3.0)
-        
+            ax1.plot(
+                time_axis,
+                ext_traj,
+                color="tab:green",
+                alpha=0.4,
+                linewidth=0.5,
+                label=label,
+            )
+
+        ax1.plot(
+            time_axis,
+            ext_mean,
+            label="Substation Import (Mean)",
+            color="#27ae60",
+            linewidth=3.0,
+        )
+
         raw_arr = np.array(mc_raw_p_mw)
-        ax1.plot(time_axis, raw_arr.mean(axis=0), label="Raw Datagen Aggregation (Mean)", color="#2c3e50", linestyle="--", linewidth=1.5)
-        
+        ax1.plot(
+            time_axis,
+            raw_arr.mean(axis=0),
+            label="Raw Datagen Aggregation (Mean)",
+            color="#2c3e50",
+            linestyle="--",
+            linewidth=1.5,
+        )
+
         ax1.set_ylabel("Active Power [MW]", fontweight="bold")
-        ax1.set_title(f"Stochastic Substation Demand ({len(ext_arr)} Realizations)", fontweight="bold")
+        ax1.set_title(
+            f"Stochastic Substation Demand ({len(ext_arr)} Realizations)",
+            fontweight="bold",
+        )
         ax1.grid(True, alpha=0.3, linestyle="--")
         ax1.legend(loc="upper left")
-        
-        line_arr = np.array(mc_max_line) 
+
+        line_arr = np.array(mc_max_line)
         line_mean = line_arr.mean(axis=0)
-        line_99 = np.percentile(line_arr, 99, axis=0) 
-        
+        line_99 = np.percentile(line_arr, 99, axis=0)
+
         for sim_idx, line_traj in enumerate(line_arr):
             label = "Individual Hazards" if sim_idx == 0 else None
-            ax2.plot(time_axis, line_traj, color="#e67e22", alpha=0.2, linewidth=1.5, label=label)
-            
-        ax2.plot(time_axis, line_mean, label="Grid Expected Max Congestion (Mean)", color="#d35400", linewidth=3)
-        ax2.plot(time_axis, line_99, label="Grid Extreme Congestion (99th Pct Constraint)", color="#c0392b", linewidth=2, linestyle="--")
-        
-        ax2.axhline(100, color="black", linestyle=":", linewidth=2, label="Physical Capacity Limit (100%)")
-        
+            ax2.plot(
+                time_axis,
+                line_traj,
+                color="#e67e22",
+                alpha=0.2,
+                linewidth=1.5,
+                label=label,
+            )
+
+        ax2.plot(
+            time_axis,
+            line_mean,
+            label="Grid Expected Max Congestion (Mean)",
+            color="#d35400",
+            linewidth=3,
+        )
+        ax2.plot(
+            time_axis,
+            line_99,
+            label="Grid Extreme Congestion (99th Pct Constraint)",
+            color="#c0392b",
+            linewidth=2,
+            linestyle="--",
+        )
+
+        ax2.axhline(
+            100,
+            color="black",
+            linestyle=":",
+            linewidth=2,
+            label="Physical Capacity Limit (100%)",
+        )
+
         ax2.set_xlabel("Time of Day [Hours]", fontweight="bold")
         ax2.set_ylabel("Loading [%]", fontweight="bold")
         ax2.set_title("Probabilistic Grid Congestion Analytics", fontweight="bold")
         ax2.set_xticks(np.arange(0, 25, 4))
         ax2.grid(True, alpha=0.3, linestyle="--")
         ax2.legend(loc="upper left")
-        
+
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
         plt.close()
