@@ -29,10 +29,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install package with dev extras
+      - name: Install package with runtime and test extras
+        # ".[all,test]" not ".[dev]": the dev extra additionally pulls
+        # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
+        # packages (282 -> 185) that nothing under test imports, installed once
+        # per job on every push.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[all,test]"
 
       - name: Run test suite
         run: python -m pytest -q --durations=15
@@ -59,10 +63,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install package with dev extras
+      - name: Install package with runtime and test extras
+        # ".[all,test]" not ".[dev]": the dev extra additionally pulls
+        # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
+        # packages (282 -> 185) that nothing under test imports, installed once
+        # per job on every push.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[all,test]"
 
       - name: Run fast governed studies and verify their baselines
         run: |
@@ -118,10 +126,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install package with dev extras
+      - name: Install package with runtime and test extras
+        # ".[all,test]" not ".[dev]": the dev extra additionally pulls
+        # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
+        # packages (282 -> 185) that nothing under test imports, installed once
+        # per job on every push.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[all,test]"
 
       - name: Install mypy pinned to the pre-commit rev
         # Pinned to the rev in .pre-commit-config.yaml so local and CI run the

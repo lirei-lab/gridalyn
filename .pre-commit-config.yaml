@@ -1,3 +1,25 @@
+# Git hooks in two layers, each sized to what it costs.
+#
+#   pre-commit  ->  black + isort + flake8   (~1 s)   on every commit
+#   pre-push    ->  mypy                     (~16 s)  before code leaves the machine
+#
+# mypy is 30x the cost of flake8 on this tree (15.6 s vs 0.5 s, both measured
+# cold). Charging that to every commit is how a team learns to type
+# `--no-verify` by reflex, and a hook everyone skips protects nothing.
+#
+# WHAT THIS IS NOT
+#
+# It is not CI, and it does not replace it. These hooks run on YOUR machine with
+# YOUR environment -- and this repository has already been bitten by exactly that
+# gap: a local pre-commit run reported black clean on a file that CI's black
+# reformatted, same pinned 24.3.0. `git commit --no-verify` skips all of it.
+# Treat these as a fast way to avoid a red pipeline, not as the gate.
+#
+# The gates live in .github/workflows/ci.yml: test, projects, typecheck (a mypy
+# ratchet against a measured baseline) and lint.
+
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/psf/black
     rev: 24.3.0
@@ -25,6 +47,11 @@ repos:
     rev: v1.9.0
     hooks:
       - id: mypy
+        # pre-push only -- see the header. In CI this hook is skipped outright
+        # (SKIP=mypy in the lint job) because the dedicated `typecheck` job
+        # owns type checking there, with a pinned analyser, a pinned stub set
+        # and a baseline that can only ratchet down.
+        stages: [pre-push]
         additional_dependencies: [poetry, types-requests, types-PyYAML]
         args: [--ignore-missing-imports, --disallow-untyped-defs]
 
@@ -32,4 +59,7 @@ ci:
   autofix_commit_msg: "style: Auto-format code and docs [skip ci]"
   autoupdate_commit_msg: "chore: Update pre-commit hooks [skip ci]"
   autofix_prs: true
-  skip: []  # Skip mypy in CI as it can be slow
+  # Was `skip: []` under a comment claiming mypy was skipped -- the comment
+  # described an intent the empty list never implemented. mypy is now genuinely
+  # off the commit path (pre-push above) and off the CI lint job.
+  skip: []
