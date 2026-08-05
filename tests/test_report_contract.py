@@ -96,7 +96,7 @@ from pathlib import Path
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_AUDIT_REL = ".planning/phases/02-layer-contract-enforcement/02-03-REPORT-AUDIT.md"
+_AUDIT_REL = "docs/development/report-contract-audit.md"
 _AUDIT_PATH = _REPO_ROOT / _AUDIT_REL
 
 # Only shipped code is in scope. `tests/` is scaffolding, not an
@@ -741,7 +741,7 @@ def _audit_text() -> str:
             f"Missing {_AUDIT_REL} (looked in {_AUDIT_PATH}).\n"
             "This gate pins the classification recorded in that document; "
             "without it the pins have no rationale and cannot be reviewed. "
-            "`.planning/` is untracked in this repository, so a fresh checkout "
+            "the audit is tracked under `docs/`, so a fresh checkout "
             "will not have it — restore the directory, or commit it, before "
             "relying on this gate."
         )
