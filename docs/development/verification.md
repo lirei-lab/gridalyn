@@ -18,7 +18,7 @@ pull request. What they cover is **not** your job to repeat.
 | --- | --- |
 | `test` | The whole `pytest` suite on Python 3.12 with the `dev` extra installed. |
 | `projects` (Governed project contracts) | Six fixture studies run end to end — `minimal_grid_project`, `synthetic_geojson_feeder`, `ieee_33_bus_demo`, `der_voltage_optimization`, `prosumer_battery_market`, `rl_voltage_control_lightsim` — each followed by a regression comparison against its committed baseline. This is what actually gates the StudyProject → Workflow → report → baseline contract. |
-| `typecheck` (Type check ratchet) | `mypy --ignore-missing-imports --disallow-untyped-defs gridalyn` against a pinned error baseline. It reports rather than blocks: the job fails only when the count *rises*. |
+| `typecheck` (Type check ratchet) | `tools/mypy_ratchet.py` — `mypy --ignore-missing-imports --disallow-untyped-defs gridalyn` compared against the count in `.mypy-baseline`. It reports rather than blocks: the job fails only when the count *rises*. The same script backs the pre-push hook, so local and CI cannot disagree. |
 
 The `lint` job runs pre-commit on pull-request-changed files only. The full tree
 does not pass `flake8`, so do not read a green `lint` as a clean tree.
@@ -156,7 +156,7 @@ Two limits on the coverage figure are worth knowing before you quote it:
 | Network access | `tests/test_packaging_contract.py` builds a real wheel with pip build isolation, which resolves `setuptools>=77.0` from an index. | Packaging test fails on `no matching distribution`. |
 | `setuptools>=77.0` in the build environment | `pyproject.toml` uses the PEP 639 SPDX `license = "MIT"` form, which setuptools accepts only from 77.0. An older setuptools rejects the metadata. | `invalid pyproject.toml config: 'project.license'`. |
 | `datasets/hq/consumption.h5` | The Hydro-Québec validation set is gitignored; the building-diversity tests compare against it. | Those tests skip, with a reason naming the dataset. |
-| `mypy==1.9.0` | Not in the `dev` extra. CI installs it in the `typecheck` job; locally it lives in the pre-commit cache. | `mypy: command not found` — do not conclude the project has no type checking. |
+| `mypy==1.9.0` | In the `typing` extra, and in `dev`. Pinned exactly rather than floored, because the baseline is a *count* and a different analyser returns a different count for an unchanged tree. | The pre-push ratchet names the fix: `pip install -e ".[typing]"`. |
 
 ### `uv run` dirties `uv.lock`
 
