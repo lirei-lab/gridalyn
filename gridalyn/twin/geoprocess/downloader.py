@@ -41,7 +41,9 @@ class BuildingDownloader:
             buildings.geom_type.isin(["Polygon", "MultiPolygon"])
         ].copy()
         if buildings.empty:
-            raise ValueError("OSMnx returned no Polygon/MultiPolygon building footprints")
+            raise ValueError(
+                "OSMnx returned no Polygon/MultiPolygon building footprints"
+            )
 
         buildings = gpd.GeoDataFrame(buildings, geometry="geometry", crs=gdf.crs)
         if buildings.crs is None:

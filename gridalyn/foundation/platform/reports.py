@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import hashlib
 import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 SCHEMA_VERSION = "1.0"
 REQUIRED_REPORT_FIELDS = (
@@ -99,8 +98,7 @@ def build_report(
         "inputs": inputs or [],
         "artifacts": artifacts or [],
         "summary": summary or {},
-        "validation": validation
-        or {"valid": True, "errors": [], "warnings": []},
+        "validation": validation or {"valid": True, "errors": [], "warnings": []},
     }
 
 
@@ -181,7 +179,9 @@ def write_manifest(
         "created_at": _utc_now(),
         "report_count": len(reports),
         "reports": {
-            report["report_id"]: _relative(Path(locations[report["report_id"]]), root_path)
+            report["report_id"]: _relative(
+                Path(locations[report["report_id"]]), root_path
+            )
             for report in reports
             if report.get("report_id") in locations
         },

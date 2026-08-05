@@ -13,13 +13,14 @@ configure_cli_environment()
 from gridalyn.interfaces.cli.script_runner import run_module_as_script
 from gridalyn.projects.workflows.flexibility import locational_verification
 
-
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = (
+            f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        )
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler
@@ -44,7 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
         subcommand.set_defaults(handler=_script_handler(script_name))
 
     verify_clearing = subparsers.add_parser("verify-clearing")
-    verify_clearing.set_defaults(handler=_workflow_handler(locational_verification.main))
+    verify_clearing.set_defaults(
+        handler=_workflow_handler(locational_verification.main)
+    )
     return parser
 
 

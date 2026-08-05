@@ -350,11 +350,13 @@ def run_project(
                 manifest["status"] = "failed"
                 if echo:
                     _echo(
-                        f"[{index}/{total}] {stage.id} FAILED (exit {result.returncode}) after {elapsed:.1f}s"
+                        f"[{index}/{total}] {stage.id} FAILED "
+                        f"(exit {result.returncode}) after {elapsed:.1f}s"
                     )
                     _echo(f"Inspect the run manifest: {output_path}")
                     _echo(
-                        f"Re-run just this stage with: gridalyn project run {project.root} --stage {stage.id}"
+                        "Re-run just this stage with: gridalyn project run "
+                        f"{project.root} --stage {stage.id}"
                     )
                 raise subprocess.CalledProcessError(result.returncode, stage.command)
             record["status"] = "completed"

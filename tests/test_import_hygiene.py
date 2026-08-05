@@ -151,7 +151,7 @@ def _exception_summary(stderr: str) -> str:
 
 
 class ImportHygieneTest(unittest.TestCase):
-    def test_optional_set_is_nonempty_and_expected(self):
+    def test_optional_set_is_nonempty_and_expected(self) -> None:
         # A guard, not a formality: if a later edit to capabilities.py or to
         # pyproject.toml empties this set, the sweep below would pass
         # vacuously while enforcing nothing.
@@ -167,7 +167,7 @@ class ImportHygieneTest(unittest.TestCase):
             f"derived truly-optional set changed: {sorted(optional)}",
         )
 
-    def test_no_subpackage_imports_optional_dependencies(self):
+    def test_no_subpackage_imports_optional_dependencies(self) -> None:
         optional = derive_optional_modules(REPO_ROOT)
         packages = discover_subpackages(REPO_ROOT)
         # Pinned, not a floor: a floor lets the swept population shrink
@@ -183,7 +183,7 @@ class ImportHygieneTest(unittest.TestCase):
 
         offenders = [
             f"{pkg} -> {module}"
-            for pkg, leaked in zip(packages, results)
+            for pkg, leaked in zip(packages, results, strict=True)
             for module in leaked
         ]
 

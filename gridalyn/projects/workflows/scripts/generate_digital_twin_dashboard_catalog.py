@@ -37,14 +37,14 @@ from gridalyn.interfaces.reporting.dashboard_catalog import (
 )
 from gridalyn.twin.network import NetworkModelRepository
 
-
 DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_POWERFLOW_SUMMARY = DEFAULT_LAYOUT.timeseries / "powerflow_smoke_summary.json"
 DEFAULT_OUT = DEFAULT_LAYOUT.dashboard / "catalog.json"
 DEFAULT_EXTENSIONS = {
     "network_impact": DEFAULT_LAYOUT.flexibility / "network_impact_catalog.json",
-    "clearing_scorecard": DEFAULT_LAYOUT.flexibility / "flexibility_clearing_scorecard.json",
+    "clearing_scorecard": DEFAULT_LAYOUT.flexibility
+    / "flexibility_clearing_scorecard.json",
     "operations": DEFAULT_LAYOUT.operations / "operations_catalog.json",
 }
 
@@ -66,7 +66,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario-index", type=Path, default=DEFAULT_SCENARIO_INDEX)
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
-    parser.add_argument("--powerflow-summary", type=Path, default=DEFAULT_POWERFLOW_SUMMARY)
+    parser.add_argument(
+        "--powerflow-summary", type=Path, default=DEFAULT_POWERFLOW_SUMMARY
+    )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     return parser.parse_args()
 

@@ -24,7 +24,7 @@ import pandapower as pp
 import pandas as pd
 from branca.colormap import LinearColormap
 from geopy.distance import geodesic
-from matplotlib import cm, colormaps
+from matplotlib import colormaps
 
 from gridalyn.twin.core.graph import PowerGridGraph
 
@@ -223,8 +223,8 @@ class GridPlotter:
 
     def plot_voltage_deviations_folium(self, net: "pp.pandapowerNet") -> folium.Map:
         # Step 1: Import the "turbo_r" and "inferno" colormaps from matplotlib
-        voltage_colormap = cm.get_cmap("turbo_r")  # Reverse colormap for voltages
-        line_colormap = cm.get_cmap("inferno")  # Colormap for line intensities
+        voltage_colormap = colormaps.get_cmap("turbo_r")  # Reversed, for voltages
+        line_colormap = colormaps.get_cmap("inferno")  # For line intensities
 
         # Step 2: Extract voltage deviations, angles, nominal voltages, and bus names
         voltage_deviations = net.res_bus.vm_pu

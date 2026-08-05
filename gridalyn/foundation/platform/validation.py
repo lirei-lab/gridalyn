@@ -54,7 +54,9 @@ def validate_workspace(
     project_paths = (
         list(projects)
         if projects is not None
-        else [path.relative_to(repo_root).as_posix() for path in workspace.project_paths()]
+        else [
+            path.relative_to(repo_root).as_posix() for path in workspace.project_paths()
+        ]
     )
     for project_path in project_paths:
         # LAYER-DIRECTION EXCEPTION: foundation -> gridalyn.projects.api.

@@ -99,11 +99,14 @@ jobs:
     timeout-minutes: 20
     env:
       # Ratchet. LOWER this as errors are fixed; never raise it to make CI pass.
-      # Measured with the dev extra installed, so third-party stubs (lightgbm,
-      # rdflib) resolve. The pre-commit hook's isolated env cannot see them and
-      # reports 21 fewer (126) for the same tree — both figures are real, they
-      # differ by stub visibility alone.
-      MYPY_BASELINE: "147"
+      # Measured with the dev extra AND types-requests installed, which is what
+      # the step below installs. Reproduce it locally with exactly that pair or
+      # the count will not match: types-requests alone moves it by one, and the
+      # pre-commit hook's isolated env, which sees neither, reports 21 fewer
+      # (126) for the same tree. Every one of those figures is real; they differ
+      # by stub visibility alone, which is why the baseline names its
+      # environment instead of just its number.
+      MYPY_BASELINE: "146"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

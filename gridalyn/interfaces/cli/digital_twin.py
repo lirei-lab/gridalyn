@@ -11,15 +11,14 @@ from gridalyn.interfaces.cli.environment import configure_cli_environment
 configure_cli_environment()
 
 from gridalyn.interfaces.cli.script_runner import run_module_as_script
+from gridalyn.projects.workflows.digital_twin import ev_scenarios, ev_timeseries
+from gridalyn.projects.workflows.digital_twin.build import run_digital_twin_build
 from gridalyn.twin.geoprocess import (
     clip_buildings_by_polygon,
     download_osm_building_footprints,
     load_polygon_coordinates,
     prepare_microsoft_building_footprints,
 )
-from gridalyn.projects.workflows.digital_twin.build import run_digital_twin_build
-from gridalyn.projects.workflows.digital_twin import ev_scenarios, ev_timeseries
-
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -51,13 +50,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build.set_defaults(handler=handle_build)
 
-    clip = subparsers.add_parser("clip-buildings", help="Clip building GeoJSON to a polygon.")
+    clip = subparsers.add_parser(
+        "clip-buildings", help="Clip building GeoJSON to a polygon."
+    )
     clip.add_argument("--buildings-file", type=Path, required=True)
     clip.add_argument("--polygon-file", type=Path, required=True)
     clip.add_argument("--output-file", type=Path, required=True)
     clip.set_defaults(handler=handle_clip_buildings)
 
-    osm = subparsers.add_parser("download-osm-buildings", help="Download OSM building footprints with OSMnx.")
+    osm = subparsers.add_parser(
+        "download-osm-buildings", help="Download OSM building footprints with OSMnx."
+    )
     osm.add_argument("--polygon-file", type=Path, required=True)
     osm.add_argument("--output-file", type=Path, required=True)
     osm.set_defaults(handler=handle_download_osm_buildings)
@@ -107,7 +110,9 @@ def _workflow_handler(main_func):
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
-        module_name = f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        module_name = (
+            f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
+        )
         return run_module_as_script(module_name, getattr(args, "script_args", []))
 
     return handler
@@ -143,7 +148,11 @@ def handle_clip_buildings(args: argparse.Namespace) -> int:
         polygon_coordinates=load_polygon_coordinates(args.polygon_file),
         output_file=args.output_file,
     )
-    print(json.dumps({"output_file": _display_path(args.output_file)}, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            {"output_file": _display_path(args.output_file)}, indent=2, sort_keys=True
+        )
+    )
     return 0
 
 
@@ -152,7 +161,11 @@ def handle_download_osm_buildings(args: argparse.Namespace) -> int:
         polygon_coordinates=load_polygon_coordinates(args.polygon_file),
         output_file=args.output_file,
     )
-    print(json.dumps({"output_file": _display_path(args.output_file)}, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            {"output_file": _display_path(args.output_file)}, indent=2, sort_keys=True
+        )
+    )
     return 0
 
 

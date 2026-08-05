@@ -7,8 +7,8 @@ import importlib
 import importlib.metadata
 import importlib.util
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
@@ -18,14 +18,37 @@ from gridalyn.foundation.platform.capabilities import OPTIONAL_CAPABILITY_MODULE
 from gridalyn.foundation.platform.validation import validate_workspace
 from gridalyn.projects.api import list_projects
 
-
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
-    "twin": ("gridalyn.interfaces.cli.digital_twin", "Build and inspect digital-twin artifacts.", ["dt", "model"]),
-    "project": ("gridalyn.interfaces.cli.project", "Create, validate, plan, and run project workflows.", ["projects"]),
-    "market": ("gridalyn.interfaces.cli.flexibility", "Run flexibility-market and network-impact commands.", ["flex", "flexibility"]),
-    "semantic": ("gridalyn.interfaces.cli.semantic", "Build and validate the semantic graph.", ["semantics"]),
-    "dashboard": ("gridalyn.interfaces.cli.dashboard", "Generate and validate dashboard catalogs.", ["dash"]),
-    "platform": ("gridalyn.interfaces.cli.platform", "Run platform governance and artifact checks.", ["governance"]),
+    "twin": (
+        "gridalyn.interfaces.cli.digital_twin",
+        "Build and inspect digital-twin artifacts.",
+        ["dt", "model"],
+    ),
+    "project": (
+        "gridalyn.interfaces.cli.project",
+        "Create, validate, plan, and run project workflows.",
+        ["projects"],
+    ),
+    "market": (
+        "gridalyn.interfaces.cli.flexibility",
+        "Run flexibility-market and network-impact commands.",
+        ["flex", "flexibility"],
+    ),
+    "semantic": (
+        "gridalyn.interfaces.cli.semantic",
+        "Build and validate the semantic graph.",
+        ["semantics"],
+    ),
+    "dashboard": (
+        "gridalyn.interfaces.cli.dashboard",
+        "Generate and validate dashboard catalogs.",
+        ["dash"],
+    ),
+    "platform": (
+        "gridalyn.interfaces.cli.platform",
+        "Run platform governance and artifact checks.",
+        ["governance"],
+    ),
 }
 
 
@@ -142,7 +165,10 @@ def _quickstart(args: argparse.Namespace) -> int:
     print("Next steps:", file=sys.stderr)
     print(f"  gridalyn project status {target} --check-artifacts", file=sys.stderr)
     print(f"  gridalyn project verify {target}", file=sys.stderr)
-    print(f"  edit {target}/scripts/run_powerflow_study.py to make it yours", file=sys.stderr)
+    print(
+        f"  edit {target}/scripts/run_powerflow_study.py to make it yours",
+        file=sys.stderr,
+    )
     return 0
 
 
@@ -158,10 +184,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     quickstart_parser = subparsers.add_parser(
         "quickstart",
-        help="Create and run a small power-flow demo project (first simulation in one command).",
+        help="Create and run a small power-flow demo project "
+        "(first simulation in one command).",
     )
-    quickstart_parser.add_argument("project", help="Directory to create the demo project in.")
-    quickstart_parser.add_argument("--name", help="Project name (defaults to the directory name).")
+    quickstart_parser.add_argument(
+        "project", help="Directory to create the demo project in."
+    )
+    quickstart_parser.add_argument(
+        "--name", help="Project name (defaults to the directory name)."
+    )
     quickstart_parser.set_defaults(handler=_quickstart)
 
     validate_parser = subparsers.add_parser(
@@ -190,7 +221,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor_parser = subparsers.add_parser(
         "doctor",
-        help="Inspect the local Gridalyn installation, workspace, projects, and optional capabilities.",
+        help="Inspect the local Gridalyn installation, workspace, "
+        "projects, and optional capabilities.",
     )
     doctor_parser.add_argument("--root", default=".")
     doctor_parser.set_defaults(handler=_doctor)

@@ -126,7 +126,7 @@ def _extract_lazy_exports(tree: ast.Module) -> dict[str, tuple[str, str]] | None
             continue
         return {
             key.value: (entry.elts[0].value, entry.elts[1].value)
-            for key, entry in zip(value.keys, value.values)
+            for key, entry in zip(value.keys, value.values, strict=True)
             if isinstance(key, ast.Constant)
             and isinstance(entry, ast.Tuple)
             and len(entry.elts) == 2

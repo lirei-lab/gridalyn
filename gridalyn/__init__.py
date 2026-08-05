@@ -67,7 +67,10 @@ _LAZY_EXPORTS = {
     "simulation": ("gridalyn.simulation", "simulation"),
     "twin": ("gridalyn.twin", "twin"),
     "NetworkAnalyzer": ("gridalyn.twin.core.topology", "NetworkAnalyzer"),
-    "PandapowerGridBuilder": ("gridalyn.simulation.simulators.powerflow.builder", "PandapowerGridBuilder"),
+    "PandapowerGridBuilder": (
+        "gridalyn.simulation.simulators.powerflow.builder",
+        "PandapowerGridBuilder",
+    ),
     "GridPlotter": ("gridalyn.interfaces.viz.interactive", "GridPlotter"),
     "BatteryAsset": ("gridalyn.assets", "BatteryAsset"),
     "get_dataset_path": ("gridalyn.foundation.data", "get_dataset_path"),
@@ -84,7 +87,10 @@ _LAZY_EXPORTS = {
     ),
     "scale_profiles_to_peaks": ("gridalyn.assets.datagen", "scale_profiles_to_peaks"),
     "init_project": ("gridalyn.projects.api", "init_project"),
-    "load_der_dispatch_assets": ("gridalyn.projects.model_inputs", "load_der_dispatch_assets"),
+    "load_der_dispatch_assets": (
+        "gridalyn.projects.model_inputs",
+        "load_der_dispatch_assets",
+    ),
     "load_generated_bus_loads_mw": (
         "gridalyn.projects.model_inputs",
         "load_generated_bus_loads_mw",
@@ -103,7 +109,10 @@ _LAZY_EXPORTS = {
     ),
     "load_project": ("gridalyn.projects.api", "load_project"),
     "load_prosumer_assets": ("gridalyn.projects.model_inputs", "load_prosumer_assets"),
-    "load_radial_feeder_spec": ("gridalyn.projects.model_inputs", "load_radial_feeder_spec"),
+    "load_radial_feeder_spec": (
+        "gridalyn.projects.model_inputs",
+        "load_radial_feeder_spec",
+    ),
     "load_voltage_control_der_spec": (
         "gridalyn.projects.model_inputs",
         "load_voltage_control_der_spec",
@@ -120,7 +129,10 @@ _LAZY_EXPORTS = {
     "write_report": ("gridalyn.foundation", "write_report"),
     "VoltageControlDERSpec": ("gridalyn.assets", "VoltageControlDERSpec"),
     "VoltageControlEnvironment": ("gridalyn.simulation", "VoltageControlEnvironment"),
-    "VoltageControlEnvironmentSpec": ("gridalyn.simulation", "VoltageControlEnvironmentSpec"),
+    "VoltageControlEnvironmentSpec": (
+        "gridalyn.simulation",
+        "VoltageControlEnvironmentSpec",
+    ),
     "validate_project": ("gridalyn.projects.api", "validate_project"),
     "build_operation_run": ("gridalyn.operations", "build_operation_run"),
     "build_radial_pandapower_feeder": (
@@ -139,10 +151,16 @@ _LAZY_EXPORTS = {
         "gridalyn.simulation.simulators.powerflow.synthetic_network",
         "SyntheticNetworkBuildResult",
     ),
-    "build_ieee33_benchmark_feeder": ("gridalyn.simulation", "build_ieee33_benchmark_feeder"),
+    "build_ieee33_benchmark_feeder": (
+        "gridalyn.simulation",
+        "build_ieee33_benchmark_feeder",
+    ),
     "validate_operation_run": ("gridalyn.operations", "validate_operation_run"),
     "write_powerflow_report": ("gridalyn.simulation", "write_powerflow_report"),
-    "write_voltage_profile_figure": ("gridalyn.simulation", "write_voltage_profile_figure"),
+    "write_voltage_profile_figure": (
+        "gridalyn.simulation",
+        "write_voltage_profile_figure",
+    ),
 }
 
 
@@ -150,7 +168,11 @@ def __getattr__(name: str):
     if name in _LAZY_EXPORTS:
         module_name, attr_name = _LAZY_EXPORTS[name]
         module = import_module(module_name)
-        value = module if attr_name == name and module_name.endswith(f".{name}") else getattr(module, attr_name)
+        value = (
+            module
+            if attr_name == name and module_name.endswith(f".{name}")
+            else getattr(module, attr_name)
+        )
         globals()[name] = value
         return value
     raise AttributeError(f"module 'gridalyn' has no attribute {name!r}")

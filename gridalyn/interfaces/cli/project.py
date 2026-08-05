@@ -218,7 +218,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument(
         "--no-write",
         action="store_true",
-        help="Run verification without writing outputs/reports/project_sense_check_report.json.",
+        help="Run verification without writing "
+        "outputs/reports/project_sense_check_report.json.",
     )
     verify_parser.set_defaults(handler=_verify)
 
@@ -228,7 +229,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_all_parser = subparsers.add_parser("verify-all")
     verify_all_parser.add_argument("--root", default=".")
-    verify_all_parser.add_argument("--write", action="store_true", help="Write project sense-check reports.")
+    verify_all_parser.add_argument(
+        "--write", action="store_true", help="Write project sense-check reports."
+    )
     verify_all_parser.set_defaults(handler=_verify_all)
     return parser
 
