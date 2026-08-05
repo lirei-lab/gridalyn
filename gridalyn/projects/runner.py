@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import importlib.util
 import json
 import os
 import subprocess
@@ -138,6 +139,34 @@ def _input_hashes(project: StudyProject) -> dict[str, dict[str, Any]]:
     return records
 
 
+def _macro_model_provenance() -> dict[str, Any]:
+    """Which macro model the load generator would use for this run.
+
+    The packaged LightGBM weights and the analytical fallback produce different
+    load profiles from the same seed, and the fallback only warns before exiting
+    0 -- so a degraded run was previously indistinguishable from a good one in
+    every governed artifact. This records the deciding conditions rather than
+    the warning, so a manifest is enough to tell which model produced the run.
+
+    Side-effect-free: it inspects file existence and importability, and never
+    constructs the generator or draws from any RNG.
+    """
+    from gridalyn.assets.datagen import load_profiles
+
+    weights_dir = Path(load_profiles.__file__).parent / "models" / "weights"
+    weights = {
+        name: (weights_dir / f"{name}.pkl").is_file()
+        for name in ("lgbm_heating_macro", "lgbm_bg_macro")
+    }
+    runtime = importlib.util.find_spec("lightgbm") is not None
+    trained = runtime and all(weights.values())
+    return {
+        "expected": "lgbm" if trained else "analytical",
+        "lightgbm_runtime": runtime,
+        "packaged_weights": weights,
+    }
+
+
 def _build_provenance(
     project: StudyProject, planned: list[WorkflowStage]
 ) -> dict[str, Any]:
@@ -154,6 +183,7 @@ def _build_provenance(
             "version": _clearing_stack_versions(),
         },
         "seeds": _resolve_seeds(project, planned),
+        "macro_model": _macro_model_provenance(),
         "input_hashes": _input_hashes(project),
     }
 
