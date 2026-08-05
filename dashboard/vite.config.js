@@ -25,7 +25,14 @@ function digitalTwinStaticPlugin() {
           }
           fs.stat(filePath, (err, stat) => {
             if (err || !stat.isFile()) {
-              next()
+                // 404, not next(). Falling through hands the request to Vite's
+                // SPA fallback, which answers 200 with index.html -- so every
+                // `if (!res.ok) return null` guard in the loaders goes dead and
+                // `res.json()` throws on "<!doctype html>" instead. One missing
+                // file then rejects a whole Promise.all and the catalog renders
+                // empty with nothing surfaced to the user.
+                res.statusCode = 404
+                res.end('Not found')
               return
             }
             if (filePath.endsWith('.parquet')) res.setHeader('Content-Type', 'application/octet-stream')

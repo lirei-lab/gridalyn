@@ -84,6 +84,15 @@ def generate_ev_scenarios(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     n_buildings = len(buildings)
+    if n_buildings == 0:
+        raise ValueError(
+            f"ev_scenarios: the base twin at {out_dir.parent / 'base'} holds zero "
+            "buildings, so every scenario would be generated over an empty set and "
+            "would overwrite the existing scenario overlays with n_ev=0. Build the "
+            "base first: `gridalyn twin base` (or `gridalyn twin build`), then "
+            "re-run this stage."
+        )
+
     rng = np.random.default_rng(seed)
     permutation = rng.permutation(n_buildings)
 

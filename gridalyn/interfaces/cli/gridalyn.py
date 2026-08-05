@@ -93,8 +93,16 @@ def _doctor(args: argparse.Namespace) -> int:
         "workspace": {
             "root": str(root.resolve()),
             "valid": workspace.get("valid"),
-            "errors": workspace.get("errors", []),
-            "warnings": workspace.get("warnings", []),
+            # `validate_workspace` returns {valid, checks, summary} -- it has no
+            # top-level "errors"/"warnings". Reading those keys returned an empty
+            # list unconditionally, so doctor exited 1 while reporting nothing a
+            # user could act on. The failing checks are the diagnosis.
+            "failed_checks": [
+                check
+                for check in workspace.get("checks", [])
+                if not check.get("valid", True)
+            ],
+            "summary": workspace.get("summary", {}),
         },
         "projects": {
             "count": len(projects),
