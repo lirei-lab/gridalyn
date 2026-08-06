@@ -72,6 +72,81 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[all,test]"
 
+      - name: Smoke-run the documented instruction subset
+        # The instruction ledger (docs/development/instruction-ledger.json)
+        # classifies 350 fenced doc blocks and pins each one's sha1; the gate
+        # that enforces it, tests/test_doc_instructions.py, runs in the `test`
+        # job in under a second. But that gate only proves the ledger still
+        # DESCRIBES the docs -- it never runs a single documented command, so a
+        # CLI rename would leave every verdict green while the docs rotted.
+        #
+        # This step closes that hole for a measured, representative subset.
+        # MEASURED 2026-08-06, three runs on the phase-7 tree: 13.82 / 13.74 /
+        # 14.16 s, against the 90 s budget. It rides this job rather than a new
+        # one because a fourth job would pay a second checkout and a second
+        # `pip install -e ".[all,test]"` -- minutes of duplication to host
+        # fourteen seconds of work.
+        #
+        # IT RUNS BEFORE THE STUDY LOOP, DELIBERATELY. `doctor` and
+        # `check-artifacts` are exactly the commands that used to fail on a
+        # fresh checkout, because they inherited an artifact check over projects
+        # nothing had run yet. Run them after the loop and six studies' outputs
+        # would be sitting there, and the regression this guards could not
+        # reproduce.
+        #
+        # WHAT IT DOES NOT PROVE, so nobody reads more into a green: it covers
+        # 14 of the corpus's 159 runnable instructions, chosen for breadth of
+        # command surface rather than depth. It cannot catch a doc that
+        # instructs the right commands in the wrong ORDER -- the dominant defect
+        # the wave-2 sweep found, 8 of 13 fixes -- because that needs a clean
+        # workspace per chain. The full sweep stays an operator protocol;
+        # docs/development/instruction-verification.md carries the command.
+        run: |
+          set -euo pipefail
+          G="python -m gridalyn.interfaces.cli.gridalyn"
+          SCRATCH="$(mktemp -d)"
+          trap 'rm -rf "${SCRATCH}"' EXIT
+
+          echo "::group::documented command surface"
+          # README.md#3, quickstart.md#1, reference/cli.md#0,
+          # reproducibility.md#3, index.md#0
+          $G --help > /dev/null
+          # quickstart.md#2
+          $G validate > /dev/null
+          # quickstart.md#3 -- the fresh-checkout case, see above
+          $G doctor > /dev/null
+          # development/artifact-policy.md#1, tutorials/
+          # build-minimal-digital-twin.md#1, reproducibility.md#4
+          $G platform check-artifacts --summary-only > /dev/null
+          # index.md#0
+          $G project validate projects/minimal_grid_project > /dev/null
+          # projects/project-model.md#3, retargeted to scratch so the repo's
+          # own projects/ tree is never written to
+          $G project init "${SCRATCH}/my_minimal_case" --template minimal > /dev/null
+          echo "::endgroup::"
+
+          echo "::group::documented chains"
+          # getting-started/first-hour.md#3 -- run, then check artifacts, then
+          # verify, in the order the document gives them
+          $G project run projects/minimal_grid_project > /dev/null
+          $G project status projects/minimal_grid_project --check-artifacts > /dev/null
+          $G project verify projects/minimal_grid_project > /dev/null
+          # quickstart.md#seq0 member #4, from a clean directory
+          ( cd "${SCRATCH}" && $G quickstart my-first-study > /dev/null )
+          echo "::endgroup::"
+
+          # None of the above may touch a tracked file. Documented commands have
+          # regressed into writing the repository's own committed artifacts
+          # before (the dashboard catalog, finding #40), and that lands as a
+          # dirty index rather than a non-zero exit -- so exit status alone
+          # would not have caught it.
+          DIRT="$(git status --porcelain)"
+          if [ -n "${DIRT}" ]; then
+            echo "documented commands dirtied the working tree:"
+            echo "${DIRT}"
+            exit 1
+          fi
+
       - name: Run fast governed studies and verify their baselines
         # Subprocess coverage (#18) is wired in [tool.coverage.run] but
         # deliberately NOT carried by this job — a measured cost-benefit call

@@ -233,6 +233,17 @@ FAMILY_PREFIXES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "docs/projects/",
             "docs/sdk/",
             "docs/concepts/",
+            # Assigned to this family by orchestrator ruling during Phase 7:
+            # the original three-family split left these unowned, and their
+            # runnable blocks were executed under the platform family. Keeping
+            # them out would leave real instructions verified by nobody.
+            # ``applications/`` carries no fenced block today, but ownership is
+            # about who runs a document's instructions WHEN it gains them --
+            # claiming it now is what lets the gate assert that the split
+            # covers the whole corpus rather than all-but-a-pinned-remainder.
+            "docs/index.md",
+            "docs/semantic-layer/",
+            "docs/applications/",
         ),
     ),
     ("development", ("docs/development/",)),
