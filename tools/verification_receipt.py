@@ -52,6 +52,7 @@ SCHEMA_VERSION = "1.0"
 #: prose and then quietly forgotten.
 REQUIRED_PROTOCOLS: tuple[str, ...] = (
     "flagship-reproduce",
+    "flagship-subset",
     "docs-instruction-sweep",
     "subprocess-coverage",
 )

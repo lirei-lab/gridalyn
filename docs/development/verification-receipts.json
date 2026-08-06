@@ -30,7 +30,7 @@
     },
     "flagship-reproduce": {
       "status": "deferred",
-      "command": "python tools/flagship_verify.py --staged -- see docs/development/verification.md; the shape-covering staged-regeneration protocol (implemented by Phase 8 plan 08-04, executed by plan 08-05).",
+      "command": "python tools/flagship_verify.py -- see docs/development/verification.md; the shape-covering staged-regeneration protocol (implemented by Phase 8 plan 08-04, executed by plan 08-05).",
       "commit": null,
       "recorded_on": null,
       "result": null,
@@ -42,6 +42,21 @@
         "tools/flagship_verify.py"
       ],
       "rationale": "Deferred as a *recorded execution* but the protocol is now declared: the flagship becomes SOURCE-proven by protocol via a shape-covering subset (~30-60 min) with per-stage receipts, replacing the cache-only proof (ledger #17, deferred 2026-08-05/06). The full ~6 h regeneration remains operator-scheduled; the execution receipt lands in Phase 8 plan 08-05 at a real commit."
+    },
+    "flagship-subset": {
+      "status": "deferred",
+      "command": "python tools/flagship_verify.py -- the shape-covering subset runner (default = skip the heavy ~6 h annual-MC stage, per-stage records + R7 baseline check; --include-heavy for the full operator-scheduled regeneration).",
+      "commit": null,
+      "recorded_on": null,
+      "result": null,
+      "evidence": null,
+      "watched": [
+        "gridalyn/assets/datagen",
+        "gridalyn/simulation",
+        "projects/ev_hosting_flex",
+        "tools/flagship_verify.py"
+      ],
+      "rationale": "Declared with the runner in Phase 8 plan 08-04. The shape-covering subset is the fast source-proven proof (~30-60 min) used on generator/kernel changes; per-stage receipts make partial regeneration auditable. The execution receipt (recorded at a real commit) lands in Phase 8 plan 08-05."
     }
   }
 }
