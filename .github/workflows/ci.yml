@@ -73,6 +73,17 @@ jobs:
           python -m pip install -e ".[all,test]"
 
       - name: Run fast governed studies and verify their baselines
+        # Subprocess coverage (#18) is wired in [tool.coverage.run] but
+        # deliberately NOT carried by this job — a measured cost-benefit call
+        # (2026-08-06, six fixtures, local): uninstrumented 80 s; parent-only
+        # coverage 89 s at 7% of gridalyn (the stages run as subprocesses, so
+        # the parent measures almost nothing); subprocess-hooked coverage 159 s
+        # at 24%. Doubling this job's study loop would buy a number that no CI
+        # consumer reads: there is no coverage threshold or upload by design
+        # (docs/development/verification.md — "measured, not enforced"). The
+        # operator command that produces the 24%-scope number lives in the
+        # [tool.coverage.run] comment in pyproject.toml; revisit if a coverage
+        # ratchet or upload ever gains a consumer.
         run: |
           set -euo pipefail
           for project in \

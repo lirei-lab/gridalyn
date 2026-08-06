@@ -32,6 +32,14 @@ Why each import runs in its own subprocess
 An in-process sweep leaks ``sys.modules`` between checks: the first package
 to pull ``lightsim2grid`` would make every package checked after it look
 dirty. Subprocess isolation is mandatory for a correct verdict.
+
+Shared source of truth
+----------------------
+``derive_optional_modules`` below is the SINGLE source of the truly-optional
+set for the whole suite: ``tests/test_operations_boundaries.py`` imports it to
+build its stricter per-facade heavy-module contract. Changing its semantics
+changes BOTH gates — that coupling is deliberate (Phase 6, #2), so the two
+contracts cannot drift apart again.
 """
 
 from __future__ import annotations

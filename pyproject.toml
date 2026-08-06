@@ -201,3 +201,48 @@ dev = [
     "jupyterlab<5.0.0,>=4.3.4",
     "ipykernel>=6.29.5",
 ]
+
+# Slow-tier marker (#19). The annual byte-stability seal
+# (tests/test_ev_hosting_flex_annual_seal.py) re-runs four governed pipeline
+# stages and costs ~287 s — over half the suite's wall time. The marker tiers
+# it WITHOUT weakening the property: a default ``pytest -q`` still runs it
+# (CI passes no ``-m`` filter, and the operator's full local run is the run
+# that proves byte-stability). Local fast iteration may opt out via
+# ``-m "not slow"`` (deselects) or ``GRIDALYN_SKIP_SLOW=1`` (skips with a
+# visible reason in the skip summary).
+[tool.pytest.ini_options]
+markers = [
+    "slow: multi-minute test (the ~287 s annual byte-stability seal); runs by default and in CI-equivalent full runs, deselect locally with -m 'not slow' or skip visibly with GRIDALYN_SKIP_SLOW=1",
+]
+
+# Subprocess-aware coverage (#18). The workflow runner spawns every stage via
+# ``subprocess.run(shell=True)`` (gridalyn/projects/runner.py), so a plain
+# ``coverage run`` / ``pytest --cov`` measures ONLY the parent process and the
+# 77 stage scripts' SDK calls read as uncovered. To include subprocesses:
+#
+#   export COVERAGE_PROCESS_START="$PWD/pyproject.toml"
+#   export COVERAGE_FILE="$PWD/.coverage"   # keep data files out of projects/
+#   export PYTHONPATH="<dir containing a sitecustomize.py that runs:
+#                       import coverage; coverage.process_startup()>"
+#   python -m gridalyn.interfaces.cli.project run projects/<study>  # per study
+#   coverage combine && coverage report
+#
+# Mechanism choice, justified: coverage 7.10+ has ``patch = ["subprocess"]``,
+# but older coverage (7.6.x, the version existing local envs resolved through
+# pytest-cov) only WARNS "Unrecognized option" and silently measures nothing —
+# a config that claims subprocess scope without delivering it. The
+# COVERAGE_PROCESS_START + sitecustomize hook works on every supported
+# coverage version and is inert unless the env var is set, so plain
+# ``pytest -q`` and ``pytest --cov`` behave exactly as before.
+#
+# * parallel: each process writes its own suffixed data file (no clobbering
+#   between the runner and its stage subprocesses); run ``coverage combine``
+#   before ``coverage report``. pytest-cov combines automatically.
+# * sigterm: a stage terminated by the runner still flushes its data.
+# * source: the SDK package — the same scope as the operator-verified
+#   full-suite baseline (74%, measured 2026-08-05 via ``--cov=gridalyn``; see
+#   docs/development/verification.md), so the numbers stay comparable.
+[tool.coverage.run]
+source = ["gridalyn"]
+parallel = true
+sigterm = true
