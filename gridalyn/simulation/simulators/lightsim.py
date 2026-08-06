@@ -7,11 +7,16 @@ import warnings
 import numpy as np
 import pandapower as pp
 
+from gridalyn.foundation.platform.capabilities import require_capabilities
+
 
 class LightSimPowerflowAdapter:
     """Wrap LightSim2Grid's grid model behind a narrow Gridalyn API."""
 
     def __init__(self, net: pp.pandapowerNet) -> None:
+        require_capabilities(
+            "sim", context="LightSimPowerflowAdapter (lightsim2grid power flow)"
+        )
         try:
             from lightsim2grid.gridmodel import init_from_pandapower
         except ImportError as exc:

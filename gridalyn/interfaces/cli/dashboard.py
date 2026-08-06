@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
@@ -48,26 +47,16 @@ def main(argv: list[str] | None = None) -> int:
     """Run the ``gridalyn dashboard`` command group.
 
     Dispatches ``catalog`` (generate the digital-twin dashboard catalog) and
-    ``verify`` (check dashboard consistency), after confirming the optional
-    ``dashboard`` capability is installed.
+    ``verify`` (check dashboard consistency). No capability preflight is
+    needed: the modules these commands use (folium, leafmap) are base
+    dependencies, guaranteed by install.
 
     Args:
         argv: Argument list to parse; defaults to ``sys.argv[1:]``.
 
     Returns:
-        Exit code from the selected subcommand, or ``2`` if the ``dashboard``
-        capability is missing.
+        Exit code from the selected subcommand.
     """
-    from gridalyn.foundation.platform.capabilities import (
-        MissingCapabilityError,
-        require_capabilities,
-    )
-
-    try:
-        require_capabilities("dashboard", context="dashboard commands")
-    except MissingCapabilityError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
     args, _extra_args = parse_args(argv)
     return args.handler(args)
 
