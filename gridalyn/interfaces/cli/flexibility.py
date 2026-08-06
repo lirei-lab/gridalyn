@@ -16,9 +16,6 @@ configure_cli_environment()
 # any effect, which is a silent failure rather than a loud one.
 
 from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
-from gridalyn.projects.workflows.flexibility import (  # noqa: E402
-    locational_verification,
-)
 
 
 def _script_handler(script_name: str):
@@ -34,41 +31,34 @@ def _script_handler(script_name: str):
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    # ``verify-clearing``, ``perturbation-samples``, ``verify-network-impact``,
+    # ``shadow-report`` and ``scorecard`` were RETIRED on 2026-08-06 together
+    # with the ``flexibility_cls`` study that produced their input. They all
+    # read ``flexibility/market_dispatch_timeseries.parquet``, and nothing has
+    # written it since that study was retired on 2026-08-03 (archived at tag
+    # ``archive/flexibility_cls``), so they could not succeed anywhere in this
+    # repository. See docs/development/instruction-verification.md.
     scripts = {
         "providers": "generate_digital_twin_flexibility_providers.py",
         "surrogate": "generate_network_impact_surrogate.py",
         "locational-clearing": "generate_locational_flexibility_clearing.py",
-        "perturbation-samples": "generate_network_impact_perturbation_samples.py",
         "train-physics-surrogate": "train_network_impact_physics_surrogate.py",
-        "verify-network-impact": "generate_network_impact_verification_report.py",
-        "shadow-report": "generate_provider_selection_shadow_report.py",
-        "scorecard": "generate_flexibility_clearing_scorecard.py",
         "network-impact-catalog": "generate_network_impact_dashboard_catalog.py",
     }
     for command, script_name in scripts.items():
         subcommand = subparsers.add_parser(command)
         subcommand.set_defaults(handler=_script_handler(script_name))
 
-    verify_clearing = subparsers.add_parser("verify-clearing")
-    verify_clearing.set_defaults(
-        handler=_workflow_handler(locational_verification.main)
-    )
     return parser
-
-
-def _workflow_handler(main_func):
-    def handler(args: argparse.Namespace) -> int:
-        return main_func(getattr(args, "script_args", []))
-
-    return handler
 
 
 def main(argv: list[str] | None = None) -> int:
     """Run the ``gridalyn market`` command group.
 
-    Dispatches the flexibility and network-impact commands, currently
-    ``verify-clearing``, after confirming the optional ``ops`` capability is
-    installed.
+    Dispatches the flexibility and network-impact commands -- provider
+    registry, network-impact surrogate, locational clearing, physics-surrogate
+    training and the network-impact catalog -- after confirming the optional
+    ``ops`` capability is installed.
 
     Args:
         argv: Argument list to parse; defaults to ``sys.argv[1:]``.

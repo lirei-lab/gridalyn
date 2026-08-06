@@ -147,6 +147,31 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
         "archive/flexibility_cls",
     ): "a git tag, not a path; the notation is indistinguishable from a directory",
     (
+        "docs/development/instruction-verification.md",
+        "archive/flexibility_cls",
+    ): "a git tag, not a path; the notation is indistinguishable from a "
+    "directory (retirement note added 2026-08-06)",
+    (
+        "docs/development/report-contract-audit.md",
+        "archive/flexibility_cls",
+    ): "a git tag, not a path; the notation is indistinguishable from a "
+    "directory (retirement note added 2026-08-06)",
+    (
+        "docs/flexibility/network-impact-surrogate.md",
+        "archive/flexibility_cls",
+    ): "a git tag, not a path; the notation is indistinguishable from a "
+    "directory (retirement note added 2026-08-06)",
+    (
+        "docs/flexibility/providers-and-aggregators.md",
+        "archive/flexibility_cls",
+    ): "a git tag, not a path; the notation is indistinguishable from a "
+    "directory (retirement note added 2026-08-06)",
+    (
+        "docs/platform/digital-twin.md",
+        "archive/flexibility_cls",
+    ): "a git tag, not a path; the notation is indistinguishable from a "
+    "directory (retirement note added 2026-08-06)",
+    (
         "CLAUDE.md",
         "recovered/*",
     ): "a git branch glob, not a path",
@@ -183,6 +208,23 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
         "docs/development/release-cleanup-audit.md",
         "projects/flexibility_cls",
     ): "the study was retired 2026-08-03 and archived at tag archive/flexibility_cls",
+    (
+        "docs/development/report-contract-audit.md",
+        "gridalyn/projects/workflows/flexibility/locational_verification.py",
+    ): "retired 2026-08-06 with the flexibility_cls-dependent chain (audit "
+    "section 11); the audit is a historical record of what the tree contained "
+    "when each site was classified, so the reference must stay",
+    (
+        "docs/development/report-contract-audit.md",
+        "projects/workflows/flexibility/locational_verification.py",
+    ): "same module, layer-relative shorthand in the section 5.5 prose; "
+    "retired 2026-08-06 (audit section 11)",
+    (
+        "docs/development/report-contract-audit.md",
+        "gridalyn/projects/workflows/flexibility/spatial_powerflow_validation.py",
+    ): "retired 2026-08-06 (audit section 11); the row records the site that "
+    "was removed from the direct-JSON classification, so being absent is the "
+    "claim",
     (
         "docs/getting-started/what-is-gridalyn.md",
         "lirei-lab/gridalyn",

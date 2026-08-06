@@ -3,7 +3,7 @@
 The SDK's cross-cutting rule is that every artifact-producing run emits a
 governed platform report via ``write_report`` — never hand-written report JSON.
 Enforcing that mechanically is not as simple as banning ``json.dump``: the repo
-writes 70 JSON artifacts directly plus 22 through in-repo JSON helpers, and the
+writes 69 JSON artifacts directly plus 18 through in-repo JSON helpers, and the
 overwhelming majority are legitimately *not* platform reports (catalogs,
 manifests, scorecards, run-lineage records, cache metadata, GeoJSON, study data
 payloads). Each has its own shape and its own contract.
@@ -188,9 +188,6 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
             "generate_ev_timeseries::<inline:area_m2_used_for_generation,assignment"
             "_seed,created_at,resolution_minutes,scenarios,start_timestamp>#0"
         ),
-    ),
-    "gridalyn/projects/workflows/flexibility/spatial_powerflow_validation.py": (
-        "generate_spatial_cls_powerflow_validation::summary#0",
     ),
     "gridalyn/projects/workflows/scripts/generate_digital_twin_asset_registry.py": (
         "generate_asset_registry::summary#0",
@@ -425,22 +422,10 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "gridalyn/projects/workflows/scripts/"
         "generate_digital_twin_dashboard_catalog.py::main::write_dashboard_catalog#0",
         "gridalyn/projects/workflows/scripts/"
-        "generate_flexibility_clearing_scorecard.py::"
-        "main::write_flexibility_clearing_scorecard#0",
-        "gridalyn/projects/workflows/scripts/"
         "generate_network_impact_dashboard_catalog.py::"
         "main::write_network_impact_catalog#0",
-        "gridalyn/projects/workflows/scripts/"
-        "generate_network_impact_perturbation_samples.py::"
-        "main::write_sampler_artifacts#0",
         "gridalyn/projects/workflows/scripts/generate_network_impact_surrogate.py::"
         "main::write_surrogate_artifacts#0",
-        "gridalyn/projects/workflows/scripts/"
-        "generate_network_impact_verification_report.py::"
-        "generate_report::write_network_impact_verification_report#0",
-        "gridalyn/projects/workflows/scripts/"
-        "generate_provider_selection_shadow_report.py::"
-        "generate_shadow_report::write_shadow_report#0",
         "gridalyn/projects/workflows/scripts/"
         "train_network_impact_physics_surrogate.py::"
         "main::write_physics_surrogate_artifacts#0",
@@ -955,12 +940,14 @@ class ReportContractAuditTest(unittest.TestCase):
         # Guard against a vacuous pass if the scanner silently stops matching.
         self.assertEqual(
             examined,
-            70,
+            69,
             "The 02-03 audit examined 76 direct-JSON write sites; the "
-            "duplicate-write removal brought it to 75, and the 2026-08-06 "
-            "wave applying audit sections 5.1-5.5 brought it to 70 with zero "
-            "known violations. A different number means the tree moved or "
-            "the scanner no longer matches; reconcile before adjusting.",
+            "duplicate-write removal brought it to 75, the 2026-08-06 wave "
+            "applying audit sections 5.1-5.5 brought it to 70 with zero known "
+            "violations, and retiring the flexibility_cls-dependent commands "
+            "the same day removed one more (spatial_powerflow_validation.py), "
+            "leaving 69. A different number means the tree moved or the "
+            "scanner no longer matches; reconcile before adjusting.",
         )
 
     def test_helper_routed_counts_reconcile(self) -> None:
@@ -975,10 +962,13 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            22,
+            18,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
-            "helpers. A different number means the tree moved; reconcile before "
-            "adjusting this number.",
+            "helpers; retiring the flexibility_cls-dependent commands on "
+            "2026-08-06 removed four of them (the clearing scorecard, "
+            "perturbation sampler, network-impact verification report and "
+            "provider-selection shadow report), leaving 18. A different number "
+            "means the tree moved; reconcile before adjusting this number.",
         )
 
 

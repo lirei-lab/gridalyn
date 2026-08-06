@@ -227,16 +227,51 @@ cleaner long-term fix and would let the override map be deleted.
 
 ## Open findings
 
-Two defects found by the sweep were reported rather than fixed, and are carried
-forward:
+Both defects the sweep reported rather than fixed were **resolved on 2026-08-06
+by retiring the affected chain** — see below. No finding from this sweep remains
+open.
 
-- **`market_dispatch_timeseries.parquet` has no producer.** Four sites read it;
-  nothing has written it since `flexibility_cls` was retired. Nine documented
-  commands fail because of it, and `docs/platform/dashboard.md#9` cannot be
-  verified green anywhere in the repository as a result.
-- **`gridalyn twin build --include-network-impact` exits 0 with 5 of 22 steps
-  failed.** A non-zero exit is what a caller would expect, and what CI would
-  need.
+### Resolved: the `flexibility_cls`-dependent chain, retired 2026-08-06
+
+`market_dispatch_timeseries.parquet` was read at four sites and **written at
+none**: its only producer was the `flexibility_cls` study, retired 2026-08-03
+and archived at the git tag `archive/flexibility_cls`. Nine documented commands
+failed on it, and five `gridalyn twin build --include-network-impact` steps
+failed on every run while the build still exited 0, because all five were
+declared `optional=True` — a green exit on an incomplete build.
+
+Rather than leave instructions that cannot work, the whole chain was retired:
+
+| Removed | What |
+|---|---|
+| 5 CLI commands | `verify-clearing`, `perturbation-samples`, `verify-network-impact`, `shadow-report`, `scorecard` |
+| 5 build steps | the `optional=True` steps that invoked them |
+| 7 modules | the `projects/workflows/flexibility/` package and four `workflows/scripts/` generators |
+| 9 doc blocks | across `digital-twin.md`, `dashboard.md`, `network-impact-surrogate.md`, `providers-and-aggregators.md` |
+
+This also closes the silent-failure finding: no tolerated step fails any more,
+so `twin build --include-network-impact` exiting 0 now means what it says.
+
+**What was deliberately kept.** The operations-layer helpers those workflows
+called — `write_locational_verification_outputs`, `build_shadow_report`,
+`write_shadow_report` — are published SDK surface exported through
+`gridalyn/operations/__init__.py`, still covered by
+`tests/test_locational_clearing_verification.py`. The retirement removed the
+orphan-blocked *pipeline*, not the mechanism. `market surrogate`,
+`market providers`, `market locational-clearing`,
+`market train-physics-surrogate` and `market network-impact-catalog` all still
+run and were verified green during this sweep.
+
+**Cost of reinstatement.** A producer for the dispatch time series has to exist
+first. Ledger finding #39 (a `parents[4]` installed-layout hazard in
+`spatial_powerflow_validation.py`) is closed by deletion rather than by a fix,
+so it returns with that module if it is ever restored.
+
+Accounting: the ledger went 354 → 345 blocks; the report-contract audit went 70
+→ 69 direct-JSON sites and 22 → 18 helper-routed sites, with zero known
+violations unchanged (audit section 11). Surviving blocks in the four edited
+documents were re-anchored by content hash — 56 carried, zero needing
+re-classification — so only their ordinals moved.
 
 Three other defects the sweep found *were* fixed, and their blocks now carry
 `FIXED-CODE`: `gridalyn doctor` no longer inherits an artifact check that failed

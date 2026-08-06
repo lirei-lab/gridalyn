@@ -2,7 +2,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from gridalyn.projects.workflows.digital_twin.build import build_digital_twin_steps, run_digital_twin_build
+from gridalyn.projects.workflows.digital_twin.build import (
+    build_digital_twin_steps,
+    run_digital_twin_build,
+)
 
 
 class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
@@ -17,18 +20,45 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
         self.assertIn("generate_scenario_models", names)
         self.assertIn("run_powerflow", names)
         self.assertIn("generate_dashboard_catalog", names)
-        self.assertLess(names.index("export_base"), names.index("generate_building_models"))
-        self.assertLess(names.index("generate_building_models"), names.index("generate_scenarios"))
+        self.assertLess(
+            names.index("export_base"), names.index("generate_building_models")
+        )
+        self.assertLess(
+            names.index("generate_building_models"), names.index("generate_scenarios")
+        )
         self.assertLess(names.index("export_base"), names.index("generate_scenarios"))
-        self.assertLess(names.index("generate_asset_registry"), names.index("generate_scenario_models"))
-        self.assertLess(names.index("generate_scenario_models"), names.index("generate_flexibility_providers"))
-        self.assertLess(names.index("run_powerflow"), names.index("generate_dashboard_catalog"))
+        self.assertLess(
+            names.index("generate_asset_registry"),
+            names.index("generate_scenario_models"),
+        )
+        self.assertLess(
+            names.index("generate_scenario_models"),
+            names.index("generate_flexibility_providers"),
+        )
+        self.assertLess(
+            names.index("run_powerflow"), names.index("generate_dashboard_catalog")
+        )
         self.assertEqual(names[-1], "generate_dashboard_catalog")
-        self.assertEqual(command_by_name["generate_building_models"][:3], ["-m", "gridalyn.interfaces.cli.digital_twin", "building-models"])
-        self.assertEqual(command_by_name["generate_scenario_models"][:3], ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"])
-        self.assertEqual(command_by_name["generate_scenarios"][:3], ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"])
-        self.assertEqual(command_by_name["generate_semantic_graph"][:3], ["-m", "gridalyn.interfaces.cli.semantic", "build"])
-        self.assertEqual(command_by_name["generate_dashboard_catalog"][:3], ["-m", "gridalyn.interfaces.cli.dashboard", "catalog"])
+        self.assertEqual(
+            command_by_name["generate_building_models"][:3],
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "building-models"],
+        )
+        self.assertEqual(
+            command_by_name["generate_scenario_models"][:3],
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"],
+        )
+        self.assertEqual(
+            command_by_name["generate_scenarios"][:3],
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"],
+        )
+        self.assertEqual(
+            command_by_name["generate_semantic_graph"][:3],
+            ["-m", "gridalyn.interfaces.cli.semantic", "build"],
+        )
+        self.assertEqual(
+            command_by_name["generate_dashboard_catalog"][:3],
+            ["-m", "gridalyn.interfaces.cli.dashboard", "catalog"],
+        )
 
     def test_skip_heavy_removes_powerflow_and_physics_sampling(self):
         steps = build_digital_twin_steps(skip_heavy=True, include_network_impact=True)
@@ -47,21 +77,31 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
         )
         self.assertIn("generate_dashboard_catalog", names)
 
-    def test_include_network_impact_runs_locational_verification_after_clearing(self):
-        steps = build_digital_twin_steps(skip_heavy=False, include_network_impact=True)
-        names = [step["name"] for step in steps]
-        command_by_name = {step["name"]: step["command"] for step in steps}
+    def test_flexibility_cls_dependent_steps_are_retired(self):
+        """The five orphan-blocked steps are gone from every build variant.
 
-        self.assertIn("generate_locational_flexibility_clearing", names)
-        self.assertIn("generate_locational_clearing_verification_report", names)
-        self.assertLess(
-            names.index("generate_locational_flexibility_clearing"),
-            names.index("generate_locational_clearing_verification_report"),
-        )
-        self.assertEqual(
-            command_by_name["generate_locational_clearing_verification_report"][:3],
-            ["-m", "gridalyn.interfaces.cli.flexibility", "verify-clearing"],
-        )
+        Each invoked a command that reads
+        ``flexibility/market_dispatch_timeseries.parquet`` with no argument,
+        and nothing has written that file since the ``flexibility_cls`` study
+        was retired on 2026-08-03. All five were ``optional=True``, so they
+        failed on every network-impact build while the build still exited 0.
+        Removing them is what makes that exit code mean something.
+        """
+        retired = [
+            "generate_locational_clearing_verification_report",
+            "generate_network_impact_perturbation_samples",
+            "generate_network_impact_verification_report",
+            "generate_network_impact_physics_verification_report",
+            "generate_flexibility_clearing_scorecard",
+        ]
+        for skip_heavy in (False, True):
+            steps = build_digital_twin_steps(
+                skip_heavy=skip_heavy, include_network_impact=True
+            )
+            names = [step["name"] for step in steps]
+            for name in retired:
+                with self.subTest(skip_heavy=skip_heavy, step=name):
+                    self.assertNotIn(name, names)
 
     def test_network_impact_build_defaults_to_digital_twin_artifacts(self):
         steps = build_digital_twin_steps(skip_heavy=False, include_network_impact=True)
@@ -76,10 +116,8 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
             any("projects/" in command for command in commands.values()),
             commands,
         )
-        self.assertIn(
-            "instances/default/digital_twin/flexibility/network_impact_physics_verification_report.json",
-            commands["generate_network_impact_physics_verification_report"],
-        )
+        self.assertIn("generate_network_impact_surrogate", commands)
+        self.assertIn("generate_locational_flexibility_clearing", commands)
 
     def test_dry_run_manifest_uses_portable_python_command(self):
         with TemporaryDirectory() as tmpdir:
@@ -93,7 +131,9 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
             )
 
         self.assertTrue(manifest["dry_run"])
-        self.assertTrue(all(result["command"][0] == "python" for result in manifest["results"]))
+        self.assertTrue(
+            all(result["command"][0] == "python" for result in manifest["results"])
+        )
 
 
 if __name__ == "__main__":
