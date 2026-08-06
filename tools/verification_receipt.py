@@ -261,12 +261,55 @@ def _recorded_problems(
     return findings
 
 
+def _stages_problems(name: str, stages: Any) -> list[Finding]:
+    """Return the problems an optional per-stage record list can have.
+
+    ``stages`` is optional and never required; when present it must be a list
+    of mappings, each carrying a non-empty ``name`` and ``result``, and any
+    per-stage ``commit`` must name a commit that exists in this history and
+    leads to HEAD (the same anti-forgery rule the top-level commit obeys).
+
+    Args:
+        name: Protocol the stages belong to.
+        stages: The parsed ``stages`` value, or ``None`` when absent.
+
+    Returns:
+        Findings describing any malformed or unverifiable stage records.
+    """
+    if stages is None:
+        return []
+    if not isinstance(stages, list):
+        return [Finding(name, "schema", "'stages' must be a list of stage records")]
+    findings: list[Finding] = []
+    for index, stage in enumerate(stages):
+        where = f"stages[{index}]"
+        if not isinstance(stage, dict):
+            findings.append(Finding(name, "schema", f"{where} must be a mapping"))
+            continue
+        for field in ("name", "result"):
+            if not str(stage.get(field) or "").strip():
+                findings.append(
+                    Finding(name, "incomplete", f"{where}.{field} is empty")
+                )
+        commit = str(stage.get("commit") or "").strip()
+        if commit and not _commit_is_in_history(commit):
+            findings.append(
+                Finding(
+                    name,
+                    "unverifiable-commit",
+                    f"{where}.commit {commit} is not an ancestor of HEAD",
+                )
+            )
+    return findings
+
+
 def _audit_one(name: str, receipt: Any, stale: list[str]) -> list[Finding]:
     """Check a single receipt, appending to ``stale`` when it is out of date."""
     if not isinstance(receipt, dict):
         return [Finding(name, "schema", "receipt must be a mapping")]
 
     findings = _shape_problems(name, receipt)
+    findings += _stages_problems(name, receipt.get("stages"))
     status = receipt.get("status")
     if status not in _STATUSES or status == "deferred":
         # A deferral is a decision, so it needs a reason and nothing else.

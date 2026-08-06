@@ -176,6 +176,41 @@ class VerificationReceiptTests(unittest.TestCase):
         self.assertEqual(tool.SCHEMA_VERSION, raw["schema_version"])
         self.assertTrue(str(raw.get("note") or "").strip())
 
+    # -- per-stage records (optional, validated when present) -----------------
+
+    def test_valid_per_stage_records_pass_the_gate(self) -> None:
+        """Mutation: well-formed stages on a recorded receipt change nothing."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
+            {"name": "getting-started", "result": "47/47", "commit": "ffcf4a7b"},
+            {"name": "platform", "result": "84/84"},
+        ]
+        self.assertEqual([], [f.located() for f in tool.audit(mutant)[0]])
+
+    def test_a_stage_missing_name_or_result_turns_the_gate_red(self) -> None:
+        """Mutation: a bare 'ok' stage is the per-stage form of a bare 'ok'."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
+            {"name": "getting-started", "result": ""}
+        ]
+        findings = tool.audit(mutant)[0]
+        self.assertEqual(["incomplete"], [f.kind for f in findings], findings)
+
+    def test_a_stage_naming_a_fabricated_commit_turns_the_gate_red(self) -> None:
+        """Mutation: a stage cannot vouch for a tree that never existed."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
+            {"name": "getting-started", "result": "47/47", "commit": "0" * 40}
+        ]
+        findings = tool.audit(mutant)[0]
+        self.assertEqual(["unverifiable-commit"], [f.kind for f in findings])
+
 
 if __name__ == "__main__":
     unittest.main()

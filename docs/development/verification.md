@@ -197,6 +197,29 @@ An offline build is possible with `PIP_NO_INDEX=1 --no-build-isolation` **if** t
 environment already carries `setuptools>=77.0`; with build isolation it cannot
 be, because isolation always reaches for an index.
 
+## 6. Staged Regeneration And Per-Stage Receipts
+
+The flagship `ev_hosting_flex` study is verified **by protocol** rather than by
+a single opaque run: a shape-covering subset (`python tools/flagship_verify.py`)
+executes the pipeline's non-heavy stages end to end against the study workspace,
+skips the hours-long heavy stages with a recorded reason, and reports the R7
+baseline check. Per-stage records — name, status, duration, and a reason when a
+stage is skipped — are captured so a partial regeneration is auditable, and the
+verification-receipt ledger accepts an optional per-stage record list on any
+receipt (each stage must carry a `name` and a `result`, and any per-stage
+`commit` must exist in this history and lead to HEAD).
+
+Two operator commands:
+
+- `python tools/flagship_verify.py` — the shape-covering subset (~30-60 min),
+  the fast source-proven proof used on generator/kernel changes.
+- `python tools/flagship_verify.py --include-heavy` — the full regeneration
+  (roughly six hours), operator-scheduled at milestones; the resulting receipt is
+  recorded at the commit it ran at.
+
+The full six-hour regeneration remains operator-scheduled; the subset is what
+keeps the study source-proven between those runs.
+
 ## Related Pages
 
 - [Testing And Validation](testing-and-validation.md) — the per-change checklist.

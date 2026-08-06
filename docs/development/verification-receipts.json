@@ -30,17 +30,18 @@
     },
     "flagship-reproduce": {
       "status": "deferred",
-      "command": "See docs/development/verification.md -- regenerate the ev_hosting_flex caches from source and re-run its reproduce-and-pin tests.",
+      "command": "python tools/flagship_verify.py --staged -- see docs/development/verification.md; the shape-covering staged-regeneration protocol (implemented by Phase 8 plan 08-04, executed by plan 08-05).",
       "commit": null,
       "recorded_on": null,
       "result": null,
-      "evidence": null,
+      "evidence": "Honest runtime split (measured/sourced 2026-08-06): a full source regeneration is roughly six hours across 22 stages; warm reproduce-and-pin runs against the existing cache take minutes; the six CI fixture studies run ~78 s end-to-end. Warm run not re-measured this run (bounded).",
       "watched": [
         "gridalyn/assets/datagen",
         "gridalyn/simulation",
-        "projects/ev_hosting_flex"
+        "projects/ev_hosting_flex",
+        "tools/flagship_verify.py"
       ],
-      "rationale": "Roughly six hours across 22 stages, deferred by explicit user decision on 2026-08-05 and again on 2026-08-06 (ledger finding #17). The study's pins therefore remain CACHE-proven, not SOURCE-proven: its tests pass against a 2026-08-03 cache. Its sibling admm_thermal_consensus carries the stronger proof, having been regenerated from scratch. This entry exists so that gap is visible rather than implied -- a deferral is a decision, and it is recorded as one."
+      "rationale": "Deferred as a *recorded execution* but the protocol is now declared: the flagship becomes SOURCE-proven by protocol via a shape-covering subset (~30-60 min) with per-stage receipts, replacing the cache-only proof (ledger #17, deferred 2026-08-05/06). The full ~6 h regeneration remains operator-scheduled; the execution receipt lands in Phase 8 plan 08-05 at a real commit."
     }
   }
 }

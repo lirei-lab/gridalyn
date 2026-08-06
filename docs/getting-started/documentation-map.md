@@ -77,5 +77,8 @@ If one command fails, fix that layer before moving to the next command.
 
 The ladder uses `minimal_grid_project` because it runs in seconds. `verify` and
 `regression` read a project's emitted reports, and `outputs/` is not committed —
-so they fail on a fresh clone until that project has been run. Substituting a
-research study here means budgeting tens of minutes for the `run` step.
+so they fail on a fresh clone until that project has been run. Substituting the
+flagship `ev_hosting_flex` study here means budgeting about six hours for a full
+source regeneration (operator-verified, receipt-pinned); the six CI fixture
+studies run end-to-end in ~78 s, and warm runs against an existing cache take
+minutes.
