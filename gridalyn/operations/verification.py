@@ -432,9 +432,9 @@ def write_locational_verification_outputs(
 ) -> dict[str, Path]:
     """Write the dispatch artifact and prepare the verification report path.
 
-    The report JSON itself is serialized by the caller — the workflow stage in
-    ``gridalyn/projects/workflows/flexibility/locational_verification.py`` is
-    the single writer of ``report_path`` (report-contract audit §5.2). This
+    The report JSON itself is serialized by the caller — the workflow stage
+    module ``gridalyn.projects.workflows.flexibility.locational_verification``
+    is the single writer of ``report_path`` (report-contract audit §5.2). This
     helper used to write the same path first with absolute machine paths in
     ``artifacts``; that duplicate write was removed so the caller's
     ROOT-relative payload is the only one ever on disk.
