@@ -53,7 +53,86 @@ def _validate_schema(
         report.add_error(f"{label}:{path}: {error.message}{_friendly_hint(error)}")
 
 
-def validate_project_file(  # noqa: C901  # complexity 18, refactor scheduled (ledger #34)
+def _read_workflow_data(
+    project_data: dict,
+    base_dir: Path,
+    report: ValidationReport,
+) -> dict | None:
+    """Load and schema-validate the workflow file a project declares.
+
+    Args:
+        project_data: The parsed ``project.yaml`` document.
+        base_dir: The project base directory the workflow path resolves against.
+        report: The validation report to record checks and errors into.
+
+    Returns:
+        The parsed workflow document, or ``None`` when the file is missing or
+        fails schema validation (the error is already on ``report``).
+    """
+    workflow_path = (base_dir / project_data["spec"]["workflow"]["file"]).resolve()
+    report.checked_files.append(str(workflow_path))
+    if not workflow_path.exists():
+        report.add_error(f"workflow file does not exist: {workflow_path}")
+        return None
+
+    workflow_data = read_yaml(workflow_path)
+    _validate_schema(workflow_data, "workflow.schema.json", report, "workflow")
+    if not report.valid:
+        return None
+    return workflow_data
+
+
+def _validate_workflow_stages(workflow_data: dict, report: ValidationReport) -> None:
+    """Check stage ids are unique and every dependency names a known stage.
+
+    Args:
+        workflow_data: The schema-valid workflow document.
+        report: The validation report to record errors into.
+    """
+    stages = workflow_data["spec"]["stages"]
+    stage_ids = [stage["id"] for stage in stages]
+    duplicates = sorted(
+        {stage_id for stage_id in stage_ids if stage_ids.count(stage_id) > 1}
+    )
+    for duplicate in duplicates:
+        report.add_error(f"duplicate workflow stage id: {duplicate}")
+
+    known = set(stage_ids)
+    for stage in stages:
+        for dependency in stage.get("needs", []):
+            if dependency not in known:
+                report.add_error(
+                    f"stage {stage['id']} depends on unknown stage {dependency}"
+                )
+
+
+def _check_required_artifacts(
+    project_data: dict,
+    base_dir: Path,
+    report: ValidationReport,
+) -> None:
+    """Check every declared required report and figure exists and is non-empty.
+
+    Args:
+        project_data: The parsed ``project.yaml`` document.
+        base_dir: The project base directory artifact paths resolve against.
+        report: The validation report to record checks and errors into.
+    """
+    validation = project_data["spec"].get("validation", {})
+    for key, label in (
+        ("requiredReports", "report"),
+        ("requiredFigures", "figure"),
+    ):
+        for relative in validation.get(key, []):
+            artifact = (base_dir / relative).resolve()
+            report.checked_files.append(str(artifact))
+            if not artifact.exists():
+                report.add_error(f"missing required {label}: {artifact}")
+            elif artifact.is_file() and artifact.stat().st_size == 0:
+                report.add_error(f"empty required {label}: {artifact}")
+
+
+def validate_project_file(
     path: Path | str,
     check_artifacts: bool = False,
 ) -> ValidationReport:
@@ -78,46 +157,13 @@ def validate_project_file(  # noqa: C901  # complexity 18, refactor scheduled (l
         report.add_error(f"{project_path}: {exc}")
         return report
 
-    workflow_path = (base_dir / project_data["spec"]["workflow"]["file"]).resolve()
-    report.checked_files.append(str(workflow_path))
-    if not workflow_path.exists():
-        report.add_error(f"workflow file does not exist: {workflow_path}")
+    workflow_data = _read_workflow_data(project_data, base_dir, report)
+    if workflow_data is None:
         return report
-
-    workflow_data = read_yaml(workflow_path)
-    _validate_schema(workflow_data, "workflow.schema.json", report, "workflow")
-    if not report.valid:
-        return report
-
-    stages = workflow_data["spec"]["stages"]
-    stage_ids = [stage["id"] for stage in stages]
-    duplicates = sorted(
-        {stage_id for stage_id in stage_ids if stage_ids.count(stage_id) > 1}
-    )
-    for duplicate in duplicates:
-        report.add_error(f"duplicate workflow stage id: {duplicate}")
-
-    known = set(stage_ids)
-    for stage in stages:
-        for dependency in stage.get("needs", []):
-            if dependency not in known:
-                report.add_error(
-                    f"stage {stage['id']} depends on unknown stage {dependency}"
-                )
+    _validate_workflow_stages(workflow_data, report)
 
     if check_artifacts:
-        validation = project_data["spec"].get("validation", {})
-        for key, label in (
-            ("requiredReports", "report"),
-            ("requiredFigures", "figure"),
-        ):
-            for relative in validation.get(key, []):
-                artifact = (base_dir / relative).resolve()
-                report.checked_files.append(str(artifact))
-                if not artifact.exists():
-                    report.add_error(f"missing required {label}: {artifact}")
-                elif artifact.is_file() and artifact.stat().st_size == 0:
-                    report.add_error(f"empty required {label}: {artifact}")
+        _check_required_artifacts(project_data, base_dir, report)
 
     return report
 

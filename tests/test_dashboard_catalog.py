@@ -1,6 +1,9 @@
+import importlib
 import json
+import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 
 import pandas as pd
@@ -114,6 +117,35 @@ class DashboardCatalogTest(unittest.TestCase):
                 json.loads(path.read_text())["report_id"],
                 "digital_twin_dashboard_catalog",
             )
+
+    def test_deprecated_interfaces_deep_path_imports_and_warns(self):
+        """Ledger #36: the pre-relocation deep path stays importable as a shim.
+
+        Both facade names must resolve to the relocated implementation, and the
+        import itself must fire exactly one DeprecationWarning naming the new
+        module, so external callers of the published SDK get a migration signal
+        instead of an ImportError.
+        """
+        shim_name = "gridalyn.interfaces.reporting.dashboard_catalog"
+        sys.modules.pop(shim_name, None)
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                shim = importlib.import_module(shim_name)
+
+            self.assertIs(shim.build_dashboard_catalog, build_dashboard_catalog)
+            self.assertIs(shim.write_dashboard_catalog, write_dashboard_catalog)
+
+            deprecations = [
+                item for item in caught if issubclass(item.category, DeprecationWarning)
+            ]
+            self.assertEqual(1, len(deprecations))
+            self.assertIn(
+                "gridalyn.projects.dashboard_catalog",
+                str(deprecations[0].message),
+            )
+        finally:
+            sys.modules.pop(shim_name, None)
 
     def test_dashboard_catalog_script_declares_operations_extension(self):
         repo_root = Path(__file__).resolve().parents[1]

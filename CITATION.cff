@@ -1,3 +1,7 @@
+# Authorship split with pyproject.toml is deliberate (user decision,
+# 2026-08-06, ledger #25): the package author "Gridalyn Contributors" is the
+# community-facing identity; this file carries the citable author for academic
+# use. Do not "reconcile" the two.
 cff-version: 1.2.0
 title: "Gridalyn: a governed SDK for distribution-network digital twins and flexibility studies"
 message: "If you use this software or its studies in your research, please cite it."

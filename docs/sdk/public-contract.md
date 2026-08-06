@@ -19,6 +19,11 @@ repository = twin.NetworkModelRepository("instances/default/digital_twin/base")
 These imports are intended for project scripts, tests, applications, and
 automation.
 
+Note that `foundation.validate_workspace` is a socket filled in by the projects
+layer: reached through `gridalyn.foundation` alone it raises a located
+`RuntimeError` naming the remedy until `gridalyn.projects` (or any module that
+imports it, such as the CLI) has been imported.
+
 ## Domain Modules
 
 Use domain modules when you are building reusable platform capabilities:

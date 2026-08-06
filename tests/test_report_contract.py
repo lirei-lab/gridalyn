@@ -555,12 +555,34 @@ def _qualname_by_node(tree: ast.Module) -> dict[int, str]:
     return qualnames
 
 
+def _is_print_to_file(call: ast.Call) -> bool:
+    """Return whether a call is ``print(..., file=<target>)`` writing to a file.
+
+    ``print(json.dumps(payload), file=fh)`` serializes a document exactly like
+    ``fh.write`` (S11). Printing to ``sys.stdout`` / ``sys.stderr`` is console
+    output, not an artifact write, so those targets do not count.
+
+    Args:
+        call: Any call node encountered during the scan.
+
+    Returns:
+        True when the call prints to an explicit non-stream ``file=`` target.
+    """
+    if not (isinstance(call.func, ast.Name) and call.func.id == "print"):
+        return False
+    for keyword in call.keywords:
+        if keyword.arg == "file":
+            return _dotted_name(keyword.value) not in {"sys.stdout", "sys.stderr"}
+    return False
+
+
 def _json_payload_argument(call: ast.Call) -> ast.expr | None:
     """Return the payload written by a direct-JSON write call, if any.
 
-    Matches ``json.dump(payload, fh)``, ``path.write_text(json.dumps(payload))``
-    and ``fh.write(json.dumps(payload))``, including forms concatenating a
-    trailing newline.
+    Matches ``json.dump(payload, fh)``, ``path.write_text(json.dumps(payload))``,
+    ``fh.write(json.dumps(payload))``, ``path.write_bytes(json.dumps(payload)
+    .encode(...))`` and ``print(json.dumps(payload), file=fh)`` (the last two
+    added by S11), including forms concatenating a trailing newline.
 
     Args:
         call: Any call node encountered during the scan.
@@ -573,12 +595,19 @@ def _json_payload_argument(call: ast.Call) -> ast.expr | None:
         return call.args[0]
 
     attr = call.func.attr if isinstance(call.func, ast.Attribute) else None
-    if attr not in {"write_text", "write"} or not call.args:
+    is_write_method = attr in {"write_text", "write", "write_bytes"}
+    if not (is_write_method or _is_print_to_file(call)) or not call.args:
         return None
 
     candidate: ast.expr = call.args[0]
     while isinstance(candidate, ast.BinOp):
         candidate = candidate.left
+    if (
+        isinstance(candidate, ast.Call)
+        and isinstance(candidate.func, ast.Attribute)
+        and candidate.func.attr == "encode"
+    ):
+        candidate = candidate.func.value
     if (
         isinstance(candidate, ast.Call)
         and _dotted_name(candidate.func) == "json.dumps"
@@ -593,10 +622,20 @@ def _parsed_modules() -> dict[str, ast.Module]:
 
     Returns:
         Mapping of repo-relative POSIX path to parsed module.
+
+    Raises:
+        AssertionError: When a scan root is missing (S11) -- a renamed or moved
+            root must fail loudly, not silently empty the denominator.
     """
     modules: dict[str, ast.Module] = {}
     for root_name in _SCAN_ROOTS:
         root = _REPO_ROOT / root_name
+        if not root.is_dir():
+            raise AssertionError(
+                f"report-contract scan root {root_name!r} not found at {root}; "
+                "update _SCAN_ROOTS if the tree moved -- an absent root would "
+                "silently drop every site under it from the scan."
+            )
         for path in sorted(root.rglob("*.py")):
             relative = path.relative_to(_REPO_ROOT).as_posix()
             modules[relative] = ast.parse(

@@ -97,15 +97,49 @@ def _called_name(node: ast.Call) -> str | None:
     return None
 
 
+def _capability_literals(node: ast.Call) -> list[str]:
+    """Return every capability-key string literal a preflight call carries.
+
+    Counts three spellings (S12): positional string constants, elements of a
+    starred list/tuple literal, and keyword arguments other than ``context=``
+    -- the ``context`` string describes the operation and must never be
+    mistaken for a required key, even when it happens to equal one.
+
+    Args:
+        node: A call to ``require_capabilities``.
+
+    Returns:
+        The string literals found among the call's capability arguments.
+    """
+    candidates: list[ast.expr] = []
+    for argument in node.args:
+        if isinstance(argument, ast.Starred) and isinstance(
+            argument.value, (ast.List, ast.Tuple)
+        ):
+            candidates.extend(argument.value.elts)
+        else:
+            candidates.append(argument)
+    candidates.extend(
+        keyword.value for keyword in node.keywords if keyword.arg != "context"
+    )
+    return [
+        candidate.value
+        for candidate in candidates
+        if isinstance(candidate, ast.Constant) and isinstance(candidate.value, str)
+    ]
+
+
 def capability_call_sites(repo_root: Path) -> dict[str, list[str]]:
     """Return per-capability ``require_capabilities`` call sites.
 
     AST-scans every Python file under ``gridalyn/`` for calls to
-    ``require_capabilities`` whose positional arguments include the capability
-    key as a string literal -- robust to line wrapping, unlike a grep for the
-    literal call text. Generic iteration over ``OPTIONAL_CAPABILITY_MODULES``
-    (the ``_doctor`` pattern) is deliberately not counted: it exercises every
-    key of any map, so it cannot fail for a specific one.
+    ``require_capabilities`` whose capability arguments include the key as a
+    string literal -- robust to line wrapping, unlike a grep for the literal
+    call text, and robust to the spelling of the argument (positional, starred
+    literal, or keyword; see :func:`_capability_literals`). Generic iteration
+    over ``OPTIONAL_CAPABILITY_MODULES`` (the ``_doctor`` pattern) is
+    deliberately not counted: it exercises every key of any map, so it cannot
+    fail for a specific one.
 
     Args:
         repo_root: Repository root containing the ``gridalyn/`` package.
@@ -124,13 +158,9 @@ def capability_call_sites(repo_root: Path) -> dict[str, list[str]]:
                 continue
             if _called_name(node) != "require_capabilities":
                 continue
-            for argument in node.args:
-                if (
-                    isinstance(argument, ast.Constant)
-                    and isinstance(argument.value, str)
-                    and argument.value in sites
-                ):
-                    sites[argument.value].append(str(path.relative_to(repo_root)))
+            for literal in _capability_literals(node):
+                if literal in sites:
+                    sites[literal].append(str(path.relative_to(repo_root)))
     return sites
 
 
