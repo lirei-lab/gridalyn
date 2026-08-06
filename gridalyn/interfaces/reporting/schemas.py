@@ -12,9 +12,9 @@ from gridalyn.foundation.platform.reports import (
     ReportMetadata,
     build_report,
     file_reference,
+    validate_report,
     write_json_report,
 )
-
 
 SCHEMA_VERSION = "1.0"
 
@@ -62,7 +62,7 @@ def canonical_report(
     root: Path,
     inputs: list[Path],
     metrics: dict[str, Any],
-    artifacts: dict[str, str] | None = None,
+    artifacts: dict[str, Any] | None = None,
     stage: str | None = None,
     source_domain: str = "gridalyn",
     project_name: str = "gridalyn",
@@ -84,7 +84,9 @@ def canonical_report(
     )
 
 
-def artifact_references(artifacts: dict[str, Any], *, root: Path) -> list[dict[str, Any]]:
+def artifact_references(
+    artifacts: dict[str, Any], *, root: Path
+) -> list[dict[str, Any]]:
     """Normalize named artifacts to the public platform report contract."""
     items: list[dict[str, Any]] = []
     for name, value in artifacts.items():
@@ -109,5 +111,27 @@ def artifact_references(artifacts: dict[str, Any], *, root: Path) -> list[dict[s
 
 
 def write_report(path: Path, report: dict[str, Any], *, root: Path) -> str:
+    """Validate and write a canonical report, returning its root-relative path.
+
+    Args:
+        path: Destination file for the canonical report JSON.
+        report: Report payload; must satisfy the platform report contract.
+        root: Workspace root used to relativize the returned path.
+
+    Returns:
+        The written report's path relative to ``root``.
+
+    Raises:
+        ValueError: If ``report`` fails :func:`validate_report`; the message
+            names the destination file, the contract errors, and the fix.
+    """
+    errors = validate_report(report)
+    if errors:
+        raise ValueError(
+            f"{path}: canonical report violates the platform report contract "
+            f"({'; '.join(errors)}). Build the payload with "
+            "gridalyn.interfaces.reporting.schemas.canonical_report — which "
+            "routes through build_report — instead of hand-assembling the dict."
+        )
     write_json_report(path, report)
     return relpath(path, root)

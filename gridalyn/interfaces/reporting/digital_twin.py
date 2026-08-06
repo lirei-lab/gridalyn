@@ -6,8 +6,6 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).parents[3]
-
 from gridalyn.foundation import ArtifactLayout
 from gridalyn.interfaces.reporting.schemas import (
     canonical_report,
@@ -18,6 +16,11 @@ from gridalyn.interfaces.reporting.schemas import (
     write_report,
 )
 
+# Current-directory default, matching ArtifactLayout's own root default. Never
+# derive the root from __file__: in an installed wheel that resolves to
+# site-packages, where reads return {} and writes land inside the package.
+_DEFAULT_ROOT = Path(".")
+
 
 def _load_optional_json(path: Path) -> dict[str, Any]:
     return load_json(path) if path.exists() else {}
@@ -25,11 +28,35 @@ def _load_optional_json(path: Path) -> dict[str, Any]:
 
 def build_digital_twin_reports(
     *,
-    root: Path = ROOT,
+    root: Path = _DEFAULT_ROOT,
     out_dir: Path | None = None,
 ) -> dict[str, Any]:
+    """Build the canonical digital-twin reports for a workspace root.
+
+    Args:
+        root: Workspace root containing ``instances/default/digital_twin``.
+            Defaults to the current directory, matching ``ArtifactLayout``.
+        out_dir: Destination directory for the canonical reports; defaults to
+            ``<root>/instances/default/digital_twin/reports/canonical``.
+
+    Returns:
+        The canonical report manifest, mapping report ids to written paths.
+
+    Raises:
+        FileNotFoundError: If ``root`` holds no digital-twin artifact tree —
+            the guard that keeps an installed package from reading empty
+            inputs and writing degenerate reports outside a workspace.
+    """
     root = root.resolve()
     layout = ArtifactLayout(root)
+    if not layout.digital_twin.is_dir():
+        raise FileNotFoundError(
+            f"{layout.digital_twin}: no digital-twin artifact tree under root "
+            f"{root}; canonical reports would be built from empty inputs and "
+            "written outside a workspace. Run from a workspace root containing "
+            "instances/default/digital_twin, or pass root=<workspace> "
+            "(--root on the command line)."
+        )
     out_dir = (out_dir or (layout.reports / "canonical")).resolve()
     reports_dir = layout.reports
     semantic_dir = layout.semantic
@@ -57,15 +84,17 @@ def build_digital_twin_reports(
             "scenarios": transformer.get("scenarios", []),
         },
         artifacts={
-            "mv_lv_transformer_overload_report": relpath(transformer_path, root)
-            if transformer_path.exists()
-            else None,
+            "mv_lv_transformer_overload_report": (
+                relpath(transformer_path, root) if transformer_path.exists() else None
+            ),
         },
         stage="network_capacity",
         source_domain="digital_twin",
         project_name="digital_twin",
     )
-    report_paths["network_capacity"] = write_report(out_dir / "network_capacity_report.json", network_report, root=root)
+    report_paths["network_capacity"] = write_report(
+        out_dir / "network_capacity_report.json", network_report, root=root
+    )
 
     asset_report = canonical_report(
         report_id="scenario_registry",
@@ -80,15 +109,19 @@ def build_digital_twin_reports(
         },
         artifacts={
             "asset_registry": "instances/default/digital_twin/scenarios/asset_registry.parquet",
-            "asset_registry_summary": relpath(asset_summary_path, root)
-            if asset_summary_path.exists()
-            else None,
+            "asset_registry_summary": (
+                relpath(asset_summary_path, root)
+                if asset_summary_path.exists()
+                else None
+            ),
         },
         stage="scenario_registry",
         source_domain="digital_twin",
         project_name="digital_twin",
     )
-    report_paths["scenario_registry"] = write_report(out_dir / "scenario_registry_report.json", asset_report, root=root)
+    report_paths["scenario_registry"] = write_report(
+        out_dir / "scenario_registry_report.json", asset_report, root=root
+    )
 
     semantic_report = canonical_report(
         report_id="semantic_graph",
@@ -104,18 +137,24 @@ def build_digital_twin_reports(
             "namespaces": semantic_manifest.get("namespaces", {}),
         },
         artifacts={
-            "graph_manifest": relpath(semantic_manifest_path, root)
-            if semantic_manifest_path.exists()
-            else None,
+            "graph_manifest": (
+                relpath(semantic_manifest_path, root)
+                if semantic_manifest_path.exists()
+                else None
+            ),
             "nodes": semantic_manifest.get("artifacts", {}).get("nodes"),
             "edges": semantic_manifest.get("artifacts", {}).get("edges"),
-            "validation_report": semantic_manifest.get("artifacts", {}).get("validation_report"),
+            "validation_report": semantic_manifest.get("artifacts", {}).get(
+                "validation_report"
+            ),
         },
         stage="semantic_graph",
         source_domain="digital_twin",
         project_name="digital_twin",
     )
-    report_paths["semantic_graph"] = write_report(out_dir / "semantic_graph_report.json", semantic_report, root=root)
+    report_paths["semantic_graph"] = write_report(
+        out_dir / "semantic_graph_report.json", semantic_report, root=root
+    )
 
     manifest = {
         "report_id": "digital_twin_report_manifest",
@@ -129,10 +168,22 @@ def build_digital_twin_reports(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build canonical digital-twin reports.")
+    """Build canonical digital-twin reports for a workspace root."""
+    parser = argparse.ArgumentParser(
+        description="Build canonical digital-twin reports."
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=_DEFAULT_ROOT,
+        help=(
+            "Workspace root containing instances/default/digital_twin "
+            "(default: current directory)."
+        ),
+    )
     parser.add_argument("--out-dir", type=Path, default=None)
     args = parser.parse_args()
-    manifest = build_digital_twin_reports(root=ROOT, out_dir=args.out_dir)
+    manifest = build_digital_twin_reports(root=args.root, out_dir=args.out_dir)
     print(f"Built digital-twin canonical reports: {len(manifest['reports'])} reports")
 
 

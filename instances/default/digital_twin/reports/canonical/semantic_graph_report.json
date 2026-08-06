@@ -1,24 +1,53 @@
 {
-  "artifacts": {
-    "edges": "digital_twin/semantic/edges.parquet",
-    "graph_manifest": "digital_twin/semantic/graph_manifest.json",
-    "nodes": "digital_twin/semantic/nodes.parquet",
-    "validation_report": "digital_twin/semantic/validation_report.json"
+  "artifacts": [
+    {
+      "bytes": 1734,
+      "name": "graph_manifest",
+      "path": "instances/default/digital_twin/semantic/graph_manifest.json",
+      "sha256": "b922f63174375a6269045ec384a2334edfbc1b165c0dd943c730c85f0918a0b3"
+    },
+    {
+      "exists": false,
+      "name": "nodes",
+      "path": "digital_twin/semantic/nodes.parquet"
+    },
+    {
+      "exists": false,
+      "name": "edges",
+      "path": "digital_twin/semantic/edges.parquet"
+    },
+    {
+      "exists": false,
+      "name": "validation_report",
+      "path": "digital_twin/semantic/validation_report.json"
+    }
+  ],
+  "created_at": "2026-08-06T00:11:23.856171+00:00",
+  "governance": {
+    "model_version_id": null,
+    "study_run_id": null
   },
-  "created_at": "2026-05-12T17:19:18.864438+00:00",
   "inputs": [
     {
-      "bytes": 1716,
-      "path": "digital_twin/semantic/graph_manifest.json",
-      "sha256": "c3c958bb63884323f688fc3631c3dcc85b037701986323ac9d68ad9c7d0af9e5"
+      "bytes": 1734,
+      "path": "instances/default/digital_twin/semantic/graph_manifest.json",
+      "sha256": "b922f63174375a6269045ec384a2334edfbc1b165c0dd943c730c85f0918a0b3"
     },
     {
       "bytes": 194,
-      "path": "digital_twin/semantic/validation_report.json",
-      "sha256": "12e91532e7925df9d29f7b14b924165a3093e2872802a696ca38137c2460c386"
+      "path": "instances/default/digital_twin/semantic/validation_report.json",
+      "sha256": "1c95247d07186e1bebf9b4c4bf2c4cda146ee5e96ac144d26c204f8857954324"
     }
   ],
-  "metrics": {
+  "project": {
+    "name": "digital_twin",
+    "stage": "semantic_graph",
+    "title": "North America Semantic Graph"
+  },
+  "report_id": "semantic_graph",
+  "schema_version": "1.0",
+  "source_domain": "digital_twin",
+  "summary": {
     "count_checks": {
       "buildings": {
         "actual": 3235,
@@ -46,7 +75,7 @@
         "ok": true
       }
     },
-    "edge_count": 134130,
+    "edge_count": 147065,
     "namespaces": {
       "brick": "https://brickschema.org/schema/Brick#",
       "cim": "https://cim.ucaiug.io/ns#",
@@ -58,18 +87,18 @@
       "openadr": "https://openadr.org/ns#",
       "s223": "http://data.ashrae.org/standard223#"
     },
-    "node_count": 61351,
+    "node_count": 74286,
     "semantic_profile": "north_america",
     "validation": {
       "error_count": 0,
-      "report": "digital_twin/semantic/validation_report.json",
+      "report": "instances/default/digital_twin/semantic/validation_report.json",
       "valid": true,
       "warning_count": 0
     }
   },
-  "report_id": "semantic_graph",
-  "schema_version": "1.0",
-  "source_domain": "digital_twin",
-  "stage": "semantic_graph",
-  "title": "North America Semantic Graph"
+  "validation": {
+    "errors": [],
+    "valid": true,
+    "warnings": []
+  }
 }
