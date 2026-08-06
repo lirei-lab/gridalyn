@@ -220,6 +220,16 @@ Two operator commands:
 The full six-hour regeneration remains operator-scheduled; the subset is what
 keeps the study source-proven between those runs.
 
+### Executed run (2026-08-06, recorded at 6ea8a92a)
+
+The shape-covering subset was executed and its receipts recorded: 22 stages,
+2 ran OK (`prepare_workspace` 0.4 s, `prepare_topology_cache` 3.1 s, topology
+cache 4320 buses), 20 skipped (the heavy `generate_annual_mc` plus its
+downstream dependents), and the R7 baseline check returned **PASS — baselines
+byte-identical**. Per-stage records are embedded on the `flagship-subset`
+receipt; the `flagship-reproduce` receipt is now `recorded` (source-proven by
+protocol). The full ~6 h regeneration remains operator-scheduled.
+
 ## Related Pages
 
 - [Testing And Validation](testing-and-validation.md) — the per-change checklist.

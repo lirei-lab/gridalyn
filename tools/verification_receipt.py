@@ -266,9 +266,10 @@ def _stages_problems(name: str, stages: Any) -> list[Finding]:
     """Return the problems an optional per-stage record list can have.
 
     ``stages`` is optional and never required; when present it must be a list
-    of mappings, each carrying a non-empty ``name`` and ``result``, and any
-    per-stage ``commit`` must name a commit that exists in this history and
-    leads to HEAD (the same anti-forgery rule the top-level commit obeys).
+    of mappings, each carrying a non-empty ``name`` and ``status`` (the
+    per-stage outcome — ``ok``, ``skipped`` or ``failed``), and any per-stage
+    ``commit`` must name a commit that exists in this history and leads to
+    HEAD (the same anti-forgery rule the top-level commit obeys).
 
     Args:
         name: Protocol the stages belong to.
@@ -287,7 +288,7 @@ def _stages_problems(name: str, stages: Any) -> list[Finding]:
         if not isinstance(stage, dict):
             findings.append(Finding(name, "schema", f"{where} must be a mapping"))
             continue
-        for field in ("name", "result"):
+        for field in ("name", "status"):
             if not str(stage.get(field) or "").strip():
                 findings.append(
                     Finding(name, "incomplete", f"{where}.{field} is empty")

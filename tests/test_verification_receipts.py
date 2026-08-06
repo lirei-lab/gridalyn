@@ -184,18 +184,18 @@ class VerificationReceiptTests(unittest.TestCase):
         self.assertEqual([], tool.audit(mutant)[0])
 
         mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
-            {"name": "getting-started", "result": "47/47", "commit": "ffcf4a7b"},
-            {"name": "platform", "result": "84/84"},
+            {"name": "getting-started", "status": "ok", "commit": "ffcf4a7b"},
+            {"name": "platform", "status": "ok"},
         ]
         self.assertEqual([], [f.located() for f in tool.audit(mutant)[0]])
 
-    def test_a_stage_missing_name_or_result_turns_the_gate_red(self) -> None:
+    def test_a_stage_missing_name_or_status_turns_the_gate_red(self) -> None:
         """Mutation: a bare 'ok' stage is the per-stage form of a bare 'ok'."""
         mutant = copy.deepcopy(self.ledger)
         self.assertEqual([], tool.audit(mutant)[0])
 
         mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
-            {"name": "getting-started", "result": ""}
+            {"name": "getting-started", "status": ""}
         ]
         findings = tool.audit(mutant)[0]
         self.assertEqual(["incomplete"], [f.kind for f in findings], findings)
@@ -206,7 +206,7 @@ class VerificationReceiptTests(unittest.TestCase):
         self.assertEqual([], tool.audit(mutant)[0])
 
         mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
-            {"name": "getting-started", "result": "47/47", "commit": "0" * 40}
+            {"name": "getting-started", "status": "ok", "commit": "0" * 40}
         ]
         findings = tool.audit(mutant)[0]
         self.assertEqual(["unverifiable-commit"], [f.kind for f in findings])
