@@ -174,7 +174,7 @@ def run_subset(
     *,
     include_heavy: bool = False,
     dry_run: bool = False,
-    check_baselines: bool = True,
+    run_baselines_check: bool = True,
 ) -> dict[str, Any]:
     """Execute (or describe) the shape-covering subset.
 
@@ -182,7 +182,7 @@ def run_subset(
         workspace: Repository root.
         include_heavy: Run the heavy annual-MC stage too.
         dry_run: Describe run/skip decisions without executing anything.
-        check_baselines: Run the R7 regression check after a real run.
+        run_baselines_check: Run the R7 regression check after a real run.
 
     Returns:
         A result mapping with ``stages`` (per-stage records), ``baselines``
@@ -231,7 +231,7 @@ def run_subset(
             )
 
     baselines = None
-    if check_baselines and not dry_run:
+    if run_baselines_check and not dry_run:
         status, detail = check_baselines(workspace)
         baselines = {"status": status, "detail": detail}
     return {
@@ -297,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         workspace,
         include_heavy=args.include_heavy,
         dry_run=args.dry_run,
-        check_baselines=not args.no_check_baselines,
+        run_baselines_check=not args.no_check_baselines,
     )
     if args.out_json:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)

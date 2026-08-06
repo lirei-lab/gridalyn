@@ -86,7 +86,7 @@ class FlagshipVerifyTests(unittest.TestCase):
         stages = tool.topo_sort([_stage("a"), _stage("generate_annual_mc", ["a"])])
         with mock.patch.object(tool, "load_stages", return_value=stages):
             result = tool.run_subset(
-                Path("."), include_heavy=False, dry_run=True, check_baselines=False
+                Path("."), include_heavy=False, dry_run=True, run_baselines_check=False
             )
         records = result["stages"]
         self.assertTrue(records)
@@ -108,7 +108,9 @@ class FlagshipVerifyTests(unittest.TestCase):
             ),
         ):
             with self.assertRaises(RuntimeError) as ctx:
-                tool.run_subset(Path("."), include_heavy=False, check_baselines=False)
+                tool.run_subset(
+                    Path("."), include_heavy=False, run_baselines_check=False
+                )
         self.assertIn("boom", str(ctx.exception))
 
     def test_real_workflow_parses_and_enumerates_stages(self) -> None:
