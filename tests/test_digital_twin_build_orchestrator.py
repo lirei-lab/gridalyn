@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -134,6 +135,53 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
         self.assertTrue(
             all(result["command"][0] == "python" for result in manifest["results"])
         )
+
+    def test_no_step_carries_optional_flag(self):
+        """No build step may carry an ``optional`` failure-swallowing flag.
+
+        The five orphan-blocked steps were removed on 2026-08-06 and the
+        ``optional`` mechanism that let them fail silently must not resurface:
+        a green exit on an incomplete build is impossible by construction.
+        """
+        from gridalyn.projects.workflows.digital_twin import build as build_module
+
+        for include_network_impact in (False, True):
+            steps = build_digital_twin_steps(
+                skip_heavy=False, include_network_impact=include_network_impact
+            )
+            self.assertTrue(steps)
+            self.assertTrue(all("name" in s and "command" in s for s in steps))
+            for step in steps:
+                with self.subTest(
+                    include_network_impact=include_network_impact,
+                    step=step["name"],
+                ):
+                    self.assertNotIn("optional", step)
+        # The step factory must not accept an optional argument either.
+        with self.assertRaises(TypeError):
+            build_module._step("x", ["-m", "y"], optional=True)
+
+    def test_failing_non_optional_step_raises_and_records_failed(self):
+        """A failing non-optional step raises RuntimeError and the manifest records it."""
+        from unittest import mock
+
+        from gridalyn.projects.workflows.digital_twin import build as build_module
+
+        fake = mock.Mock(returncode=1)
+        with TemporaryDirectory() as tmpdir:
+            manifest_path = Path(tmpdir) / "manifest.json"
+            with mock.patch.object(build_module.subprocess, "run", return_value=fake):
+                with self.assertRaises(RuntimeError) as ctx:
+                    run_digital_twin_build(
+                        root=Path(tmpdir),
+                        skip_heavy=True,
+                        include_network_impact=False,
+                        manifest_path=manifest_path,
+                    )
+            self.assertIn("export_base", str(ctx.exception))
+            manifest = json.loads(manifest_path.read_text())
+            self.assertEqual(manifest["results"][0]["name"], "export_base")
+            self.assertEqual(manifest["results"][0]["status"], "failed")
 
 
 if __name__ == "__main__":

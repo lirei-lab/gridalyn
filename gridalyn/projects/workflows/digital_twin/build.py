@@ -12,14 +12,11 @@ from typing import Any
 from gridalyn.foundation import ArtifactLayout
 
 
-def _step(
-    name: str, command: list[str], *, heavy: bool = False, optional: bool = False
-) -> dict[str, Any]:
+def _step(name: str, command: list[str], *, heavy: bool = False) -> dict[str, Any]:
     return {
         "name": name,
         "command": command,
         "heavy": heavy,
-        "optional": optional,
     }
 
 
@@ -109,6 +106,9 @@ def build_digital_twin_steps(
                 # while the build still exited 0 -- a green exit on an
                 # incomplete build. See
                 # docs/development/instruction-verification.md.
+                # The ``optional`` failure-swallowing mechanism itself was
+                # removed on 2026-08-06; a failing step now always fails the
+                # build.
                 _step(
                     "generate_network_impact_dashboard_catalog",
                     [
@@ -208,7 +208,7 @@ def run_digital_twin_build(
             "command": display_command,
         }
         results.append(result)
-        if completed.returncode != 0 and not (continue_on_error or step["optional"]):
+        if completed.returncode != 0 and not continue_on_error:
             manifest = build_manifest(
                 steps, root=root, dry_run=dry_run, results=results
             )
