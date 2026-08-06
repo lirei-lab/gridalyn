@@ -222,7 +222,7 @@ constructs. Verdicts come from §1.2, not from this column.
 |---|---|---|---|---|---|
 | `foundation/platform/reports.py` | 120 | `payload` | 8/8 | ALREADY-GOVERNED | This *is* `write_json_report`, the contract's own serializer, called by `write_report` (`:147`) after `validate_report`. |
 | `interfaces/reporting/schemas.py` | 55 | `payload` | n/a | NOT-A-REPORT | `write_json` generic serializer; see §2.2. Its own payload is a parameter, so it has no intrinsic shape. Its in-repo caller writes a report *manifest*, indexing three governed reports — an index, not a report. |
-| `interfaces/reporting/dashboard_catalog.py` | 149 | `catalog` | 3/8 | NOT-A-REPORT | `:128-135`. A dashboard catalog: per-scenario `paths`/`metrics`/`topology_counts`. Role: no own-I/O sections. |
+| `gridalyn/projects/dashboard_catalog.py` (relocated — §9) | 149 | `catalog` | 3/8 | NOT-A-REPORT | `:128-135`. A dashboard catalog: per-scenario `paths`/`metrics`/`topology_counts`. Role: no own-I/O sections. |
 
 ### 3.2 `gridalyn/assets/`
 
@@ -340,7 +340,7 @@ FeatureCollection; the module emits its governed report at `:25`).
 | `projects/regression.py::write_regression_report` | `regression.py:138` | NOT-A-REPORT | See §3.6. |
 | `projects/runner.py::_write_manifest` | `runner.py:330` | NOT-A-REPORT | Workflow run manifest. |
 | `.../digital_twin/build.py::write_build_manifest` | `build.py:173`, `:180` | NOT-A-REPORT | Build manifest, written twice (dry-run and real). |
-| `interfaces/reporting/dashboard_catalog.py::write_dashboard_catalog` | `generate_digital_twin_dashboard_catalog.py:83` | NOT-A-REPORT | Catalog. |
+| `gridalyn/projects/dashboard_catalog.py::write_dashboard_catalog` (relocated — §9) | `generate_digital_twin_dashboard_catalog.py:83` | NOT-A-REPORT | Catalog. |
 | `operations/settlement.py::write_flexibility_clearing_scorecard` | `generate_flexibility_clearing_scorecard.py:71` | NOT-A-REPORT | Scorecard. |
 | `.../network_impact/catalog.py::write_network_impact_catalog` | `generate_network_impact_dashboard_catalog.py:58` | NOT-A-REPORT | Catalog. |
 | `.../network_impact/perturbation_sampler.py::write_sampler_artifacts` | `generate_network_impact_perturbation_samples.py:166` | NOT-A-REPORT | Sidecar. |
@@ -667,3 +667,82 @@ than alongside the workflow notes that produced it: those are excluded from the 
 repository, and a test may not depend on a path a fresh checkout does not carry. If the file
 is missing the tests **fail with a message naming the missing path** rather than erroring or
 skipping — the pins are only meaningful alongside the rationale recorded here.
+
+---
+
+## 8. Amendment — 2026-08-06 (§5.2 duplicate write removed)
+
+The sections above are the audit as taken; their counts are historical and are not
+rewritten. This amendment records the first remedy applied since.
+
+**Finding #8 closed, in this audit's own recommended direction.** The duplicate-write half
+of the corrected §5.2 remedy is applied: the SDK-side report write inside
+`write_locational_verification_outputs` (`gridalyn/operations/verification.py`, formerly
+`:419`) is **removed**. The function still writes the dispatch parquet, still creates the
+report destination's parent directory, and still returns both paths; it no longer
+serializes the report. The **surviving single writer** is the caller,
+`gridalyn/projects/workflows/flexibility/locational_verification.py` (`generate_report`),
+whose ROOT-relative-paths write always won the race — so the bytes that land on disk are
+**identical** before and after (verified: the caller's write sequence produces
+byte-identical final artifacts; only the transient absolute-paths first write is gone).
+No baseline pins the artifact (§5.0), so nothing moved.
+
+**What this changes in the enumerations:**
+
+- Direct-JSON sites examined: **76 → 75**. Removed site:
+  `gridalyn/operations/verification.py::write_locational_verification_outputs::report_with_artifacts#0`.
+- `GOVERNED-VIOLATION`: **6 → 5**. Reconciliation: `5 + 69 + 1 = 75` ✔
+- Helper-routed enumeration: unchanged (`22` across 15 helpers) —
+  `write_locational_verification_outputs` never serialized a caller-supplied payload, so it
+  was never a pinned helper.
+- The caller's site
+  (`.../locational_verification.py::generate_report::report#0`) **remains a
+  `GOVERNED-VIOLATION`**: it is still hand-serialized. The second half of §5.2 — converting
+  that write to `write_report(...)` with contract-shaped `inputs`/`artifacts`/`validation` —
+  is still open and still sequenced first in §5's follow-up ordering.
+
+**Related hardening, same phase:** advisory observation §6.2 is also closed — the local
+`write_report` in `gridalyn/interfaces/reporting/schemas.py` now runs `validate_report`
+before writing and raises a located, remediating `ValueError` on a non-conforming payload
+(plan 05-03 tasks 1–2), and `tests/test_canonical_report_conformance.py` gates the tracked
+canonical reports.
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_KNOWN_VIOLATIONS`, the examined-count guard, and the module docstring), per §7's rule
+that a fixed violation must update the audit and the gate in the same change.
+
+## 9. Amendment — 2026-08-06 (dashboard catalog builder relocated)
+
+The sections above are the audit as taken; their counts and classifications are
+historical and are not rewritten. This amendment records a path move only — no
+write site was added, removed, or reclassified.
+
+**Layer-exception #13 retired by relocation.** The dashboard catalog builder,
+formerly the module `gridalyn.interfaces.reporting.dashboard_catalog`, moved via
+`git mv` (content byte-identical) to `gridalyn/projects/dashboard_catalog.py`. Its
+only in-package dependency is `gridalyn.twin.network`, so the projects layer hosts it
+legally, and the stage script `generate_digital_twin_dashboard_catalog.py` now imports
+it downward — retiring the second documented entry in
+`tests/test_layer_direction.py::_DOCUMENTED_EXCEPTIONS`, which is now empty. (The
+first entry, `validate_workspace`'s upward import in
+`gridalyn/foundation/platform/validation.py`, was retired in the same change by
+re-homing the composed implementation into `gridalyn/projects/validation.py` behind a
+foundation-registered socket.)
+
+**What this changes in the enumerations:**
+
+- The §3.1 direct-write row and the §3.9 helper row for the catalog builder now name
+  `gridalyn/projects/dashboard_catalog.py`; their path cells were re-pointed in place
+  (marked "relocated — §9") so the documentation path gate stays truthful. Line
+  references inside those rows (`149`, `:128-135`) are unchanged and still accurate —
+  the file content did not change. The §3.9 call-site reference
+  `generate_digital_twin_dashboard_catalog.py:83` predates this move: deleting that
+  script's 18-line layer-exception comment shifted the call to line 65.
+- Counts are unchanged: 75 direct-JSON sites examined, 5 `GOVERNED-VIOLATION`, 22
+  helper-routed writes across 15 helpers. Classification of the site
+  (`NOT-A-REPORT`, a catalog) is unaffected by where the module lives.
+- Public names are unchanged: `build_dashboard_catalog` and `write_dashboard_catalog`
+  remain importable from `gridalyn.interfaces` and `gridalyn.interfaces.reporting`.
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_NOT_A_REPORT_BY_FILE` and `_PARAM_SERIALIZING_HELPERS` path keys).

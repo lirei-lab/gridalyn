@@ -13,25 +13,7 @@ from gridalyn.foundation import ArtifactLayout  # noqa: E402
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 
-# LAYER-DIRECTION EXCEPTION: projects -> gridalyn.interfaces.reporting.dashboard_catalog.
-# `build_dashboard_catalog` / `write_dashboard_catalog` are pure catalog
-# builders whose only gridalyn dependency is `gridalyn.twin.network`, but they
-# are filed under `interfaces.reporting`, so reaching them from here crosses
-# upward. This module is a stage-script entry point (see the package docstring:
-# "script entrypoints, not domain logic"), yet it is not a top-of-stack
-# composition root: `gridalyn.interfaces.cli.dashboard` and
-# `gridalyn.interfaces.cli.digital_twin` dispatch *downward* into it via
-# `run_module_as_script`, so this import closes an
-# interfaces -> projects -> interfaces cycle.
-# The exception is scoped to this one file, deliberately NOT to the scripts
-# package: the other 21 modules in this directory import only foundation,
-# twin, assets, simulation and operations, and already obey the direction.
-# Removing it means relocating
-# `gridalyn/interfaces/reporting/dashboard_catalog.py` to a layer at or below
-# `projects` (`twin` suffices, given its only import) and updating its
-# importers -- outside this change's scope.
-# Registered in tests/test_layer_direction.py::_DOCUMENTED_EXCEPTIONS.
-from gridalyn.interfaces.reporting.dashboard_catalog import (  # noqa: E402
+from gridalyn.projects.dashboard_catalog import (  # noqa: E402
     build_dashboard_catalog,
     write_dashboard_catalog,
 )

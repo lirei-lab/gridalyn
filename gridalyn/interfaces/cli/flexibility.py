@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
@@ -20,8 +19,6 @@ from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: 
 from gridalyn.projects.workflows.flexibility import (  # noqa: E402
     locational_verification,
 )
-
-ROOT = Path(__file__).resolve().parents[3]
 
 
 def _script_handler(script_name: str):

@@ -441,12 +441,13 @@ def analyze_synthetic_line_sizing(
         ``loading_percent`` is optional while the structural correlation is
         always computed.
     """
-    from gridalyn.foundation.platform.capabilities import require_capabilities
     from gridalyn.simulation.simulators.powerflow.synthetic_network import (
         build_synthetic_network_from_config,
     )
 
-    require_capabilities("sim", context="line-sizing diagnostic")
+    # No "sim" capability preflight: this path runs on pandapower alone (a
+    # base dependency); requiring lightsim2grid here would demand an extra
+    # the diagnostic never imports.
     build_kwargs.setdefault("write_cache", False)
     result = build_synthetic_network_from_config(
         footprints_path=footprints_path,

@@ -1,17 +1,39 @@
 {
-  "artifacts": {
-    "asset_registry": "digital_twin/scenarios/asset_registry.parquet",
-    "asset_registry_summary": "digital_twin/scenarios/asset_registry_summary.json"
-  },
-  "created_at": "2026-05-12T17:19:18.864044+00:00",
-  "inputs": [
+  "artifacts": [
+    {
+      "bytes": 646069,
+      "name": "asset_registry",
+      "path": "instances/default/digital_twin/scenarios/asset_registry.parquet",
+      "sha256": "67ed56902d270bbb3ff8b2535a75276649625b276e99763c929ff82c0115bc87"
+    },
     {
       "bytes": 1674,
-      "path": "digital_twin/scenarios/asset_registry_summary.json",
+      "name": "asset_registry_summary",
+      "path": "instances/default/digital_twin/scenarios/asset_registry_summary.json",
       "sha256": "f425db4e63b4dfffe4f1e250e1ae9a299a82eb7100dfb653b4a07d3918f21ac1"
     }
   ],
-  "metrics": {
+  "created_at": "2026-08-06T00:11:23.855341+00:00",
+  "governance": {
+    "model_version_id": null,
+    "study_run_id": null
+  },
+  "inputs": [
+    {
+      "bytes": 1674,
+      "path": "instances/default/digital_twin/scenarios/asset_registry_summary.json",
+      "sha256": "f425db4e63b4dfffe4f1e250e1ae9a299a82eb7100dfb653b4a07d3918f21ac1"
+    }
+  ],
+  "project": {
+    "name": "digital_twin",
+    "stage": "scenario_registry",
+    "title": "Digital Twin Scenario and Asset Registry"
+  },
+  "report_id": "scenario_registry",
+  "schema_version": "1.0",
+  "source_domain": "digital_twin",
+  "summary": {
     "n_scenarios": 5,
     "scenarios": [
       {
@@ -73,9 +95,9 @@
     "soft_assignment_seed": 3042,
     "soft_participation_rate": 0.3
   },
-  "report_id": "scenario_registry",
-  "schema_version": "1.0",
-  "source_domain": "digital_twin",
-  "stage": "scenario_registry",
-  "title": "Digital Twin Scenario and Asset Registry"
+  "validation": {
+    "errors": [],
+    "valid": true,
+    "warnings": []
+  }
 }

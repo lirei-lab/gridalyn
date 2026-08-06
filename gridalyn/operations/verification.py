@@ -105,10 +105,18 @@ def validate_cls_output_consistency(
     _require_columns_validation(
         errors,
         dispatch_timeseries,
-        ["t_hours", "p_soft_cls_mw", "p_hard_cls_mw", "p_rebound_mw", "p_limit_trace_mw"],
+        [
+            "t_hours",
+            "p_soft_cls_mw",
+            "p_hard_cls_mw",
+            "p_rebound_mw",
+            "p_limit_trace_mw",
+        ],
         "dispatch_timeseries",
     )
-    _require_columns_validation(errors, temporal_bounds, ["p_limit_trace"], "temporal_bounds")
+    _require_columns_validation(
+        errors, temporal_bounds, ["p_limit_trace"], "temporal_bounds"
+    )
 
     dt_h = _infer_dt_h(dispatch_timeseries, errors)
     dispatch_values = scenarios.get(dispatch_scenario, {})
@@ -181,7 +189,9 @@ def validate_cls_output_consistency(
     return CLSOutputConsistencyResult(
         errors=errors,
         scenario_labels=sorted(scenarios),
-        dynamic_limit_min_mw=float(ev_summary.get("dynamic_limit_min_mw", temporal_min)),
+        dynamic_limit_min_mw=float(
+            ev_summary.get("dynamic_limit_min_mw", temporal_min)
+        ),
         dynamic_limit_max_mw=float(ev_summary.get("dynamic_limit_max_mw", dynamic_max)),
         s4_soft_cls_mwh=s4_soft,
         s4_hard_cls_mwh=s4_hard,
@@ -192,7 +202,9 @@ def _scenario_items(summary: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {key: value for key, value in summary.items() if isinstance(value, dict)}
 
 
-def _assert_close(errors: list[str], label: str, left: float, right: float, tol: float) -> None:
+def _assert_close(
+    errors: list[str], label: str, left: float, right: float, tol: float
+) -> None:
     if not np.isclose(left, right, atol=tol, rtol=0.0):
         errors.append(f"{label}: {left} != {right} (tol={tol})")
 
@@ -235,10 +247,13 @@ def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> Non
         raise ValueError(f"{label} is missing required columns: {', '.join(missing)}")
 
 
-def _compare_to_unmanaged(metrics: dict[str, Any], unmanaged: dict[str, Any]) -> dict[str, float | int]:
+def _compare_to_unmanaged(
+    metrics: dict[str, Any], unmanaged: dict[str, Any]
+) -> dict[str, float | int]:
     return {
         "trafo_max_loading_reduction_pctpt": float(
-            unmanaged["trafo_max_loading_percent"] - metrics["trafo_max_loading_percent"]
+            unmanaged["trafo_max_loading_percent"]
+            - metrics["trafo_max_loading_percent"]
         ),
         "line_max_loading_reduction_pctpt": float(
             unmanaged["line_max_loading_percent"] - metrics["line_max_loading_percent"]
@@ -247,8 +262,12 @@ def _compare_to_unmanaged(metrics: dict[str, Any], unmanaged: dict[str, Any]) ->
         "ext_grid_peak_reduction_mw": float(
             unmanaged["ext_grid_peak_mw"] - metrics["ext_grid_peak_mw"]
         ),
-        "trafo_overload_delta": int(metrics["n_trafo_overloads"] - unmanaged["n_trafo_overloads"]),
-        "line_overload_delta": int(metrics["n_line_overloads"] - unmanaged["n_line_overloads"]),
+        "trafo_overload_delta": int(
+            metrics["n_trafo_overloads"] - unmanaged["n_trafo_overloads"]
+        ),
+        "line_overload_delta": int(
+            metrics["n_line_overloads"] - unmanaged["n_line_overloads"]
+        ),
     }
 
 
@@ -304,8 +323,12 @@ def apply_locational_selections(
         validate="many_to_one",
     )
     if merged["pandapower_load"].isna().any():
-        missing = sorted(merged.loc[merged["pandapower_load"].isna(), "provider_id"].unique())
-        raise ValueError(f"selections contain providers missing from registry: {missing[:5]}")
+        missing = sorted(
+            merged.loc[merged["pandapower_load"].isna(), "provider_id"].unique()
+        )
+        raise ValueError(
+            f"selections contain providers missing from registry: {missing[:5]}"
+        )
 
     n_steps = building.shape[0]
     soft_delivered = np.zeros(n_steps, dtype=float)
@@ -323,7 +346,9 @@ def apply_locational_selections(
         requested_kw = max(float(row["selected_kw"]), 0.0)
         provider_type = str(row["provider_type"])
         if provider_type == "soft_cls_building":
-            delivered_kw = min(requested_kw, max(float(building[timestep, load_idx]), 0.0))
+            delivered_kw = min(
+                requested_kw, max(float(building[timestep, load_idx]), 0.0)
+            )
             building[timestep, load_idx] -= delivered_kw
             soft_delivered[timestep] += delivered_kw
             soft_shortfall[timestep] += max(requested_kw - delivered_kw, 0.0)
@@ -405,18 +430,29 @@ def write_locational_verification_outputs(
     dispatch_path: Path,
     report_path: Path,
 ) -> dict[str, Path]:
-    """Write locational verification dispatch and report artifacts."""
+    """Write the dispatch artifact and prepare the verification report path.
+
+    The report JSON itself is serialized by the caller — the workflow stage
+    module ``gridalyn.projects.workflows.flexibility.locational_verification``
+    is the single writer of ``report_path`` (report-contract audit §5.2). This
+    helper used to write the same path first with absolute machine paths in
+    ``artifacts``; that duplicate write was removed so the caller's
+    ROOT-relative payload is the only one ever on disk.
+
+    Args:
+        dispatch: Per-timestep delivered/shortfall dispatch matrix.
+        report: Verification report payload. Accepted for signature stability
+            with existing callers; not written here.
+        dispatch_path: Destination for the dispatch parquet artifact.
+        report_path: Destination the caller writes the report JSON to; its
+            parent directory is created here.
+
+    Returns:
+        Mapping with the ``dispatch`` and ``report`` destination paths.
+    """
     dispatch_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     dispatch.to_parquet(dispatch_path, index=False)
-    report_with_artifacts = {
-        **report,
-        "artifacts": {
-            "dispatch": str(dispatch_path),
-            "report": str(report_path),
-        },
-    }
-    report_path.write_text(json.dumps(report_with_artifacts, indent=2, sort_keys=True))
     return {"dispatch": dispatch_path, "report": report_path}
 
 
@@ -428,7 +464,9 @@ def _dispatch_dt_h(dispatch: pd.DataFrame) -> float:
     return 5.0 / 60.0
 
 
-def _provider_selection_summary(selected: pd.DataFrame) -> tuple[float, float, list[dict[str, Any]]]:
+def _provider_selection_summary(
+    selected: pd.DataFrame,
+) -> tuple[float, float, list[dict[str, Any]]]:
     if selected.empty:
         return 0.0, 0.0, []
     by_type = selected.groupby("provider_type")["selected_kw"].sum()
@@ -484,13 +522,24 @@ def build_shadow_report(
                 constraint_id=constraint_id,
                 required_kw=required_kw,
             )
-            selected_soft_kw, selected_hard_kw, selected_providers = _provider_selection_summary(
-                selected.head(max_selected_providers_per_event)
+            selected_soft_kw, selected_hard_kw, selected_providers = (
+                _provider_selection_summary(
+                    selected.head(max_selected_providers_per_event)
+                )
             )
-            selected_relief_kw = float(selected["expected_relief_kw"].sum()) if not selected.empty else 0.0
+            selected_relief_kw = (
+                float(selected["expected_relief_kw"].sum())
+                if not selected.empty
+                else 0.0
+            )
             local_shortfall_kw = max(0.0, required_kw - selected_relief_kw)
             total_cost = (
-                float((selected["selected_kw"] * selected["effective_cost_per_kw_h"]).sum() * dt_h)
+                float(
+                    (
+                        selected["selected_kw"] * selected["effective_cost_per_kw_h"]
+                    ).sum()
+                    * dt_h
+                )
                 if not selected.empty
                 else 0.0
             )
@@ -511,9 +560,15 @@ def build_shadow_report(
                 }
             )
 
-    aggregate_required_mwh = sum(event["required_kw"] * dt_h / 1000.0 for event in events)
-    local_selected_mwh = sum(event["selected_relief_kw"] * dt_h / 1000.0 for event in events)
-    local_shortfall_mwh = sum(event["local_shortfall_kw"] * dt_h / 1000.0 for event in events)
+    aggregate_required_mwh = sum(
+        event["required_kw"] * dt_h / 1000.0 for event in events
+    )
+    local_selected_mwh = sum(
+        event["selected_relief_kw"] * dt_h / 1000.0 for event in events
+    )
+    local_shortfall_mwh = sum(
+        event["local_shortfall_kw"] * dt_h / 1000.0 for event in events
+    )
     unique_dispatch_required_mwh = float(
         (
             (dispatch.get("p_soft_cls_mw", 0.0) + dispatch.get("p_hard_cls_mw", 0.0))
@@ -536,8 +591,12 @@ def build_shadow_report(
             "aggregate_required_mwh": aggregate_required_mwh,
             "local_selected_mwh": local_selected_mwh,
             "local_shortfall_mwh": local_shortfall_mwh,
-            "shortfall_event_count": int(sum(event["local_shortfall_kw"] > 0.0 for event in events)),
-            "estimated_selection_cost": float(sum(event["estimated_selection_cost"] for event in events)),
+            "shortfall_event_count": int(
+                sum(event["local_shortfall_kw"] > 0.0 for event in events)
+            ),
+            "estimated_selection_cost": float(
+                sum(event["estimated_selection_cost"] for event in events)
+            ),
         },
         "events": events,
     }

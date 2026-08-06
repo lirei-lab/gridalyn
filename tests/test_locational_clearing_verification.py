@@ -129,7 +129,7 @@ class LocationalClearingVerificationTest(unittest.TestCase):
         self.assertAlmostEqual(comparison["v_min_improvement_pu"], 0.01)
         self.assertEqual(comparison["line_overload_delta"], -1)
 
-    def test_write_outputs_creates_dispatch_and_report_files(self):
+    def test_write_outputs_creates_dispatch_and_leaves_report_to_caller(self):
         dispatch = pd.DataFrame(
             [
                 {
@@ -173,7 +173,11 @@ class LocationalClearingVerificationTest(unittest.TestCase):
             )
 
             self.assertTrue(outputs["dispatch"].exists())
-            self.assertTrue(outputs["report"].exists())
+            # Single-writer contract (report-contract audit §5.2): the caller
+            # owns the report write; this helper only prepares the destination
+            # directory and returns the path.
+            self.assertFalse(outputs["report"].exists())
+            self.assertTrue(outputs["report"].parent.is_dir())
             self.assertEqual(len(pd.read_parquet(outputs["dispatch"])), 1)
 
 

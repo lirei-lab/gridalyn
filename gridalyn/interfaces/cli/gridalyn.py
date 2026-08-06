@@ -9,6 +9,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
@@ -23,8 +24,17 @@ configure_cli_environment()
 from gridalyn.foundation.platform.capabilities import (  # noqa: E402
     OPTIONAL_CAPABILITY_MODULES,
 )
-from gridalyn.foundation.platform.validation import validate_workspace  # noqa: E402
+
+# ``_looks_like_workspace`` is the single source of truth for what counts as a
+# workspace; re-deriving the marker set here would drift. ``find_workspace_root``
+# falls back to returning its start path, so the predicate is the only way to
+# tell "found" from "not found".
+from gridalyn.foundation.platform.workspace import (  # noqa: E402
+    _looks_like_workspace,
+    find_workspace_root,
+)
 from gridalyn.projects.api import list_projects  # noqa: E402
+from gridalyn.projects.validation import validate_workspace  # noqa: E402
 
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
     "twin": (
@@ -78,7 +88,7 @@ def _delegate_domain_help(argv: list[str] | None) -> int | None:
     return None
 
 
-def _delegate_module(module_name: str):
+def _delegate_module(module_name: str) -> Any:
     def handler(args: argparse.Namespace) -> int:
         module = importlib.import_module(module_name)
         return module.main(getattr(args, "subcommand_args", []))
@@ -99,12 +109,14 @@ def _validate(args: argparse.Namespace) -> int:
 
 def _doctor(args: argparse.Namespace) -> int:
     root = Path(args.root)
-    workspace = validate_workspace(root)
-    projects = list_projects(root)
     try:
         version = importlib.metadata.version("gridalyn")
     except importlib.metadata.PackageNotFoundError:
         version = "unknown"
+    python_section = {
+        "version": sys.version.split()[0],
+        "executable": sys.executable,
+    }
     optional = {
         capability: {
             module_name: importlib.util.find_spec(module_name) is not None
@@ -112,16 +124,40 @@ def _doctor(args: argparse.Namespace) -> int:
         }
         for capability, module_names in OPTIONAL_CAPABILITY_MODULES.items()
     }
+    if not _looks_like_workspace(find_workspace_root(root)):
+        # A pip-installed gridalyn with no checkout nearby is a healthy
+        # installation -- there is simply no workspace to lint. Running
+        # ``validate_workspace`` here would apply gridalyn's own artifact
+        # policy to an arbitrary directory and exit 1 over nothing the user
+        # can act on.
+        payload = {
+            "valid": True,
+            "python": python_section,
+            "gridalyn": {"version": version},
+            "workspace": {
+                "found": False,
+                "searched_from": str(root.resolve()),
+                "note": (
+                    f"no Gridalyn workspace found at or above {root.resolve()}; "
+                    "create one with 'gridalyn quickstart <directory>' or point "
+                    "doctor at an existing workspace with --root <workspace>"
+                ),
+            },
+            "projects": {"count": 0, "items": []},
+            "optional_capabilities": optional,
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    workspace = validate_workspace(root)
+    projects = list_projects(root)
     payload = {
         "valid": bool(workspace.get("valid")),
-        "python": {
-            "version": sys.version.split()[0],
-            "executable": sys.executable,
-        },
+        "python": python_section,
         "gridalyn": {
             "version": version,
         },
         "workspace": {
+            "found": True,
             "root": str(root.resolve()),
             "valid": workspace.get("valid"),
             # `validate_workspace` returns {valid, checks, summary} -- it has no
@@ -146,17 +182,9 @@ def _doctor(args: argparse.Namespace) -> int:
 
 
 def _quickstart(args: argparse.Namespace) -> int:
-    from gridalyn.foundation.platform.capabilities import (
-        MissingCapabilityError,
-        require_capabilities,
-    )
+    # No capability preflight: the demo imports only pandapower, a base
+    # dependency that is always present on a supported install.
     from gridalyn.projects.api import init_project, run_workflow
-
-    try:
-        require_capabilities("sim", context="the quickstart power-flow demo")
-    except MissingCapabilityError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
 
     target = Path(args.project)
     created = init_project(target, name=args.name, template="powerflow-demo")

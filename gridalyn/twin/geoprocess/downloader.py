@@ -1,7 +1,12 @@
+"""OpenStreetMap building-footprint download behind the ``geo`` capability."""
+
+from __future__ import annotations
+
 from typing import Tuple
 
 import geopandas as gpd
-import osmnx as ox
+
+from gridalyn.foundation.platform.capabilities import require_capabilities
 
 
 class BuildingDownloader:
@@ -26,7 +31,15 @@ class BuildingDownloader:
         Args:
             polygon_coordinates: The polygon coordinates to download building shapes for.
             output_path: The path to save the downloaded building shapes.
+
+        Raises:
+            MissingCapabilityError: If the ``geo`` extra (osmnx) is not
+                installed.
+            ValueError: If OSMnx returns no usable building footprints.
         """
+        require_capabilities("geo", context="OSM building-footprint download")
+
+        import osmnx as ox
         from shapely.geometry import Polygon
 
         polygon_list = [list(coord) for coord in polygon_coordinates]

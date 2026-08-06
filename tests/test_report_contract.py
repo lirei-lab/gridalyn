@@ -3,7 +3,7 @@
 The SDK's cross-cutting rule is that every artifact-producing run emits a
 governed platform report via ``write_report`` — never hand-written report JSON.
 Enforcing that mechanically is not as simple as banning ``json.dump``: the repo
-writes 76 JSON artifacts directly plus 22 through in-repo JSON helpers, and the
+writes 75 JSON artifacts directly plus 22 through in-repo JSON helpers, and the
 overwhelming majority are legitimately *not* platform reports (catalogs,
 manifests, scorecards, run-lineage records, cache metadata, GeoJSON, study data
 payloads). Each has its own shape and its own contract.
@@ -57,9 +57,11 @@ The tests
 * :func:`test_site_keys_identify_exactly_one_write` — no key may stand for two
   writes, in either enumeration. This is what stops a new governed report from
   hiding behind a pinned one; see "Site keys" below.
-* :func:`test_known_violations_are_visible_not_tolerated` — the six
+* :func:`test_known_violations_are_visible_not_tolerated` — the five
   ``GOVERNED-VIOLATION`` sites are named here with their remedy section, so they
-  are impossible to forget. Fixing one without updating the audit fails.
+  are impossible to forget. Fixing one without updating the audit fails. (Six
+  at audit time; the §5.2 duplicate write in ``operations/verification.py`` was
+  removed by the 2026-08-06 amendment.)
 * :func:`test_audit_counts_reconcile` and
   :func:`test_helper_routed_counts_reconcile` — examined == violations +
   not-a-report + already-governed, in each enumeration, against the live scan.
@@ -132,14 +134,12 @@ _KNOWN_VIOLATIONS: dict[str, str] = {
     # hand-built in-module (as dicts, not contract lists).
     "gridalyn/operations/artifacts.py::"
     "materialize_flexibility_operation_artifacts::report#0": "audit section 5.1",
-    # Two writes of the SAME path, .../locational_clearing_verification_report.json.
-    # The SDK-side write emits absolute paths; the caller's emits ROOT-relative
-    # ones and currently wins. See audit §5.2 — the SDK-side write is the one to
-    # remove.
-    "gridalyn/operations/verification.py::"
-    "write_locational_verification_outputs::report_with_artifacts#0": (
-        "audit section 5.2"
-    ),
+    # Formerly one of TWO writes of the same path — the SDK-side write in
+    # operations/verification.py emitted absolute paths first, and this
+    # ROOT-relative caller write overwrote it. The audit §5.2 amendment
+    # (2026-08-06) removed the SDK-side duplicate; this surviving single
+    # writer is still hand-serialized, so it remains a violation until the
+    # write_report conversion in §5.2 is applied.
     "gridalyn/projects/workflows/flexibility/"
     "locational_verification.py::generate_report::report#0": "audit section 5.2",
     # ArtifactLayout.reports / network_adapter_validation_report.json; validation
@@ -173,9 +173,6 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
     "gridalyn/assets/modeling/scenarios.py": (
         "write_scenario_model_artifacts::manifest#0",
     ),
-    "gridalyn/interfaces/reporting/dashboard_catalog.py": (
-        "write_dashboard_catalog::catalog#0",
-    ),
     "gridalyn/interfaces/reporting/schemas.py": ("write_json::payload#0",),
     "gridalyn/operations/artifacts.py": (
         "materialize_flexibility_operation_artifacts::catalog#0",
@@ -191,6 +188,7 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
         "write_flexibility_clearing_scorecard::scorecard#0",
     ),
     "gridalyn/operations/verification.py": ("write_shadow_report::report#0",),
+    "gridalyn/projects/dashboard_catalog.py": ("write_dashboard_catalog::catalog#0",),
     # outputs/reports/regression_report.json — governed destination, but the
     # payload never records its own inputs/artifacts. Role test rejects it.
     "gridalyn/projects/regression.py": ("write_regression_report::report#0",),
@@ -393,10 +391,10 @@ _CLASSIFIED: frozenset[str] = (
 _PARAM_SERIALIZING_HELPERS: frozenset[str] = frozenset(
     {
         "gridalyn/foundation/platform/reports.py::write_json_report",
-        "gridalyn/interfaces/reporting/dashboard_catalog.py::write_dashboard_catalog",
         "gridalyn/interfaces/reporting/schemas.py::write_json",
         "gridalyn/operations/settlement.py::write_flexibility_clearing_scorecard",
         "gridalyn/operations/verification.py::write_shadow_report",
+        "gridalyn/projects/dashboard_catalog.py::write_dashboard_catalog",
         "gridalyn/projects/regression.py::write_regression_report",
         "gridalyn/projects/runner.py::_write_manifest",
         "gridalyn/projects/workflows/digital_twin/build.py::write_build_manifest",
@@ -421,7 +419,8 @@ _PARAM_SERIALIZING_HELPERS: frozenset[str] = frozenset(
 _HELPER_ROUTED_ALREADY_GOVERNED: frozenset[str] = frozenset(
     {
         "gridalyn/foundation/platform/reports.py::write_report::write_json_report#0",
-        # Local write_report helper; audit §6 notes it skips validate_report.
+        # Local write_report helper; validates the payload before writing (audit
+        # §8 closed §6.2: validation now happens in write_report).
         "gridalyn/interfaces/reporting/schemas.py::write_report::write_json_report#0",
     }
 )
@@ -882,7 +881,7 @@ class ReportContractAuditTest(unittest.TestCase):
                 )
 
     def test_known_violations_are_visible_not_tolerated(self) -> None:
-        """The six audited violations stay named, with their remedy cited."""
+        """The five audited violations stay named, with their remedy cited."""
         sites = _scan_direct_json_write_sites()
         for key, remedy in sorted(_KNOWN_VIOLATIONS.items()):
             with self.subTest(site=key):
@@ -929,8 +928,10 @@ class ReportContractAuditTest(unittest.TestCase):
         # Guard against a vacuous pass if the scanner silently stops matching.
         self.assertEqual(
             examined,
-            76,
-            "The 02-03 audit examined 76 direct-JSON write sites. A different "
+            75,
+            "The 02-03 audit examined 76 direct-JSON write sites; the "
+            "2026-08-06 amendment (audit §5.2, duplicate-write removal in "
+            "operations/verification.py) brought the tree to 75. A different "
             "number means the tree moved or the scanner no longer matches; "
             "reconcile before adjusting this number.",
         )

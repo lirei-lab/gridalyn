@@ -16,6 +16,7 @@ configure_cli_environment()
 # these imports above the call would leave the variable set too late to have
 # any effect, which is a silent failure rather than a loud one.
 
+from gridalyn.foundation import ArtifactLayout  # noqa: E402
 from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
 from gridalyn.projects.workflows.digital_twin import (  # noqa: E402
     ev_scenarios,
@@ -31,16 +32,42 @@ from gridalyn.twin.geoprocess import (  # noqa: E402
     prepare_microsoft_building_footprints,
 )
 
-ROOT = Path(__file__).resolve().parents[3]
+# Current-directory default, matching ArtifactLayout's own root default. Never
+# derive the root from __file__: in an installed wheel that resolves to
+# site-packages, where reads return {} and writes land inside the package.
+_DEFAULT_ROOT = Path(".")
 
-from gridalyn.foundation import ArtifactLayout  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+def _require_workspace_root(root: Path) -> Path:
+    """Resolve and validate a CLI-provided workspace root.
+
+    Args:
+        root: Root passed on the command line; defaults to the current
+            directory.
+
+    Returns:
+        The resolved, existing root directory.
+
+    Raises:
+        FileNotFoundError: If ``root`` does not exist or is not a directory.
+            The message names the root and the remedy so a misconfigured
+            ``--root`` cannot silently write into (or read from) the wrong
+            location.
+    """
+    resolved = Path(root).resolve()
+    if not resolved.is_dir():
+        raise FileNotFoundError(
+            f"{resolved}: not an existing directory; the digital-twin build "
+            "reads and writes under <root>/instances/default/digital_twin, "
+            "with every path composed from ArtifactLayout. Run from a "
+            "workspace root, or pass --root <workspace>."
+        )
+    return resolved
 
 
 def _display_path(path: Path) -> str:
     try:
-        return str(path.resolve().relative_to(ROOT))
+        return str(path.resolve().relative_to(Path.cwd()))
     except ValueError:
         return str(path)
 
@@ -50,6 +77,15 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     build = subparsers.add_parser("build", help="Build or plan digital twin artifacts.")
+    build.add_argument(
+        "--root",
+        type=Path,
+        default=_DEFAULT_ROOT,
+        help=(
+            "Workspace root containing instances/default/digital_twin "
+            "(default: current directory)."
+        ),
+    )
     build.add_argument("--skip-heavy", action="store_true")
     build.add_argument("--include-network-impact", action="store_true")
     build.add_argument("--dry-run", action="store_true")
@@ -57,7 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--manifest",
         type=Path,
-        default=DEFAULT_LAYOUT.reports / "digital_twin_build_manifest.json",
+        default=None,
+        help=(
+            "Destination for the build manifest (default: "
+            "<root>/instances/default/digital_twin/reports/"
+            "digital_twin_build_manifest.json)."
+        ),
     )
     build.set_defaults(handler=handle_build)
 
@@ -130,20 +171,25 @@ def _script_handler(script_name: str):
 
 
 def handle_build(args: argparse.Namespace) -> int:
+    root = _require_workspace_root(args.root)
+    layout = ArtifactLayout(root)
+    manifest_path = args.manifest or (
+        layout.reports / "digital_twin_build_manifest.json"
+    )
     manifest = run_digital_twin_build(
-        root=ROOT,
+        root=root,
         skip_heavy=args.skip_heavy,
         include_network_impact=args.include_network_impact,
         dry_run=args.dry_run,
         continue_on_error=args.continue_on_error,
-        manifest_path=args.manifest,
+        manifest_path=manifest_path,
     )
     print(
         json.dumps(
             {
                 "dry_run": manifest["dry_run"],
                 "step_count": manifest["step_count"],
-                "manifest": _display_path(args.manifest),
+                "manifest": _display_path(manifest_path),
                 "steps": [step["name"] for step in manifest["steps"]],
             },
             indent=2,

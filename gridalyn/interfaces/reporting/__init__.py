@@ -1,10 +1,7 @@
 """Canonical report builders and JSON report helpers."""
 
 from gridalyn.interfaces.reporting.digital_twin import build_digital_twin_reports
-from gridalyn.interfaces.reporting.dashboard_catalog import (
-    build_dashboard_catalog,
-    write_dashboard_catalog,
-)
+from gridalyn.interfaces.reporting.metrics import dispatch_timeseries_metrics
 from gridalyn.interfaces.reporting.schemas import (
     artifact_references,
     canonical_report,
@@ -16,7 +13,10 @@ from gridalyn.interfaces.reporting.schemas import (
     write_json,
     write_report,
 )
-from gridalyn.interfaces.reporting.metrics import dispatch_timeseries_metrics
+from gridalyn.projects.dashboard_catalog import (
+    build_dashboard_catalog,
+    write_dashboard_catalog,
+)
 
 __all__ = [
     "artifact_references",

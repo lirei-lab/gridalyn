@@ -1,21 +1,32 @@
-"""Optional capability detection with actionable install guidance."""
+"""Optional capability detection with actionable install guidance.
+
+A capability names the *truly-optional* modules an operation needs -- modules
+absent from ``pyproject.toml`` ``[project] dependencies``. A base dependency
+never belongs here: it is present on every supported install, so listing it
+creates a check that can never fail. ``tests/test_capability_contract.py``
+pins this rule against the pyproject dependency list.
+"""
 
 from __future__ import annotations
 
 import importlib.util
 
-
 OPTIONAL_CAPABILITY_MODULES: dict[str, list[str]] = {
-    "geo": ["geopandas", "osmnx", "shapely"],
-    "sim": ["pandapower", "lightsim2grid"],
-    # lightgbm is NOT here: it is a base dependency, because the packaged
-    # macro weights are LightGBM models and a missing runtime silently
-    # swaps the generator to a different macro model. Listing a base
-    # dependency as an optional capability makes a check that can never
-    # fail on a supported install.
+    # A base dependency NEVER appears in this map: it is installed on every
+    # supported environment, so requiring it makes a check that can never
+    # fail -- an always-green gate that guards nothing. lightgbm was the
+    # first removal for this reason (the packaged macro weights are LightGBM
+    # models and a missing runtime silently swaps the generator to a
+    # different macro model, so it became a base dependency). On 2026-08-06
+    # six more base dependencies were removed for the same reason:
+    # pandapower (sim), geopandas and shapely (geo), rdflib (semantic), and
+    # folium and leafmap -- the last two emptied the 'dashboard' capability,
+    # which was removed entirely, because an empty capability is itself an
+    # always-green check.
+    "geo": ["osmnx"],
+    "sim": ["lightsim2grid"],
     "ops": ["cvxpy"],
-    "semantic": ["rdflib", "falkordb"],
-    "dashboard": ["folium", "leafmap"],
+    "semantic": ["falkordb"],
 }
 
 
@@ -32,11 +43,13 @@ def missing_capability_modules(capability: str) -> list[str]:
     return [name for name in modules if importlib.util.find_spec(name) is None]
 
 
-def capability_install_hint(capability: str, missing: list[str], context: str = "") -> str:
+def capability_install_hint(
+    capability: str, missing: list[str], context: str = ""
+) -> str:
     """Build the user-facing message for a missing optional capability."""
-    subject = context or f"the '{capability}' capability"
+    subject = context or f"the {capability!r} capability"
     return (
-        f"{subject} needs the '{capability}' extra "
+        f"{subject} needs the {capability!r} extra "
         f"(missing modules: {', '.join(missing)}). "
         f'Install with: pip install "gridalyn[{capability}]" '
         "and inspect your installation with: gridalyn doctor"

@@ -100,7 +100,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{{python}} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -110,7 +110,7 @@ spec:
     - id: write_summary_report
       needs:
         - prepare_workspace
-      command: python scripts/write_summary_report.py
+      command: "{{python}} scripts/write_summary_report.py"
       outputs:
         - outputs/reports/project_summary.json
 """
@@ -121,13 +121,13 @@ metadata:
 spec:
   stages:
     - id: prepare_inputs
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{{python}} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/reports
     - id: validate_outputs
       needs:
         - prepare_inputs
-      command: python -c "print('No project-specific validation configured yet')"
+      command: "{{python}} -c \\"print('No project-specific validation configured yet')\\""
 """
 
 
@@ -292,7 +292,7 @@ metadata:
 spec:
   stages:
     - id: prepare_workspace
-      command: python -m gridalyn.interfaces.cli.project prepare-workspace .
+      command: "{{python}} -m gridalyn.interfaces.cli.project prepare-workspace ."
       outputs:
         - outputs/data
         - outputs/figures
@@ -302,7 +302,7 @@ spec:
     - id: run_powerflow_study
       needs:
         - prepare_workspace
-      command: python scripts/run_powerflow_study.py
+      command: "{{python}} scripts/run_powerflow_study.py"
       outputs:
         - outputs/reports/powerflow_demo_report.json
         - outputs/figures/powerflow_demo_voltage_profile.png
@@ -390,7 +390,8 @@ TEMPLATES: dict[str, ProjectTemplate] = {
         name="powerflow-demo",
         description=(
             "Runnable IEEE 33-bus power-flow study producing a figure and a "
-            "governed report (requires the 'sim' extra)."
+            "governed report (requires only base dependencies, e.g. "
+            "pandapower)."
         ),
         project_yaml=_powerflow_demo_project_yaml,
         workflow_yaml=_powerflow_demo_workflow_yaml,

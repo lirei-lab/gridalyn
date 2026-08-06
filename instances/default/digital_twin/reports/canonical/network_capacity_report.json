@@ -1,16 +1,33 @@
 {
-  "artifacts": {
-    "mv_lv_transformer_overload_report": "digital_twin/reports/mv_lv_transformer_overload_report.json"
-  },
-  "created_at": "2026-05-12T17:19:18.862565+00:00",
-  "inputs": [
+  "artifacts": [
     {
       "bytes": 33910,
-      "path": "digital_twin/reports/mv_lv_transformer_overload_report.json",
+      "name": "mv_lv_transformer_overload_report",
+      "path": "instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json",
       "sha256": "acb47048ae6863071d4d1689d37a94294a794b0cd151945a5706baf28c8c637b"
     }
   ],
-  "metrics": {
+  "created_at": "2026-08-06T00:11:23.852299+00:00",
+  "governance": {
+    "model_version_id": null,
+    "study_run_id": null
+  },
+  "inputs": [
+    {
+      "bytes": 33910,
+      "path": "instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json",
+      "sha256": "acb47048ae6863071d4d1689d37a94294a794b0cd151945a5706baf28c8c637b"
+    }
+  ],
+  "project": {
+    "name": "digital_twin",
+    "stage": "network_capacity",
+    "title": "Digital Twin Network Capacity and Transformer Loading"
+  },
+  "report_id": "network_capacity",
+  "schema_version": "1.0",
+  "source_domain": "digital_twin",
+  "summary": {
     "overall": {
       "any_overloaded_mv_lv_transformer": true,
       "interpretation": "At least one MV/LV transformer exceeds 100% loading in the simulated scenarios.",
@@ -1007,9 +1024,9 @@
       }
     ]
   },
-  "report_id": "network_capacity",
-  "schema_version": "1.0",
-  "source_domain": "digital_twin",
-  "stage": "network_capacity",
-  "title": "Digital Twin Network Capacity and Transformer Loading"
+  "validation": {
+    "errors": [],
+    "valid": true,
+    "warnings": []
+  }
 }
