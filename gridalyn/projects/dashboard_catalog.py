@@ -16,6 +16,31 @@ FILE_KINDS = {
     "transformers": "powerflow_transformers",
 }
 
+#: Workspace-relative root of the default digital-twin instance. Summaries
+#: written before the 2026-05-19 instance-path unification declared their
+#: parquet locations relative to the *instance* (``digital_twin/...``) rather
+#: than to the workspace, so paths in that older form need re-anchoring here.
+_INSTANCE_ROOT = "instances/default"
+_TWIN_PREFIX = "digital_twin/"
+
+
+def _anchor(declared: str) -> str:
+    """Re-anchor an instance-relative declared path onto the workspace root.
+
+    Args:
+        declared: Path recorded in a powerflow summary, in either the current
+            workspace-relative form or the pre-unification instance-relative
+            form.
+
+    Returns:
+        The workspace-relative equivalent. Absolute paths and paths already
+        anchored under ``instances/`` are returned unchanged.
+    """
+    text = str(declared).replace("\\", "/")
+    if text.startswith(_TWIN_PREFIX):
+        return f"{_INSTANCE_ROOT}/{text}"
+    return text
+
 
 def _web_path(path: Path | str, root: Path) -> str:
     raw = Path(path)
@@ -38,11 +63,11 @@ def _paths(scenario_id: str, summary: dict[str, Any], root: Path) -> dict[str, s
     declared = summary.get("paths") or {}
     paths = {}
     for kind, suffix in FILE_KINDS.items():
-        paths[kind] = _web_path(
-            declared.get(kind)
-            or f"instances/default/digital_twin/timeseries/{scenario_id}_{suffix}.parquet",
-            root,
+        fallback = (
+            f"{_INSTANCE_ROOT}/{_TWIN_PREFIX}timeseries/"
+            f"{scenario_id}_{suffix}.parquet"
         )
+        paths[kind] = _web_path(_anchor(declared.get(kind) or fallback), root)
     return paths
 
 

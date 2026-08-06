@@ -15,7 +15,11 @@ function digitalTwinStaticPlugin() {
     name: 'gridalyn-data-static',
     configureServer(server) {
       for (const [mountPath, dataRoot] of Object.entries(roots)) {
-        server.middlewares.use(mountPath, (req, res, next) => {
+        // Three arguments, not four: connect only treats a 4-arity middleware
+        // as an error handler, and this one deliberately never calls next()
+        // (see the 404 comment below). Declaring an unused `next` also fails
+        // `npm run lint`, which the docs present as a gate.
+        server.middlewares.use(mountPath, (req, res) => {
           const rawUrl = decodeURIComponent((req.url || '').split('?')[0])
           const filePath = path.normalize(path.join(dataRoot, rawUrl))
           if (filePath !== dataRoot && !filePath.startsWith(`${dataRoot}${path.sep}`)) {

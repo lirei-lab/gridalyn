@@ -21,6 +21,7 @@ import inspect
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,6 +32,7 @@ from typing import Any
 
 import yaml
 
+from gridalyn.foundation.platform.workspace import _looks_like_workspace
 from gridalyn.interfaces.cli import gridalyn as gridalyn_cli
 from gridalyn.projects.api import init_project
 from gridalyn.projects.templates import TEMPLATES
@@ -89,6 +91,73 @@ class TestDoctorInsideTheWorkspace(unittest.TestCase):
         self.assertIn("valid", payload["workspace"])
         self.assertIn("failed_checks", payload["workspace"])
         self.assertIn("summary", payload["workspace"])
+
+    def test_doctor_does_not_fail_on_un_run_project_artifacts(self) -> None:
+        """Un-run projects are not a doctor failure.
+
+        Project ``outputs/`` are git-ignored, so a workspace whose projects
+        have never been run is the *permanent* state of every fresh checkout.
+        doctor inherited ``validate_workspace``'s ``check_project_artifacts``
+        default of True and reported every declared report as missing, while
+        ``gridalyn validate`` -- documented beside it -- passed argparse's
+        default of False and reported none on the same tree. Observed by
+        execution during the Phase 7 docs sweep: doctor exited 1 on a fresh
+        clone while its own payload reported all capabilities present and all
+        8 project contracts valid.
+
+        The assertion is on the missing-report checks rather than the exit
+        code, because a synthetic workspace also trips the unrelated artifact
+        policy (it has no ``examples/tutorials/data/minimal`` dataset) and an
+        exit-code assertion would then pass or fail for the wrong reason.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            # `_looks_like_workspace` requires all three markers; without them
+            # doctor takes the no-workspace branch and this test would pass
+            # vacuously on the very bug it exists to catch.
+            (workspace / "pyproject.toml").write_text("[project]\nname='x'\n")
+            (workspace / "gridalyn").mkdir()
+            (workspace / "projects").mkdir()
+            shutil.copy(_REPO_ROOT / ".gitignore", workspace / ".gitignore")
+            created = init_project(
+                workspace / "projects" / "unrun_demo", template="minimal"
+            )
+            # Only projects that DECLARE required artifacts can produce the
+            # failing checks, so the fixture must declare one -- otherwise the
+            # test is vacuous whichever default doctor uses.
+            project_file = created.root / "project.yaml"
+            document = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+            document["spec"].setdefault("validation", {})["requiredReports"] = [
+                "outputs/reports/never_run_report.json"
+            ]
+            project_file.write_text(yaml.safe_dump(document), encoding="utf-8")
+            self.assertTrue(_looks_like_workspace(workspace))
+
+            _exit_code, payload = _run_doctor(workspace)
+            self.assertIs(True, payload["workspace"]["found"])
+
+            missing_reports = [
+                check
+                for check in payload["workspace"]["failed_checks"]
+                if "missing required report" in json.dumps(check)
+            ]
+            self.assertEqual(
+                [],
+                missing_reports,
+                "doctor re-enabled project-artifact checks; a fresh checkout "
+                "can never satisfy them because outputs/ is git-ignored",
+            )
+
+    def test_validate_still_opts_in_to_artifact_checks(self) -> None:
+        """The two defaults stay deliberately different.
+
+        Fixing doctor must not silently disarm ``gridalyn validate
+        --check-project-artifacts``, which is the intentional opt-in.
+        """
+        signature = inspect.signature(gridalyn_cli._validate)
+        self.assertIn("args", signature.parameters)
+        source = inspect.getsource(gridalyn_cli._validate)
+        self.assertIn("check_project_artifacts", source)
 
 
 class TestQuickstartCapabilityGate(unittest.TestCase):

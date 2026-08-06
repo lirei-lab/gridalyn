@@ -148,7 +148,12 @@ def _doctor(args: argparse.Namespace) -> int:
         }
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
-    workspace = validate_workspace(root)
+    # Artifact checks are deliberately off, matching `gridalyn validate`'s own
+    # argparse default: project ``outputs/`` are git-ignored, so requiring them
+    # here would make doctor exit 1 on every fresh checkout -- the same
+    # "nothing the user can act on" failure the no-workspace branch avoids.
+    # `gridalyn validate --check-project-artifacts` remains the opt-in.
+    workspace = validate_workspace(root, check_project_artifacts=False)
     projects = list_projects(root)
     payload = {
         "valid": bool(workspace.get("valid")),
