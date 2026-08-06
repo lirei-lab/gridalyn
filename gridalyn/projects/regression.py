@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
 
 DEFAULT_BASELINE = "baselines/results_baseline.json"
 DEFAULT_REPORT = "outputs/reports/regression_report.json"
@@ -116,6 +115,16 @@ def build_regression_report(
 
 
 def write_regression_report(report: dict[str, Any], path: Path) -> Path:
+    # Report-contract boundary ruling (#15; report-contract-audit sections 3.6
+    # and 6): this write is NOT-A-REPORT under the adopted rule. Destination
+    # holds (`outputs/reports/regression_report.json`), but role fails -- no
+    # `inputs`, no `artifacts`; `valid`/`errors` are top-level scalars, not the
+    # contract's `validation` object. It is a baseline-comparison record. The
+    # audit flags it as the site nearest the boundary of the adopted rule,
+    # admitted by destination and rejected only by role: if R3 is later read as
+    # governing *any* document in `outputs/reports/`, this becomes a violation
+    # and must convert to `write_report`. Recorded here so a future reading of
+    # R3 that widens finds it already identified rather than discovered late.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     return path

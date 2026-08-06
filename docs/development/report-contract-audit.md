@@ -746,3 +746,70 @@ foundation-registered socket.)
 
 Pins updated together with this amendment in `tests/test_report_contract.py`
 (`_NOT_A_REPORT_BY_FILE` and `_PARAM_SERIALIZING_HELPERS` path keys).
+
+## 10. Amendment — 2026-08-06: sections 5.1–5.5 applied; zero known violations
+
+The sections above are the audit as taken; their counts are historical. This
+amendment records the completion of ALL remaining §5 remedies in one wave. The
+gate's `_KNOWN_VIOLATIONS` is now empty, the way the layer gate's exception
+allowlist emptied — by fixing causes. Reconciliation: **0 + 69 + 1 = 70**
+direct-JSON sites examined (76 at audit time → 75 after §8 → 70 now);
+helper-routed enumeration unchanged at 22.
+
+**§5.1** `gridalyn/operations/artifacts.py` — the serialized
+`operational_kpi_report.json` is now the contract envelope: KPI metrics,
+`operation_context` and `constraint_summary` under `summary`;
+`inputs`/`artifacts` as `file_reference` lists; governance ids on
+`ReportMetadata`. The consumer constraint was honoured by the first recorded
+option: the in-memory `report` dict keeps its pre-conversion shape, so
+`build_operations_catalog`, `build_operation_run` and `validate_operation_run`
+see byte-identical inputs and the operations catalog is untouched. One
+serialized-shape consumer §5.1's analysis missed:
+`tests/test_ev_project_operational_artifacts.py` read the file's top-level
+`operation_context`; it now reads `summary.operation_context`.
+
+**§5.2** the surviving caller write in
+`gridalyn/projects/workflows/flexibility/locational_verification.py` routes
+through `write_report(...)`: the five stage inputs as `file_reference`
+entries, the dispatch parquet as the artifact, `{authority, policy}` folded
+into `summary`, and the contract `validation` derived from the replay
+comparison (errors when the cleared case adds overloads; warnings on loading
+or voltage regressions). The report no longer lists itself in `artifacts` — a
+self-referencing `file_reference` computed pre-write carries a stale hash on
+re-runs. S14 closed with it: the dead `report` parameter of
+`write_locational_verification_outputs` is removed end-to-end.
+
+**§5.3** `gridalyn/projects/sense_checks.py` routes its on-disk report
+through `write_report` (`report_id="project_sense_check_report"`,
+`source_domain="project_verification"`). Envelope identity proven literally:
+under a frozen clock, all eight `REQUIRED_REPORT_FIELDS` serialize
+byte-identically old-vs-new; file-side differences are `project` (bare string
+→ `{"name": ...}`, anticipated in §5.3), the standard `governance` block, and
+the flattened duplicates plus `checks` which leave the file but remain on the
+returned dict that `projects/api.py` and the CLI consume — the return
+contract is unchanged. The §6 advisory-3 ruling on `regression.py` (#15) is
+now a comment at the write site; this audit's `regression.py` line references
+(`:120`, `:138`) have shifted by +10 lines.
+
+**§5.4** `gridalyn/twin/adapters/validation.py` — the writer routes through
+`write_report` (`source_domain="twin"`); `source_adapter`, `source_standard`,
+`adapter` and `lineage` fold into `summary`; the exported base tables are
+recorded as both `inputs` and `artifacts` (`file_reference` lists).
+`build_network_adapter_validation_report` keeps its flat shape for in-memory
+consumers; both callers consume only the returned path and needed no change.
+The lineage pointer in `base/metadata.json` records the path only, unchanged.
+
+**§5.5** the terminal write in
+`generate_locational_flexibility_clearing.py` routes through `write_report`
+(`report_id="locational_flexibility_clearing"`); `constraint_ids` lives under
+`summary.constraint_ids`, and the reader in `locational_verification.py` was
+updated in the same change (new envelope → legacy flat → parquet fallback).
+The sidecar `locational_clearing_summary.json` keeps its flat legacy shape
+per §5.5 — it is a sidecar with its own consumers, not the run's report.
+
+**Installed-layout hardening in the same wave (#30):** both locational-chain
+modules dropped module-scope `parents[4]`/`DEFAULT_LAYOUT` for an explicit
+`--root` with the located no-tree guard, mirroring
+`gridalyn/interfaces/reporting/digital_twin.py`. The same hazard remains in
+`spatial_powerflow_validation.py` (recorded as ledger finding #39, not fixed
+here).
