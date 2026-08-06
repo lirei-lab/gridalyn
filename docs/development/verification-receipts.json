@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "note": "Receipts for verification this repository performs OUTSIDE continuous integration, because CI cannot perform it. Each entry names the protocol, the commit it was run at, and what came out. tools/verification_receipt.py checks that every required protocol is declared, that recorded receipts are complete, and that the commit named really exists in this history and leads to HEAD. Staleness is reported, never enforced. A receipt is an account of a run, not a substitute for a test CI could have run itself.",
+  "receipts": {
+    "docs-instruction-sweep": {
+      "status": "recorded",
+      "command": "See docs/development/instruction-verification.md -- the full sweep executes every RUNNABLE instruction in the corpus, in the environment each one needs, and records a verdict per block.",
+      "commit": "ffcf4a7bb8d8bc3809cfda90dcd76e1a4ed1ea1f",
+      "recorded_on": "2026-08-06",
+      "result": "162 runnable instructions verdicted, zero UNVERIFIED: 95 PASS-AS-WRITTEN, 63 FIXED-DOC, 1 FIXED-CODE, 3 DOCUMENTED.",
+      "evidence": "Per-block verdicts, evidence strings and durations are in docs/development/instruction-ledger.json, which is tracked and gated by tests/test_doc_instructions.py. The CI smoke subset (14 of 162 instructions, 13.8 s measured) rides the projects job and covers command surface only -- it cannot catch wrong-order documentation, which was the dominant defect this sweep found.",
+      "watched": [
+        "docs",
+        "README.md"
+      ],
+      "rationale": "The full sweep needs clean virtual environments per chain, network access, a node runtime and roughly an hour of wall clock. CI runs a measured 14-instruction subset instead; the rest is operator-verified and accounted for here."
+    },
+    "subprocess-coverage": {
+      "status": "recorded",
+      "command": "See the [tool.coverage.run] comment in pyproject.toml -- the six fixture studies run with the subprocess coverage hook enabled.",
+      "commit": "35c6cd6bc1d66f9b47795a560d8a3a1c9b2258be",
+      "recorded_on": "2026-08-06",
+      "result": "Fixture-scope coverage 7% -> 24% once the subprocess hook is active; study loop 80 s uninstrumented, 89 s parent-only, 159 s subprocess-hooked.",
+      "evidence": "Measured during phase 6, plan 06-04. The parent-only figure is near-meaningless because the stages run as subprocesses, which is what the 7% number shows. The coverage config's `patch=` option was probed and proven to measure nothing silently.",
+      "watched": [
+        "gridalyn",
+        "pyproject.toml"
+      ],
+      "rationale": "Deliberately not carried by CI: doubling the study loop's runtime would buy a number no consumer reads, since there is no coverage threshold or upload by design. Recorded here so the figure has a provenance instead of living in a comment."
+    },
+    "flagship-reproduce": {
+      "status": "deferred",
+      "command": "See docs/development/verification.md -- regenerate the ev_hosting_flex caches from source and re-run its reproduce-and-pin tests.",
+      "commit": null,
+      "recorded_on": null,
+      "result": null,
+      "evidence": null,
+      "watched": [
+        "gridalyn/assets/datagen",
+        "gridalyn/simulation",
+        "projects/ev_hosting_flex"
+      ],
+      "rationale": "Roughly six hours across 22 stages, deferred by explicit user decision on 2026-08-05 and again on 2026-08-06 (ledger finding #17). The study's pins therefore remain CACHE-proven, not SOURCE-proven: its tests pass against a 2026-08-03 cache. Its sibling admm_thermal_consensus carries the stronger proof, having been regenerated from scratch. This entry exists so that gap is visible rather than implied -- a deferral is a decision, and it is recorded as one."
+    }
+  }
+}

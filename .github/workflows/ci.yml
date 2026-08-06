@@ -15,6 +15,73 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # What a pull request touches decides what needs proving. Measured on this
+    # repository's recent history: a docs-only PR paid the full four-job matrix
+    # -- four checkouts and four `pip install -e ".[all,test]"` -- to re-run six
+    # end-to-end studies that no change could have affected.
+    #
+    # This job is the cheap discriminator. It never gates anything on a push to
+    # `main`: there the answer is always "run everything", because that is the
+    # tree the baselines and the published docs come from. It only trims the PR
+    # path, where the base commit is known and the diff is exact.
+    name: Classify the change surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify
+        id: classify
+        # `code` means "anything that could change a study's output or the
+        # contract around it". Deliberately broad: the SDK, the studies, the
+        # packaging metadata, the test suite and this workflow itself. Anything
+        # NOT on that list -- docs, README, the ledgers -- cannot alter a
+        # baseline, and the doc gates that DO cover it live in the `test` job,
+        # which always runs.
+        #
+        # Fails open. If the diff cannot be computed for any reason, `code` is
+        # true and the full matrix runs: a classifier that silently answers
+        # "nothing to do" is worse than no classifier.
+        run: |
+          set -uo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "code=true" >> "${GITHUB_OUTPUT}"
+            echo "not a pull request -- running everything" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          BASE="origin/${{ github.base_ref }}"
+          if ! git fetch --quiet origin "${{ github.base_ref }}" \
+             || ! CHANGED="$(git diff --name-only "${BASE}...HEAD")"; then
+            echo "code=true" >> "${GITHUB_OUTPUT}"
+            echo "diff unavailable -- failing open, running everything" \
+              >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          if printf '%s\n' "${CHANGED}" | grep -qE \
+             '^(gridalyn/|projects/|tests/|tools/|pyproject\.toml|uv\.lock|\.github/workflows/)'; then
+            CODE=true
+          else
+            CODE=false
+          fi
+          echo "code=${CODE}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Change surface"
+            echo ""
+            echo "\`code=${CODE}\` over $(printf '%s\n' "${CHANGED}" | wc -l) changed file(s)."
+            if [ "${CODE}" = "false" ]; then
+              echo ""
+              echo "No SDK, study, test, tool or packaging file changed, so the"
+              echo "end-to-end study job is skipped. Every gate that covers what"
+              echo "DID change still runs in the test job."
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -29,17 +96,49 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
-      - name: Install package with runtime and test extras
+      - name: Install package with runtime, test and typing extras
         # ".[all,test]" not ".[dev]": the dev extra additionally pulls
         # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
         # packages (282 -> 185) that nothing under test imports, installed once
         # per job on every push.
+        #
+        # `typing` is here because the ratchet moved INTO this job (2026-08-06).
+        # It used to be a fourth job that paid its own checkout and its own
+        # ~1.7 min install to host ~0.3 min of mypy. Measured on the six runs
+        # before the merge: typecheck cost 1.9-2.0 min wall, of which the
+        # analyser was a sixth. Sharing this job's environment removes that
+        # install and one queue slot -- which is what actually hurt on
+        # 2026-08-06, when four jobs sat unscheduled and were cancelled at 15 m.
+        #
+        # The tradeoff, stated rather than hidden: wall-clock for a green run
+        # gets slightly WORSE (the ratchet no longer overlaps the suite, about
+        # +0.3 min), and a red job now means "tests or types" until you read
+        # which step failed. Both were judged worth one fewer install and one
+        # fewer thing to schedule. The stub environment is unchanged, so the
+        # baseline still reads the same number it does locally.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,test]"
+          python -m pip install -e ".[all,test,typing]"
 
       - name: Run test suite
         run: python -m pytest -q --durations=15
+
+      - name: Run the mypy ratchet
+        # Reports; blocks only when the count RISES. Same script and same
+        # baseline file as the pre-push hook, so the two cannot disagree.
+        run: |
+          python tools/mypy_ratchet.py | tee -a "${GITHUB_STEP_SUMMARY}"
+
+      - name: Verify the operator-run protocols are accounted for
+        # The things CI cannot run -- the multi-hour flagship regeneration, the
+        # full documented-instruction sweep -- were previously verified by
+        # nobody and recorded only in prose. This checks their receipts:
+        # declared, well formed, and pinned to a commit that really exists in
+        # this history. It reports staleness rather than blocking on it, for
+        # the same reason the mypy ratchet reports rather than demanding zero.
+        run: |
+          python tools/verification_receipt.py --check \
+            | tee -a "${GITHUB_STEP_SUMMARY}"
 
   projects:
     # End-to-end contract gate. The governed study outputs are gitignored, so the
@@ -50,6 +149,11 @@ jobs:
     # and admm_thermal_consensus — are far too heavy for CI: their
     # baselines stay operator-verified, see docs/projects/.)
     name: Governed project contracts
+    needs: changes
+    # Skipped only when NOTHING under gridalyn/, projects/, tests/, tools/, the
+    # packaging metadata or these workflows changed -- see the `changes` job.
+    # Always runs on a push to `main`.
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -174,52 +278,6 @@ jobs:
             python -m gridalyn.interfaces.cli.project regression "projects/${project}"
             echo "::endgroup::"
           done
-
-  typecheck:
-    # Type checking was claimed but never enforced: CLAUDE.md stated mypy ran
-    # with --disallow-untyped-defs, yet it existed only as a local pre-commit
-    # hook. The "skipped in CI because it can be slow" justification does not
-    # survive a stopwatch -- mypy costs ~16 s cold over all 183 files, against a
-    # test job budgeted 40 minutes and a projects job that runs six end-to-end
-    # studies in ~78 s.
-    #
-    # THIS JOB REPORTS; IT DOES NOT BLOCK THE CURRENT TREE. The baseline is a
-    # real backlog, not zero, and a gate that fails on day one gets turned off.
-    # It fails only when the count RISES, so new type errors cannot enter
-    # silently while the existing ones are paid down deliberately.
-    #
-    # The comparison itself lives in tools/mypy_ratchet.py and the number in
-    # .mypy-baseline, so this job and the pre-push hook run the same logic
-    # against the same figure. They previously duplicated it -- inline bash here
-    # and a plain mypy hook there -- which is how the hook came to approve what
-    # this job rejected.
-    name: Type check (ratchet)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
-
-      - name: Install package with runtime, test and typing extras
-        # The baseline is only meaningful alongside the environment it was
-        # measured in: mypy's reading depends on which third-party stubs
-        # resolve, and the same tree reports 145 here against roughly 126 in an
-        # isolated env that cannot see them. ".[all,test,typing]" is that
-        # environment, and it is what tools/mypy_ratchet.py expects locally too.
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[all,test,typing]"
-
-      - name: Run the ratchet
-        run: |
-          python tools/mypy_ratchet.py | tee -a "${GITHUB_STEP_SUMMARY}"
 
   lint:
     # Lints only the files changed in the pull request, mirroring the local
