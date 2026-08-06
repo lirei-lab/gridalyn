@@ -78,9 +78,11 @@ uv run gridalyn project run projects/my_case
 uv run gridalyn project status projects/my_case --check-artifacts
 ```
 
-Run a project without writing the generated sense-check report:
+Check a project without writing the generated sense-check report. Both commands
+read artifacts the project has already produced, so run it first:
 
 ```bash
+uv run gridalyn project run projects/rl_voltage_control_lightsim
 uv run gridalyn project sense-check projects/rl_voltage_control_lightsim --no-write
 uv run gridalyn project verify projects/rl_voltage_control_lightsim --no-write
 ```

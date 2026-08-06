@@ -145,6 +145,10 @@ uv sync --extra dashboard  # map and visualization helpers
 uv sync --extra all        # full platform runtime
 ```
 
+Each `uv sync` synchronises the environment exactly, replacing the installed
+set rather than adding to it — combine groups in one command
+(`uv sync --extra dev --extra geo`) instead of running them in sequence.
+
 Synthetic load and weather generation is documented in
 `docs/sdk/data-generation.md`; treat its output as a synthetic baseline unless
 a project explicitly documents calibration.
@@ -161,6 +165,13 @@ uv run gridalyn project list
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project verify-all
 ```
+
+`verify-all` applies the verification ladder to *every* project under
+`projects/`, and a project only passes once its (git-ignored) outputs exist. On
+a fresh checkout it therefore reports the un-run projects as failures and exits
+non-zero; that is the expected result, not a broken install. Run the projects
+you care about first, and note that a fully green `verify-all` also requires
+the two long-running studies (`ev_hosting_flex`, `admm_thermal_consensus`).
 
 When you need the full research arc — calibrated inputs, pinned headline
 metrics, and reproduce-and-pin verification — run the flagship study. It also

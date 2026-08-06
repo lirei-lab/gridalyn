@@ -40,11 +40,16 @@ uv run gridalyn validate
 This is the lightweight platform check. It validates repository policy and the
 project contracts without regenerating heavy outputs.
 
-For stricter checks:
+For stricter checks, once the projects have been run:
 
 ```bash
 uv run gridalyn validate --check-project-artifacts
 ```
+
+`--check-project-artifacts` additionally requires each project's declared
+reports and figures to exist. Those outputs are git-ignored, so on a fresh
+checkout this command reports every project as failing and exits non-zero. Run
+it after the steps below, not before.
 
 ## 3. Run One Minimal Contract Check
 
@@ -60,9 +65,12 @@ This verifies the platform's smallest workflow loop: project manifest,
 workflow stage, generated artifacts, JSON report, figure, run manifest, and
 objective-level sense check.
 
-If you want a benchmark feeder after that, run:
+If you want a benchmark feeder after that, run it and then verify it —
+`verify` only inspects existing artifacts, so it fails on a project that has
+never been run:
 
 ```bash
+uv run gridalyn project run projects/ieee_33_bus_demo
 uv run gridalyn project verify projects/ieee_33_bus_demo
 ```
 
@@ -87,13 +95,15 @@ study:
 uv run gridalyn quickstart projects/my_first_case
 ```
 
-Or do the same steps explicitly, choosing a template
-(`gridalyn project init --list-templates` shows all of them):
+Or, *instead of* the command above, do the same steps explicitly, choosing a
+template (`gridalyn project init --list-templates` shows all of them). `init`
+refuses a target directory that already exists, so this uses a second path —
+run one of the two, not both into the same directory:
 
 ```bash
-uv run gridalyn project init projects/my_first_case --template powerflow-demo
-uv run gridalyn project run projects/my_first_case
-uv run gridalyn project status projects/my_first_case --check-artifacts
+uv run gridalyn project init projects/my_second_case --template powerflow-demo
+uv run gridalyn project run projects/my_second_case
+uv run gridalyn project status projects/my_second_case --check-artifacts
 ```
 
 This gives you a clean project workspace with a runnable workflow, a figure,

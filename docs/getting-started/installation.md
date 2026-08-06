@@ -28,8 +28,8 @@ From the repository root:
 uv sync --extra dev
 ```
 
-Use plain `uv sync` when you only need the installable SDK and CLI. Optional
-extras install heavier capability groups:
+Use plain `uv sync` when you only need the installable SDK and CLI. These are
+the heavier capability groups:
 
 ```bash
 uv sync --extra geo        # geospatial preprocessing and OSM tooling
@@ -39,6 +39,14 @@ uv sync --extra semantic   # semantic graph and database tooling
 uv sync --extra dashboard  # dashboard and visualization helpers
 uv sync --extra all        # full runtime capability set
 ```
+
+`uv sync` synchronises the environment exactly: each command above *replaces*
+the installed set rather than adding to it, so running `uv sync --extra geo`
+after `uv sync --extra dev` uninstalls the dev toolchain (measured: 121
+packages removed, including `pytest`). Note also that `--extra all` is the full
+*runtime* set and does not include the test and documentation tooling. To keep
+several groups at once, pass them in one command, as in
+`uv sync --extra dev --extra geo`.
 
 The `dev` extra installs the full runtime plus test and documentation tooling
 for the repository workflow.
