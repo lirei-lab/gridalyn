@@ -258,6 +258,39 @@ class FlagshipVerifyTests(unittest.TestCase):
         self.assertEqual(["a", "boom"], names)
         self.assertEqual("failed", ctx.exception.records[-1]["status"])
 
+    def test_main_persists_out_json_and_exits_one_on_failure(self) -> None:
+        """A failed run still writes its audit trail and returns exit 1."""
+        from tempfile import TemporaryDirectory
+        from unittest import mock
+
+        stages = tool.topo_sort([_stage("a"), _stage("boom", ["a"])])
+        with TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir) / "records.json"
+            with (
+                mock.patch.object(tool, "load_stages", return_value=stages),
+                mock.patch(
+                    "subprocess.run",
+                    side_effect=[
+                        mock.Mock(returncode=0, stdout="", stderr=""),
+                        mock.Mock(returncode=1, stdout="", stderr=""),
+                    ],
+                ),
+            ):
+                code = tool.main(
+                    [
+                        "--no-check-baselines",
+                        "--workspace",
+                        str(_REPO_ROOT),
+                        "--out-json",
+                        str(out),
+                    ]
+                )
+            self.assertEqual(1, code)
+            self.assertTrue(out.exists())
+            payload = json.loads(out.read_text())
+            self.assertEqual(1, payload["exit_code"])
+            self.assertEqual("failed", payload["stages"][-1]["status"])
+
 
 if __name__ == "__main__":
     unittest.main()
