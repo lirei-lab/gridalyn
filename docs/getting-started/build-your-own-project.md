@@ -119,7 +119,12 @@ the same interpreter. That fallback is compatibility, not the form to teach —
 it only ever touches the first token, so `uv run python …` and a script named
 `python_helper.py` are deliberately left alone.
 
-Run the full workflow, or just one stage and its dependencies while iterating:
+Run the full workflow, or just one stage and its dependencies while iterating.
+`--stage` takes a stage id from *your* `workflow.yaml`, so `run_study` below
+only resolves once you have replaced the scaffolded workflow with the one
+above; the `powerflow-demo` scaffold ships `prepare_workspace` and
+`run_powerflow_study` instead, and an unknown id fails listing the available
+ones:
 
 ```bash
 uv run gridalyn project run projects/my_study
@@ -156,7 +161,10 @@ alter them. Create `baselines/results_baseline.json`:
 }
 ```
 
-Then run:
+`source` and `json_path` must name a report your project actually writes and a
+key it actually contains — the command fails on a missing baseline file, and
+reports an unresolvable `json_path` as an invalid metric rather than skipping
+it. Create the file first, then run:
 
 ```bash
 uv run gridalyn project regression projects/my_study

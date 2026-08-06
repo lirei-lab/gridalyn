@@ -77,8 +77,10 @@ MPLCONFIGDIR=/tmp/matplotlib-cache \
 uv run python examples/tutorials/basic_grid_creation.py
 ```
 
-It generates fake building footprints, creates LV/MV/HV graphs, and writes local
-inspection maps under `examples/generated/outputs/`.
+It generates fake building footprints, creates LV/MV/HV graphs, and writes the
+footprint GeoJSON, the topology/network caches, and
+`synthetic_network_validation_report.json` under
+`examples/generated/outputs/basic_grid_creation/`. It does not render maps.
 
 Run the bundled real-footprint example:
 

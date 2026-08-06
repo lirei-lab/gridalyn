@@ -104,6 +104,7 @@ nav:
       - Contribution Workflow: development/developer-workflow.md
       - Project Hygiene: development/project-hygiene.md
       - Testing And Validation: development/testing-and-validation.md
+      - Instruction Verification: development/instruction-verification.md
       - Release Readiness: platform/release-readiness.md
 theme:
   name: material

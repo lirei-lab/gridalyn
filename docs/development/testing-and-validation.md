@@ -87,6 +87,16 @@ To verify every governed demo project:
 uv run gridalyn project verify-all
 ```
 
+**Expect a non-zero exit on the current tree.** `verify-all` covers all eight
+governed projects, but sense checkers are registered for the six CI fixture
+studies only (`_PROJECT_CHECKERS` in `gridalyn/projects/sense_checks.py`). The two
+research studies — `ev_hosting_flex` and `admm_thermal_consensus` — therefore fail
+`project_has_registered_sense_checks` and the run reports `"valid": false` with
+exit 1, on a clean checkout and regardless of whether their gitignored outputs are
+present. Measured 2026-08-06: six projects `ok`, those two failing on that check
+alone. Read the per-project entries rather than the top-level `valid`, and treat a
+*seventh* failing project as the real signal.
+
 ## Project Contract Check
 
 ```bash

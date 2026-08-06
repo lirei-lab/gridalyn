@@ -8,7 +8,7 @@ what capability gating exists to prevent.
 Why this check is BEHAVIORAL, not syntactic
 -------------------------------------------
 The obvious cheap check -- assert every package ``__init__.py`` contains the
-literal ``_LAZY_EXPORTS`` map -- is wrong here. Of the 36 ``__init__.py``
+literal ``_LAZY_EXPORTS`` map -- is wrong here. Of the 35 ``__init__.py``
 files in this tree, 17 carry that literal and 19 do not, yet none of those 19
 pulls an optional dependency: only 2 sub-packages ever did, and both now carry
 the map. A syntactic check would therefore produce 19 false positives while
@@ -70,8 +70,11 @@ _IMPORT_TIMEOUT_SECONDS = 120
 
 #: Number of ``gridalyn`` sub-packages the sweep must cover. Pinned so the
 #: swept population cannot shrink unnoticed; update deliberately when a
-#: package is added or removed.
-_EXPECTED_SUBPACKAGE_COUNT = 36
+#: package is added or removed. 36 -> 35 on 2026-08-06, when
+#: ``gridalyn.projects.workflows.flexibility`` was deleted with the
+#: ``flexibility_cls``-dependent chain (its two modules read an artifact whose
+#: producer had been retired), leaving the package empty.
+_EXPECTED_SUBPACKAGE_COUNT = 35
 
 _PROBE = """\
 import json

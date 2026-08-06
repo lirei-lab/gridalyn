@@ -201,15 +201,18 @@ Soft CLS providers. This is the first actionable clearing layer: it produces
 which offers were selected for which network constraint, while pandapower
 verification remains the authority for physical impact.
 
-Validate the selected providers with:
+`market verify-clearing` validated the selected providers, and was retired on
+2026-08-06 along with `market shadow-report` and `market verify-network-impact`
+below. All three read
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`,
+whose only producer — the `flexibility_cls` study — was retired on 2026-08-03
+(archived at the git tag `archive/flexibility_cls`), so none of them could
+succeed anywhere in this repository. The commands on this page that do run
+against a stock workspace are `market providers`, `market surrogate`,
+`market locational-clearing` and `semantic build`.
 
-```bash
-uv run gridalyn market verify-clearing \
-  --scenario-id S4
-```
-
-This replays `locational_clearing_selections.parquet` on the S4 pandapower
-network and writes:
+The replay of `locational_clearing_selections.parquet` on the S4 pandapower
+network wrote:
 
 ```text
 instances/default/digital_twin/flexibility/locational_clearing_dispatch.parquet
@@ -246,17 +249,12 @@ screening and ranking. Final dispatch must still be replayed through pandapower.
 
 ## Shadow Report
 
-The shadow report compares the current aggregate study dispatch against the
-locational provider selector without changing market-clearing behavior:
+The shadow report compared the current aggregate study dispatch against the
+locational provider selector without changing market-clearing behavior. Its
+command, `market shadow-report`, was retired on 2026-08-06 with the chain
+above; the results below are the last recorded run.
 
-```bash
-uv run gridalyn market shadow-report \
-  --scenario-id S4 \
-  --top-constraints 3 \
-  --out-path instances/default/digital_twin/flexibility/provider_selection_shadow_report.json
-```
-
-The report uses the top transformer constraints from
+The report used the top transformer constraints from
 `instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json`, maps them to
 `transformer:*` IDs, and runs provider selection for each timestep where the
 aggregate dispatch requests Soft or Hard CLS.
@@ -278,15 +276,9 @@ aggregate clearing with constraint-aware clearing.
 
 ## Network Impact Verification
 
-The follow-up verification report replays candidate policies through pandapower:
-
-```bash
-uv run gridalyn market verify-network-impact \
-  --scenario-id S4 \
-  --top-constraints 3
-```
-
-It writes:
+The follow-up verification report replayed candidate policies through
+pandapower. Its command, `market verify-network-impact`, was retired on
+2026-08-06 with the chain above. It wrote:
 
 ```text
 instances/default/digital_twin/flexibility/network_impact_verification_report.json

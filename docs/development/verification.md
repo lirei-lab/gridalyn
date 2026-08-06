@@ -158,19 +158,33 @@ Two limits on the coverage figure are worth knowing before you quote it:
 | `datasets/hq/consumption.h5` | The Hydro-Québec validation set is gitignored; the building-diversity tests compare against it. | Those tests skip, with a reason naming the dataset. |
 | `mypy==1.9.0` | In the `typing` extra, and in `dev`. Pinned exactly rather than floored, because the baseline is a *count* and a different analyser returns a different count for an unchanged tree. | The pre-push ratchet names the fix: `pip install -e ".[typing]"`. |
 
-### `uv run` dirties `uv.lock`
+### If `uv run` dirties `uv.lock`
 
-`uv.lock` is currently **stale relative to `pyproject.toml`**: `lightgbm` is a base
-dependency at `pyproject.toml:32`, but the lockfile records it only under the
-`ops` / `all` / `dev` extras. Any `uv run` — including the 32 heavy-study stages —
-re-resolves and rewrites the lockfile, leaving a tracked file modified:
+`uv.lock` is **current**, and the routine case is that verification never touches
+it. Measured 2026-08-06 on `uv 0.11.7`: `uv lock --check` resolves cleanly
+(`Resolved 268 packages`), and `lightgbm` — a base dependency at
+`pyproject.toml:32` — is recorded as a base dependency in the lockfile too, at
+`uv.lock:1099` inside the `gridalyn` package's `dependencies` list and at
+`uv.lock:1275` with no `extra ==` marker (unlike its `lightsim2grid` neighbours,
+which do carry one). Six consecutive `uv run` invocations left the file
+byte-identical.
+
+An earlier revision of this page claimed the lockfile was stale — that `lightgbm`
+was recorded "only under the `ops` / `all` / `dev` extras" — and that *any*
+`uv run` therefore re-resolved and rewrote it. Neither reproduces; treat a
+rewrite as the exception below, not the rule.
+
+It can still happen: a different `uv` version, or a `pyproject.toml` edit that
+forces re-resolution, will rewrite the lockfile and leave a tracked file
+modified:
 
 ```
  M uv.lock
 ```
 
-This is pre-existing, not caused by verification. After a run, check `git status`
-and revert it path-scoped unless you intend to land the re-lock as its own change:
+If you see that, it is a re-lock, not a product of verification. Check
+`git status` and revert it path-scoped unless you intend to land the re-lock as
+its own change:
 
 ```bash
 git checkout -- uv.lock

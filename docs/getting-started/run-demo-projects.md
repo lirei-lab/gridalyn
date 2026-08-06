@@ -24,7 +24,10 @@ larger flexibility workflow only when you want an end-to-end operations example.
 
 ## Common Commands
 
-Validate a project contract:
+Validate a project contract. `--check-artifacts` also requires the declared
+reports and figures to exist; those are git-ignored, so drop the flag on a
+fresh checkout and add it back after the run below, or the command exits
+non-zero on the missing artifacts:
 
 ```bash
 uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
@@ -65,6 +68,12 @@ Verify all governed demos:
 ```bash
 uv run gridalyn project verify-all
 ```
+
+`verify-all` covers every project in the table above and only passes a project
+whose outputs already exist, so it exits non-zero until each has been run. The
+six compact demos take about 80 s in total; a fully green `verify-all` also
+needs the two long-running studies (`ev_hosting_flex`,
+`admm_thermal_consensus`).
 
 Check pinned result metrics against the project's regression baseline (every
 demo ships one under `baselines/results_baseline.json`):

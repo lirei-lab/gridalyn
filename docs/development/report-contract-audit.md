@@ -813,3 +813,58 @@ modules dropped module-scope `parents[4]`/`DEFAULT_LAYOUT` for an explicit
 `gridalyn/interfaces/reporting/digital_twin.py`. The same hazard remains in
 `spatial_powerflow_validation.py` (recorded as ledger finding #39, not fixed
 here).
+
+## 11. Amendment — 2026-08-06: the `flexibility_cls`-dependent chain retired
+
+**Counts move: direct-JSON sites 70 → 69, helper-routed sites 22 → 18.**
+`tests/test_report_contract.py` pins both numbers and both classified sets; it
+caught every one of these removals before this section was written, which is
+what the vanished-site assertions exist for.
+
+**Why.** Five commands — `verify-clearing`, `perturbation-samples`,
+`verify-network-impact`, `shadow-report` and `scorecard` — read
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`
+as a default input. A repo-wide scan finds that path read at four sites and
+**written at none**: its producer was the `flexibility_cls` study, retired
+2026-08-03 and archived at tag `archive/flexibility_cls`. The provenance is
+explicit — `instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json` records
+`"dispatch": "projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet"`.
+
+The five matching steps in `gridalyn/projects/workflows/digital_twin/build.py`
+were all `optional=True`, so every `twin build --include-network-impact` run
+failed them and still exited 0 — a green exit on an incomplete build, measured
+during the Phase 7 docs sweep (5 of 22 steps failed, `rc=0`).
+
+**Removed from the direct-JSON classification (1 site, NOT-A-REPORT):**
+
+| Site | Prior ruling |
+|---|---|
+| `gridalyn/projects/workflows/flexibility/spatial_powerflow_validation.py::generate_spatial_cls_powerflow_validation::summary#0` | NOT-A-REPORT |
+
+**Removed from the helper-routed classification (4 sites):**
+
+| Site |
+|---|
+| `generate_flexibility_clearing_scorecard.py::main::write_flexibility_clearing_scorecard#0` |
+| `generate_network_impact_perturbation_samples.py::main::write_sampler_artifacts#0` |
+| `generate_network_impact_verification_report.py::generate_report::write_network_impact_verification_report#0` |
+| `generate_provider_selection_shadow_report.py::generate_shadow_report::write_shadow_report#0` |
+
+**Zero known violations is unaffected.** Every removed site was already
+classified NOT-A-REPORT or helper-routed; none was a GOVERNED-VIOLATION, so
+the §10 result stands with a smaller denominator.
+
+**What §5.2 now refers to.** That section paired
+`gridalyn/operations/verification.py:419` with
+`gridalyn/projects/workflows/flexibility/locational_verification.py:131`. The
+workflow module is deleted; the operations-layer helpers it called
+(`write_locational_verification_outputs`, `build_shadow_report`,
+`write_shadow_report`) are **retained** — they are published SDK surface
+exported through `gridalyn/operations/__init__.py` and still covered by
+`tests/test_locational_clearing_verification.py`. §5.2's ruling therefore
+still describes live code; only its workflow-side caller is gone.
+
+**Ledger finding #39 closes as moot.** The `parents[4]` installed-layout
+hazard recorded at the end of §10 lived in `spatial_powerflow_validation.py`,
+which no longer exists. It is closed by deletion, not by a fix — if that
+module is ever reinstated, the hazard returns with it.

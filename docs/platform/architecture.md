@@ -131,6 +131,11 @@ uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
 uv run gridalyn project plan projects/minimal_grid_project
 ```
 
+`--check-artifacts` asserts that the reports and figures declared under
+`spec.validation` already exist, so it fails on a fresh checkout until
+`gridalyn project run projects/minimal_grid_project` has produced them. Drop the
+flag, or run the project first, when validating a project that has not been run.
+
 Dry runs and executions write a project run manifest under
 `projects/<name>/outputs/manifests/`, allowing a project run to be audited from
 the project contract and generated artifacts.

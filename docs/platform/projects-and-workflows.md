@@ -140,6 +140,11 @@ uv run gridalyn project status projects/my_case --check-artifacts
 
 ## Python API
 
+This is the programmatic equivalent of the CLI section above, not a
+continuation of it. `init_project` refuses a non-empty target directory, so if
+you already ran `gridalyn project init projects/my_case` it raises
+`FileExistsError`; point it at a path that does not exist yet.
+
 ```python
 from gridalyn.projects import init_project, load_project, plan_project
 

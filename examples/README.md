@@ -17,17 +17,16 @@ The project also exposes installed script entrypoints:
 
 ```bash
 uv run gridalyn-dt build --dry-run
-uv run gridalyn-flex verify-clearing \
-  --scenario-id S4 \
-  --cache-dir projects/ev_hosting_flex/outputs/cache \
-  --market-dispatch-path projects/ev_hosting_flex/outputs/data/market_dispatch_timeseries.parquet
+uv run gridalyn-flex locational-clearing --scenario-id S4
 uv run gridalyn-semantic validate
 uv run gridalyn-dashboard catalog
 ```
 
-The `verify-clearing` smoke command assumes `projects/ev_hosting_flex` has been
-run. The shorter `gridalyn-flex verify-clearing --scenario-id S4` form targets a
-materialized `instances/default/digital_twin/` instance.
+`gridalyn-flex verify-clearing` was retired on 2026-08-06. It read a market
+dispatch time series whose only producer, the `flexibility_cls` study, was
+retired on 2026-08-03, so it could not succeed anywhere in this repository —
+including from `projects/ev_hosting_flex`, which does not emit that artifact.
+See [Instruction Verification](../docs/development/instruction-verification.md).
 
 ## Tutorial Scripts
 

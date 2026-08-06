@@ -60,12 +60,14 @@ outputs/figures/powerflow_demo_voltage_profile.png
 outputs/reports/powerflow_demo_report.json
 ```
 
-The same study in Python, using only top-level imports:
+The same study in Python, using only top-level imports. `init_project` refuses
+a target directory that already exists, so this uses a second path — run either
+the CLI command above or this snippet, not both into the same directory:
 
 ```python
 import gridalyn
 
-created = gridalyn.init_project("my-first-study", template="powerflow-demo")
+created = gridalyn.init_project("my-second-study", template="powerflow-demo")
 gridalyn.run_workflow(created.root, echo=True)
 print(gridalyn.project_verify(created.root)["valid"])
 ```
@@ -149,6 +151,11 @@ Pick one path based on what you need to prove:
 | Learning-control environment | `uv run gridalyn project verify projects/rl_voltage_control_lightsim` | [RL Voltage Control With LightSim2Grid](https://github.com/lirei-lab/gridalyn/tree/main/projects/rl_voltage_control_lightsim) |
 | Larger operations workflow | `uv run gridalyn project verify projects/ev_hosting_flex` | [Run Demo Projects](run-demo-projects.md) |
 
+`verify` inspects artifacts a project has already produced; it does not run the
+workflow. Precede each command above with
+`uv run gridalyn project run <project>`, or `verify` exits non-zero reporting
+the missing reports.
+
 The larger EV hosting flexibility workflow is useful as an end-to-end stress
 test for locational clearing, operation artifacts and figures. Run it when you
 need the full arc, not as the first proof that Gridalyn works.
@@ -171,7 +178,11 @@ The generated HTML goes to `site/` and should not be committed.
 
 ## 7. Optional Application Surfaces
 
-Build the semantic graph when you need ontology-aligned artifacts:
+Build the semantic graph when you need ontology-aligned artifacts. It reads the
+materialized twin — in particular
+`instances/default/digital_twin/scenarios/asset_registry.parquet` — which is
+git-ignored and absent from a fresh checkout, so build the twin first (see
+[Digital Twin](../platform/digital-twin.md)):
 
 ```bash
 uv run gridalyn semantic build \

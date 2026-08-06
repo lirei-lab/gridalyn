@@ -12,7 +12,9 @@ from typing import Any
 from gridalyn.foundation import ArtifactLayout
 
 
-def _step(name: str, command: list[str], *, heavy: bool = False, optional: bool = False) -> dict[str, Any]:
+def _step(
+    name: str, command: list[str], *, heavy: bool = False, optional: bool = False
+) -> dict[str, Any]:
     return {
         "name": name,
         "command": command,
@@ -29,77 +31,107 @@ def build_digital_twin_steps(
     """Return the ordered digital-twin build plan."""
     steps = [
         _step("export_base", ["-m", "gridalyn.interfaces.cli.digital_twin", "base"]),
-        _step("generate_building_models", ["-m", "gridalyn.interfaces.cli.digital_twin", "building-models"]),
-        _step("generate_scenarios", ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"]),
-        _step("generate_ev_timeseries", ["-m", "gridalyn.interfaces.cli.digital_twin", "timeseries"]),
-        _step("run_powerflow", ["-m", "gridalyn.interfaces.cli.digital_twin", "powerflow"], heavy=True),
-        _step("report_transformer_overloads", ["-m", "gridalyn.interfaces.cli.digital_twin", "overload-report"]),
-        _step("generate_asset_registry", ["-m", "gridalyn.interfaces.cli.digital_twin", "asset-registry"]),
-        _step("generate_scenario_models", ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"]),
-        _step("generate_flexibility_providers", ["-m", "gridalyn.interfaces.cli.flexibility", "providers"]),
-        _step("generate_semantic_graph", ["-m", "gridalyn.interfaces.cli.semantic", "build"]),
-        _step("validate_semantics", ["-m", "gridalyn.interfaces.cli.semantic", "validate"]),
-        _step("generate_canonical_reports", ["-m", "gridalyn.interfaces.reporting.digital_twin"]),
+        _step(
+            "generate_building_models",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "building-models"],
+        ),
+        _step(
+            "generate_scenarios",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"],
+        ),
+        _step(
+            "generate_ev_timeseries",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "timeseries"],
+        ),
+        _step(
+            "run_powerflow",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "powerflow"],
+            heavy=True,
+        ),
+        _step(
+            "report_transformer_overloads",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "overload-report"],
+        ),
+        _step(
+            "generate_asset_registry",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "asset-registry"],
+        ),
+        _step(
+            "generate_scenario_models",
+            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"],
+        ),
+        _step(
+            "generate_flexibility_providers",
+            ["-m", "gridalyn.interfaces.cli.flexibility", "providers"],
+        ),
+        _step(
+            "generate_semantic_graph",
+            ["-m", "gridalyn.interfaces.cli.semantic", "build"],
+        ),
+        _step(
+            "validate_semantics", ["-m", "gridalyn.interfaces.cli.semantic", "validate"]
+        ),
+        _step(
+            "generate_canonical_reports",
+            ["-m", "gridalyn.interfaces.reporting.digital_twin"],
+        ),
     ]
 
     if include_network_impact:
         steps.extend(
             [
-                _step("generate_network_impact_surrogate", ["-m", "gridalyn.interfaces.cli.flexibility", "surrogate"]),
+                _step(
+                    "generate_network_impact_surrogate",
+                    ["-m", "gridalyn.interfaces.cli.flexibility", "surrogate"],
+                ),
                 _step(
                     "generate_locational_flexibility_clearing",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "locational-clearing"],
-                ),
-                _step(
-                    "generate_locational_clearing_verification_report",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "verify-clearing"],
-                    heavy=True,
-                    optional=True,
-                ),
-                _step(
-                    "generate_network_impact_perturbation_samples",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "perturbation-samples"],
-                    heavy=True,
-                    optional=True,
-                ),
-                _step(
-                    "train_network_impact_physics_surrogate",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "train-physics-surrogate"],
-                    optional=True,
-                ),
-                _step(
-                    "generate_network_impact_verification_report",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "verify-network-impact"],
-                    heavy=True,
-                    optional=True,
-                ),
-                _step(
-                    "generate_network_impact_physics_verification_report",
                     [
                         "-m",
                         "gridalyn.interfaces.cli.flexibility",
-                        "verify-network-impact",
-                        "--predictions-path",
-                        "instances/default/digital_twin/flexibility/network_impact_physics_predictions.parquet",
-                        "--out-path",
-                        "instances/default/digital_twin/flexibility/network_impact_physics_verification_report.json",
+                        "locational-clearing",
                     ],
-                    heavy=True,
+                ),
+                # Five steps were RETIRED here on 2026-08-06 --
+                # generate_locational_clearing_verification_report,
+                # generate_network_impact_perturbation_samples,
+                # generate_network_impact_verification_report,
+                # generate_network_impact_physics_verification_report and
+                # generate_flexibility_clearing_scorecard. Each invoked a
+                # command that reads
+                # flexibility/market_dispatch_timeseries.parquet with no
+                # argument, and nothing has written that file since the
+                # ``flexibility_cls`` study was retired on 2026-08-03. They
+                # were marked optional=True, so all five failed on every run
+                # while the build still exited 0 -- a green exit on an
+                # incomplete build. See
+                # docs/development/instruction-verification.md.
+                _step(
+                    "train_network_impact_physics_surrogate",
+                    [
+                        "-m",
+                        "gridalyn.interfaces.cli.flexibility",
+                        "train-physics-surrogate",
+                    ],
                     optional=True,
                 ),
                 _step(
                     "generate_network_impact_dashboard_catalog",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "network-impact-catalog"],
-                ),
-                _step(
-                    "generate_flexibility_clearing_scorecard",
-                    ["-m", "gridalyn.interfaces.cli.flexibility", "scorecard"],
-                    optional=True,
+                    [
+                        "-m",
+                        "gridalyn.interfaces.cli.flexibility",
+                        "network-impact-catalog",
+                    ],
                 ),
             ]
         )
 
-    steps.append(_step("generate_dashboard_catalog", ["-m", "gridalyn.interfaces.cli.dashboard", "catalog"]))
+    steps.append(
+        _step(
+            "generate_dashboard_catalog",
+            ["-m", "gridalyn.interfaces.cli.dashboard", "catalog"],
+        )
+    )
     if skip_heavy:
         steps = [step for step in steps if not step["heavy"]]
     return steps
@@ -121,11 +153,23 @@ def build_manifest(
         "steps": steps,
         "results": results,
         "artifacts": {
-            "dashboard_catalog": "instances/default/digital_twin/dashboard/catalog.json",
-            "building_model_manifest": "instances/default/digital_twin/models/building_model_manifest.json",
-            "scenario_model_manifest": "instances/default/digital_twin/models/scenarios/scenario_model_manifest.json",
-            "semantic_manifest": "instances/default/digital_twin/semantic/graph_manifest.json",
-            "canonical_report_manifest": "instances/default/digital_twin/reports/canonical/digital_twin_report_manifest.json",
+            "dashboard_catalog": (
+                "instances/default/digital_twin/dashboard/catalog.json"
+            ),
+            "building_model_manifest": (
+                "instances/default/digital_twin/models/building_model_manifest.json"
+            ),
+            "scenario_model_manifest": (
+                "instances/default/digital_twin/models/scenarios/"
+                "scenario_model_manifest.json"
+            ),
+            "semantic_manifest": (
+                "instances/default/digital_twin/semantic/graph_manifest.json"
+            ),
+            "canonical_report_manifest": (
+                "instances/default/digital_twin/reports/canonical/"
+                "digital_twin_report_manifest.json"
+            ),
         },
         "root": ".",
     }
@@ -157,7 +201,9 @@ def run_digital_twin_build(
         display_command = ["python", *step["command"]]
         command = [sys.executable, *step["command"]]
         if dry_run:
-            results.append({"name": step["name"], "status": "planned", "command": display_command})
+            results.append(
+                {"name": step["name"], "status": "planned", "command": display_command}
+            )
             continue
 
         completed = subprocess.run(command, cwd=root, check=False)
@@ -169,12 +215,16 @@ def run_digital_twin_build(
         }
         results.append(result)
         if completed.returncode != 0 and not (continue_on_error or step["optional"]):
-            manifest = build_manifest(steps, root=root, dry_run=dry_run, results=results)
+            manifest = build_manifest(
+                steps, root=root, dry_run=dry_run, results=results
+            )
             write_build_manifest(
                 manifest_path or layout.reports / "digital_twin_build_manifest.json",
                 manifest,
             )
-            raise RuntimeError(f"Digital twin build step failed: {step['name']} ({completed.returncode})")
+            raise RuntimeError(
+                f"Digital twin build step failed: {step['name']} ({completed.returncode})"
+            )
 
     manifest = build_manifest(steps, root=root, dry_run=dry_run, results=results)
     write_build_manifest(

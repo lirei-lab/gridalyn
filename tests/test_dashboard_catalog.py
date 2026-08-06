@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from gridalyn.projects.dashboard_catalog import FILE_KINDS as _FILE_KINDS
 from gridalyn.projects.dashboard_catalog import (
     build_dashboard_catalog,
     write_dashboard_catalog,
@@ -220,6 +221,77 @@ class DashboardCatalogTest(unittest.TestCase):
             catalog["scenarios"][0]["topology_counts"]["n_transformers"], 1
         )
         self.assertEqual(catalog["scenarios"][0]["topology_counts"]["n_loads"], 1)
+
+
+class DashboardCatalogPathAnchoringTest(unittest.TestCase):
+    """Declared parquet paths must reach the dashboard as servable URLs.
+
+    Root cause of tracked-tree finding #40. Summaries written before the
+    2026-05-19 instance-path unification (commit 25dbeb7a) declare their
+    parquet locations relative to the *instance* -- ``digital_twin/...`` --
+    while the dashboard mounts ``/instances/default/digital_twin``. Passing a
+    declared path through verbatim emitted ``/digital_twin/...``, which 404s;
+    and because the summary that carries them is git-ignored, regenerating the
+    catalog silently rewrote the tracked ``catalog.json`` into that broken
+    form. The consumers pin the served prefix: ``dashboard/src/useDuckDB.js``,
+    ``dashboard/vite.config.js`` and ``dashboard/docker-compose.yml``.
+    """
+
+    def test_pre_unification_declared_paths_are_reanchored(self):
+        catalog = build_dashboard_catalog(
+            scenario_index={"scenarios": [{"scenario_id": "S0"}]},
+            powerflow_summary={
+                "scenarios": [
+                    {
+                        "scenario_id": "S0",
+                        "paths": {
+                            kind: f"digital_twin/timeseries/S0_{suffix}.parquet"
+                            for kind, suffix in _FILE_KINDS.items()
+                        },
+                    }
+                ]
+            },
+            optional_extensions=None,
+            root=Path("/nonexistent-workspace"),
+        )
+
+        for kind, url in catalog["scenarios"][0]["paths"].items():
+            with self.subTest(kind=kind):
+                self.assertTrue(
+                    url.startswith("/instances/default/digital_twin/"),
+                    f"{kind} would 404 in the dashboard: {url!r}",
+                )
+
+    def test_current_form_declared_paths_are_unchanged(self):
+        """Re-anchoring must be a no-op on paths already in the current form."""
+        declared = {
+            kind: f"instances/default/digital_twin/timeseries/S0_{suffix}.parquet"
+            for kind, suffix in _FILE_KINDS.items()
+        }
+        catalog = build_dashboard_catalog(
+            scenario_index={"scenarios": [{"scenario_id": "S0"}]},
+            powerflow_summary={"scenarios": [{"scenario_id": "S0", "paths": declared}]},
+            optional_extensions=None,
+            root=Path("/nonexistent-workspace"),
+        )
+
+        self.assertEqual(
+            {kind: "/" + value for kind, value in declared.items()},
+            catalog["scenarios"][0]["paths"],
+        )
+
+    def test_fallback_paths_keep_the_served_prefix(self):
+        """A summary with no declared paths still yields servable URLs."""
+        catalog = build_dashboard_catalog(
+            scenario_index={"scenarios": [{"scenario_id": "S0"}]},
+            powerflow_summary={"scenarios": [{"scenario_id": "S0"}]},
+            optional_extensions=None,
+            root=Path("/nonexistent-workspace"),
+        )
+
+        for kind, url in catalog["scenarios"][0]["paths"].items():
+            with self.subTest(kind=kind):
+                self.assertTrue(url.startswith("/instances/default/digital_twin/"))
 
 
 if __name__ == "__main__":

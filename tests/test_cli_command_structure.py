@@ -1,12 +1,14 @@
-import unittest
 import tomllib
+import unittest
 from contextlib import redirect_stdout
 from io import StringIO
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
+from gridalyn.interfaces.cli import dashboard, digital_twin, flexibility
+from gridalyn.interfaces.cli import gridalyn as gridalyn_cli
+from gridalyn.interfaces.cli import platform, project, semantic
 from gridalyn.interfaces.cli.environment import configure_cli_environment
-from gridalyn.interfaces.cli import dashboard, digital_twin, flexibility, gridalyn as gridalyn_cli, platform, project, semantic
 
 
 class CliCommandStructureTest(unittest.TestCase):
@@ -33,10 +35,14 @@ class CliCommandStructureTest(unittest.TestCase):
             configure_cli_environment()
 
             self.assertIn("MPLCONFIGDIR", __import__("os").environ)
-            self.assertIn("gridalyn-matplotlib", __import__("os").environ["MPLCONFIGDIR"])
+            self.assertIn(
+                "gridalyn-matplotlib", __import__("os").environ["MPLCONFIGDIR"]
+            )
 
     def test_cli_environment_preserves_existing_matplotlib_cache(self):
-        with mock.patch.dict("os.environ", {"MPLCONFIGDIR": "/custom/cache"}, clear=True):
+        with mock.patch.dict(
+            "os.environ", {"MPLCONFIGDIR": "/custom/cache"}, clear=True
+        ):
             configure_cli_environment()
 
             self.assertEqual(__import__("os").environ["MPLCONFIGDIR"], "/custom/cache")
@@ -94,22 +100,40 @@ class CliCommandStructureTest(unittest.TestCase):
             "providers",
             "surrogate",
             "locational-clearing",
-            "verify-clearing",
-            "perturbation-samples",
             "train-physics-surrogate",
-            "verify-network-impact",
-            "shadow-report",
-            "scorecard",
             "network-impact-catalog",
         ]:
             args = parser.parse_args([command])
             self.assertEqual(args.command, command)
             self.assertTrue(callable(args.handler))
 
-    def test_cli_parser_preserves_script_arguments(self):
-        args, extra_args = flexibility.parse_args(["verify-clearing", "--scenario-id", "S4"])
+    def test_flexibility_parser_does_not_expose_retired_commands(self):
+        """The ``flexibility_cls``-dependent commands are gone, not hidden.
 
-        self.assertEqual(args.command, "verify-clearing")
+        All five read ``flexibility/market_dispatch_timeseries.parquet`` with
+        no argument, and nothing has written that file since the
+        ``flexibility_cls`` study was retired on 2026-08-03. They were removed
+        on 2026-08-06 rather than left to fail; a reinstated one must be able
+        to name its producer.
+        """
+        parser = flexibility.build_parser()
+        for command in [
+            "verify-clearing",
+            "perturbation-samples",
+            "verify-network-impact",
+            "shadow-report",
+            "scorecard",
+        ]:
+            with self.subTest(command=command):
+                with self.assertRaises(SystemExit):
+                    parser.parse_args([command])
+
+    def test_cli_parser_preserves_script_arguments(self):
+        args, extra_args = flexibility.parse_args(
+            ["locational-clearing", "--scenario-id", "S4"]
+        )
+
+        self.assertEqual(args.command, "locational-clearing")
         self.assertEqual(extra_args, ["--scenario-id", "S4"])
 
     def test_semantic_parser_exposes_build_and_validate(self):
@@ -149,7 +173,9 @@ class CliCommandStructureTest(unittest.TestCase):
         report = platform._artifact_policy_payload(args)
 
         self.assertTrue(report["valid"], report)
-        self.assertEqual("examples/tutorials/data/minimal", report["summary"]["minimal_dataset"])
+        self.assertEqual(
+            "examples/tutorials/data/minimal", report["summary"]["minimal_dataset"]
+        )
 
     def test_cli_modules_expose_main_functions(self):
         self.assertTrue(callable(gridalyn_cli.main))
@@ -161,7 +187,9 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertTrue(callable(project.main))
 
     def test_gridalyn_parser_exposes_product_domains_and_aliases(self):
-        parser = gridalyn_cli.build_parser()
+        # Routing is asserted through parse_args below, so no parser handle is
+        # needed here; test_gridalyn_parser_exposes_same_product_domains keeps
+        # the one assertion that inspects the parser object itself.
         for domain in [
             "validate",
             "twin",
@@ -212,8 +240,8 @@ class CliCommandStructureTest(unittest.TestCase):
             called.append(argv)
             return 0
 
-        import types
         import sys
+        import types
 
         fake_module = types.SimpleNamespace(main=fake_main)
         original_module = sys.modules.get("tests.fake_twin_cli")
@@ -238,10 +266,20 @@ class CliCommandStructureTest(unittest.TestCase):
 
     def test_project_parser_exposes_init_validate_plan_run_status_and_regression(self):
         parser = project.build_parser()
-        init_args = parser.parse_args(["init", "projects/example", "--template", "grid-study"])
+        init_args = parser.parse_args(
+            ["init", "projects/example", "--template", "grid-study"]
+        )
         self.assertEqual(init_args.template, "grid-study")
 
-        for command in ["init", "validate", "plan", "run", "status", "regression", "prepare-workspace"]:
+        for command in [
+            "init",
+            "validate",
+            "plan",
+            "run",
+            "status",
+            "regression",
+            "prepare-workspace",
+        ]:
             args = parser.parse_args([command, "projects/example"])
             self.assertEqual(args.command, command)
             self.assertTrue(callable(args.handler))
@@ -286,7 +324,12 @@ class CliCommandStructureTest(unittest.TestCase):
             },
         )
         removed_name = "synt" "grid"
-        self.assertTrue(all(not name.startswith(removed_name) for name in pyproject["project"]["scripts"]))
+        self.assertTrue(
+            all(
+                not name.startswith(removed_name)
+                for name in pyproject["project"]["scripts"]
+            )
+        )
         self.assertEqual(
             pyproject["tool"]["setuptools"]["packages"]["find"]["include"],
             ["gridalyn*"],

@@ -99,6 +99,16 @@ Rebuild the core digital twin:
 uv run gridalyn twin build
 ```
 
+The first step, `export_base`, reads the topology caches
+`pp_net_cache.pkl` and `pg_graph_cache.pkl` from
+`instances/default/digital_twin/cache/`. That directory is git-ignored and is
+absent on a fresh checkout, so the build fails there with `FileNotFoundError`
+until it is populated. Populate it with
+`gridalyn.simulation.build_synthetic_network_from_geojson`, passing the cache
+directory as `out_dir` and `write_cache=True` — the same call
+`examples/tutorials/create_grid_from_real_data.py` makes, pointed at the twin
+cache instead of `examples/generated/outputs/`.
+
 Include the Network Impact and clearing scorecard artifacts:
 
 ```bash
@@ -368,32 +378,27 @@ selects providers by local deliverability-adjusted offer cost, writes provider
 selection Parquet tables, and emits
 `instances/default/digital_twin/flexibility/locational_flexibility_clearing_report.json`.
 
-Replay those selections through pandapower:
+### Retired: the pandapower replay chain
 
-```bash
-uv run gridalyn market verify-clearing \
-  --scenario-id S4
-```
+Five commands were removed on 2026-08-06 — `market verify-clearing`,
+`market perturbation-samples`, `market verify-network-impact`,
+`market shadow-report` and `market scorecard` — together with the five
+`gridalyn twin build --include-network-impact` steps that invoked them.
 
-This writes `instances/default/digital_twin/flexibility/locational_clearing_dispatch.parquet` and
-`instances/default/digital_twin/flexibility/locational_clearing_verification_report.json`. The
-verification report is the physical authority for the locational clearing MVP:
-it compares unmanaged load against the selected provider dispatch with AC power
-flow metrics for voltage, line loading, transformer loading, overload counts,
-and external-grid peak.
+All five read
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`,
+and nothing in this repository has written that file since its only producer,
+the `flexibility_cls` study, was retired on 2026-08-03 (archived at the git tag
+`archive/flexibility_cls`). They therefore failed with `FileNotFoundError`
+wherever they were run. Because their build steps were declared optional, the
+build tolerated those failures and still exited 0 — a green exit on a build
+missing its verification artifacts.
 
-Generate finite-difference physics labels:
-
-```bash
-uv run gridalyn market perturbation-samples \
-  --scenario-id S4 \
-  --top-constraints 6 \
-  --max-providers-per-constraint 12 \
-  --max-timesteps 18 \
-  --perturbation-kw 2 \
-  --perturbation-kw 5 \
-  --perturbation-kw 10
-```
+The locational clearing MVP above still runs and still emits its report; what
+is gone is the replay-and-verify layer that consumed a dispatch time series
+this repository cannot produce. Reinstating it requires a producer for that
+artifact first. See
+[Instruction Verification](../development/instruction-verification.md).
 
 Train physics-backed predictions:
 
