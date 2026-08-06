@@ -115,31 +115,12 @@ _DUNDER_IMPORT_NAME = "__import__"
 # one-line summaries. Every entry must still match a real crossing, which
 # ``test_gridalyn_imports_only_downward_layers`` asserts.
 _DOCUMENTED_EXCEPTIONS: dict[tuple[str, str], str] = {
-    (
-        "gridalyn/foundation/platform/validation.py",
-        "gridalyn.projects.api",
-    ): (
-        "validate_workspace composes the repo-level artifact policy with the "
-        "per-project contract check, so it spans both layers; it sits in "
-        "foundation because gridalyn.foundation.validate_workspace is its "
-        "published entry point. The import is call-time, so importing the "
-        "module pulls no gridalyn.projects into sys.modules. Removed by "
-        "relocating the published symbol into the projects layer and updating "
-        "the two _LAZY_EXPORTS maps plus interfaces/cli/gridalyn.py."
-    ),
-    (
-        "gridalyn/projects/workflows/scripts/generate_digital_twin_dashboard_catalog.py",
-        "gridalyn.interfaces.reporting.dashboard_catalog",
-    ): (
-        "A stage-script entry point that interfaces/cli dispatches downward "
-        "into via run_module_as_script, so this closes an "
-        "interfaces -> projects -> interfaces cycle rather than acting as a "
-        "composition root. Scoped to this one file and NOT to the scripts "
-        "package: the other 21 modules there already obey the direction. "
-        "Removed by relocating interfaces/reporting/dashboard_catalog.py to a "
-        "layer at or below projects -- its only gridalyn import is "
-        "gridalyn.twin.network -- and updating its importers."
-    ),
+    # Empty since phase 5: the two exceptions this map carried were retired by
+    # fixing their causes -- validate_workspace's composed implementation now
+    # lives in the projects layer (foundation keeps only a delegating socket),
+    # and dashboard_catalog.py was relocated from interfaces/reporting to
+    # gridalyn/projects. The stale-entry assertion below forces any future
+    # entry to keep matching a real crossing.
 }
 
 

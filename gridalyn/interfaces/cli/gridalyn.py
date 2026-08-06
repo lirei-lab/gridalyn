@@ -23,7 +23,6 @@ configure_cli_environment()
 from gridalyn.foundation.platform.capabilities import (  # noqa: E402
     OPTIONAL_CAPABILITY_MODULES,
 )
-from gridalyn.foundation.platform.validation import validate_workspace  # noqa: E402
 
 # ``_looks_like_workspace`` is the single source of truth for what counts as a
 # workspace; re-deriving the marker set here would drift. ``find_workspace_root``
@@ -34,6 +33,7 @@ from gridalyn.foundation.platform.workspace import (  # noqa: E402
     find_workspace_root,
 )
 from gridalyn.projects.api import list_projects  # noqa: E402
+from gridalyn.projects.validation import validate_workspace  # noqa: E402
 
 DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
     "twin": (

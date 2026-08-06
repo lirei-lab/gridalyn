@@ -173,9 +173,6 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
     "gridalyn/assets/modeling/scenarios.py": (
         "write_scenario_model_artifacts::manifest#0",
     ),
-    "gridalyn/interfaces/reporting/dashboard_catalog.py": (
-        "write_dashboard_catalog::catalog#0",
-    ),
     "gridalyn/interfaces/reporting/schemas.py": ("write_json::payload#0",),
     "gridalyn/operations/artifacts.py": (
         "materialize_flexibility_operation_artifacts::catalog#0",
@@ -191,6 +188,7 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
         "write_flexibility_clearing_scorecard::scorecard#0",
     ),
     "gridalyn/operations/verification.py": ("write_shadow_report::report#0",),
+    "gridalyn/projects/dashboard_catalog.py": ("write_dashboard_catalog::catalog#0",),
     # outputs/reports/regression_report.json — governed destination, but the
     # payload never records its own inputs/artifacts. Role test rejects it.
     "gridalyn/projects/regression.py": ("write_regression_report::report#0",),
@@ -393,10 +391,10 @@ _CLASSIFIED: frozenset[str] = (
 _PARAM_SERIALIZING_HELPERS: frozenset[str] = frozenset(
     {
         "gridalyn/foundation/platform/reports.py::write_json_report",
-        "gridalyn/interfaces/reporting/dashboard_catalog.py::write_dashboard_catalog",
         "gridalyn/interfaces/reporting/schemas.py::write_json",
         "gridalyn/operations/settlement.py::write_flexibility_clearing_scorecard",
         "gridalyn/operations/verification.py::write_shadow_report",
+        "gridalyn/projects/dashboard_catalog.py::write_dashboard_catalog",
         "gridalyn/projects/regression.py::write_regression_report",
         "gridalyn/projects/runner.py::_write_manifest",
         "gridalyn/projects/workflows/digital_twin/build.py::write_build_manifest",

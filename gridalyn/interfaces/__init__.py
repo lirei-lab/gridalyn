@@ -8,7 +8,7 @@ _LAZY_EXPORTS = {
     "GridPlotter": ("gridalyn.interfaces.viz.interactive", "GridPlotter"),
     "apply_hour_axis": ("gridalyn.interfaces.viz", "apply_hour_axis"),
     "build_dashboard_catalog": (
-        "gridalyn.interfaces.reporting",
+        "gridalyn.projects.dashboard_catalog",
         "build_dashboard_catalog",
     ),
     "build_digital_twin_reports": (
@@ -31,7 +31,7 @@ _LAZY_EXPORTS = {
     "semantic_main": ("gridalyn.interfaces.cli.semantic", "main"),
     "style_timeseries_axis": ("gridalyn.interfaces.viz", "style_timeseries_axis"),
     "write_dashboard_catalog": (
-        "gridalyn.interfaces.reporting",
+        "gridalyn.projects.dashboard_catalog",
         "write_dashboard_catalog",
     ),
     "write_json": ("gridalyn.interfaces.reporting", "write_json"),

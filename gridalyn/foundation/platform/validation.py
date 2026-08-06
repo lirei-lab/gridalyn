@@ -1,30 +1,52 @@
-"""Unified workspace validation facade."""
+"""Delegating socket for the composed workspace validator.
+
+``validate_workspace`` composes a repo-level check (artifact policy) with
+per-project contract checks, so its implementation spans layers above
+``foundation``. The composed implementation therefore lives in the projects
+layer, which registers it here at import time through
+:func:`register_workspace_validator`. This module keeps only the published
+entry point -- ``gridalyn.foundation.validate_workspace``, exported via two
+``_LAZY_EXPORTS`` maps -- and holds no upward dependency of its own, so the
+layer direction stays strictly downward with no documented exception.
+"""
 
 from __future__ import annotations
 
-from importlib import import_module
 from pathlib import Path
-from typing import Any
-
-from gridalyn.foundation.platform.artifacts import check_artifact_policy
-from gridalyn.foundation.platform.workspace import GridalynWorkspace
+from typing import Any, Protocol
 
 
-def _check_record(
-    *,
-    check_id: str,
-    valid: bool,
-    summary: dict[str, Any] | None = None,
-    errors: list[str] | None = None,
-    warnings: list[str] | None = None,
-) -> dict[str, Any]:
-    return {
-        "id": check_id,
-        "valid": valid,
-        "errors": errors or [],
-        "warnings": warnings or [],
-        "summary": summary or {},
-    }
+class WorkspaceValidator(Protocol):
+    """Callable contract for a composed workspace validator."""
+
+    def __call__(
+        self,
+        root: Path | str = ".",
+        *,
+        projects: list[str] | tuple[str, ...] | None = None,
+        check_project_artifacts: bool = True,
+        run_regression: bool = False,
+    ) -> dict[str, Any]:
+        """Validate the workspace at ``root`` and return the check payload."""
+        ...
+
+
+_workspace_validator: WorkspaceValidator | None = None
+
+
+def register_workspace_validator(validator: WorkspaceValidator) -> None:
+    """Register the composed workspace validator implementation.
+
+    Called by the projects layer's ``validation`` module when it is imported.
+    Re-registration overwrites the previous validator, so repeated imports
+    stay idempotent.
+
+    Args:
+        validator: Implementation composing the repo-level artifact-policy
+            check with the per-project contract checks.
+    """
+    global _workspace_validator
+    _workspace_validator = validator
 
 
 def validate_workspace(
@@ -34,92 +56,41 @@ def validate_workspace(
     check_project_artifacts: bool = True,
     run_regression: bool = False,
 ) -> dict[str, Any]:
-    """Validate repository-level policy and one or more project contracts."""
+    """Validate repository-level policy and one or more project contracts.
 
-    workspace = GridalynWorkspace.discover(root)
-    repo_root = workspace.root
-    checks: list[dict[str, Any]] = []
+    Delegates to the validator the projects layer registers on import; every
+    supported entry point (the ``gridalyn`` CLI, ``from gridalyn import
+    projects``, the project scripting helpers) imports that layer before
+    calling this function.
 
-    artifact_report = check_artifact_policy(repo_root)
-    checks.append(
-        _check_record(
-            check_id="artifact_policy",
-            valid=artifact_report.valid,
-            errors=artifact_report.errors,
-            warnings=artifact_report.warnings,
-            summary=artifact_report.summary,
+    Args:
+        root: Workspace root, or any path inside it, to validate.
+        projects: Repo-relative project paths to check; when ``None``, every
+            project the workspace discovers is checked.
+        check_project_artifacts: Also check required project reports and
+            figures exist.
+        run_regression: Also run configured project regression checks.
+
+    Returns:
+        The composed check payload: ``{"valid", "checks", "summary"}``.
+
+    Raises:
+        RuntimeError: If no validator has been registered yet, with the
+            remediation in the message.
+    """
+    if _workspace_validator is None:
+        raise RuntimeError(
+            "gridalyn.foundation.platform.validation.validate_workspace: no "
+            "workspace validator is registered; the projects layer registers "
+            "one when it is imported -- run 'from gridalyn import projects' "
+            "before calling validate_workspace"
         )
+    return _workspace_validator(
+        root,
+        projects=projects,
+        check_project_artifacts=check_project_artifacts,
+        run_regression=run_regression,
     )
 
-    project_paths = (
-        list(projects)
-        if projects is not None
-        else [
-            path.relative_to(repo_root).as_posix() for path in workspace.project_paths()
-        ]
-    )
-    for project_path in project_paths:
-        # LAYER-DIRECTION EXCEPTION: foundation -> gridalyn.projects.api.
-        # This facade composes a repo-level check (artifact policy) with a
-        # per-project contract check, so it spans both layers by construction.
-        # It lives in `foundation` because that is where its published entry
-        # point is: `gridalyn.foundation.validate_workspace`
-        # (docs/sdk/public-contract.md) exported via two `_LAZY_EXPORTS` maps
-        # and imported directly by `gridalyn.interfaces.cli.gridalyn`.
-        # The import is kept inside this loop on purpose: importing this
-        # module, or validating a workspace with no projects, pulls no
-        # `gridalyn.projects` module into `sys.modules`.
-        # Inverting it (injecting the validator, or moving this loop up into
-        # the `projects` layer) is the right fix but is not a local edit --
-        # it must relocate the published symbol and update
-        # `gridalyn/foundation/__init__.py`,
-        # `gridalyn/foundation/platform/__init__.py` and
-        # `gridalyn/interfaces/cli/gridalyn.py`. Doing that removes this
-        # exception; nothing less does.
-        # Registered in tests/test_layer_direction.py::_DOCUMENTED_EXCEPTIONS.
-        project_api = import_module("gridalyn.projects.api")
 
-        report = project_api.validate_project(
-            repo_root / project_path,
-            check_artifacts=check_project_artifacts,
-        )
-        checks.append(
-            _check_record(
-                check_id=f"project:{project_path}",
-                valid=report.valid,
-                errors=report.errors,
-                warnings=report.warnings,
-                summary={"checked_files": report.checked_files},
-            )
-        )
-        if run_regression:
-            regression = project_api.project_regression(repo_root / project_path)
-            checks.append(
-                _check_record(
-                    check_id=f"regression:{project_path}",
-                    valid=bool(regression.get("valid")),
-                    errors=list(regression.get("errors", [])),
-                    warnings=[],
-                    summary={
-                        key: value
-                        for key, value in regression.items()
-                        if key not in {"errors", "warnings"}
-                    },
-                )
-            )
-
-    valid = all(check["valid"] for check in checks)
-    return {
-        "valid": valid,
-        "checks": checks,
-        "summary": {
-            "root": str(repo_root),
-            "check_count": len(checks),
-            "failed_count": sum(1 for check in checks if not check["valid"]),
-            "project_count": len(project_paths),
-            "run_regression": run_regression,
-        },
-    }
-
-
-__all__ = ["validate_workspace"]
+__all__ = ["WorkspaceValidator", "register_workspace_validator", "validate_workspace"]

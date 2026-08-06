@@ -9,7 +9,6 @@ from typing import Any
 
 from gridalyn.twin.network import NetworkModelRepository
 
-
 FILE_KINDS = {
     "nodes": "powerflow_nodes",
     "lines": "powerflow_lines",
@@ -40,7 +39,8 @@ def _paths(scenario_id: str, summary: dict[str, Any], root: Path) -> dict[str, s
     paths = {}
     for kind, suffix in FILE_KINDS.items():
         paths[kind] = _web_path(
-            declared.get(kind) or f"instances/default/digital_twin/timeseries/{scenario_id}_{suffix}.parquet",
+            declared.get(kind)
+            or f"instances/default/digital_twin/timeseries/{scenario_id}_{suffix}.parquet",
             root,
         )
     return paths
@@ -116,7 +116,9 @@ def build_dashboard_catalog(
             {
                 "scenario_id": scenario_id,
                 "label": scenario.get("label") or summary.get("label") or scenario_id,
-                "description": scenario.get("description") or summary.get("description") or "",
+                "description": scenario.get("description")
+                or summary.get("description")
+                or "",
                 "paths": _paths(scenario_id, summary, root),
                 "metrics": _metrics(summary),
                 "topology_counts": _topology_counts(summary, network_counts),
