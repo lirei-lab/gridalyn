@@ -148,3 +148,9 @@ uv run gridalyn project plan projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
 ```
+
+These are the four lifecycle commands, not a top-to-bottom recipe for a fresh
+checkout: `--check-artifacts` requires the reports and figures declared under
+`spec.validation` to exist already, so the first line fails until
+`gridalyn project run` has produced them. On a project that has never been run,
+validate without the flag first, run, and then use `--check-artifacts`.

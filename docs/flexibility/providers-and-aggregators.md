@@ -208,6 +208,17 @@ uv run gridalyn market verify-clearing \
   --scenario-id S4
 ```
 
+**This command needs a market dispatch time series that no build step
+produces.** It, `market shadow-report` and `market verify-network-impact`
+below all read
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
+Nothing in the repository writes that file: its only producer was the
+`flexibility_cls` study, retired in 2026-08 and archived at the git
+tag archive/flexibility_cls. Until a replacement producer exists these
+three steps fail with `FileNotFoundError`; `market providers`, `market surrogate`,
+`market locational-clearing` and `semantic build` on this page run against a
+stock workspace.
+
 This replays `locational_clearing_selections.parquet` on the S4 pandapower
 network and writes:
 

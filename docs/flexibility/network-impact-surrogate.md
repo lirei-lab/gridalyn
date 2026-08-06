@@ -166,8 +166,21 @@ interfaces that a trained model will replace later.
 
 ## Physics Labels
 
-The next training layer uses pandapower finite differences as labels. Generate
-sample labels with:
+The next training layer uses pandapower finite differences as labels.
+
+**The labelling steps need a market dispatch time series that no build step
+produces.** `market perturbation-samples` and `market verify-network-impact`
+read
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
+Nothing in the repository writes that file: its only producer was the
+`flexibility_cls` study, retired in 2026-08 and archived at the git
+tag archive/flexibility_cls. Until a replacement producer exists both
+commands
+fail with `FileNotFoundError`, and only `market surrogate`,
+`market train-physics-surrogate` and `market network-impact-catalog` on this
+page run against a stock workspace.
+
+Generate sample labels with:
 
 ```bash
 uv run gridalyn market perturbation-samples \

@@ -32,8 +32,11 @@ For the generated digital twin build entrypoint, use:
 uv run gridalyn twin build --dry-run --skip-heavy
 ```
 
-Remove `--dry-run` only when you intend to regenerate shared digital twin
-artifacts.
+Remove `--dry-run` only when you intend to regenerate the heavy shared digital
+twin artifacts. Note that `--dry-run` is not read-only: it still rewrites
+`instances/default/digital_twin/reports/digital_twin_build_manifest.json` with
+the planned steps, and that file is tracked, so a dry run leaves the working
+tree dirty.
 
 ## Next Step
 

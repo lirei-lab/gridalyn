@@ -99,6 +99,16 @@ Rebuild the core digital twin:
 uv run gridalyn twin build
 ```
 
+The first step, `export_base`, reads the topology caches
+`pp_net_cache.pkl` and `pg_graph_cache.pkl` from
+`instances/default/digital_twin/cache/`. That directory is git-ignored and is
+absent on a fresh checkout, so the build fails there with `FileNotFoundError`
+until it is populated. Populate it with
+`gridalyn.simulation.build_synthetic_network_from_geojson`, passing the cache
+directory as `out_dir` and `write_cache=True` — the same call
+`examples/tutorials/create_grid_from_real_data.py` makes, pointed at the twin
+cache instead of `examples/generated/outputs/`.
+
 Include the Network Impact and clearing scorecard artifacts:
 
 ```bash
@@ -374,6 +384,20 @@ Replay those selections through pandapower:
 uv run gridalyn market verify-clearing \
   --scenario-id S4
 ```
+
+**This command needs a market dispatch time series that no build step
+produces.** It, along with `market perturbation-samples`,
+`market shadow-report`, `market verify-network-impact` and `market scorecard`,
+reads
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
+Nothing in the repository writes that file: its only producer was the
+`flexibility_cls` study, retired in 2026-08 and archived at the git
+tag archive/flexibility_cls. Until a replacement producer exists these
+commands
+fail with `FileNotFoundError`, and the corresponding steps of
+`gridalyn twin build --include-network-impact` are declared optional and are
+skipped on failure, so that build still exits 0 with those artifacts missing.
+Supply the file from a study that emits one to run them.
 
 This writes `instances/default/digital_twin/flexibility/locational_clearing_dispatch.parquet` and
 `instances/default/digital_twin/flexibility/locational_clearing_verification_report.json`. The

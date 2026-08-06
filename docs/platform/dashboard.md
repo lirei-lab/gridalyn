@@ -249,3 +249,10 @@ verification reports:
 ```bash
 uv run gridalyn market scorecard
 ```
+
+The scorecard reads `network_impact_verification_report.json`, which is itself
+produced by `market verify-network-impact` from
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
+That input currently has no producer in the repository — see the warning in
+[Digital Twin](digital-twin.md) — so on a stock workspace this command fails
+with `FileNotFoundError`.
