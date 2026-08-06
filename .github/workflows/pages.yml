@@ -50,6 +50,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Bounded well above the step timeout below so a genuine hang still ends,
+    # rather than occupying a runner for the 6 h default.
+    timeout-minutes: 30
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -57,3 +60,16 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # The action's default timeout is 600000 ms. Four consecutive
+          # deployments of 35c6cd6b (2026-08-06 12:59, 13:10, 13:36, 14:48)
+          # each sat in `deployment_in_progress` for exactly ten minutes, hit
+          # that default, cancelled the deployment and reported failure -- yet
+          # the content went live: the audit amendment added by 1118312e is
+          # served at lirei.ca/gridalyn today. The publish succeeds; only the
+          # status poll gives up too early, so the red was false and the docs
+          # were never stale. Widening the observation window is the fix for
+          # that; it does not paper over a failed publish, because there was
+          # none. If a future deployment burns all 20 minutes, that IS a real
+          # failure and should be investigated rather than widened again.
+          timeout: 1200000
