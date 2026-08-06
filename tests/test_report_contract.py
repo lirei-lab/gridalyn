@@ -3,12 +3,12 @@
 The SDK's cross-cutting rule is that every artifact-producing run emits a
 governed platform report via ``write_report`` — never hand-written report JSON.
 Enforcing that mechanically is not as simple as banning ``json.dump``: the repo
-writes 75 JSON artifacts directly plus 22 through in-repo JSON helpers, and the
+writes 70 JSON artifacts directly plus 22 through in-repo JSON helpers, and the
 overwhelming majority are legitimately *not* platform reports (catalogs,
 manifests, scorecards, run-lineage records, cache metadata, GeoJSON, study data
 payloads). Each has its own shape and its own contract.
 
-``.planning/phases/02-layer-contract-enforcement/02-03-REPORT-AUDIT.md``
+``docs/development/report-contract-audit.md`` (the tracked audit)
 classified all of them by reading the code that builds each payload. This module
 pins that classification so it cannot rot.
 
@@ -125,30 +125,13 @@ _AUDITED_REQUIRED_FIELDS = (
 # audit. This plan deliberately changed no production code.
 # --------------------------------------------------------------------------
 _KNOWN_VIOLATIONS: dict[str, str] = {
-    # 8/8 with contract-correct types — validate_report() returns zero errors.
-    # outputs/reports/project_sense_check_report.json.
-    "gridalyn/projects/sense_checks.py::project_sense_check::payload#0": (
-        "audit section 5.3"
-    ),
-    # outputs/reports/operational_kpi_report.json; inputs + artifacts both
-    # hand-built in-module (as dicts, not contract lists).
-    "gridalyn/operations/artifacts.py::"
-    "materialize_flexibility_operation_artifacts::report#0": "audit section 5.1",
-    # Formerly one of TWO writes of the same path — the SDK-side write in
-    # operations/verification.py emitted absolute paths first, and this
-    # ROOT-relative caller write overwrote it. The audit §5.2 amendment
-    # (2026-08-06) removed the SDK-side duplicate; this surviving single
-    # writer is still hand-serialized, so it remains a violation until the
-    # write_report conversion in §5.2 is applied.
-    "gridalyn/projects/workflows/flexibility/"
-    "locational_verification.py::generate_report::report#0": "audit section 5.2",
-    # ArtifactLayout.reports / network_adapter_validation_report.json; validation
-    # block is already contract-shaped, artifacts is a dict-of-dicts.
-    "gridalyn/twin/adapters/validation.py::"
-    "write_network_adapter_validation_report::report#0": "audit section 5.4",
-    # The stage's terminal .../locational_flexibility_clearing_report.json.
-    "gridalyn/projects/workflows/scripts/generate_locational_flexibility_clearing.py"
-    "::generate_locational_clearing::report#0": "audit section 5.5",
+    # EMPTY since 2026-08-06 — all five audit §5 remedies are applied (§5.1
+    # artifacts.py, §5.2 locational_verification.py, §5.3 sense_checks.py,
+    # §5.4 twin/adapters/validation.py, §5.5 the clearing script); each site
+    # now routes through build_report/write_report. See the audit's dated
+    # amendment. A NEW hand-serialized report must be FIXED, not added here:
+    # this dict emptied the same way the layer gate's exception allowlist did
+    # — by fixing causes — and should stay empty.
 }
 
 # --------------------------------------------------------------------------
@@ -572,12 +555,34 @@ def _qualname_by_node(tree: ast.Module) -> dict[int, str]:
     return qualnames
 
 
+def _is_print_to_file(call: ast.Call) -> bool:
+    """Return whether a call is ``print(..., file=<target>)`` writing to a file.
+
+    ``print(json.dumps(payload), file=fh)`` serializes a document exactly like
+    ``fh.write`` (S11). Printing to ``sys.stdout`` / ``sys.stderr`` is console
+    output, not an artifact write, so those targets do not count.
+
+    Args:
+        call: Any call node encountered during the scan.
+
+    Returns:
+        True when the call prints to an explicit non-stream ``file=`` target.
+    """
+    if not (isinstance(call.func, ast.Name) and call.func.id == "print"):
+        return False
+    for keyword in call.keywords:
+        if keyword.arg == "file":
+            return _dotted_name(keyword.value) not in {"sys.stdout", "sys.stderr"}
+    return False
+
+
 def _json_payload_argument(call: ast.Call) -> ast.expr | None:
     """Return the payload written by a direct-JSON write call, if any.
 
-    Matches ``json.dump(payload, fh)``, ``path.write_text(json.dumps(payload))``
-    and ``fh.write(json.dumps(payload))``, including forms concatenating a
-    trailing newline.
+    Matches ``json.dump(payload, fh)``, ``path.write_text(json.dumps(payload))``,
+    ``fh.write(json.dumps(payload))``, ``path.write_bytes(json.dumps(payload)
+    .encode(...))`` and ``print(json.dumps(payload), file=fh)`` (the last two
+    added by S11), including forms concatenating a trailing newline.
 
     Args:
         call: Any call node encountered during the scan.
@@ -590,12 +595,19 @@ def _json_payload_argument(call: ast.Call) -> ast.expr | None:
         return call.args[0]
 
     attr = call.func.attr if isinstance(call.func, ast.Attribute) else None
-    if attr not in {"write_text", "write"} or not call.args:
+    is_write_method = attr in {"write_text", "write", "write_bytes"}
+    if not (is_write_method or _is_print_to_file(call)) or not call.args:
         return None
 
     candidate: ast.expr = call.args[0]
     while isinstance(candidate, ast.BinOp):
         candidate = candidate.left
+    if (
+        isinstance(candidate, ast.Call)
+        and isinstance(candidate.func, ast.Attribute)
+        and candidate.func.attr == "encode"
+    ):
+        candidate = candidate.func.value
     if (
         isinstance(candidate, ast.Call)
         and _dotted_name(candidate.func) == "json.dumps"
@@ -610,10 +622,20 @@ def _parsed_modules() -> dict[str, ast.Module]:
 
     Returns:
         Mapping of repo-relative POSIX path to parsed module.
+
+    Raises:
+        AssertionError: When a scan root is missing (S11) -- a renamed or moved
+            root must fail loudly, not silently empty the denominator.
     """
     modules: dict[str, ast.Module] = {}
     for root_name in _SCAN_ROOTS:
         root = _REPO_ROOT / root_name
+        if not root.is_dir():
+            raise AssertionError(
+                f"report-contract scan root {root_name!r} not found at {root}; "
+                "update _SCAN_ROOTS if the tree moved -- an absent root would "
+                "silently drop every site under it from the scan."
+            )
         for path in sorted(root.rglob("*.py")):
             relative = path.relative_to(_REPO_ROOT).as_posix()
             modules[relative] = ast.parse(
@@ -881,7 +903,12 @@ class ReportContractAuditTest(unittest.TestCase):
                 )
 
     def test_known_violations_are_visible_not_tolerated(self) -> None:
-        """The five audited violations stay named, with their remedy cited."""
+        """Any re-added known violation must stay visible with its remedy.
+
+        Empty since 2026-08-06 (all five remedies applied); the loop is the
+        contract for any future entry, and emptiness itself is asserted by
+        ``test_audit_counts_reconcile`` via the violation count.
+        """
         sites = _scan_direct_json_write_sites()
         for key, remedy in sorted(_KNOWN_VIOLATIONS.items()):
             with self.subTest(site=key):
@@ -928,12 +955,12 @@ class ReportContractAuditTest(unittest.TestCase):
         # Guard against a vacuous pass if the scanner silently stops matching.
         self.assertEqual(
             examined,
-            75,
+            70,
             "The 02-03 audit examined 76 direct-JSON write sites; the "
-            "2026-08-06 amendment (audit §5.2, duplicate-write removal in "
-            "operations/verification.py) brought the tree to 75. A different "
-            "number means the tree moved or the scanner no longer matches; "
-            "reconcile before adjusting this number.",
+            "duplicate-write removal brought it to 75, and the 2026-08-06 "
+            "wave applying audit sections 5.1-5.5 brought it to 70 with zero "
+            "known violations. A different number means the tree moved or "
+            "the scanner no longer matches; reconcile before adjusting.",
         )
 
     def test_helper_routed_counts_reconcile(self) -> None:

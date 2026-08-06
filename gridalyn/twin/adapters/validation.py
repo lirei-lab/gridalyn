@@ -1,14 +1,20 @@
-"""Validation reports for network source adapter exports."""
+"""Validation reports for network source adapter exports.
+
+:func:`build_network_adapter_validation_report` keeps its historical flat
+shape for in-memory consumers; the serialized report routes through the
+platform report contract (:func:`gridalyn.foundation.write_report`, audit
+§5.4, 2026-08-06), with the flat report's ``source_adapter``,
+``source_standard``, ``adapter`` and ``lineage`` folded into ``summary``.
+"""
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from gridalyn.foundation import ReportMetadata, file_reference, write_report
 from gridalyn.twin.network import NetworkModelRepository
-
 
 NETWORK_ADAPTER_VALIDATION_SCHEMA_VERSION = "1.0"
 
@@ -39,7 +45,8 @@ def build_network_adapter_validation_report(
             "adapter_id": adapter_id or _adapter_id_from_name(source_adapter),
             "adapter_name": source_adapter,
             "source_standard": source_standard,
-            "source_format": source_format or _default_source_format_for(source_adapter, source_standard),
+            "source_format": source_format
+            or _default_source_format_for(source_adapter, source_standard),
             "capabilities": list(
                 adapter_capabilities or _default_capabilities_for(source_adapter)
             ),
@@ -82,7 +89,7 @@ def write_network_adapter_validation_report(
     artifact_paths: dict[str, Path],
     metadata_path: Path,
 ) -> Path:
-    """Write a standard validation report for an exported network snapshot."""
+    """Write a governed validation report for an exported network snapshot."""
     report = build_network_adapter_validation_report(
         base_dir=base_dir,
         root=root,
@@ -94,8 +101,29 @@ def write_network_adapter_validation_report(
         artifact_paths=artifact_paths,
         metadata_path=metadata_path,
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(report, indent=2, sort_keys=True))
+    # The exported base tables are both what the integrity validation read
+    # (inputs) and what the adapter export wrote (artifacts).
+    table_references = [
+        file_reference(table_path, root)
+        for _, table_path in sorted(artifact_paths.items())
+    ]
+    write_report(
+        path,
+        metadata=ReportMetadata(
+            report_id="network_adapter_validation",
+            source_domain="twin",
+        ),
+        inputs=table_references,
+        artifacts=table_references,
+        summary={
+            **report["summary"],
+            "source_adapter": report["source_adapter"],
+            "source_standard": report["source_standard"],
+            "adapter": report["adapter"],
+            "lineage": report["lineage"],
+        },
+        validation=report["validation"],
+    )
     return path
 
 

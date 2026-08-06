@@ -1,5 +1,5 @@
-import importlib.util
 import ast
+import importlib.util
 import json
 import os
 import re
@@ -124,7 +124,9 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         offenders = [
             path.relative_to(repo_root).as_posix()
-            for path in sorted((repo_root / "projects").glob("*/scripts/manuscript_figures"))
+            for path in sorted(
+                (repo_root / "projects").glob("*/scripts/manuscript_figures")
+            )
             if path.exists()
         ]
 
@@ -149,7 +151,8 @@ class ProjectHygieneTest(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "from gridalyn.assets.datagen.data import weather; print(weather._CACHE_FILE.as_posix())",
+                "from gridalyn.assets.datagen.data import weather; "
+                "print(weather._CACHE_FILE.as_posix())",
             ],
             check=True,
             capture_output=True,
@@ -158,7 +161,9 @@ class ProjectHygieneTest(unittest.TestCase):
         )
 
         self.assertTrue(
-            result.stdout.strip().endswith("projects/demo/outputs/cache/tmy_trois_rivieres.pkl")
+            result.stdout.strip().endswith(
+                "projects/demo/outputs/cache/tmy_trois_rivieres.pkl"
+            )
         )
 
     def test_datagen_weather_synthetic_tmy_is_versioned_and_plausible(self):
@@ -171,7 +176,9 @@ class ProjectHygieneTest(unittest.TestCase):
             weather._CACHE_SCHEMA_VERSION,
             tmy.attrs.get(weather._SCHEMA_ATTR),
         )
-        self.assertEqual("synthetic_climate_normals", tmy.attrs.get(weather._SOURCE_ATTR))
+        self.assertEqual(
+            "synthetic_climate_normals", tmy.attrs.get(weather._SOURCE_ATTR)
+        )
         self.assertTrue(weather._is_valid_cached_tmy(tmy))
         self.assertGreaterEqual(float(temp.min()), weather._MIN_REASONABLE_TEMP_C)
         self.assertLessEqual(float(temp.max()), weather._MAX_REASONABLE_TEMP_C)
@@ -204,14 +211,23 @@ class ProjectHygieneTest(unittest.TestCase):
         generator = ParametricArxGenerator()
 
         self.assertEqual("weights", Path(generator.model_dir).name)
-        self.assertTrue(Path(generator.model_dir).as_posix().endswith("gridalyn/assets/datagen/models/weights"))
-        if Path(generator.heat_model_path).exists() and Path(generator.bg_model_path).exists():
+        self.assertTrue(
+            Path(generator.model_dir)
+            .as_posix()
+            .endswith("gridalyn/assets/datagen/models/weights")
+        )
+        if (
+            Path(generator.heat_model_path).exists()
+            and Path(generator.bg_model_path).exists()
+        ):
             generator.load()
             self.assertIsNotNone(generator.heat_model)
             self.assertIsNotNone(generator.bg_model)
         else:
             generator.load()
-            self.assertEqual("_AnalyticalMacroModel", type(generator.heat_model).__name__)
+            self.assertEqual(
+                "_AnalyticalMacroModel", type(generator.heat_model).__name__
+            )
             self.assertEqual("_AnalyticalMacroModel", type(generator.bg_model).__name__)
 
     def test_parametric_arx_generator_falls_back_without_packaged_weights(self):
@@ -248,7 +264,12 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         removed_module = "gridalyn.simulation.simulators.agents"
         offenders = []
-        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples", repo_root / "tests"]:
+        for root in [
+            repo_root / "gridalyn",
+            repo_root / "projects",
+            repo_root / "examples",
+            repo_root / "tests",
+        ]:
             for path in sorted(root.rglob("*.py")):
                 text = path.read_text(encoding="utf-8")
                 if (
@@ -282,7 +303,11 @@ class ProjectHygieneTest(unittest.TestCase):
             "sync_dashboard_public_" + "from_digital_twin",
         ]
         offenders = []
-        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples"]:
+        for root in [
+            repo_root / "gridalyn",
+            repo_root / "projects",
+            repo_root / "examples",
+        ]:
             for path in sorted(root.rglob("*.py")):
                 text = path.read_text(encoding="utf-8")
                 if any(symbol in text for symbol in removed_symbols):
@@ -384,11 +409,22 @@ class ProjectHygieneTest(unittest.TestCase):
                 if not path.is_file():
                     continue
                 relative = path.relative_to(repo_root)
-                if any(relative.parts[: len(parts)] == parts for parts in allowed_parts):
+                if any(
+                    relative.parts[: len(parts)] == parts for parts in allowed_parts
+                ):
                     continue
                 if "outputs" in relative.parts or "__pycache__" in relative.parts:
                     continue
-                if path.suffix in {".pyc", ".parquet", ".pkl", ".npy", ".npz", ".png", ".jpg", ".pdf"}:
+                if path.suffix in {
+                    ".pyc",
+                    ".parquet",
+                    ".pkl",
+                    ".npy",
+                    ".npz",
+                    ".png",
+                    ".jpg",
+                    ".pdf",
+                }:
                     continue
                 text = path.read_text(encoding="utf-8", errors="ignore").lower()
                 if removed_name in text:
@@ -494,7 +530,11 @@ class ProjectHygieneTest(unittest.TestCase):
         ]
         offenders: list[str] = []
 
-        for root in [repo_root / "gridalyn", repo_root / "projects", repo_root / "examples"]:
+        for root in [
+            repo_root / "gridalyn",
+            repo_root / "projects",
+            repo_root / "examples",
+        ]:
             for path in sorted(root.rglob("*.py")):
                 relative = path.relative_to(repo_root)
                 if "__pycache__" in relative.parts or "outputs" in relative.parts:
@@ -578,7 +618,9 @@ class ProjectHygieneTest(unittest.TestCase):
             "Build With The SDK",
             "Explore Demos",
         ]
-        missing_index_terms = [item for item in required_index_terms if item not in index]
+        missing_index_terms = [
+            item for item in required_index_terms if item not in index
+        ]
 
         self.assertEqual([], missing_nav)
         self.assertEqual([], missing_index_terms)
@@ -593,12 +635,17 @@ class ProjectHygieneTest(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             # `projects/*/` globs are project-agnostic by design; a concrete
             # project name hardcoded in the SDK is the leak this guards against.
-            if re.search(r"projects/(?!\*)[\w.-]+/", text):
+            # The lookbehind exempts mid-path occurrences such as the package's
+            # own `gridalyn/projects/...` module paths in docstrings (#37): only
+            # a studies-directory literal starting at a path boundary matches.
+            if re.search(r"(?<![\w/])projects/(?!\*)[\w.-]+/", text):
                 violations.append(
                     f"{path.relative_to(repo_root)} hardcodes a concrete project path"
                 )
             if "from projects." in text or "import projects." in text:
-                violations.append(f"{path.relative_to(repo_root)} imports from projects")
+                violations.append(
+                    f"{path.relative_to(repo_root)} imports from projects"
+                )
             if "sys.path.insert" in text:
                 violations.append(f"{path.relative_to(repo_root)} mutates sys.path")
 
@@ -667,7 +714,16 @@ class ProjectHygieneTest(unittest.TestCase):
     def test_ai_agent_state_is_not_tracked(self):
         repo_root = Path(__file__).resolve().parents[1]
         result = subprocess.run(
-            ["git", "ls-files", ".roo", ".agents", ".codex", ".claude", ".cursor", ".windsurf"],
+            [
+                "git",
+                "ls-files",
+                ".roo",
+                ".agents",
+                ".codex",
+                ".claude",
+                ".cursor",
+                ".windsurf",
+            ],
             cwd=repo_root,
             check=True,
             text=True,
@@ -733,7 +789,9 @@ class ProjectHygieneTest(unittest.TestCase):
 
         self.assertEqual([], forbidden)
 
-    def test_public_examples_do_not_track_legacy_archive_or_large_duplicate_inputs(self):
+    def test_public_examples_do_not_track_legacy_archive_or_large_duplicate_inputs(
+        self,
+    ):
         repo_root = Path(__file__).resolve().parents[1]
         result = subprocess.run(
             ["git", "ls-files", "examples"],
@@ -770,8 +828,10 @@ class ProjectHygieneTest(unittest.TestCase):
         offenders: list[str] = []
         forbidden_imports = [
             "from gridalyn.twin.core.graph import PowerGridGraph",
-            "from gridalyn.simulation.simulators.powerflow.runner import MonteCarloSimulationManager",
-            "from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner",
+            "from gridalyn.simulation.simulators.powerflow.runner "
+            "import MonteCarloSimulationManager",
+            "from gridalyn.simulation.simulators.powerflow.runner "
+            "import PowerflowMonteCarloRunner",
         ]
 
         for relative_path in result.stdout.splitlines():
@@ -815,10 +875,20 @@ class ProjectHygieneTest(unittest.TestCase):
         legacy_token = "ev" "case"
         offenders = []
         for path in sorted((repo_root / "projects" / "ev_hosting_flex").rglob("*")):
-            if not path.is_file() or path.suffix not in {".py", ".yaml", ".yml", ".md", ".sh"}:
+            if not path.is_file() or path.suffix not in {
+                ".py",
+                ".yaml",
+                ".yml",
+                ".md",
+                ".sh",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
-            if f"from {legacy_token}." in text or f"import {legacy_token}." in text or f"{legacy_token}/" in text:
+            if (
+                f"from {legacy_token}." in text
+                or f"import {legacy_token}." in text
+                or f"{legacy_token}/" in text
+            ):
                 offenders.append(path.relative_to(repo_root).as_posix())
 
         self.assertEqual([], offenders)
@@ -830,7 +900,14 @@ class ProjectHygieneTest(unittest.TestCase):
         for path in sorted((repo_root / "dashboard").rglob("*")):
             if "dist" in path.relative_to(repo_root / "dashboard").parts:
                 continue
-            if not path.is_file() or path.suffix not in {".js", ".jsx", ".ts", ".tsx", ".yml", ".yaml"}:
+            if not path.is_file() or path.suffix not in {
+                ".js",
+                ".jsx",
+                ".ts",
+                ".tsx",
+                ".yml",
+                ".yaml",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
             if f"/{legacy_token}" in text or f"{legacy_token}/outputs" in text:
@@ -845,9 +922,7 @@ class ProjectHygieneTest(unittest.TestCase):
             self.skipTest("minimal tutorial dataset has not been created yet")
 
         total_bytes = sum(
-            path.stat().st_size
-            for path in minimal_dir.rglob("*")
-            if path.is_file()
+            path.stat().st_size for path in minimal_dir.rglob("*") if path.is_file()
         )
 
         self.assertLessEqual(total_bytes, 10 * 1024 * 1024)
@@ -864,13 +939,17 @@ class ProjectHygieneTest(unittest.TestCase):
             "expected_summary.json",
         }
 
-        missing = [name for name in sorted(required_files) if not (minimal_dir / name).exists()]
+        missing = [
+            name for name in sorted(required_files) if not (minimal_dir / name).exists()
+        ]
         self.assertEqual([], missing)
 
         for name in required_files:
             json.loads((minimal_dir / name).read_text(encoding="utf-8"))
 
-        summary = json.loads((minimal_dir / "expected_summary.json").read_text(encoding="utf-8"))
+        summary = json.loads(
+            (minimal_dir / "expected_summary.json").read_text(encoding="utf-8")
+        )
         self.assertEqual(3, summary["node_count"])
         self.assertEqual(2, summary["edge_count"])
         self.assertEqual(3, summary["building_count"])
@@ -903,11 +982,15 @@ class ProjectHygieneTest(unittest.TestCase):
                 "scenarios.json",
                 "expected_summary.json",
             ):
-                (root / "examples" / "tutorials" / "data" / "minimal" / filename).write_text(
+                (
+                    root / "examples" / "tutorials" / "data" / "minimal" / filename
+                ).write_text(
                     "{}",
                     encoding="utf-8",
                 )
-            (root / "examples" / "tutorials" / "data" / "minimal" / "manifest.json").write_text(
+            (
+                root / "examples" / "tutorials" / "data" / "minimal" / "manifest.json"
+            ).write_text(
                 json.dumps(
                     {
                         "dataset_id": "gridalyn_minimal_radial_demo",
@@ -922,7 +1005,9 @@ class ProjectHygieneTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (root / ".gitignore").write_text((repo_root / ".gitignore").read_text(encoding="utf-8"), encoding="utf-8")
+            (root / ".gitignore").write_text(
+                (repo_root / ".gitignore").read_text(encoding="utf-8"), encoding="utf-8"
+            )
 
             report = check_artifact_policy(root)
 
@@ -931,7 +1016,9 @@ class ProjectHygieneTest(unittest.TestCase):
     def test_base_dependencies_exclude_dev_docs_and_git_sources(self):
         repo_root = Path(__file__).resolve().parents[1]
         pyproject = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
-        base_dependencies = pyproject.split("[project.optional-dependencies]", maxsplit=1)[0]
+        base_dependencies = pyproject.split(
+            "[project.optional-dependencies]", maxsplit=1
+        )[0]
 
         forbidden = [
             "git+https://",
@@ -941,7 +1028,9 @@ class ProjectHygieneTest(unittest.TestCase):
             "mkdocstrings",
             "jupyterlab",
         ]
-        offenders = [dependency for dependency in forbidden if dependency in base_dependencies]
+        offenders = [
+            dependency for dependency in forbidden if dependency in base_dependencies
+        ]
 
         self.assertEqual([], offenders)
 

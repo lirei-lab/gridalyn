@@ -20,7 +20,11 @@ import contextlib
 import inspect
 import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from typing import Any
@@ -30,6 +34,7 @@ import yaml
 from gridalyn.interfaces.cli import gridalyn as gridalyn_cli
 from gridalyn.projects.api import init_project
 from gridalyn.projects.templates import TEMPLATES
+from tests.test_import_hygiene import derive_optional_modules
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -95,6 +100,111 @@ class TestQuickstartCapabilityGate(unittest.TestCase):
         self.assertNotIn('require_capabilities("sim"', source)
         # The fix is removal, not replacement: no preflight of any kind.
         self.assertNotIn("require_capabilities", source)
+
+    def test_quickstart_succeeds_with_every_optional_capability_absent(self) -> None:
+        """S9: the behavioral form of the gate above.
+
+        The source-text check cannot see a preflight moved into a helper. This
+        runs the real handler end-to-end in a subprocess that simulates an
+        install without any optional extra, via two mechanisms that both
+        propagate (through ``PYTHONPATH``) to the workflow's stage
+        subprocesses:
+
+        - every truly-optional module (derived from the suite's single source,
+          ``derive_optional_modules``) is shadowed by an ImportError-raising
+          fake, so real *usage* of an optional module fails; and
+        - a ``sitecustomize.py`` re-points every ``OPTIONAL_CAPABILITY_MODULES``
+          entry at a nonexistent module, so any ``require_capabilities`` /
+          ``missing_capability_modules`` *preflight* reports the extra missing.
+          The second mechanism is load-bearing: the repo's preflight probes via
+          ``importlib.util.find_spec``, which finds the shadowing fakes and
+          would otherwise report the capability present (proven by mutation —
+          a reintroduced ``require_capabilities("sim")`` in the handler passes
+          under shadowing alone and fails only with the poisoned map).
+
+        The subprocess first proves the shadowing works, so a green result
+        cannot be vacuous.
+        """
+        optional = sorted(derive_optional_modules(_REPO_ROOT))
+        self.assertNotEqual([], optional, "no truly-optional modules derived")
+
+        driver = textwrap.dedent(
+            """\
+            import importlib
+            import sys
+
+            for name in sys.argv[1].split(","):
+                try:
+                    importlib.import_module(name)
+                except ImportError:
+                    continue
+                print(f"shadowing failed: {name} imported", file=sys.stderr)
+                sys.exit(3)
+
+            from gridalyn.foundation.platform import capabilities
+
+            if any(
+                modules != ["gridalyn_s9_absent_module"]
+                for modules in capabilities.OPTIONAL_CAPABILITY_MODULES.values()
+            ):
+                print("capability-map poisoning failed", file=sys.stderr)
+                sys.exit(4)
+
+            from gridalyn.interfaces.cli import gridalyn as cli
+
+            sys.exit(cli.main(["quickstart", sys.argv[2]]))
+            """
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fakes = Path(tmp) / "blocked_modules"
+            fakes.mkdir()
+            for name in optional:
+                (fakes / f"{name}.py").write_text(
+                    'raise ImportError("blocked by test_first_run_cli (S9): '
+                    'simulates an install without this optional extra")\n',
+                    encoding="utf-8",
+                )
+            (fakes / "sitecustomize.py").write_text(
+                textwrap.dedent(
+                    """\
+                    from gridalyn.foundation.platform import capabilities
+
+                    for _key in capabilities.OPTIONAL_CAPABILITY_MODULES:
+                        capabilities.OPTIONAL_CAPABILITY_MODULES[_key] = [
+                            "gridalyn_s9_absent_module"
+                        ]
+                    """
+                ),
+                encoding="utf-8",
+            )
+            env = os.environ.copy()
+            existing = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = (
+                f"{fakes}{os.pathsep}{existing}" if existing else str(fakes)
+            )
+
+            target = Path(tmp) / "quickstart_demo"
+            result = subprocess.run(
+                [sys.executable, "-c", driver, ",".join(optional), str(target)],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=300,
+                check=False,
+            )
+
+            self.assertEqual(
+                0,
+                result.returncode,
+                f"quickstart failed without optional extras:\n{result.stderr}",
+            )
+            report = target / "outputs" / "reports" / "powerflow_demo_report.json"
+            self.assertTrue(
+                report.is_file(),
+                "quickstart exited 0 but produced no report, so the run did "
+                "not actually complete",
+            )
 
 
 class TestTemplatesEmitTheQuotedPlaceholderForm(unittest.TestCase):

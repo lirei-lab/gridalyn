@@ -15,8 +15,11 @@ Three cases:
 * :func:`test_importing_operations_loads_no_heavy_optional_deps` is a
   subprocess lazy-purity check (analog of
   ``tests/test_operations_contract.py``) asserting that importing
-  ``gridalyn.operations`` pulls in none of the heavy optional capability
-  modules.
+  ``gridalyn.operations`` pulls in none of the heavy deferred modules. The
+  truly-optional portion of that set is DERIVED from the same source of truth
+  as ``tests/test_import_hygiene.py`` (``derive_optional_modules``), so the
+  two contracts cannot drift; the heavy BASE-dependency remainder is this
+  module's deliberately stricter addition (see ``_HEAVY_BASE_MODULES``).
 """
 
 from __future__ import annotations
@@ -25,6 +28,8 @@ import ast
 import subprocess
 import sys
 from pathlib import Path
+
+from tests.test_import_hygiene import derive_optional_modules
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _OPERATIONS_DIR = _REPO_ROOT / "gridalyn" / "operations"
@@ -50,13 +55,29 @@ _REINTRODUCTION_SCAN_DIRS = (
     _REPO_ROOT / "tests",
 )
 
-# Heavy optional capabilities that must stay deferred (lazy) on facade import.
-_HEAVY_OPTIONAL_MODULES = (
+# Heavy modules that must stay deferred (lazy) on facade import. Two disjoint
+# classes, deliberately kept apart:
+#
+# * The *truly-optional* set is DERIVED from the same single source of truth as
+#   ``tests/test_import_hygiene.py`` (``OPTIONAL_CAPABILITY_MODULES`` minus the
+#   ``pyproject.toml`` base dependencies, via ``derive_optional_modules``), so
+#   the two contracts cannot drift apart: a module migrating between optional
+#   and base moves in BOTH gates at once, and the hygiene test's exact-set pin
+#   makes that migration a deliberate act rather than a silent narrowing.
+# * ``_HEAVY_BASE_MODULES`` are heavy BASE dependencies (importable on any
+#   supported install, so the hygiene sweep rightly ignores them) that this
+#   stricter per-facade contract additionally forbids at import time. They are
+#   not declared capability modules (scipy, matplotlib) or are base-dependency
+#   capabilities (pandapower), so they cannot be derived — the tuple is the
+#   deliberate, documented remainder.
+_HEAVY_BASE_MODULES = (
     "pandapower",
-    "lightsim2grid",
-    "cvxpy",
     "scipy",
     "matplotlib",
+)
+
+_HEAVY_OPTIONAL_MODULES = (
+    tuple(sorted(derive_optional_modules(_REPO_ROOT))) + _HEAVY_BASE_MODULES
 )
 
 

@@ -173,7 +173,8 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     (
         "docs/development/code-structure-audit.md",
         "gridalyn/api.py",
-    ): "an audit of a pre-layering tree; the module never existed under this name",
+    ): "the sentence states the historical facade *has been removed*; being "
+    "absent is the claim (re-checked per finding #27, 04-04 triage)",
     (
         "docs/development/release-cleanup-audit.md",
         "examples/legacy/",
@@ -189,7 +190,9 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     (
         "docs/projects/project-model.md",
         "scripts/write_summary_report.py",
-    ): "no study ships this stage script; genuinely stale, fixed by Plan 04-04",
+    ): "not stale: templates.py declares it for the grid-study template and "
+    "`gridalyn project init` generates it; the path exists only in a generated "
+    "workspace (re-checked per finding #27, 04-04 triage)",
 }
 
 

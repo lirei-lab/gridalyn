@@ -5,10 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.operations.artifacts import (
-    materialize_flexibility_operation_artifacts,
-)
-
+from gridalyn.operations.artifacts import materialize_flexibility_operation_artifacts
 
 # The study that used to wrap this materialiser was retired; the wrapper only
 # bound ``project_id``, so the SDK entry point is exercised directly against
@@ -128,16 +125,29 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
                 ]
             )
             providers.to_parquet(input_dir / "provider_registry.parquet", index=False)
-            events.to_parquet(input_dir / "locational_clearing_events.parquet", index=False)
-            selections.to_parquet(input_dir / "locational_clearing_selections.parquet", index=False)
-            impact.to_parquet(input_dir / "network_impact_predictions.parquet", index=False)
+            events.to_parquet(
+                input_dir / "locational_clearing_events.parquet", index=False
+            )
+            selections.to_parquet(
+                input_dir / "locational_clearing_selections.parquet", index=False
+            )
+            impact.to_parquet(
+                input_dir / "network_impact_predictions.parquet", index=False
+            )
 
             result = materialize_flexibility_operation_artifacts(
                 root=root, project_id=PROJECT_ID, scenario_id="S4"
             )
 
             operations_dir = root / "projects" / PROJECT_ID / "outputs" / "operations"
-            report_path = root / "projects" / PROJECT_ID / "outputs" / "reports" / "operational_kpi_report.json"
+            report_path = (
+                root
+                / "projects"
+                / PROJECT_ID
+                / "outputs"
+                / "reports"
+                / "operational_kpi_report.json"
+            )
             catalog_path = operations_dir / "operations_catalog.json"
             operation_run_path = operations_dir / "operation_run.json"
             for name in [
@@ -158,16 +168,27 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
             self.assertEqual(result["operations_catalog"], catalog_path)
             self.assertEqual(result["operation_run"], operation_run_path)
             self.assertEqual(report["report_id"], "operational_kpi_report")
-            self.assertEqual(report["governance"]["model_version_id"], "model:sha256:test")
+            self.assertEqual(
+                report["governance"]["model_version_id"], "model:sha256:test"
+            )
             self.assertEqual(report["governance"]["study_run_id"], "run:ev:test")
             self.assertAlmostEqual(report["summary"]["delivered_mwh"], 0.002)
-            self.assertEqual(len(pd.read_parquet(operations_dir / "dispatch_instructions.parquet")), 2)
+            self.assertEqual(
+                len(pd.read_parquet(operations_dir / "dispatch_instructions.parquet")),
+                2,
+            )
             self.assertEqual(operation_run["report_id"], "operation_run")
-            self.assertEqual(operation_run["operation_id"], report["operation_context"]["operation_id"])
+            self.assertEqual(
+                operation_run["operation_id"],
+                report["summary"]["operation_context"]["operation_id"],
+            )
             self.assertEqual(operation_run["operation_type"], "flexibility_clearing")
             self.assertEqual(operation_run["scenario_id"], "S4")
             self.assertEqual(operation_run["status"], "completed")
-            self.assertEqual(operation_run["governance"]["network_model_version_id"], "model:sha256:test")
+            self.assertEqual(
+                operation_run["governance"]["network_model_version_id"],
+                "model:sha256:test",
+            )
             self.assertEqual(operation_run["governance"]["study_run_id"], "run:ev:test")
             self.assertEqual(catalog["report_id"], "operations_catalog")
             self.assertEqual(catalog["scenarios"]["S4"]["status"], "available")
@@ -183,7 +204,9 @@ class EvProjectOperationalArtifactsTest(unittest.TestCase):
                 catalog["scenarios"]["S4"]["artifacts"]["dispatchInstructions"],
                 "/projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet",
             )
-            self.assertEqual(catalog["scenarios"]["S4"]["summary"]["delivered_mwh"], 0.002)
+            self.assertEqual(
+                catalog["scenarios"]["S4"]["summary"]["delivered_mwh"], 0.002
+            )
 
 
 if __name__ == "__main__":

@@ -42,6 +42,14 @@ _EXPECTED_REPORTS = (
     "semantic_graph_report.json",
 )
 
+# JSON siblings under canonical/ that are deliberately NOT platform reports.
+# The report *index* is a manifest routed through ``write_manifest``; the
+# report-contract audit classifies it NOT-A-REPORT, and wrapping a manifest in
+# a report envelope would break its own consumers. Every other ``*.json`` in
+# the directory must pass ``validate_report`` -- a report cannot escape the
+# gate by choosing a non-``_report`` filename (S10).
+_NON_REPORT_SIBLINGS = frozenset({"digital_twin_report_manifest.json"})
+
 
 class CanonicalReportConformanceTest(unittest.TestCase):
     """Every tracked canonical report passes the platform report contract."""
@@ -59,9 +67,20 @@ class CanonicalReportConformanceTest(unittest.TestCase):
         )
 
     def test_every_canonical_report_passes_validate_report(self) -> None:
-        """Each ``*_report.json`` under canonical/ yields zero contract errors."""
+        """Every ``*.json`` under canonical/ yields zero contract errors.
+
+        The glob is deliberately ``*.json``, not ``*_report.json`` (S10): the
+        directory's contract is that everything in it is a platform report, so
+        a report committed under a non-``_report`` name must not escape the
+        gate by its filename. The named manifest sibling is the one documented
+        exception. Note the gate pins the committed artifacts, not the
+        generator -- regenerating requires a built digital-twin workspace,
+        which a unit gate cannot assume; the regenerate hint names the command.
+        """
         failures: dict[str, list[str]] = {}
-        for path in sorted(_CANONICAL_DIR.glob("*_report.json")):
+        for path in sorted(_CANONICAL_DIR.glob("*.json")):
+            if path.name in _NON_REPORT_SIBLINGS:
+                continue
             payload = json.loads(path.read_text(encoding="utf-8"))
             errors = validate_report(payload)
             if errors:
@@ -75,6 +94,25 @@ class CanonicalReportConformanceTest(unittest.TestCase):
                 for name, errors in sorted(failures.items())
             )
             + f"\n{_REGENERATE_HINT}.",
+        )
+
+    def test_non_report_sibling_exclusions_are_not_stale(self) -> None:
+        """Every excluded sibling must still exist, or the exclusion must go.
+
+        A stale exclusion is a standing permission: if the manifest is renamed
+        or retired, a future report could adopt the excluded name and skip the
+        contract check silently.
+        """
+        stale = sorted(
+            name
+            for name in _NON_REPORT_SIBLINGS
+            if not (_CANONICAL_DIR / name).is_file()
+        )
+        self.assertEqual(
+            stale,
+            [],
+            f"_NON_REPORT_SIBLINGS entries no longer present in {_CANONICAL_DIR}: "
+            f"{stale}; delete the entry rather than leave a standing permission.",
         )
 
 

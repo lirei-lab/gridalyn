@@ -2,9 +2,13 @@
 
 Moved essentially verbatim from ``gridalyn.operations.flexibility.artifacts``.
 The governed artifact-run lineage routes through
-``gridalyn.operations.runs.build_operation_run`` / ``write_operation_run`` and
-the KPI report is materialized exactly as before (D-01 bit-for-bit): the report
-fields the regression gate compares are unchanged. Internal builders are sourced
+``gridalyn.operations.runs.build_operation_run`` / ``write_operation_run``. The
+serialized KPI report routes through the platform report contract
+(``write_report``, audit §5.1, 2026-08-06): KPIs live under ``summary`` together
+with ``operation_context`` and ``constraint_summary``, while the in-memory
+report dict keeps its pre-conversion shape for ``build_operations_catalog`` and
+``build_operation_run``. No regression baseline pins this report (audit §5.0).
+Internal builders are sourced
 from their canonical concept homes (:mod:`gridalyn.operations.constraints`,
 :mod:`gridalyn.operations.contracts`, :mod:`gridalyn.operations.domain`,
 :mod:`gridalyn.operations.settlement`).
@@ -19,7 +23,12 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import (
+    ArtifactLayout,
+    ReportMetadata,
+    file_reference,
+    write_report,
+)
 from gridalyn.operations.constraints import build_network_constraint_set
 from gridalyn.operations.contracts import build_operation_context
 from gridalyn.operations.domain import (
@@ -50,8 +59,7 @@ def materialize_flexibility_operation_artifacts(
     project_output_root = root / "projects" / project_id / "outputs"
     out_dir = (out_dir or (project_output_root / "operations")).resolve()
     report_path = (
-        report_path
-        or (project_output_root / "reports" / "operational_kpi_report.json")
+        report_path or (project_output_root / "reports" / "operational_kpi_report.json")
     ).resolve()
     catalog_path = (catalog_path or (out_dir / "operations_catalog.json")).resolve()
 
@@ -136,9 +144,9 @@ def materialize_flexibility_operation_artifacts(
                 flexibility_dir / "locational_clearing_selections.parquet",
                 root,
             ),
-            "network_impact_predictions": relpath(impact_path, root)
-            if impact_path.exists()
-            else None,
+            "network_impact_predictions": (
+                relpath(impact_path, root) if impact_path.exists() else None
+            ),
         },
         "artifacts": {
             name: relpath(path, root)
@@ -146,8 +154,38 @@ def materialize_flexibility_operation_artifacts(
             if name not in {"report", "operations_catalog", "operation_run"}
         },
     }
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2, sort_keys=True, default=json_default))
+    input_paths = (
+        flexibility_dir / "provider_registry.parquet",
+        flexibility_dir / "locational_clearing_events.parquet",
+        flexibility_dir / "locational_clearing_selections.parquet",
+        impact_path,
+    )
+    write_report(
+        report_path,
+        metadata=ReportMetadata(
+            report_id="operational_kpi_report",
+            source_domain="operations",
+            model_version_id=model_version_id,
+            study_run_id=study_run_id,
+            project={"name": project_id, "scenario_id": scenario_id},
+        ),
+        inputs=[file_reference(path, root) for path in input_paths if path.exists()],
+        artifacts=[
+            file_reference(paths[name], root)
+            for name in (
+                "network_constraints",
+                "flexibility_offers",
+                "dispatch_instructions",
+                "settlement_records",
+            )
+        ],
+        summary={
+            **report["summary"],
+            "operation_context": context.to_dict(),
+            "constraint_summary": report["constraint_summary"],
+        },
+        validation={"valid": True, "errors": [], "warnings": []},
+    )
     catalog = build_operations_catalog(
         root=root,
         project_id=project_id,
@@ -182,7 +220,9 @@ def materialize_flexibility_operation_artifacts(
     )
     write_operation_run(paths["operation_run"], operation_run)
     catalog_path.parent.mkdir(parents=True, exist_ok=True)
-    catalog_path.write_text(json.dumps(catalog, indent=2, sort_keys=True, default=json_default))
+    catalog_path.write_text(
+        json.dumps(catalog, indent=2, sort_keys=True, default=json_default)
+    )
     return paths
 
 

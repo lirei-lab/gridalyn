@@ -12,10 +12,9 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
+from gridalyn.foundation import ArtifactLayout
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.network.metadata import write_base_metadata
-from gridalyn.foundation import ArtifactLayout
-
 
 BASE_TABLE_FILENAMES = {
     "grid_buses": "grid_buses.parquet",
@@ -150,7 +149,9 @@ class SyntheticPandapowerAdapter:
             transformers,
         )
         if len(buildings) != len(net.load):
-            raise RuntimeError("Building twin row count does not match pandapower loads.")
+            raise RuntimeError(
+                "Building twin row count does not match pandapower loads."
+            )
         if (connectivity["connectivity_status"] != "ok").any():
             missing = connectivity.loc[connectivity["connectivity_status"] != "ok"]
             raise RuntimeError(
@@ -212,7 +213,9 @@ def _load_json(path: Path) -> dict[str, Any]:
         return json.load(f)
 
 
-def describe_network_source_adapter(adapter: NetworkSourceAdapter) -> NetworkAdapterDescriptor:
+def describe_network_source_adapter(
+    adapter: NetworkSourceAdapter,
+) -> NetworkAdapterDescriptor:
     """Describe an adapter using the platform network source contract."""
     adapter_name = getattr(adapter, "source_adapter", adapter.__class__.__name__)
     source_standard = getattr(adapter, "source_standard", "unknown")
@@ -323,7 +326,9 @@ def _make_line_table(net, buses: pd.DataFrame) -> pd.DataFrame:
         from_bus = int(row["from_bus"])
         to_bus = int(row["to_bus"])
         from_name = str(bus_lookup.at[from_bus, "name"])
-        category = _bus_category(from_name, float(bus_lookup.at[from_bus, "voltage_kv"]))
+        category = _bus_category(
+            from_name, float(bus_lookup.at[from_bus, "voltage_kv"])
+        )
         rows.append(
             {
                 "line_id": f"line:{int(line_idx)}",
@@ -367,9 +372,9 @@ def _make_transformer_table(net, buses: pd.DataFrame) -> pd.DataFrame:
                 "vn_lv_kv": float(row["vn_lv_kv"]),
                 "vk_percent": float(row["vk_percent"]),
                 "vkr_percent": float(row["vkr_percent"]),
-                "tap_pos": None
-                if pd.isna(row.get("tap_pos"))
-                else float(row.get("tap_pos")),
+                "tap_pos": (
+                    None if pd.isna(row.get("tap_pos")) else float(row.get("tap_pos"))
+                ),
                 "in_service": bool(row.get("in_service", True)),
                 "cim_class": "PowerTransformer",
             }
@@ -404,20 +409,34 @@ def _make_buildings_and_connectivity(
             lv_feeder_bus_id = str(feeder_bus.iloc[0]["bus_id"])
             lv_transformer_id = trafo_by_lv_bus.get(lv_feeder_bus_id)
 
-        source = building_data.iloc[building_idx] if building_idx < len(building_data) else {}
+        source = (
+            building_data.iloc[building_idx]
+            if building_idx < len(building_data)
+            else {}
+        )
         area_m2 = source.get("Area (sq. meters)") if hasattr(source, "get") else None
-        source_building_id = source.get("Building ID") if hasattr(source, "get") else None
-        lat = source.get("Longitude") if hasattr(source, "get") else bus_lookup.at[bus_idx, "lat"]
-        lon = source.get("Latitude") if hasattr(source, "get") else bus_lookup.at[bus_idx, "lon"]
+        source_building_id = (
+            source.get("Building ID") if hasattr(source, "get") else None
+        )
+        lat = (
+            source.get("Longitude")
+            if hasattr(source, "get")
+            else bus_lookup.at[bus_idx, "lat"]
+        )
+        lon = (
+            source.get("Latitude")
+            if hasattr(source, "get")
+            else bus_lookup.at[bus_idx, "lon"]
+        )
 
         building_id = f"building:{building_idx}"
         load_id = f"load:{int(load_idx)}"
         buildings.append(
             {
                 "building_id": building_id,
-                "source_building_id": None
-                if pd.isna(source_building_id)
-                else int(source_building_id),
+                "source_building_id": (
+                    None if pd.isna(source_building_id) else int(source_building_id)
+                ),
                 "load_id": load_id,
                 "pandapower_load": int(load_idx),
                 "lv_bus_id": bus_id,
@@ -443,9 +462,9 @@ def _make_buildings_and_connectivity(
                 "lv_cluster": lv_cluster,
                 "lv_feeder_bus_id": lv_feeder_bus_id,
                 "lv_transformer_id": lv_transformer_id,
-                "connectivity_status": "ok"
-                if lv_transformer_id is not None
-                else "missing_transformer",
+                "connectivity_status": (
+                    "ok" if lv_transformer_id is not None else "missing_transformer"
+                ),
             }
         )
 

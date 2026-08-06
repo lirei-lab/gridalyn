@@ -70,8 +70,10 @@ PUBLIC_LAYER_FACADES = (
 
 #: Number of modules in the tree that declare a ``_LAZY_EXPORTS`` map. Pinned so
 #: that a discovery walk which stops finding them fails loudly instead of
-#: quietly collecting zero parametrized cases.
-EXPECTED_LAZY_MODULE_COUNT = 17
+#: quietly collecting zero parametrized cases. 17 -> 18 on 2026-08-06:
+#: ``gridalyn.interfaces.reporting`` converted to a lazy facade (ledger #35,
+#: removing the eager ``digital_twin`` import behind the runpy RuntimeWarning).
+EXPECTED_LAZY_MODULE_COUNT = 18
 
 #: Total ``_LAZY_EXPORTS`` entries across those modules. Lower bound, not an
 #: equality: adding a public export must not require editing this test.

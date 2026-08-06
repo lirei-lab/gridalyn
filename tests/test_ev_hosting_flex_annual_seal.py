@@ -9,13 +9,31 @@ PINNING defect (seed/round/thread cap) — never a reason to re-baseline;
 escalate per the study-B migration design doc.
 
 Skips when the gitignored cache/artifacts are absent (CI). Runtime is
-dominated by one annual SDK simulation set (~90 s).
+dominated by the annual Monte-Carlo stage (measured 2026-08-06:
+``generate_annual_mc.py`` 284.0 s of the 290.5 s chain — 97.8%; the other
+three stages total 6.6 s; the whole test is ~287 s, over half the suite).
+
+Slow tier (#19)
+---------------
+The test carries ``@pytest.mark.slow``. The DEFAULT run still executes it —
+that is what proves the byte-stability property, and CI passes no marker
+filter — so the tier does not weaken the seal. For fast local iteration:
+
+* ``pytest -m "not slow"`` deselects it (shows in the deselected count), or
+* ``GRIDALYN_SKIP_SLOW=1 pytest`` skips it with a visible reason in the
+  suite's skip summary, which is the auditable form.
+
+A real speedup (preference (a)) is not available from this file: the four
+stages are strictly data-dependent (no parallelism), the hashing is
+negligible, and the stage scripts live under ``projects/`` where the
+byte-stable pipeline must not be modified.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -54,6 +72,17 @@ _SKIP_REASON = (
     "prepare_topology_cache.py and generate_annual_mc.py first"
 )
 
+# Explicit slow-tier opt-out. Deliberately an env var rather than only the
+# ``-m "not slow"`` filter: a deselected test is invisible in the skip summary,
+# while this skip surfaces with its reason (the Phase-3 skip-visibility gate
+# checks that reason's specificity).
+_SLOW_OPT_OUT = os.environ.get("GRIDALYN_SKIP_SLOW") == "1"
+_SLOW_SKIP_REASON = (
+    "GRIDALYN_SKIP_SLOW=1: the ~287 s annual byte-stability seal was "
+    "deliberately skipped for fast iteration; unset the variable and re-run "
+    "to prove the property before shipping"
+)
+
 
 def _hash_array(path: Path) -> str:
     """Return the canonical-bytes sha256 of a saved float array."""
@@ -84,6 +113,8 @@ def _run_annual_chain() -> None:
         )
 
 
+@pytest.mark.slow
+@pytest.mark.skipif(_SLOW_OPT_OUT, reason=_SLOW_SKIP_REASON)
 @pytest.mark.skipif(not _READY, reason=_SKIP_REASON)
 def test_annual_chain_byte_stable_across_two_runs() -> None:
     """Arrays AND headline JSONs are byte-stable across two SEED=42 runs."""

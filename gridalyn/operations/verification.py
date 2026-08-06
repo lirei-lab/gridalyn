@@ -426,7 +426,6 @@ def build_locational_clearing_verification_report(
 def write_locational_verification_outputs(
     *,
     dispatch: pd.DataFrame,
-    report: dict[str, Any],
     dispatch_path: Path,
     report_path: Path,
 ) -> dict[str, Path]:
@@ -441,8 +440,6 @@ def write_locational_verification_outputs(
 
     Args:
         dispatch: Per-timestep delivered/shortfall dispatch matrix.
-        report: Verification report payload. Accepted for signature stability
-            with existing callers; not written here.
         dispatch_path: Destination for the dispatch parquet artifact.
         report_path: Destination the caller writes the report JSON to; its
             parent directory is created here.
