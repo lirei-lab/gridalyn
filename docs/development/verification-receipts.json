@@ -56,7 +56,7 @@
         "projects/ev_hosting_flex",
         "tools/flagship_verify.py"
       ],
-      "rationale": "Recorded at 6ea8a92a: the shape-covering subset is the fast source-proven proof (~30-60 min) used on generator/kernel changes; per-stage records make partial regeneration auditable.",
+      "rationale": "Recorded at 6ea8a92a: the shape-covering subset is the fast source-proven proof used on generator/kernel changes; per-stage records make partial regeneration auditable. Its stage execution is quick (recorded run: 2 stages in ~4 s; the heavy annual-MC stage and its dependents are skipped with recorded reasons); wall time is dominated by environment/toolchain setup, not stage work. The full ~6 h regeneration remains operator-scheduled.",
       "stages": [
         {
           "name": "prepare_workspace",

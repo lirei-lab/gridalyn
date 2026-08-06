@@ -65,6 +65,9 @@ _RECORDED_FIELDS: tuple[str, ...] = ("commit", "recorded_on", "result", "evidenc
 
 _STATUSES: tuple[str, ...] = ("recorded", "deferred")
 
+#: Outcomes a per-stage record may claim.
+_STAGE_STATUSES: tuple[str, ...] = ("ok", "skipped", "failed")
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -293,6 +296,16 @@ def _stages_problems(name: str, stages: Any) -> list[Finding]:
                 findings.append(
                     Finding(name, "incomplete", f"{where}.{field} is empty")
                 )
+        status = str(stage.get("status") or "")
+        if status and status not in _STAGE_STATUSES:
+            findings.append(
+                Finding(
+                    name,
+                    "schema",
+                    f"{where}.status {status!r} is not one of "
+                    f"{', '.join(_STAGE_STATUSES)}",
+                )
+            )
         commit = str(stage.get("commit") or "").strip()
         if commit and not _commit_is_in_history(commit):
             findings.append(

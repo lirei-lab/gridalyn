@@ -206,13 +206,17 @@ skips the hours-long heavy stages with a recorded reason, and reports the R7
 baseline check. Per-stage records — name, status, duration, and a reason when a
 stage is skipped — are captured so a partial regeneration is auditable, and the
 verification-receipt ledger accepts an optional per-stage record list on any
-receipt (each stage must carry a `name` and a `result`, and any per-stage
-`commit` must exist in this history and lead to HEAD).
+receipt (each stage must carry a `name` and a `status` — `ok`, `skipped` or
+`failed` — and any per-stage `commit` must exist in this history and lead to
+HEAD).
 
 Two operator commands:
 
-- `python tools/flagship_verify.py` — the shape-covering subset (~30-60 min),
-  the fast source-proven proof used on generator/kernel changes.
+- `python tools/flagship_verify.py` — the shape-covering subset, the fast
+  source-proven proof used on generator/kernel changes. Its stage execution is
+  quick (the recorded run executed 2 stages in ~4 s; the heavy annual-MC stage
+  and its dependents are skipped with recorded reasons), so its wall time is
+  dominated by environment/toolchain setup rather than stage work.
 - `python tools/flagship_verify.py --include-heavy` — the full regeneration
   (roughly six hours), operator-scheduled at milestones; the resulting receipt is
   recorded at the commit it ran at.

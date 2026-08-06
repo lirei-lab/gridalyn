@@ -36,6 +36,22 @@ HEAVY_STAGES: frozenset[str] = frozenset({"generate_annual_mc"})
 WORKFLOW_PATH = "projects/ev_hosting_flex/workflow.yaml"
 
 
+class FlagshipSubsetError(RuntimeError):
+    """A non-heavy subset stage failed.
+
+    Carries the per-stage records collected up to (and including) the failing
+    stage, so the audit trail survives the failure and can be persisted by the
+    CLI even when the run aborts.
+
+    Attributes:
+        records: Per-stage records collected before the failure.
+    """
+
+    def __init__(self, message: str, records: list[dict[str, Any]]) -> None:
+        super().__init__(message)
+        self.records = records
+
+
 def load_stages(workspace: Path) -> list[dict[str, Any]]:
     """Read the flagship workflow's stage list from its YAML contract.
 
@@ -226,8 +242,9 @@ def run_subset(
             }
         )
         if returncode != 0:
-            raise RuntimeError(
-                f"flagship subset stage failed: {stage['id']} ({returncode})"
+            raise FlagshipSubsetError(
+                f"flagship subset stage failed: {stage['id']} ({returncode})",
+                records,
             )
 
     baselines = None
@@ -293,12 +310,22 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{stage['id']}\t{flag}\t{needs}")
         return 0
 
-    result = run_subset(
-        workspace,
-        include_heavy=args.include_heavy,
-        dry_run=args.dry_run,
-        run_baselines_check=not args.no_check_baselines,
-    )
+    try:
+        result = run_subset(
+            workspace,
+            include_heavy=args.include_heavy,
+            dry_run=args.dry_run,
+            run_baselines_check=not args.no_check_baselines,
+        )
+    except FlagshipSubsetError as exc:
+        # Fail loud, but persist the audit trail: the per-stage records up to
+        # (and including) the failing stage are still written and reported.
+        result = {
+            "stages": exc.records,
+            "baselines": None,
+            "exit_code": 1,
+            "error": str(exc),
+        }
     if args.out_json:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)
         args.out_json.write_text(json.dumps(result, indent=2), encoding="utf-8")

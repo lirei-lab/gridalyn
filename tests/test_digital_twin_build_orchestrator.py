@@ -141,7 +141,8 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
 
         The five orphan-blocked steps were removed on 2026-08-06 and the
         ``optional`` mechanism that let them fail silently must not resurface:
-        a green exit on an incomplete build is impossible by construction.
+        a green exit on an incomplete build is impossible by default (the only
+        opt-out is the explicit ``continue_on_error`` caller flag).
         """
         from gridalyn.projects.workflows.digital_twin import build as build_module
 
@@ -182,6 +183,25 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text())
             self.assertEqual(manifest["results"][0]["name"], "export_base")
             self.assertEqual(manifest["results"][0]["status"], "failed")
+
+    def test_continue_on_error_records_failed_but_does_not_raise(self) -> None:
+        """The explicit continue_on_error opt-out records and completes."""
+        from unittest import mock
+
+        from gridalyn.projects.workflows.digital_twin import build as build_module
+
+        fake = mock.Mock(returncode=1)
+        with TemporaryDirectory() as tmpdir:
+            manifest_path = Path(tmpdir) / "manifest.json"
+            with mock.patch.object(build_module.subprocess, "run", return_value=fake):
+                manifest = run_digital_twin_build(
+                    root=Path(tmpdir),
+                    skip_heavy=True,
+                    include_network_impact=False,
+                    continue_on_error=True,
+                    manifest_path=manifest_path,
+                )
+            self.assertEqual("failed", manifest["results"][0]["status"])
 
 
 if __name__ == "__main__":

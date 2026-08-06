@@ -211,6 +211,57 @@ class VerificationReceiptTests(unittest.TestCase):
         findings = tool.audit(mutant)[0]
         self.assertEqual(["unverifiable-commit"], [f.kind for f in findings])
 
+    def test_stages_not_a_list_turns_the_gate_red(self) -> None:
+        """Mutation: 'stages' must be a list of stage records."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = "not-a-list"
+        findings = tool.audit(mutant)[0]
+        self.assertEqual(["schema"], [f.kind for f in findings], findings)
+
+    def test_a_non_dict_stage_element_turns_the_gate_red(self) -> None:
+        """Mutation: each stage element must be a mapping."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = ["oops"]
+        findings = tool.audit(mutant)[0]
+        self.assertEqual(["schema"], [f.kind for f in findings], findings)
+
+    def test_a_stage_with_invalid_status_turns_the_gate_red(self) -> None:
+        """Mutation: a stage status must be ok/skipped/failed, not arbitrary."""
+        mutant = copy.deepcopy(self.ledger)
+        self.assertEqual([], tool.audit(mutant)[0])
+
+        mutant["receipts"]["docs-instruction-sweep"]["stages"] = [
+            {"name": "getting-started", "status": "banana"}
+        ]
+        findings = tool.audit(mutant)[0]
+        self.assertEqual(["schema"], [f.kind for f in findings], findings)
+
+    def test_the_cli_reports_findings_and_exits_one(self) -> None:
+        """A bad ledger fails the CLI with the finding on stderr."""
+        import tempfile
+
+        bad = copy.deepcopy(self.ledger)
+        bad["receipts"]["flagship-reproduce"]["commit"] = "0" * 40
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump(bad, handle)
+            bad_path = Path(handle.name)
+        try:
+            completed = subprocess.run(
+                [sys.executable, str(_TOOL_PATH), "--check", "--ledger", str(bad_path)],
+                cwd=_REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        finally:
+            bad_path.unlink(missing_ok=True)
+        self.assertEqual(1, completed.returncode)
+        self.assertIn("unverifiable-commit", completed.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
