@@ -148,6 +148,27 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "a git tag, not a path; the notation is indistinguishable from a directory",
     (
         "docs/development/instruction-verification.md",
+        "projects/workflows/flexibility/",
+    ): "the retirement record names the package that was DELETED on "
+    "2026-08-06; being absent is the claim",
+    (
+        "docs/development/report-contract-audit.md",
+        ".../flexibility/locational_verification.py",
+    ): "retired 2026-08-06 (audit section 11); the audit row records what the "
+    "tree contained when the site was classified, so the reference must stay",
+    (
+        "docs/development/report-contract-audit.md",
+        ".../flexibility/spatial_powerflow_validation.py",
+    ): "retired 2026-08-06 (audit section 11); the audit row records what the "
+    "tree contained when the site was classified, so the reference must stay",
+    (
+        "docs/development/report-contract-audit.md",
+        ".../locational_verification.py",
+    ): "the abbreviated form of the same retired module; the extractor "
+    "normalises the '::site::key' suffix away, so this is the write-site row "
+    "in audit section 5.2 (retired 2026-08-06, audit section 11)",
+    (
+        "docs/development/instruction-verification.md",
         "archive/flexibility_cls",
     ): "a git tag, not a path; the notation is indistinguishable from a "
     "directory (retirement note added 2026-08-06)",
