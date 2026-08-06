@@ -140,34 +140,9 @@ class LocationalClearingVerificationTest(unittest.TestCase):
                 }
             ]
         )
-        report = build_locational_clearing_verification_report(
-            scenario_id="S4",
-            clearing_summary={"total_delivered_mwh": 0.002, "total_shortfall_mwh": 0.0},
-            case_metrics={
-                "unmanaged": {
-                    "trafo_max_loading_percent": 100.0,
-                    "line_max_loading_percent": 90.0,
-                    "v_min_pu": 0.95,
-                    "n_trafo_overloads": 0,
-                    "n_line_overloads": 0,
-                    "ext_grid_peak_mw": 20.0,
-                },
-                "locational_clearing": {
-                    "trafo_max_loading_percent": 99.0,
-                    "line_max_loading_percent": 89.0,
-                    "v_min_pu": 0.96,
-                    "n_trafo_overloads": 0,
-                    "n_line_overloads": 0,
-                    "ext_grid_peak_mw": 19.9,
-                },
-            },
-            constraint_ids=["transformer:64"],
-        )
-
         with tempfile.TemporaryDirectory() as tmp:
             outputs = write_locational_verification_outputs(
                 dispatch=dispatch,
-                report=report,
                 dispatch_path=Path(tmp) / "dispatch.parquet",
                 report_path=Path(tmp) / "report.json",
             )
