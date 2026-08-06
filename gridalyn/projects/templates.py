@@ -390,7 +390,8 @@ TEMPLATES: dict[str, ProjectTemplate] = {
         name="powerflow-demo",
         description=(
             "Runnable IEEE 33-bus power-flow study producing a figure and a "
-            "governed report (requires the 'sim' extra)."
+            "governed report (requires only base dependencies, e.g. "
+            "pandapower)."
         ),
         project_yaml=_powerflow_demo_project_yaml,
         workflow_yaml=_powerflow_demo_workflow_yaml,

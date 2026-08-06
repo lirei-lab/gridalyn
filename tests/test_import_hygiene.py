@@ -15,14 +15,17 @@ the map. A syntactic check would therefore produce 19 false positives while
 proving nothing about what actually gets imported. This test instead imports
 each sub-package for real and inspects the resulting ``sys.modules``.
 
-Why 6 of the 10 declared capability modules are excluded
---------------------------------------------------------
-``OPTIONAL_CAPABILITY_MODULES`` names 10 modules, but ``pandapower``,
-``geopandas``, ``shapely``, ``rdflib``, ``folium`` and ``leafmap`` are base
-dependencies in ``pyproject.toml`` -- present on every supported install, so
-importing them is legitimate and asserting against them would be wrong. The
-truly-optional set is the declared capability modules MINUS the base
-dependencies, derived here rather than hardcoded.
+Why the declared set is the derived set (pyproject keeps them honest)
+---------------------------------------------------------------------
+``OPTIONAL_CAPABILITY_MODULES`` declares only the *truly-optional* modules —
+modules absent from ``pyproject.toml`` ``[project] dependencies`` — so there
+is no runtime exclusion: the declared set and the derived set are the same
+four modules (``lightsim2grid``, ``cvxpy``, ``osmnx``, ``falkordb``). The
+``derive_optional_modules`` subtraction is kept as the pyproject cross-check
+that keeps the two honest: if a declared capability module ever migrates into
+``[project] dependencies`` (as ``lightgbm`` did), it drops out of the derived
+set and stops being asserted, and ``test_optional_set_is_nonempty_and_expected``
+pins the derived set exactly so the sweep cannot narrow silently.
 
 Why each import runs in its own subprocess
 ------------------------------------------

@@ -9,6 +9,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
@@ -87,7 +88,7 @@ def _delegate_domain_help(argv: list[str] | None) -> int | None:
     return None
 
 
-def _delegate_module(module_name: str):
+def _delegate_module(module_name: str) -> Any:
     def handler(args: argparse.Namespace) -> int:
         module = importlib.import_module(module_name)
         return module.main(getattr(args, "subcommand_args", []))

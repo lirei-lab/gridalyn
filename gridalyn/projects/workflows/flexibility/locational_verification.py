@@ -21,14 +21,27 @@ from gridalyn.projects.workflows.flexibility.spatial_powerflow_validation import
     _powerflow_metrics,
 )
 
+# HAZARD #6 (deferred): ROOT derived from __file__.parents[4] resolves to
+# site-packages in an installed wheel — the same installed-layout bug class
+# already fixed in gridalyn/interfaces/reporting/digital_twin.py. Known,
+# tracked deferral scheduled for a later phase; this pointer keeps the item
+# visible in the public repo (.planning/ is gitignored).
 ROOT = Path(__file__).resolve().parents[4]
 
 DEFAULT_LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_PROVIDERS = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
-DEFAULT_SELECTIONS = DEFAULT_LAYOUT.flexibility / "locational_clearing_selections.parquet"
-DEFAULT_CLEARING_REPORT = DEFAULT_LAYOUT.flexibility / "locational_flexibility_clearing_report.json"
-DEFAULT_DISPATCH_OUT = DEFAULT_LAYOUT.flexibility / "locational_clearing_dispatch.parquet"
-DEFAULT_REPORT_OUT = DEFAULT_LAYOUT.flexibility / "locational_clearing_verification_report.json"
+DEFAULT_SELECTIONS = (
+    DEFAULT_LAYOUT.flexibility / "locational_clearing_selections.parquet"
+)
+DEFAULT_CLEARING_REPORT = (
+    DEFAULT_LAYOUT.flexibility / "locational_flexibility_clearing_report.json"
+)
+DEFAULT_DISPATCH_OUT = (
+    DEFAULT_LAYOUT.flexibility / "locational_clearing_dispatch.parquet"
+)
+DEFAULT_REPORT_OUT = (
+    DEFAULT_LAYOUT.flexibility / "locational_clearing_verification_report.json"
+)
 
 
 def _relpath(path: Path) -> str:
@@ -55,15 +68,19 @@ def generate_report(
 ) -> dict:
     """Generate a pandapower verification report for locational clearing."""
     if scenario_id != "S4":
-        raise ValueError("Current powerflow verification loader supports scenario_id='S4'")
+        raise ValueError(
+            "Current powerflow verification loader supports scenario_id='S4'"
+        )
 
     providers = pd.read_parquet(provider_path)
     selections = pd.read_parquet(selections_path)
     clearing_report = _load_json(clearing_report_path)
 
-    _buildings, _registry, building_kw, ev_kw, _soft_kw, _hard_kw, _rebound_kw = _load_s4_inputs(
-        cache_dir=cache_dir,
-        market_dispatch_path=market_dispatch_path,
+    _buildings, _registry, building_kw, ev_kw, _soft_kw, _hard_kw, _rebound_kw = (
+        _load_s4_inputs(
+            cache_dir=cache_dir,
+            market_dispatch_path=market_dispatch_path,
+        )
     )
     dt_h = 5.0 / 60.0
     if building_kw.shape[0] > 1:
@@ -78,7 +95,9 @@ def generate_report(
     )
 
     unmanaged_p_total_mw = (building_kw + ev_kw) / 1000.0
-    locational_p_total_mw = (result["managed_building_kw"] + result["managed_ev_kw"]) / 1000.0
+    locational_p_total_mw = (
+        result["managed_building_kw"] + result["managed_ev_kw"]
+    ) / 1000.0
     unmanaged_q_mvar = (building_kw / 1000.0) * 0.1
     locational_q_mvar = (result["managed_building_kw"] / 1000.0) * 0.1
 
@@ -136,12 +155,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider-path", type=Path, default=DEFAULT_PROVIDERS)
     parser.add_argument("--selections-path", type=Path, default=DEFAULT_SELECTIONS)
-    parser.add_argument("--clearing-report-path", type=Path, default=DEFAULT_CLEARING_REPORT)
+    parser.add_argument(
+        "--clearing-report-path", type=Path, default=DEFAULT_CLEARING_REPORT
+    )
     parser.add_argument("--dispatch-out", type=Path, default=DEFAULT_DISPATCH_OUT)
     parser.add_argument("--report-out", type=Path, default=DEFAULT_REPORT_OUT)
     parser.add_argument("--scenario-id", default="S4")
     parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE_DIR)
-    parser.add_argument("--market-dispatch-path", type=Path, default=DEFAULT_MARKET_DISPATCH_PATH)
+    parser.add_argument(
+        "--market-dispatch-path", type=Path, default=DEFAULT_MARKET_DISPATCH_PATH
+    )
     return parser
 
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
@@ -16,8 +15,6 @@ configure_cli_environment()
 # any effect, which is a silent failure rather than a loud one.
 
 from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
-
-ROOT = Path(__file__).resolve().parents[3]
 
 
 def _script_handler(script_name: str):

@@ -419,7 +419,8 @@ _PARAM_SERIALIZING_HELPERS: frozenset[str] = frozenset(
 _HELPER_ROUTED_ALREADY_GOVERNED: frozenset[str] = frozenset(
     {
         "gridalyn/foundation/platform/reports.py::write_report::write_json_report#0",
-        # Local write_report helper; audit §6 notes it skips validate_report.
+        # Local write_report helper; validates the payload before writing (audit
+        # §8 closed §6.2: validation now happens in write_report).
         "gridalyn/interfaces/reporting/schemas.py::write_report::write_json_report#0",
     }
 )

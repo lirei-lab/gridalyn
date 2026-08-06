@@ -53,7 +53,7 @@ def _validate_schema(
         report.add_error(f"{label}:{path}: {error.message}{_friendly_hint(error)}")
 
 
-def validate_project_file(  # noqa: C901
+def validate_project_file(  # noqa: C901  # complexity 18, refactor scheduled (ledger #34)
     path: Path | str,
     check_artifacts: bool = False,
 ) -> ValidationReport:
