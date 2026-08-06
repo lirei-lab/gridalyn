@@ -100,7 +100,6 @@ class CliCommandStructureTest(unittest.TestCase):
             "providers",
             "surrogate",
             "locational-clearing",
-            "train-physics-surrogate",
             "network-impact-catalog",
         ]:
             args = parser.parse_args([command])
@@ -108,13 +107,13 @@ class CliCommandStructureTest(unittest.TestCase):
             self.assertTrue(callable(args.handler))
 
     def test_flexibility_parser_does_not_expose_retired_commands(self):
-        """The ``flexibility_cls``-dependent commands are gone, not hidden.
+        """The orphaned-input commands are gone, not hidden.
 
         All five read ``flexibility/market_dispatch_timeseries.parquet`` with
-        no argument, and nothing has written that file since the
-        ``flexibility_cls`` study was retired on 2026-08-03. They were removed
-        on 2026-08-06 rather than left to fail; a reinstated one must be able
-        to name its producer.
+        no argument, and no command in this repository writes that file -- it
+        came from a study that was consolidated away. They were removed on
+        2026-08-06 rather than left to fail; a reinstated one must be able to
+        name its producer.
         """
         parser = flexibility.build_parser()
         for command in [
@@ -123,6 +122,7 @@ class CliCommandStructureTest(unittest.TestCase):
             "verify-network-impact",
             "shadow-report",
             "scorecard",
+            "train-physics-surrogate",
         ]:
             with self.subTest(command=command):
                 with self.assertRaises(SystemExit):

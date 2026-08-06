@@ -205,9 +205,8 @@ verification remains the authority for physical impact.
 2026-08-06 along with `market shadow-report` and `market verify-network-impact`
 below. All three read
 `instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`,
-whose only producer — the `flexibility_cls` study — was retired on 2026-08-03
-(archived at the git tag `archive/flexibility_cls`), so none of them could
-succeed anywhere in this repository. The commands on this page that do run
+which no command in this repository produces — the study that emitted it was
+consolidated away — so none of them could succeed anywhere here. The commands on this page that do run
 against a stock workspace are `market providers`, `market surrogate`,
 `market locational-clearing` and `semantic build`.
 

@@ -3,8 +3,8 @@
 Split out of ``test_locational_verification_workflow.py`` on 2026-08-06. That
 module also asserted that ``gridalyn market verify-clearing`` routed to the
 locational-verification workflow; the command and the workflow were retired
-with the ``flexibility_cls`` study that produced their input, so only this
-check -- which was always unrelated to them -- remains.
+together with the input they depended on, so only this check -- which was
+always unrelated to them -- remains.
 """
 
 from __future__ import annotations

@@ -231,12 +231,12 @@ Both defects the sweep reported rather than fixed were **resolved on 2026-08-06
 by retiring the affected chain** — see below. No finding from this sweep remains
 open.
 
-### Resolved: the `flexibility_cls`-dependent chain, retired 2026-08-06
+### Resolved: the orphaned-input command chain, retired 2026-08-06
 
 `market_dispatch_timeseries.parquet` was read at four sites and **written at
-none**: its only producer was the `flexibility_cls` study, retired 2026-08-03
-and archived at the git tag `archive/flexibility_cls`. Nine documented commands
-failed on it, and five `gridalyn twin build --include-network-impact` steps
+none**. It came from a study that was consolidated away, and the capability was
+never re-homed, so no command in this repository produces it. Nine documented
+commands failed on it, and five `gridalyn twin build --include-network-impact` steps
 failed on every run while the build still exited 0, because all five were
 declared `optional=True` — a green exit on an incomplete build.
 
@@ -259,8 +259,10 @@ called — `write_locational_verification_outputs`, `build_shadow_report`,
 `tests/test_locational_clearing_verification.py`. The retirement removed the
 orphan-blocked *pipeline*, not the mechanism. `market surrogate`,
 `market providers`, `market locational-clearing`,
-`market train-physics-surrogate` and `market network-impact-catalog` all still
-run and were verified green during this sweep.
+and `market network-impact-catalog` all still run and were verified green
+during this sweep. `market train-physics-surrogate` was retired the same day
+for the same reason once removing `perturbation-samples` left its labels
+parquet without a writer.
 
 **Cost of reinstatement.** A producer for the dispatch time series has to exist
 first. Ledger finding #39 (a `parents[4]` installed-layout hazard in

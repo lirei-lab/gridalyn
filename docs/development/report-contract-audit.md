@@ -572,9 +572,9 @@ not because of what it contains.** Two consequences the follow-up plan must resp
 
 ### Sequencing note for the follow-up plan
 
-Re-derived from actual consumers. **The first revision's sequencing cited
-`projects/flexibility_cls`; that study does not exist** — it was retired 2026-08-03 and the
-reference is dropped.
+Re-derived from actual consumers. **The first revision's sequencing cited a study
+directory that does not exist** — it had been consolidated away, and the reference is
+dropped.
 
 1. **§5.2 first** — lowest risk. No in-repo consumer, no baseline, and it fixes a
    reproducibility defect (absolute paths) plus a duplicate write. Verify: re-run the
@@ -814,7 +814,7 @@ modules dropped module-scope `parents[4]`/`DEFAULT_LAYOUT` for an explicit
 `spatial_powerflow_validation.py` (recorded as ledger finding #39, not fixed
 here).
 
-## 11. Amendment — 2026-08-06: the `flexibility_cls`-dependent chain retired
+## 11. Amendment — 2026-08-06: the orphaned-input command chain retired
 
 **Counts move: direct-JSON sites 70 → 69, helper-routed sites 22 → 18.**
 `tests/test_report_contract.py` pins both numbers and both classified sets; it
@@ -825,10 +825,10 @@ what the vanished-site assertions exist for.
 `verify-network-impact`, `shadow-report` and `scorecard` — read
 `instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`
 as a default input. A repo-wide scan finds that path read at four sites and
-**written at none**: its producer was the `flexibility_cls` study, retired
-2026-08-03 and archived at tag `archive/flexibility_cls`. The provenance is
-explicit — `instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json` records
-`"dispatch": "projects/flexibility_cls/outputs/data/market_dispatch_timeseries.parquet"`.
+**written at none**. It came from a study that was consolidated away, and the
+capability was never re-homed; the provenance recorded in
+`instances/default/digital_twin/flexibility/network_impact_physics_labels_report.json`
+still points at that former study's output directory.
 
 The five matching steps in `gridalyn/projects/workflows/digital_twin/build.py`
 were all `optional=True`, so every `twin build --include-network-impact` run

@@ -77,13 +77,13 @@ class DigitalTwinBuildOrchestratorTest(unittest.TestCase):
         )
         self.assertIn("generate_dashboard_catalog", names)
 
-    def test_flexibility_cls_dependent_steps_are_retired(self):
+    def test_orphaned_input_steps_are_retired(self):
         """The five orphan-blocked steps are gone from every build variant.
 
         Each invoked a command that reads
         ``flexibility/market_dispatch_timeseries.parquet`` with no argument,
-        and nothing has written that file since the ``flexibility_cls`` study
-        was retired on 2026-08-03. All five were ``optional=True``, so they
+        and no command in this repository writes that file -- it came from a
+        study that was consolidated away. All five were ``optional=True``, so they
         failed on every network-impact build while the build still exited 0.
         Removing them is what makes that exit code mean something.
         """

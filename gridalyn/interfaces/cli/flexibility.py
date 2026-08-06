@@ -32,17 +32,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     # ``verify-clearing``, ``perturbation-samples``, ``verify-network-impact``,
-    # ``shadow-report`` and ``scorecard`` were RETIRED on 2026-08-06 together
-    # with the ``flexibility_cls`` study that produced their input. They all
-    # read ``flexibility/market_dispatch_timeseries.parquet``, and nothing has
-    # written it since that study was retired on 2026-08-03 (archived at tag
-    # ``archive/flexibility_cls``), so they could not succeed anywhere in this
-    # repository. See docs/development/instruction-verification.md.
+    # ``shadow-report``, ``scorecard`` and ``train-physics-surrogate`` were
+    # RETIRED on 2026-08-06 together
+    # together with the input they depended on. All five read
+    # ``flexibility/market_dispatch_timeseries.parquet``, which no command in
+    # this repository writes -- it came from a study that was consolidated
+    # away -- so they could not succeed anywhere here.
+    # ``train-physics-surrogate`` went with them: its labels parquet was
+    # written only by ``perturbation-samples``, so retiring that command left
+    # it with no producer either. See
+    # docs/development/instruction-verification.md.
     scripts = {
         "providers": "generate_digital_twin_flexibility_providers.py",
         "surrogate": "generate_network_impact_surrogate.py",
         "locational-clearing": "generate_locational_flexibility_clearing.py",
-        "train-physics-surrogate": "train_network_impact_physics_surrogate.py",
         "network-impact-catalog": "generate_network_impact_dashboard_catalog.py",
     }
     for command, script_name in scripts.items():
@@ -56,8 +59,8 @@ def main(argv: list[str] | None = None) -> int:
     """Run the ``gridalyn market`` command group.
 
     Dispatches the flexibility and network-impact commands -- provider
-    registry, network-impact surrogate, locational clearing, physics-surrogate
-    training and the network-impact catalog -- after confirming the optional
+    registry, network-impact surrogate, locational clearing and the
+    network-impact catalog -- after confirming the optional
     ``ops`` capability is installed.
 
     Args:
