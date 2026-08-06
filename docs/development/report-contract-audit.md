@@ -667,3 +667,46 @@ than alongside the workflow notes that produced it: those are excluded from the 
 repository, and a test may not depend on a path a fresh checkout does not carry. If the file
 is missing the tests **fail with a message naming the missing path** rather than erroring or
 skipping — the pins are only meaningful alongside the rationale recorded here.
+
+---
+
+## 8. Amendment — 2026-08-06 (§5.2 duplicate write removed)
+
+The sections above are the audit as taken; their counts are historical and are not
+rewritten. This amendment records the first remedy applied since.
+
+**Finding #8 closed, in this audit's own recommended direction.** The duplicate-write half
+of the corrected §5.2 remedy is applied: the SDK-side report write inside
+`write_locational_verification_outputs` (`gridalyn/operations/verification.py`, formerly
+`:419`) is **removed**. The function still writes the dispatch parquet, still creates the
+report destination's parent directory, and still returns both paths; it no longer
+serializes the report. The **surviving single writer** is the caller,
+`gridalyn/projects/workflows/flexibility/locational_verification.py` (`generate_report`),
+whose ROOT-relative-paths write always won the race — so the bytes that land on disk are
+**identical** before and after (verified: the caller's write sequence produces
+byte-identical final artifacts; only the transient absolute-paths first write is gone).
+No baseline pins the artifact (§5.0), so nothing moved.
+
+**What this changes in the enumerations:**
+
+- Direct-JSON sites examined: **76 → 75**. Removed site:
+  `gridalyn/operations/verification.py::write_locational_verification_outputs::report_with_artifacts#0`.
+- `GOVERNED-VIOLATION`: **6 → 5**. Reconciliation: `5 + 69 + 1 = 75` ✔
+- Helper-routed enumeration: unchanged (`22` across 15 helpers) —
+  `write_locational_verification_outputs` never serialized a caller-supplied payload, so it
+  was never a pinned helper.
+- The caller's site
+  (`.../locational_verification.py::generate_report::report#0`) **remains a
+  `GOVERNED-VIOLATION`**: it is still hand-serialized. The second half of §5.2 — converting
+  that write to `write_report(...)` with contract-shaped `inputs`/`artifacts`/`validation` —
+  is still open and still sequenced first in §5's follow-up ordering.
+
+**Related hardening, same phase:** advisory observation §6.2 is also closed — the local
+`write_report` in `gridalyn/interfaces/reporting/schemas.py` now runs `validate_report`
+before writing and raises a located, remediating `ValueError` on a non-conforming payload
+(plan 05-03 tasks 1–2), and `tests/test_canonical_report_conformance.py` gates the tracked
+canonical reports.
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_KNOWN_VIOLATIONS`, the examined-count guard, and the module docstring), per §7's rule
+that a fixed violation must update the audit and the gate in the same change.
