@@ -171,12 +171,10 @@ The next training layer uses pandapower finite differences as labels.
 `market perturbation-samples` generated those labels, and was retired on
 2026-08-06 along with `market verify-network-impact`. Both read
 `instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`,
-whose only producer — the `flexibility_cls` study — was retired on 2026-08-03
-(archived at the git tag `archive/flexibility_cls`). Neither command could
-succeed anywhere in this repository, so both were removed rather than left to
-fail with `FileNotFoundError`. The commands that do run on a stock workspace
-are `market surrogate`, `market train-physics-surrogate` and
-`market network-impact-catalog`.
+which no command in this repository produces — the study that emitted it was
+consolidated away. Neither command could succeed anywhere here, so both were
+removed rather than left to fail with `FileNotFoundError`. The commands that do run on a stock workspace
+are `market surrogate` and `market network-impact-catalog`.
 
 The labels it produced were:
 
@@ -224,17 +222,12 @@ per sample.
 
 ## Physics-Trained Surrogate
 
-Train the first physics-backed selector table with:
+`market train-physics-surrogate` trained the first physics-backed selector
+table, and was retired on 2026-08-06 with the chain above: its labels parquet
+was written only by `market perturbation-samples`, so removing that command
+left it without a producer. The results below are the last recorded run.
 
-```bash
-uv run gridalyn market train-physics-surrogate \
-  --scenario-id S4 \
-  --training-path instances/default/digital_twin/flexibility/network_impact_training.parquet \
-  --labels-path instances/default/digital_twin/flexibility/network_impact_physics_labels.parquet \
-  --out-dir instances/default/digital_twin/flexibility
-```
-
-The command writes:
+It wrote:
 
 ```text
 instances/default/digital_twin/flexibility/network_impact_physics_predictions.parquet

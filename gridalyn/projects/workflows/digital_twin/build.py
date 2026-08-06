@@ -97,24 +97,18 @@ def build_digital_twin_steps(
                 # generate_network_impact_perturbation_samples,
                 # generate_network_impact_verification_report,
                 # generate_network_impact_physics_verification_report and
-                # generate_flexibility_clearing_scorecard. Each invoked a
+                # generate_flexibility_clearing_scorecard. A sixth,
+                # train_network_impact_physics_surrogate, followed on the same
+                # day: its labels parquet had no writer once
+                # perturbation-samples was gone. Each invoked a
                 # command that reads
                 # flexibility/market_dispatch_timeseries.parquet with no
-                # argument, and nothing has written that file since the
-                # ``flexibility_cls`` study was retired on 2026-08-03. They
+                # argument, and no command in this repository writes that file
+                # -- it came from a study that was consolidated away. They
                 # were marked optional=True, so all five failed on every run
                 # while the build still exited 0 -- a green exit on an
                 # incomplete build. See
                 # docs/development/instruction-verification.md.
-                _step(
-                    "train_network_impact_physics_surrogate",
-                    [
-                        "-m",
-                        "gridalyn.interfaces.cli.flexibility",
-                        "train-physics-surrogate",
-                    ],
-                    optional=True,
-                ),
                 _step(
                     "generate_network_impact_dashboard_catalog",
                     [
