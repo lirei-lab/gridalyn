@@ -247,9 +247,9 @@ Network Impact metrics.
 2026-08-06. It read `network_impact_verification_report.json`, itself produced
 by `market verify-network-impact` from
 `instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`
-— an input whose only producer, the `flexibility_cls` study, was retired on
-2026-08-03. The command could not succeed anywhere in this repository, so it
-was removed rather than left to fail. The overlay renders from a scorecard
+— an input no command in this repository produces, because the study that
+emitted it was consolidated away. The command could not succeed anywhere here,
+so it was removed rather than left to fail. The overlay renders from a scorecard
 produced elsewhere; see
 [Digital Twin](digital-twin.md) and
 [Instruction Verification](../development/instruction-verification.md).

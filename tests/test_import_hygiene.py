@@ -72,8 +72,8 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: swept population cannot shrink unnoticed; update deliberately when a
 #: package is added or removed. 36 -> 35 on 2026-08-06, when
 #: ``gridalyn.projects.workflows.flexibility`` was deleted with the
-#: ``flexibility_cls``-dependent chain (its two modules read an artifact whose
-#: producer had been retired), leaving the package empty.
+#: orphaned-input chain (its two modules read an artifact that no command in
+#: this repository produces), leaving the package empty.
 _EXPECTED_SUBPACKAGE_COUNT = 35
 
 _PROBE = """\

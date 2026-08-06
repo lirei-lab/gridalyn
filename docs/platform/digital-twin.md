@@ -386,11 +386,10 @@ Five commands were removed on 2026-08-06 — `market verify-clearing`,
 `gridalyn twin build --include-network-impact` steps that invoked them.
 
 All five read
-`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`,
-and nothing in this repository has written that file since its only producer,
-the `flexibility_cls` study, was retired on 2026-08-03 (archived at the git tag
-`archive/flexibility_cls`). They therefore failed with `FileNotFoundError`
-wherever they were run. Because their build steps were declared optional, the
+`instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
+No command in this repository writes that file: it came from a study that was
+consolidated away, and the capability was never re-homed. They therefore failed
+with `FileNotFoundError` wherever they were run. Because their build steps were declared optional, the
 build tolerated those failures and still exited 0 — a green exit on a build
 missing its verification artifacts.
 
@@ -400,12 +399,10 @@ this repository cannot produce. Reinstating it requires a producer for that
 artifact first. See
 [Instruction Verification](../development/instruction-verification.md).
 
-Train physics-backed predictions:
-
-```bash
-uv run gridalyn market train-physics-surrogate \
-  --scenario-id S4
-```
+`market train-physics-surrogate` trained the physics-backed predictions and
+was retired with the chain above: its labels parquet was written only by
+`market perturbation-samples`, so removing that command left it without a
+producer too.
 
 Refresh the dashboard manifest after generating or replacing Network Impact
 reports:

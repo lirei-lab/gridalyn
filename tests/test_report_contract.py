@@ -3,7 +3,7 @@
 The SDK's cross-cutting rule is that every artifact-producing run emits a
 governed platform report via ``write_report`` — never hand-written report JSON.
 Enforcing that mechanically is not as simple as banning ``json.dump``: the repo
-writes 69 JSON artifacts directly plus 18 through in-repo JSON helpers, and the
+writes 69 JSON artifacts directly plus 17 through in-repo JSON helpers, and the
 overwhelming majority are legitimately *not* platform reports (catalogs,
 manifests, scorecards, run-lineage records, cache metadata, GeoJSON, study data
 payloads). Each has its own shape and its own contract.
@@ -426,9 +426,6 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "main::write_network_impact_catalog#0",
         "gridalyn/projects/workflows/scripts/generate_network_impact_surrogate.py::"
         "main::write_surrogate_artifacts#0",
-        "gridalyn/projects/workflows/scripts/"
-        "train_network_impact_physics_surrogate.py::"
-        "main::write_physics_surrogate_artifacts#0",
         "gridalyn/projects/workflows/scripts/validate_digital_twin_semantics.py::"
         "validate_semantic_artifacts::write_validation_report#0",
         # Five distinct cache documents behind one direct-scan site.
@@ -944,7 +941,7 @@ class ReportContractAuditTest(unittest.TestCase):
             "The 02-03 audit examined 76 direct-JSON write sites; the "
             "duplicate-write removal brought it to 75, the 2026-08-06 wave "
             "applying audit sections 5.1-5.5 brought it to 70 with zero known "
-            "violations, and retiring the flexibility_cls-dependent commands "
+            "violations, and retiring the orphaned-input commands "
             "the same day removed one more (spatial_powerflow_validation.py), "
             "leaving 69. A different number means the tree moved or the "
             "scanner no longer matches; reconcile before adjusting.",
@@ -962,12 +959,13 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            18,
+            17,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
-            "helpers; retiring the flexibility_cls-dependent commands on "
-            "2026-08-06 removed four of them (the clearing scorecard, "
-            "perturbation sampler, network-impact verification report and "
-            "provider-selection shadow report), leaving 18. A different number "
+            "helpers; retiring the orphaned-input commands on "
+            "2026-08-06 removed five of them (the clearing scorecard, "
+            "perturbation sampler, network-impact verification report, "
+            "provider-selection shadow report and physics-surrogate trainer), "
+            "leaving 17. A different number "
             "means the tree moved; reconcile before adjusting this number.",
         )
 

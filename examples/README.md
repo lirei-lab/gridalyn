@@ -23,9 +23,8 @@ uv run gridalyn-dashboard catalog
 ```
 
 `gridalyn-flex verify-clearing` was retired on 2026-08-06. It read a market
-dispatch time series whose only producer, the `flexibility_cls` study, was
-retired on 2026-08-03, so it could not succeed anywhere in this repository —
-including from `projects/ev_hosting_flex`, which does not emit that artifact.
+dispatch time series that no command in this repository produces, so it could
+not succeed anywhere here.
 See [Instruction Verification](../docs/development/instruction-verification.md).
 
 ## Tutorial Scripts
