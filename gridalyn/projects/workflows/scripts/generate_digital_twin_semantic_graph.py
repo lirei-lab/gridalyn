@@ -9,15 +9,16 @@ from typing import Any
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[4]
-
-from gridalyn.foundation import ArtifactLayout
-
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
-
+from gridalyn.foundation import ArtifactLayout, find_workspace_root
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.twin.semantic.mappings import build_semantic_graph, write_profile
 
+# Current-directory default, matching ArtifactLayout's own root default. Never
+# derive the root from __file__: in an installed wheel that resolves to
+# site-packages, not the workspace (Phase 9, finding G7).
+_DEFAULT_ROOT = Path(".")
+
+DEFAULT_LAYOUT = ArtifactLayout(_DEFAULT_ROOT)
 
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
@@ -33,11 +34,22 @@ def _load_json_or_empty(path: Path) -> dict[str, Any]:
         return json.load(f)
 
 
-def _relpath(path: Path) -> str:
+def _resolve_root(root: Path | None, fallback_dir: Path) -> Path:
+    """Return the workspace root, discovered from the fallback dir if unset."""
+    if root is not None:
+        return Path(root).resolve()
+    return find_workspace_root(fallback_dir)
+
+
+def _relpath(path: Path, root: Path) -> str:
+    """Return ``path`` relative to the workspace root, failing loudly outside."""
     try:
-        return str(path.resolve().relative_to(ROOT))
-    except ValueError:
-        return str(path)
+        return str(path.resolve().relative_to(Path(root).resolve()))
+    except ValueError as exc:
+        raise RuntimeError(
+            f"artifact {path} is outside the workspace root {root}; run the "
+            "script from a workspace root or pass --root=<workspace>"
+        ) from exc
 
 
 def generate_semantic_graph(
@@ -48,9 +60,12 @@ def generate_semantic_graph(
     flexibility_dir: Path,
     timeseries_dir: Path,
     out_dir: Path,
+    root: Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     if profile != "north_america":
-        raise ValueError("Only the north_america semantic profile is currently supported")
+        raise ValueError(
+            "Only the north_america semantic profile is currently supported"
+        )
     base_dir = base_dir.resolve()
     scenario_dir = scenario_dir.resolve()
     flexibility_dir = flexibility_dir.resolve()
@@ -73,7 +88,9 @@ def generate_semantic_graph(
         else pd.DataFrame()
     )
     timeseries_manifests = {
-        "powerflow_summary": _load_json_or_empty(timeseries_dir / "powerflow_smoke_summary.json"),
+        "powerflow_summary": _load_json_or_empty(
+            timeseries_dir / "powerflow_smoke_summary.json"
+        ),
         "ev_load_summary": _load_json_or_empty(timeseries_dir / "ev_load_summary.json"),
     }
 
@@ -92,11 +109,30 @@ def generate_semantic_graph(
     nodes.to_parquet(out_dir / "nodes.parquet", index=False)
     edges.to_parquet(out_dir / "edges.parquet", index=False)
     write_profile(out_dir / "profile_north_america.json")
+    workspace_root = _resolve_root(root, out_dir)
     manifest["artifacts"] = {
-        "nodes": _relpath(out_dir / "nodes.parquet"),
-        "edges": _relpath(out_dir / "edges.parquet"),
-        "profile": _relpath(out_dir / "profile_north_america.json"),
-        "validation_report": _relpath(out_dir / "validation_report.json"),
+        "nodes": _relpath(out_dir / "nodes.parquet", workspace_root),
+        "edges": _relpath(out_dir / "edges.parquet", workspace_root),
+        "profile": _relpath(out_dir / "profile_north_america.json", workspace_root),
+        "validation_report": _relpath(
+            out_dir / "validation_report.json", workspace_root
+        ),
+    }
+    # Regression pins live at the workflow layer, not in mappings.py (G8).
+    expected_counts = {
+        "buildings": 3235,
+        "buses": 3562,
+        "lines": 3398,
+        "transformers": 163,
+        "scenarios": 5,
+    }
+    manifest["count_checks"] = {
+        key: {
+            "expected": expected,
+            "actual": manifest["source_counts"].get(key),
+            "ok": manifest["source_counts"].get(key) == expected,
+        }
+        for key, expected in expected_counts.items()
     }
     with (out_dir / "graph_manifest.json").open("w") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
@@ -105,8 +141,11 @@ def generate_semantic_graph(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate digital-twin semantic graph artifacts.")
+    parser = argparse.ArgumentParser(
+        description="Generate digital-twin semantic graph artifacts."
+    )
     parser.add_argument("--profile", default="north_america")
+    parser.add_argument("--root", type=Path, default=_DEFAULT_ROOT)
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--scenario-dir", type=Path, default=DEFAULT_SCENARIO_DIR)
     parser.add_argument("--flexibility-dir", type=Path, default=DEFAULT_FLEXIBILITY_DIR)
@@ -121,6 +160,7 @@ def main() -> None:
         flexibility_dir=args.flexibility_dir,
         timeseries_dir=args.timeseries_dir,
         out_dir=args.out_dir,
+        root=find_workspace_root(args.root),
     )
     print(
         f"Generated semantic graph {manifest['semantic_profile']} "

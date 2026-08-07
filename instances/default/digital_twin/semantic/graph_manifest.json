@@ -1,9 +1,9 @@
 {
   "artifacts": {
-    "edges": "digital_twin/semantic/edges.parquet",
-    "nodes": "digital_twin/semantic/nodes.parquet",
-    "profile": "digital_twin/semantic/profile_north_america.json",
-    "validation_report": "digital_twin/semantic/validation_report.json"
+    "edges": "instances/default/digital_twin/semantic/edges.parquet",
+    "nodes": "instances/default/digital_twin/semantic/nodes.parquet",
+    "profile": "instances/default/digital_twin/semantic/profile_north_america.json",
+    "validation_report": "instances/default/digital_twin/semantic/validation_report.json"
   },
   "count_checks": {
     "buildings": {
@@ -32,7 +32,7 @@
       "ok": true
     }
   },
-  "created_at": "2026-05-13T11:29:08.196184+00:00",
+  "created_at": "2026-08-07T14:27:11.062735+00:00",
   "edge_count": 147065,
   "namespaces": {
     "brick": "https://brickschema.org/schema/Brick#",

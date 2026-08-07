@@ -1,42 +1,45 @@
 {
   "artifacts": [
     {
-      "bytes": 1734,
+      "bytes": 1806,
       "name": "graph_manifest",
       "path": "instances/default/digital_twin/semantic/graph_manifest.json",
-      "sha256": "b922f63174375a6269045ec384a2334edfbc1b165c0dd943c730c85f0918a0b3"
+      "sha256": "7300b5903c114ca822076a823e4e0160baf51873786aea56de8acacf24f5d61a"
     },
     {
-      "exists": false,
+      "bytes": 3679062,
       "name": "nodes",
-      "path": "digital_twin/semantic/nodes.parquet"
+      "path": "instances/default/digital_twin/semantic/nodes.parquet",
+      "sha256": "35319c0b9f324a78f159f7d2c7950eda30cda10e70c7bc9a3234e4fca4260da2"
     },
     {
-      "exists": false,
+      "bytes": 3986749,
       "name": "edges",
-      "path": "digital_twin/semantic/edges.parquet"
+      "path": "instances/default/digital_twin/semantic/edges.parquet",
+      "sha256": "dba5f842225d62c515a3f189dd2b673c836f18b7e9afea529ceb95af7925d156"
     },
     {
-      "exists": false,
+      "bytes": 194,
       "name": "validation_report",
-      "path": "digital_twin/semantic/validation_report.json"
+      "path": "instances/default/digital_twin/semantic/validation_report.json",
+      "sha256": "e2573ab92e29007eb4e6c12b2080f4484d9d46a365d6d02e7f38b2740cd462f0"
     }
   ],
-  "created_at": "2026-08-06T00:11:23.856171+00:00",
+  "created_at": "2026-08-07T14:27:33.188721+00:00",
   "governance": {
     "model_version_id": null,
     "study_run_id": null
   },
   "inputs": [
     {
-      "bytes": 1734,
+      "bytes": 1806,
       "path": "instances/default/digital_twin/semantic/graph_manifest.json",
-      "sha256": "b922f63174375a6269045ec384a2334edfbc1b165c0dd943c730c85f0918a0b3"
+      "sha256": "7300b5903c114ca822076a823e4e0160baf51873786aea56de8acacf24f5d61a"
     },
     {
       "bytes": 194,
       "path": "instances/default/digital_twin/semantic/validation_report.json",
-      "sha256": "1c95247d07186e1bebf9b4c4bf2c4cda146ee5e96ac144d26c204f8857954324"
+      "sha256": "e2573ab92e29007eb4e6c12b2080f4484d9d46a365d6d02e7f38b2740cd462f0"
     }
   ],
   "project": {

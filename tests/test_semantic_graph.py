@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
 from gridalyn.twin import SemanticGraphRepository
+from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
 from gridalyn.twin.semantic.mappings import build_semantic_graph, north_america_profile
 from gridalyn.twin.semantic.validation import validate_semantic_graph
 
@@ -127,8 +127,13 @@ class SemanticGraphTest(unittest.TestCase):
                     "selection_priority": 1,
                     "source_standard": "EFOnt_CLS_CIM",
                     "source_table": "asset_registry+building_grid_connectivity",
-                    "scenario_device_ids": "scenario_device:S4:device:building:0:hvac_cooling;scenario_device:S4:device:building:0:hvac_heating",
-                    "device_ids": "device:building:0:hvac_cooling;device:building:0:hvac_heating",
+                    "scenario_device_ids": (
+                        "scenario_device:S4:device:building:0:hvac_cooling;"
+                        "scenario_device:S4:device:building:0:hvac_heating"
+                    ),
+                    "device_ids": (
+                        "device:building:0:hvac_cooling;device:building:0:hvac_heating"
+                    ),
                     "building_model_id": "building_model:building:0",
                     "device_types": "hvac_cooling;hvac_heating",
                     "scenario_device_count": 2,
@@ -163,7 +168,12 @@ class SemanticGraphTest(unittest.TestCase):
                 "scenarios": [
                     {
                         "scenario_id": "S4",
-                        "paths": {"nodes": "instances/default/digital_twin/timeseries/S4_powerflow_nodes.parquet"},
+                        "paths": {
+                            "nodes": (
+                                "instances/default/digital_twin/timeseries/"
+                                "S4_powerflow_nodes.parquet"
+                            ),
+                        },
                     }
                 ]
             },
@@ -211,17 +221,31 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertEqual(node_types["building:0"], "brick:Building")
         self.assertEqual(node_types["load:0"], "cim:EnergyConsumer")
         self.assertEqual(node_types["ev:S4:0"], "ieee2030_5:EVSE")
-        self.assertEqual(node_types["contract:S4:building:0:soft_cls"], "cls:SoftCLSContract")
-        self.assertEqual(node_types["contract:S4:ev:S4:0:hard_cls"], "cls:HardCLSContract")
-        self.assertEqual(node_types["aggregator:S4:soft_cls"], "cls:FlexibilityAggregator")
-        self.assertEqual(node_types["portfolio:S4:soft_cls"], "cls:FlexibilityPortfolio")
-        self.assertEqual(node_types["provider:S4:building:0:soft_cls"], "cls:FlexibilityProvider")
+        self.assertEqual(
+            node_types["contract:S4:building:0:soft_cls"], "cls:SoftCLSContract"
+        )
+        self.assertEqual(
+            node_types["contract:S4:ev:S4:0:hard_cls"], "cls:HardCLSContract"
+        )
+        self.assertEqual(
+            node_types["aggregator:S4:soft_cls"], "cls:FlexibilityAggregator"
+        )
+        self.assertEqual(
+            node_types["portfolio:S4:soft_cls"], "cls:FlexibilityPortfolio"
+        )
+        self.assertEqual(
+            node_types["provider:S4:building:0:soft_cls"], "cls:FlexibilityProvider"
+        )
         self.assertEqual(
             node_types["scenario_device:S4:device:building:0:hvac_heating"],
             "dt:ScenarioDevice",
         )
-        self.assertEqual(node_types["offer:S4:building:0:soft_cls"], "cls:FlexibilityOffer")
-        self.assertEqual(node_types["constraint-zone:S4:transformer:0"], "cls:ConstraintZone")
+        self.assertEqual(
+            node_types["offer:S4:building:0:soft_cls"], "cls:FlexibilityOffer"
+        )
+        self.assertEqual(
+            node_types["constraint-zone:S4:transformer:0"], "cls:ConstraintZone"
+        )
         self.assertEqual(
             node_types["efont:flexibility:S4:building:0:soft_cls"],
             "efont:EnergyFlexibility",
@@ -243,20 +267,54 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertNotIn("saref", nodes["semantic_type"].str.cat(sep=" "))
 
         rels = set(
-            zip(edges["source_id"], edges["relationship_type"], edges["target_id"], strict=True)
+            zip(
+                edges["source_id"],
+                edges["relationship_type"],
+                edges["target_id"],
+                strict=True,
+            )
         )
         self.assertIn(("building:0", "HAS_LOAD", "load:0"), rels)
         self.assertIn(("load:0", "CONNECTED_TO", "bus:0"), rels)
         self.assertIn(("line:0", "CONNECTS", "bus:0"), rels)
         self.assertIn(("transformer:0", "FEEDS", "bus:0"), rels)
         self.assertIn(("building:0", "HAS_EVSE", "ev:S4:0"), rels)
-        self.assertIn(("building:0", "PARTICIPATES_IN", "contract:S4:building:0:soft_cls"), rels)
+        self.assertIn(
+            ("building:0", "PARTICIPATES_IN", "contract:S4:building:0:soft_cls"), rels
+        )
         self.assertIn(("ev:S4:0", "ENABLES", "contract:S4:ev:S4:0:hard_cls"), rels)
-        self.assertIn(("aggregator:S4:soft_cls", "MANAGES_PORTFOLIO", "portfolio:S4:soft_cls"), rels)
-        self.assertIn(("aggregator:S4:soft_cls", "AGGREGATES", "provider:S4:building:0:soft_cls"), rels)
-        self.assertIn(("portfolio:S4:soft_cls", "INCLUDES_PROVIDER", "provider:S4:building:0:soft_cls"), rels)
-        self.assertIn(("provider:S4:building:0:soft_cls", "OFFERS", "offer:S4:building:0:soft_cls"), rels)
-        self.assertIn(("provider:S4:building:0:soft_cls", "IMPLEMENTS_CONTRACT", "contract:S4:building:0:soft_cls"), rels)
+        self.assertIn(
+            ("aggregator:S4:soft_cls", "MANAGES_PORTFOLIO", "portfolio:S4:soft_cls"),
+            rels,
+        )
+        self.assertIn(
+            ("aggregator:S4:soft_cls", "AGGREGATES", "provider:S4:building:0:soft_cls"),
+            rels,
+        )
+        self.assertIn(
+            (
+                "portfolio:S4:soft_cls",
+                "INCLUDES_PROVIDER",
+                "provider:S4:building:0:soft_cls",
+            ),
+            rels,
+        )
+        self.assertIn(
+            (
+                "provider:S4:building:0:soft_cls",
+                "OFFERS",
+                "offer:S4:building:0:soft_cls",
+            ),
+            rels,
+        )
+        self.assertIn(
+            (
+                "provider:S4:building:0:soft_cls",
+                "IMPLEMENTS_CONTRACT",
+                "contract:S4:building:0:soft_cls",
+            ),
+            rels,
+        )
         self.assertIn(
             (
                 "provider:S4:building:0:soft_cls",
@@ -265,11 +323,36 @@ class SemanticGraphTest(unittest.TestCase):
             ),
             rels,
         )
-        self.assertIn(("provider:S4:building:0:soft_cls", "LOCATED_IN_CONSTRAINT_ZONE", "constraint-zone:S4:transformer:0"), rels)
-        self.assertIn(("offer:S4:building:0:soft_cls", "TARGETS_CONSTRAINT", "constraint-zone:S4:transformer:0"), rels)
-        self.assertIn(("constraint-zone:S4:transformer:0", "CONSTRAINT_ZONE_FOR", "transformer:0"), rels)
         self.assertIn(
-            ("building:0", "HAS_FLEXIBILITY_RESOURCE", "efont:resource:S4:building:0:thermal"),
+            (
+                "provider:S4:building:0:soft_cls",
+                "LOCATED_IN_CONSTRAINT_ZONE",
+                "constraint-zone:S4:transformer:0",
+            ),
+            rels,
+        )
+        self.assertIn(
+            (
+                "offer:S4:building:0:soft_cls",
+                "TARGETS_CONSTRAINT",
+                "constraint-zone:S4:transformer:0",
+            ),
+            rels,
+        )
+        self.assertIn(
+            (
+                "constraint-zone:S4:transformer:0",
+                "CONSTRAINT_ZONE_FOR",
+                "transformer:0",
+            ),
+            rels,
+        )
+        self.assertIn(
+            (
+                "building:0",
+                "HAS_FLEXIBILITY_RESOURCE",
+                "efont:resource:S4:building:0:thermal",
+            ),
             rels,
         )
         self.assertIn(
@@ -305,14 +388,18 @@ class SemanticGraphTest(unittest.TestCase):
             rels,
         )
 
-    def test_north_america_profile_includes_efont_as_building_flexibility_crosswalk(self):
+    def test_north_america_profile_includes_efont_as_building_flexibility_crosswalk(
+        self,
+    ):
         profile = north_america_profile()
 
         self.assertIn("efont", profile["namespaces"])
         self.assertIn("EFOnt", profile["primary_standards"]["building_flexibility"])
         self.assertIn("efont:EnergyFlexibility", profile["allowed_semantic_types"])
         self.assertIn("efont:FlexibleOperation", profile["allowed_semantic_types"])
-        self.assertIn("efont:ThermallyActivatedBuildingSystem", profile["allowed_semantic_types"])
+        self.assertIn(
+            "efont:ThermallyActivatedBuildingSystem", profile["allowed_semantic_types"]
+        )
         self.assertIn("efont:EnergyFlexibilityKPI", profile["allowed_semantic_types"])
         self.assertIn("cls:FlexibilityAggregator", profile["allowed_semantic_types"])
         self.assertIn("cls:FlexibilityPortfolio", profile["allowed_semantic_types"])
@@ -367,7 +454,9 @@ class SemanticGraphTest(unittest.TestCase):
             north_america_profile(),
         )
         self.assertFalse(broken_report["valid"])
-        self.assertTrue(any("missing endpoint" in error for error in broken_report["errors"]))
+        self.assertTrue(
+            any("missing endpoint" in error for error in broken_report["errors"])
+        )
 
     def test_federated_graph_adapter_reads_parquet_and_prepares_cypher_batches(self):
         data = self._fixtures()
@@ -388,13 +477,17 @@ class SemanticGraphTest(unittest.TestCase):
             edges.to_parquet(tmp_path / "edges.parquet", index=False)
 
             adapter = FederatedGraphAdapter.from_parquet(tmp_path)
-            self.assertEqual(adapter.get_node("building:0")["semantic_type"], "brick:Building")
+            self.assertEqual(
+                adapter.get_node("building:0")["semantic_type"], "brick:Building"
+            )
             self.assertIn("load:0", adapter.neighbors("building:0", "HAS_LOAD"))
             batches = adapter.to_falkor_batches(batch_size=2)
 
         self.assertGreaterEqual(len(batches["nodes"]), 1)
         self.assertGreaterEqual(len(batches["edges"]), 1)
-        self.assertTrue(all("UNWIND $props AS p" in batch["cypher"] for batch in batches["nodes"]))
+        self.assertTrue(
+            all("UNWIND $props AS p" in batch["cypher"] for batch in batches["nodes"])
+        )
 
     def test_semantic_repository_answers_operational_relationship_queries(self):
         data = self._fixtures()
@@ -416,12 +509,17 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertIn("load:0", context["outgoing"]["HAS_LOAD"])
         self.assertIn("ev:S4:0", context["outgoing"]["HAS_EVSE"])
 
-        providers = repository.providers_for_constraint("transformer:0", scenario_id="S4")
+        providers = repository.providers_for_constraint(
+            "transformer:0", scenario_id="S4"
+        )
         self.assertEqual(
             {provider["provider_id"] for provider in providers},
             {"provider:S4:building:0:soft_cls", "provider:S4:ev:S4:0:hard_cls"},
         )
-        self.assertEqual({provider["provider_type"] for provider in providers}, {"soft_cls_building", "hard_cls_ev"})
+        self.assertEqual(
+            {provider["provider_type"] for provider in providers},
+            {"soft_cls_building", "hard_cls_ev"},
+        )
 
         trace = repository.trace_building_to_constraint("building:0", scenario_id="S4")
         self.assertEqual(trace["building_id"], "building:0")
@@ -436,6 +534,66 @@ class SemanticGraphTest(unittest.TestCase):
         timeseries = repository.timeseries_for_asset("ev:S4:0", scenario_id="S4")
         self.assertEqual(len(timeseries), 1)
         self.assertEqual(timeseries[0]["semantic_type"], "dt:TimeSeriesDataset")
+
+
+class SemanticScriptRootResolutionTest(unittest.TestCase):
+    """Regression gate for Phase 9 finding G7: no parents[N] in semantic scripts."""
+
+    def test_semantic_scripts_do_not_derive_root_from_file(self):
+        from gridalyn.projects.workflows.scripts import (
+            generate_digital_twin_semantic_graph,
+            validate_digital_twin_semantics,
+        )
+
+        for module in (
+            generate_digital_twin_semantic_graph,
+            validate_digital_twin_semantics,
+        ):
+            source = Path(module.__file__).read_text(encoding="utf-8")
+            self.assertNotIn("parents[4]", source, module.__file__)
+            self.assertNotIn("parents[3]", source, module.__file__)
+
+    def test_relpath_fails_loudly_outside_root(self):
+        from gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph import (
+            _relpath,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "root"
+            root.mkdir()
+            outside = base / "outside" / "x.parquet"
+            outside.parent.mkdir()
+            outside.write_bytes(b"x")
+
+            with self.assertRaises(RuntimeError) as ctx:
+                _relpath(outside, root)
+            self.assertIn("workspace root", str(ctx.exception))
+            self.assertIn(str(root), str(ctx.exception))
+
+    def test_relpath_is_root_relative_when_inside_root(self):
+        from gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph import (
+            _relpath,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "root"
+            artifact = (
+                root
+                / "instances"
+                / "default"
+                / "digital_twin"
+                / "semantic"
+                / "nodes.parquet"
+            )
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"x")
+
+            self.assertEqual(
+                _relpath(artifact, root),
+                "instances/default/digital_twin/semantic/nodes.parquet",
+            )
 
 
 if __name__ == "__main__":

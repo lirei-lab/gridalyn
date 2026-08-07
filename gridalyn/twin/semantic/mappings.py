@@ -8,7 +8,11 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.twin.semantic.profile import north_america_profile, semantic_uri, write_profile
+from gridalyn.twin.semantic.profile import (  # noqa: F401  (re-exported for workflow scripts)
+    north_america_profile,
+    semantic_uri,
+    write_profile,
+)
 
 
 def _clean_value(value: Any) -> Any:
@@ -88,14 +92,18 @@ def _split_semicolon_values(value: Any) -> list[str]:
     return [part for part in value.split(";") if part]
 
 
-def _append_unique_edge(edges: list[dict[str, Any]], edge: dict[str, Any], seen: set[str]) -> None:
+def _append_unique_edge(
+    edges: list[dict[str, Any]], edge: dict[str, Any], seen: set[str]
+) -> None:
     if edge["edge_id"] in seen:
         return
     seen.add(edge["edge_id"])
     edges.append(edge)
 
 
-def _append_unique_node(nodes: list[dict[str, Any]], node: dict[str, Any], seen: set[str]) -> None:
+def _append_unique_node(
+    nodes: list[dict[str, Any]], node: dict[str, Any], seen: set[str]
+) -> None:
     if node["node_id"] in seen:
         return
     seen.add(node["node_id"])
@@ -246,7 +254,7 @@ def _append_efont_soft_cls_crosswalk(
         _append_unique_edge(edges, edge, seen_edges)
 
 
-def build_semantic_graph(
+def build_semantic_graph(  # noqa: C901
     *,
     buses: pd.DataFrame,
     lines: pd.DataFrame,
@@ -261,7 +269,9 @@ def build_semantic_graph(
     edges: list[dict[str, Any]] = []
     seen_edges: set[str] = set()
     asset_registry = asset_registry if asset_registry is not None else pd.DataFrame()
-    provider_registry = provider_registry if provider_registry is not None else pd.DataFrame()
+    provider_registry = (
+        provider_registry if provider_registry is not None else pd.DataFrame()
+    )
     timeseries_manifests = timeseries_manifests or {}
 
     for row in buses.to_dict("records"):
@@ -355,7 +365,11 @@ def build_semantic_graph(
                 seen_edges,
             )
 
-    connectivity_by_load = connectivity.set_index("load_id").to_dict("index") if not connectivity.empty else {}
+    connectivity_by_load = (
+        connectivity.set_index("load_id").to_dict("index")
+        if not connectivity.empty
+        else {}
+    )
     for row in buildings.to_dict("records"):
         building_id = row["building_id"]
         load_id = row["load_id"]
@@ -427,7 +441,9 @@ def build_semantic_graph(
     if not asset_registry.empty:
         scenario_ids.update(asset_registry["scenario_id"].dropna().astype(str).unique())
     if not provider_registry.empty:
-        scenario_ids.update(provider_registry["scenario_id"].dropna().astype(str).unique())
+        scenario_ids.update(
+            provider_registry["scenario_id"].dropna().astype(str).unique()
+        )
     for manifest in timeseries_manifests.values():
         for scenario in manifest.get("scenarios", []):
             if scenario.get("scenario_id"):
@@ -636,7 +652,9 @@ def build_semantic_graph(
                 + ", ".join(sorted(missing_provider_cols))
             )
 
-        for scenario_id in sorted(provider_registry["scenario_id"].dropna().astype(str).unique()):
+        for scenario_id in sorted(
+            provider_registry["scenario_id"].dropna().astype(str).unique()
+        ):
             scenario_node = f"scenario:{scenario_id}"
             for provider_type, role_label in (
                 ("soft_cls_building", "soft_cls"),
@@ -720,14 +738,22 @@ def build_semantic_graph(
             scenario_id = str(row["scenario_id"])
             provider_type = str(row["provider_type"])
             if provider_type not in {"soft_cls_building", "hard_cls_ev"}:
-                raise ValueError(f"Unsupported provider_type in provider_registry: {provider_type}")
-            role_label = "soft_cls" if provider_type == "soft_cls_building" else "hard_cls"
+                raise ValueError(
+                    f"Unsupported provider_type in provider_registry: {provider_type}"
+                )
+            role_label = (
+                "soft_cls" if provider_type == "soft_cls_building" else "hard_cls"
+            )
             aggregator_id = f"aggregator:{scenario_id}:{role_label}"
             portfolio_id = f"portfolio:{scenario_id}:{role_label}"
             provider_id = str(row["provider_id"])
             offer_id = provider_id.replace("provider:", "offer:", 1)
             constraint_id = _safe_str(row.get("constraint_zone_id"))
-            constraint_zone_id = f"constraint-zone:{scenario_id}:{constraint_id}" if constraint_id else None
+            constraint_zone_id = (
+                f"constraint-zone:{scenario_id}:{constraint_id}"
+                if constraint_id
+                else None
+            )
             contract_id = (
                 f"contract:{scenario_id}:{row['building_id']}:soft_cls"
                 if provider_type == "soft_cls_building"
@@ -766,7 +792,9 @@ def build_semantic_graph(
                 ),
                 seen_nodes,
             )
-            scenario_device_ids = _split_semicolon_values(row.get("scenario_device_ids"))
+            scenario_device_ids = _split_semicolon_values(
+                row.get("scenario_device_ids")
+            )
             device_ids = _split_semicolon_values(row.get("device_ids"))
             device_types = _split_semicolon_values(row.get("device_types"))
             for index, scenario_device_id in enumerate(scenario_device_ids):
@@ -1005,8 +1033,18 @@ def build_semantic_graph(
                 ):
                     _append_unique_edge(edges, edge, seen_edges)
 
-    nodes_df = pd.DataFrame(nodes).drop_duplicates("node_id").sort_values("node_id").reset_index(drop=True)
-    edges_df = pd.DataFrame(edges).drop_duplicates("edge_id").sort_values("edge_id").reset_index(drop=True)
+    nodes_df = (
+        pd.DataFrame(nodes)
+        .drop_duplicates("node_id")
+        .sort_values("node_id")
+        .reset_index(drop=True)
+    )
+    edges_df = (
+        pd.DataFrame(edges)
+        .drop_duplicates("edge_id")
+        .sort_values("edge_id")
+        .reset_index(drop=True)
+    )
     profile = north_america_profile()
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -1026,13 +1064,16 @@ def build_semantic_graph(
         "artifacts": {
             "nodes": "instances/default/digital_twin/semantic/nodes.parquet",
             "edges": "instances/default/digital_twin/semantic/edges.parquet",
-            "profile": "instances/default/digital_twin/semantic/profile_north_america.json",
-            "validation_report": "instances/default/digital_twin/semantic/validation_report.json",
+            "profile": (
+                "instances/default/digital_twin/semantic/profile_north_america.json"
+            ),
+            "validation_report": (
+                "instances/default/digital_twin/semantic/validation_report.json"
+            ),
         },
     }
-    expected_counts = {"buildings": 3235, "buses": 3562, "lines": 3398, "transformers": 163, "scenarios": 5}
-    manifest["count_checks"] = {
-        key: {"expected": expected, "actual": manifest["source_counts"].get(key), "ok": manifest["source_counts"].get(key) == expected}
-        for key, expected in expected_counts.items()
-    }
+    # NOTE: ``count_checks`` is intentionally NOT computed here. The expected
+    # counts are twin-specific regression pins; they belong at the workflow
+    # script layer (generate_digital_twin_semantic_graph.py), not embedded in
+    # a library function (Phase 9, finding G8).
     return nodes_df, edges_df, manifest
