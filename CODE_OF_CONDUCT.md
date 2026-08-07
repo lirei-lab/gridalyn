@@ -39,7 +39,7 @@ it:
 
 ## Enforcement
 
-Report unacceptable behaviour to **nilson.henao@uqtr.ca**. Reports will be
+Report unacceptable behaviour to **lirei.info@uqtr.ca**. Reports will be
 reviewed and investigated promptly and fairly, and the reporter's privacy will
 be respected.
 
