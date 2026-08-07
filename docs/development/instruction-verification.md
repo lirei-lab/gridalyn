@@ -215,9 +215,10 @@ to execute; the ledger's `verification_owners` records the ruling:
 
 Only two of those three actually carry commands: `docs/index.md` and
 `semantic-graph.md`, whose 3 runnable blocks the platform family ran.
-`falkordb.md` carries four illustrative cypher blocks and nothing to execute,
-and the fourth unowned document, `docs/applications/reports.md`, carries no
-fenced block at all — so neither needs an owner for the gate's rule to hold.
+`falkordb.md` carries four illustrative cypher blocks plus one illustrative
+python snippet (added 2026-08-07) and nothing to execute, and the fourth
+unowned document, `docs/applications/reports.md`, carries no fenced block at
+all — so neither needs an owner for the gate's rule to hold.
 
 This lives in the ledger rather than in each entry's `family` field on purpose.
 `family` is a **derived** field: the harness recomputes it from `FAMILY_PREFIXES`

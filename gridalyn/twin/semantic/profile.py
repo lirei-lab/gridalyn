@@ -25,6 +25,7 @@ NAMESPACES = {
 RELATIONSHIP_TYPES = [
     "AGGREGATES",
     "ALLOWS",
+    # Aspirational — declared but not currently emitted by any generator.
     "CHARACTERIZES",
     "CONNECTS",
     "CONNECTED_TO",
@@ -46,8 +47,6 @@ RELATIONSHIP_TYPES = [
     "PRODUCED",
     "QUANTIFIES",
     "TARGETS_CONSTRAINT",
-    # Aspirational — declared but not currently emitted by any generator.
-    "CHARACTERIZES",
 ]
 
 
