@@ -125,8 +125,10 @@ Its generated artifacts live under:
 projects/ev_hosting_flex/outputs/
 ```
 
-It is the repo's flagship study, and it is long-running: expect tens of
-minutes.
+It is the repo's flagship study, and it is long-running: a full source
+regeneration takes roughly six hours across 22 stages (operator-verified,
+receipt-pinned), while warm runs against an existing cache take minutes. See
+[`verification.md`](../development/verification.md) for the staged protocol.
 
 ## Synthetic Network Inputs
 
