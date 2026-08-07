@@ -121,12 +121,28 @@ def _git(*args: str) -> tuple[int, str]:
     return completed.returncode, completed.stdout.strip()
 
 
+def repository_is_shallow() -> bool:
+    """Return True when this checkout carries a truncated history.
+
+    ``actions/checkout`` clones at depth 1 unless told otherwise, and a
+    truncated history cannot answer an ancestry question about any commit but
+    its own tip.
+    """
+    _code, out = _git("rev-parse", "--is-shallow-repository")
+    return out.strip() == "true"
+
+
 def _commit_is_in_history(commit: str) -> bool:
     """Return True when ``commit`` exists and is an ancestor of HEAD.
 
     A receipt naming a commit outside this history is either fabricated or
     recorded on a branch that was discarded; either way it vouches for a tree
     nobody can inspect.
+
+    Callers must consult :func:`repository_is_shallow` first: on a truncated
+    clone this returns False for every commit but the tip, which is absence of
+    evidence and not evidence of absence. Conflating the two turned a green
+    gate red on a legitimate receipt the first time this ran in CI.
     """
     exists, _ = _git("cat-file", "-e", f"{commit}^{{commit}}")
     if exists != 0:
@@ -250,6 +266,15 @@ def _recorded_problems(
     commit = str(receipt.get("commit") or "").strip()
     if not commit:
         return findings
+    if repository_is_shallow():
+        # A depth-1 checkout knows only its own tip, so it can neither confirm
+        # nor refute any other commit. Reporting "fabricated" here would be a
+        # claim the checkout is not entitled to make -- and it made exactly
+        # that claim about four legitimate receipts the first time this gate
+        # ran under `actions/checkout`, whose default depth is 1. The job that
+        # is meant to enforce this rule therefore fetches full history; see
+        # `fetch-depth: 0` in .github/workflows/ci.yml.
+        return findings
     if not _commit_is_in_history(commit):
         findings.append(
             Finding(
@@ -336,6 +361,16 @@ def format_report(ledger: dict[str, Any], stale: list[str]) -> str:
     """Render the human-facing summary of the ledger's state."""
     receipts = ledger.get("receipts", {})
     lines = ["### Operator-run verification protocols", ""]
+    if repository_is_shallow():
+        # Say so, loudly. A green from a checkout that could not perform the
+        # ancestry check is not the same green as one that did, and a reader
+        # who cannot tell them apart will trust the weaker one.
+        lines += [
+            "> This checkout is **shallow**, so the commit-ancestry check was "
+            "not performed. Staleness is unknown here too. Run with full "
+            "history (`fetch-depth: 0`) for the enforcing report.",
+            "",
+        ]
     lines.append("| Protocol | Status | Recorded at | Current |")
     lines.append("|---|---|---|---|")
     for name in sorted(receipts):
