@@ -1,0 +1,72 @@
+name: Runner image
+
+# Publishes the self-hosted runner image to GHCR.
+#
+# Runs on a GITHUB-HOSTED runner, deliberately and permanently. This workflow
+# builds the image that the self-hosted runners use, so running it on those
+# runners would mean a broken image could not be repaired by the pipeline that
+# produces it.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/runner/Dockerfile"
+      - ".github/workflows/runner-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: runner-image
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .github/runner
+          push: true
+          # `latest` is what the scale set pulls; the SHA tag exists so a
+          # regression can be pinned to the commit that introduced it without
+          # archaeology through image digests.
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/gridalyn-actions-runner:latest
+            ghcr.io/${{ github.repository_owner }}/gridalyn-actions-runner:${{ github.sha }}
+
+      - name: Verify the runtime this image exists to provide
+        # The whole point of the image is one shared library, so assert the
+        # exact call that failed in CI rather than a proxy for it: lightgbm
+        # reaches libgomp through `ctypes.cdll.LoadLibrary`, and that is the
+        # line that raised. `ldconfig -p | grep` would pass on a library that
+        # is listed but unloadable.
+        #
+        # Checked against the upstream base on 2026-08-07: it raises the CI
+        # error verbatim, and this image loads the library. A broken base now
+        # fails here instead of surfacing as an unexplained collection error in
+        # every future run.
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository_owner }}/gridalyn-actions-runner:${{ github.sha }}"
+          docker run --rm --entrypoint /bin/bash "${IMAGE}" -c \
+            'python3 -c "import ctypes; ctypes.cdll.LoadLibrary(\"libgomp.so.1\")" \
+             && echo "libgomp.so.1 loads"'
+          docker run --rm --entrypoint /bin/bash "${IMAGE}" -c \
+            'test "$(id -un)" = runner && echo "runs as the unprivileged runner user"'
