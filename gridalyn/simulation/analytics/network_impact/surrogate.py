@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.twin.semantic.profile import NAMESPACES, SEMANTIC_TYPE, semantic_uri
 
 NODE_COLUMNS = [
     "node_id",
@@ -33,11 +34,16 @@ EDGE_COLUMNS = [
 
 
 def _json(data: dict[str, Any]) -> str:
-    clean = {
-        key: (None if pd.isna(value) else value)
-        for key, value in data.items()
-    }
+    clean = {key: (None if pd.isna(value) else value) for key, value in data.items()}
     return json.dumps(clean, sort_keys=True)
+
+
+def _uri_for(qname: str) -> str:
+    """Resolve a qname to its namespace URI when the prefix is registered."""
+    prefix = qname.split(":", 1)[0] if ":" in qname else ""
+    if prefix in NAMESPACES:
+        return semantic_uri(qname)
+    return qname
 
 
 def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> None:
@@ -118,8 +124,8 @@ def build_graph_snapshot(
             {
                 "node_id": scenario_node,
                 "node_type": "scenario",
-                "semantic_type": "dt:Scenario",
-                "semantic_uri": "dt:Scenario",
+                "semantic_type": SEMANTIC_TYPE["scenario"],
+                "semantic_uri": _uri_for(SEMANTIC_TYPE["scenario"]),
                 "scenario_id": scenario,
                 "pandapower_id": None,
                 "features_json": _json({"scenario_id": scenario}),
@@ -141,14 +147,16 @@ def build_graph_snapshot(
             {
                 "node_id": provider_id,
                 "node_type": "provider",
-                "semantic_type": "efont:FlexibilityProvider",
-                "semantic_uri": "efont:FlexibilityProvider",
+                "semantic_type": SEMANTIC_TYPE["flexibility_provider"],
+                "semantic_uri": _uri_for(SEMANTIC_TYPE["flexibility_provider"]),
                 "scenario_id": scenario,
                 "pandapower_id": provider.get("pandapower_load"),
                 "features_json": _json(
                     {
                         "provider_type": provider["provider_type"],
-                        "available_capacity_kw": float(provider["available_capacity_kw"]),
+                        "available_capacity_kw": float(
+                            provider["available_capacity_kw"]
+                        ),
                         "base_cost_per_kw_h": float(provider["base_cost_per_kw_h"]),
                         "selection_priority": int(provider["selection_priority"]),
                     }
@@ -160,8 +168,8 @@ def build_graph_snapshot(
             {
                 "node_id": building_id,
                 "node_type": "building",
-                "semantic_type": "s223:Building",
-                "semantic_uri": "s223:Building",
+                "semantic_type": SEMANTIC_TYPE["building"],
+                "semantic_uri": _uri_for(SEMANTIC_TYPE["building"]),
                 "scenario_id": scenario,
                 "pandapower_id": provider.get("pandapower_load"),
                 "features_json": _json({"load_id": load_id}),
@@ -172,11 +180,13 @@ def build_graph_snapshot(
             {
                 "node_id": load_id,
                 "node_type": "load",
-                "semantic_type": "cim:EnergyConsumer",
-                "semantic_uri": "cim:EnergyConsumer",
+                "semantic_type": SEMANTIC_TYPE["energy_consumer"],
+                "semantic_uri": _uri_for(SEMANTIC_TYPE["energy_consumer"]),
                 "scenario_id": scenario,
                 "pandapower_id": provider.get("pandapower_load"),
-                "features_json": _json({"pandapower_load": provider.get("pandapower_load")}),
+                "features_json": _json(
+                    {"pandapower_load": provider.get("pandapower_load")}
+                ),
             },
         )
         for bus_id in [load_bus_id, feeder_bus_id]:
@@ -185,8 +195,8 @@ def build_graph_snapshot(
                 {
                     "node_id": bus_id,
                     "node_type": "bus",
-                    "semantic_type": "cim:ConnectivityNode",
-                    "semantic_uri": "cim:ConnectivityNode",
+                    "semantic_type": SEMANTIC_TYPE["connectivity_node"],
+                    "semantic_uri": _uri_for(SEMANTIC_TYPE["connectivity_node"]),
                     "scenario_id": scenario,
                     "pandapower_id": str(bus_id).replace("bus:", ""),
                     "features_json": _json({"bus_role": "load_or_feeder"}),
@@ -198,11 +208,13 @@ def build_graph_snapshot(
                 {
                     "node_id": ev_id,
                     "node_type": "evse",
-                    "semantic_type": "ieee2030_5:DER",
-                    "semantic_uri": "ieee2030_5:DER",
+                    "semantic_type": SEMANTIC_TYPE["evse"],
+                    "semantic_uri": _uri_for(SEMANTIC_TYPE["evse"]),
                     "scenario_id": scenario,
                     "pandapower_id": provider.get("pandapower_load"),
-                    "features_json": _json({"provider_type": provider["provider_type"]}),
+                    "features_json": _json(
+                        {"provider_type": provider["provider_type"]}
+                    ),
                 },
             )
 
@@ -269,7 +281,7 @@ def build_graph_snapshot(
                     "target_id": target,
                     "edge_type": edge_type,
                     "semantic_type": semantic_type,
-                    "semantic_uri": semantic_type,
+                    "semantic_uri": _uri_for(semantic_type),
                     "scenario_id": scenario,
                     "features_json": _json(features),
                 },
@@ -283,8 +295,12 @@ def build_graph_snapshot(
             {
                 "node_id": constraint_id,
                 "node_type": "constraint",
-                "semantic_type": row.get("constraint_type", "cim:PowerTransformer"),
-                "semantic_uri": row.get("constraint_type", "cim:PowerTransformer"),
+                "semantic_type": row.get(
+                    "constraint_type", SEMANTIC_TYPE["power_transformer"]
+                ),
+                "semantic_uri": _uri_for(
+                    row.get("constraint_type", SEMANTIC_TYPE["power_transformer"])
+                ),
                 "scenario_id": scenario,
                 "pandapower_id": str(constraint_id).replace("transformer:", ""),
                 "features_json": _json({"constraint_type": row.get("constraint_type")}),
@@ -298,8 +314,8 @@ def build_graph_snapshot(
                 "source_id": row["provider_id"],
                 "target_id": constraint_id,
                 "edge_type": "constrains",
-                "semantic_type": "efont:hasNetworkImpact",
-                "semantic_uri": "efont:hasNetworkImpact",
+                "semantic_type": SEMANTIC_TYPE["network_impact"],
+                "semantic_uri": _uri_for(SEMANTIC_TYPE["network_impact"]),
                 "scenario_id": scenario,
                 "features_json": _json(
                     {
@@ -311,16 +327,28 @@ def build_graph_snapshot(
             },
         )
 
-    nodes_df = pd.DataFrame(nodes.values(), columns=NODE_COLUMNS).sort_values("node_id").reset_index(drop=True)
-    edges_df = pd.DataFrame(edges.values(), columns=EDGE_COLUMNS).sort_values("edge_id").reset_index(drop=True)
+    nodes_df = (
+        pd.DataFrame(nodes.values(), columns=NODE_COLUMNS)
+        .sort_values("node_id")
+        .reset_index(drop=True)
+    )
+    edges_df = (
+        pd.DataFrame(edges.values(), columns=EDGE_COLUMNS)
+        .sort_values("edge_id")
+        .reset_index(drop=True)
+    )
     return nodes_df, edges_df
 
 
 def build_node_features(nodes: pd.DataFrame) -> pd.DataFrame:
     """Flatten node JSON features into a stable table usable as tensor input."""
-    _require_columns(nodes, ["node_id", "node_type", "semantic_type", "features_json"], "nodes")
+    _require_columns(
+        nodes, ["node_id", "node_type", "semantic_type", "features_json"], "nodes"
+    )
     rows: list[dict[str, Any]] = []
-    node_type_codes = {value: index for index, value in enumerate(sorted(nodes["node_type"].unique()))}
+    node_type_codes = {
+        value: index for index, value in enumerate(sorted(nodes["node_type"].unique()))
+    }
     for index, row in nodes.sort_values("node_id").reset_index(drop=True).iterrows():
         features = _numeric_features(row["features_json"])
         features.update(
@@ -338,10 +366,16 @@ def build_node_features(nodes: pd.DataFrame) -> pd.DataFrame:
 
 def build_edge_features(edges: pd.DataFrame) -> pd.DataFrame:
     """Flatten edge JSON features and expose source/target indices."""
-    _require_columns(edges, ["edge_id", "source_id", "target_id", "edge_type", "features_json"], "edges")
+    _require_columns(
+        edges,
+        ["edge_id", "source_id", "target_id", "edge_type", "features_json"],
+        "edges",
+    )
     endpoint_ids = sorted(set(edges["source_id"]).union(set(edges["target_id"])))
     node_index = {node_id: index for index, node_id in enumerate(endpoint_ids)}
-    edge_type_codes = {value: index for index, value in enumerate(sorted(edges["edge_type"].unique()))}
+    edge_type_codes = {
+        value: index for index, value in enumerate(sorted(edges["edge_type"].unique()))
+    }
     rows: list[dict[str, Any]] = []
     for index, row in edges.sort_values("edge_id").reset_index(drop=True).iterrows():
         features = _numeric_features(row["features_json"])
@@ -404,22 +438,44 @@ def build_training_dataset(
     if training.empty:
         return training
 
-    provider_codes = {value: index for index, value in enumerate(sorted(training["provider_type"].unique()))}
-    training["feature_provider_type_code"] = training["provider_type"].map(provider_codes).astype(float)
+    provider_codes = {
+        value: index
+        for index, value in enumerate(sorted(training["provider_type"].unique()))
+    }
+    training["feature_provider_type_code"] = (
+        training["provider_type"].map(provider_codes).astype(float)
+    )
     training["feature_same_constraint_zone"] = (
         training["constraint_zone_id"] == training["constraint_id"]
     ).astype(float)
-    training["feature_available_capacity_kw"] = training["available_capacity_kw"].astype(float)
-    training["feature_base_cost_per_kw_h"] = training["base_cost_per_kw_h"].astype(float)
-    training["feature_selection_priority"] = training["selection_priority"].astype(float)
-    training["feature_topology_sensitivity"] = training["sensitivity_kw_per_kw"].astype(float)
-    training["target_deliverability_factor"] = training["sensitivity_kw_per_kw"].clip(0.0, 1.0)
-    training["target_relief_kw"] = (
-        training["available_capacity_kw"].astype(float) * training["target_deliverability_factor"]
+    training["feature_available_capacity_kw"] = training[
+        "available_capacity_kw"
+    ].astype(float)
+    training["feature_base_cost_per_kw_h"] = training["base_cost_per_kw_h"].astype(
+        float
     )
-    training["target_delta_loading_pct_per_kw"] = -training["target_deliverability_factor"]
-    training["target_delta_v_min_pu_per_kw"] = training["target_deliverability_factor"] * 0.00001
-    training["target_side_effect_score"] = 1.0 - training["target_deliverability_factor"]
+    training["feature_selection_priority"] = training["selection_priority"].astype(
+        float
+    )
+    training["feature_topology_sensitivity"] = training["sensitivity_kw_per_kw"].astype(
+        float
+    )
+    training["target_deliverability_factor"] = training["sensitivity_kw_per_kw"].clip(
+        0.0, 1.0
+    )
+    training["target_relief_kw"] = (
+        training["available_capacity_kw"].astype(float)
+        * training["target_deliverability_factor"]
+    )
+    training["target_delta_loading_pct_per_kw"] = -training[
+        "target_deliverability_factor"
+    ]
+    training["target_delta_v_min_pu_per_kw"] = (
+        training["target_deliverability_factor"] * 0.00001
+    )
+    training["target_side_effect_score"] = (
+        1.0 - training["target_deliverability_factor"]
+    )
     return training.sort_values(["constraint_id", "provider_id"]).reset_index(drop=True)
 
 
@@ -428,21 +484,27 @@ def build_provider_impact_predictions(training: pd.DataFrame) -> pd.DataFrame:
     if training.empty:
         return training.copy()
     predictions = training.copy()
-    predictions["predicted_deliverability_factor"] = predictions["target_deliverability_factor"]
+    predictions["predicted_deliverability_factor"] = predictions[
+        "target_deliverability_factor"
+    ]
     predictions["predicted_relief_kw"] = (
-        predictions["feature_available_capacity_kw"] * predictions["predicted_deliverability_factor"]
+        predictions["feature_available_capacity_kw"]
+        * predictions["predicted_deliverability_factor"]
     )
-    predictions["predicted_delta_loading_pct_per_kw"] = predictions["target_delta_loading_pct_per_kw"]
-    predictions["predicted_delta_v_min_pu_per_kw"] = predictions["target_delta_v_min_pu_per_kw"]
+    predictions["predicted_delta_loading_pct_per_kw"] = predictions[
+        "target_delta_loading_pct_per_kw"
+    ]
+    predictions["predicted_delta_v_min_pu_per_kw"] = predictions[
+        "target_delta_v_min_pu_per_kw"
+    ]
     predictions["predicted_side_effect_score"] = predictions["target_side_effect_score"]
-    denominator = (
-        predictions["feature_base_cost_per_kw_h"].clip(lower=0.001)
-        * predictions["feature_selection_priority"].clip(lower=1.0)
-    )
+    denominator = predictions["feature_base_cost_per_kw_h"].clip(
+        lower=0.001
+    ) * predictions["feature_selection_priority"].clip(lower=1.0)
     predictions["selection_score"] = predictions["predicted_relief_kw"] / denominator
-    predictions["effective_cost_per_predicted_kw_h"] = predictions["feature_base_cost_per_kw_h"] / predictions[
-        "predicted_deliverability_factor"
-    ].clip(lower=0.001)
+    predictions["effective_cost_per_predicted_kw_h"] = predictions[
+        "feature_base_cost_per_kw_h"
+    ] / predictions["predicted_deliverability_factor"].clip(lower=0.001)
     predictions["selection_rank"] = (
         predictions.groupby(["scenario_id", "constraint_id"])["selection_score"]
         .rank(method="first", ascending=False)
@@ -466,7 +528,11 @@ def build_provider_impact_predictions(training: pd.DataFrame) -> pd.DataFrame:
         "selection_score",
         "selection_rank",
     ]
-    return predictions[columns].sort_values(["constraint_id", "selection_rank", "provider_id"]).reset_index(drop=True)
+    return (
+        predictions[columns]
+        .sort_values(["constraint_id", "selection_rank", "provider_id"])
+        .reset_index(drop=True)
+    )
 
 
 def build_surrogate_report(
@@ -478,7 +544,9 @@ def build_surrogate_report(
     scenario_id: str,
 ) -> dict[str, Any]:
     """Summarize surrogate artifacts and make the validation boundary explicit."""
-    positive = predictions.loc[predictions.get("predicted_relief_kw", pd.Series(dtype=float)) > 0.0]
+    positive = predictions.loc[
+        predictions.get("predicted_relief_kw", pd.Series(dtype=float)) > 0.0
+    ]
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "network_impact_surrogate",
@@ -492,7 +560,9 @@ def build_surrogate_report(
         },
         "validation": {
             "authority": "pandapower_ac_powerflow",
-            "policy": "use_surrogate_for_fast_screening_validate_selected_dispatch_with_pandapower",
+            "policy": (
+                "use_surrogate_for_fast_screening_validate_selected_dispatch_with_pandapower"
+            ),
         },
         "summary": {
             "n_nodes": int(len(nodes)),
@@ -500,9 +570,19 @@ def build_surrogate_report(
             "n_training_rows": int(len(training)),
             "n_prediction_rows": int(len(predictions)),
             "positive_prediction_count": int(len(positive)),
-            "positive_predicted_relief_kw": float(positive["predicted_relief_kw"].sum()) if len(positive) else 0.0,
-            "constraint_count": int(training["constraint_id"].nunique()) if "constraint_id" in training else 0,
-            "provider_count": int(training["provider_id"].nunique()) if "provider_id" in training else 0,
+            "positive_predicted_relief_kw": (
+                float(positive["predicted_relief_kw"].sum()) if len(positive) else 0.0
+            ),
+            "constraint_count": (
+                int(training["constraint_id"].nunique())
+                if "constraint_id" in training
+                else 0
+            ),
+            "provider_count": (
+                int(training["provider_id"].nunique())
+                if "provider_id" in training
+                else 0
+            ),
         },
     }
 

@@ -101,7 +101,9 @@ class NetworkImpactSurrogateTest(unittest.TestCase):
         )
 
     def test_build_graph_snapshot_exports_gnn_ready_nodes_and_edges(self):
-        nodes, edges = build_graph_snapshot(self.providers, self.sensitivity, scenario_id="S4")
+        nodes, edges = build_graph_snapshot(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
 
         node_types = set(nodes["node_type"])
         self.assertIn("provider", node_types)
@@ -126,32 +128,46 @@ class NetworkImpactSurrogateTest(unittest.TestCase):
         ].iloc[0]
         features = json.loads(provider_node["features_json"])
         self.assertEqual(features["available_capacity_kw"], 6.5)
-        self.assertEqual(provider_node["semantic_type"], "efont:FlexibilityProvider")
+        self.assertEqual(provider_node["semantic_type"], "cls:FlexibilityProvider")
 
     def test_feature_tables_have_stable_indices_for_future_gnn_tensors(self):
-        nodes, edges = build_graph_snapshot(self.providers, self.sensitivity, scenario_id="S4")
+        nodes, edges = build_graph_snapshot(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
 
         node_features = build_node_features(nodes)
         edge_features = build_edge_features(edges)
 
-        self.assertEqual(node_features["node_index"].tolist(), list(range(len(node_features))))
-        self.assertEqual(edge_features["edge_index"].tolist(), list(range(len(edge_features))))
+        self.assertEqual(
+            node_features["node_index"].tolist(), list(range(len(node_features)))
+        )
+        self.assertEqual(
+            edge_features["edge_index"].tolist(), list(range(len(edge_features)))
+        )
         self.assertIn("feature_available_capacity_kw", node_features.columns)
         self.assertIn("source_index", edge_features.columns)
         self.assertIn("target_index", edge_features.columns)
-        self.assertFalse(edge_features[["source_index", "target_index"]].isna().any().any())
+        self.assertFalse(
+            edge_features[["source_index", "target_index"]].isna().any().any()
+        )
 
     def test_training_and_predictions_rank_local_soft_provider_first(self):
-        training = build_training_dataset(self.providers, self.sensitivity, scenario_id="S4")
+        training = build_training_dataset(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
         predictions = build_provider_impact_predictions(training)
 
         self.assertEqual(len(training), 4)
         self.assertIn("target_delta_loading_pct_per_kw", training.columns)
         self.assertIn("predicted_relief_kw", predictions.columns)
 
-        local = predictions.loc[
-            predictions["provider_id"] == "provider:S4:building:1:soft_cls"
-        ].sort_values("constraint_id").reset_index(drop=True)
+        local = (
+            predictions.loc[
+                predictions["provider_id"] == "provider:S4:building:1:soft_cls"
+            ]
+            .sort_values("constraint_id")
+            .reset_index(drop=True)
+        )
         self.assertEqual(local.loc[0, "constraint_id"], "transformer:64")
         self.assertAlmostEqual(local.loc[0, "predicted_relief_kw"], 6.5)
         self.assertGreater(
@@ -166,10 +182,16 @@ class NetworkImpactSurrogateTest(unittest.TestCase):
         self.assertEqual(ranked.iloc[0]["provider_type"], "soft_cls_building")
 
     def test_report_summarizes_model_scope_and_validation_role(self):
-        nodes, edges = build_graph_snapshot(self.providers, self.sensitivity, scenario_id="S4")
-        training = build_training_dataset(self.providers, self.sensitivity, scenario_id="S4")
+        nodes, edges = build_graph_snapshot(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
+        training = build_training_dataset(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
         predictions = build_provider_impact_predictions(training)
-        report = build_surrogate_report(nodes, edges, training, predictions, scenario_id="S4")
+        report = build_surrogate_report(
+            nodes, edges, training, predictions, scenario_id="S4"
+        )
 
         self.assertEqual(report["report_id"], "network_impact_surrogate")
         self.assertEqual(report["scenario_id"], "S4")

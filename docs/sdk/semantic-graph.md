@@ -42,4 +42,8 @@ the graph answers relationship questions such as which providers target a
 constraint, which assets belong to a scenario, or how a building traces to a
 network zone.
 
+`SemanticGraphRepository` is an external-facing public read API for researchers
+and applications that consume the materialized graph directly; it has no
+in-repo application consumer today (recorded decision, Phase 9 finding G9).
+
 See [Semantic Model And Graph](../semantic-layer/semantic-graph.md).

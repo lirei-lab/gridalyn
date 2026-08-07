@@ -7,14 +7,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 NAMESPACES = {
     "cim": "https://cim.ucaiug.io/ns#",
     "brick": "https://brickschema.org/schema/Brick#",
+    # Aspirational — declared for future/imported use; not currently emitted.
     "s223": "http://data.ashrae.org/standard223#",
     "openadr": "https://openadr.org/ns#",
     "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
     "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    # Aspirational — not currently emitted (Green Button appears only as the
+    # source_standard string on dt:TimeSeriesDataset).
     "gb": "https://www.greenbuttondata.org/ns#",
     "cls": "https://gridalyn.local/ontology/cls#",
     "dt": "https://gridalyn.local/ontology/digital-twin#",
@@ -44,7 +46,26 @@ RELATIONSHIP_TYPES = [
     "PRODUCED",
     "QUANTIFIES",
     "TARGETS_CONSTRAINT",
+    # Aspirational — declared but not currently emitted by any generator.
+    "CHARACTERIZES",
 ]
+
+
+# Canonical semantic-type vocabulary shared by every generator (the semantic
+# graph in mappings.py and the network-impact surrogate). A concept's one
+# spelling lives here; generators import it instead of re-declaring divergent
+# qnames (Phase 9, finding G10).
+SEMANTIC_TYPE: dict[str, str] = {
+    "building": "brick:Building",
+    "connectivity_node": "cim:ConnectivityNode",
+    "energy_consumer": "cim:EnergyConsumer",
+    "power_transformer": "cim:PowerTransformer",
+    "flexibility_provider": "cls:FlexibilityProvider",
+    "scenario": "dt:Scenario",
+    "evse": "ieee2030_5:EVSE",
+    # Surrogate-specific edge relationship (no semantic-graph counterpart).
+    "network_impact": "efont:hasNetworkImpact",
+}
 
 
 def north_america_profile() -> dict[str, Any]:
@@ -81,6 +102,7 @@ def north_america_profile() -> dict[str, Any]:
             "dt:TimeSeriesDataset",
             "efont:EnergyFlexibility",
             "efont:EnergyFlexibilityKPI",
+            # Aspirational — declared but not currently emitted by any generator.
             "efont:FlexibleLoadCharacteristic",
             "efont:FlexibleOperation",
             "efont:ThermallyActivatedBuildingSystem",
@@ -115,6 +137,7 @@ def write_profile(path: Path) -> dict[str, Any]:
 __all__ = [
     "NAMESPACES",
     "RELATIONSHIP_TYPES",
+    "SEMANTIC_TYPE",
     "north_america_profile",
     "semantic_uri",
     "write_profile",
