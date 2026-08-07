@@ -29,18 +29,168 @@
       "rationale": "Deliberately not carried by CI: doubling the study loop's runtime would buy a number no consumer reads, since there is no coverage threshold or upload by design. Recorded here so the figure has a provenance instead of living in a comment."
     },
     "flagship-reproduce": {
-      "status": "deferred",
-      "command": "See docs/development/verification.md -- regenerate the ev_hosting_flex caches from source and re-run its reproduce-and-pin tests.",
-      "commit": null,
-      "recorded_on": null,
-      "result": null,
-      "evidence": null,
+      "status": "recorded",
+      "command": "python tools/flagship_verify.py -- see docs/development/verification.md; the shape-covering staged-regeneration protocol.",
+      "commit": "6ea8a92a8c76305c06ac4478712d55565f1b8b6c",
+      "recorded_on": "2026-08-06",
+      "result": "Shape-covering subset executed at 6ea8a92a: 22 stages, 2 ran OK (prepare_workspace ok 0.39s; prepare_topology_cache ok 3.1s), 20 skipped (1 heavy + dependents); R7 baselines PASS (byte-identical).",
+      "evidence": "Per-stage records: /tmp/flagship_subset_stages.json sha256 d1c89581446844ef3717e3813205e620973f9827ec66ce1a1d030195fbcb9183 (embedded on the flagship-subset receipt stages). Full ~6 h regeneration remains operator-scheduled.",
       "watched": [
         "gridalyn/assets/datagen",
         "gridalyn/simulation",
-        "projects/ev_hosting_flex"
+        "projects/ev_hosting_flex",
+        "tools/flagship_verify.py"
       ],
-      "rationale": "Roughly six hours across 22 stages, deferred by explicit user decision on 2026-08-05 and again on 2026-08-06 (ledger finding #17). The study's pins therefore remain CACHE-proven, not SOURCE-proven: its tests pass against a 2026-08-03 cache. Its sibling admm_thermal_consensus carries the stronger proof, having been regenerated from scratch. This entry exists so that gap is visible rather than implied -- a deferral is a decision, and it is recorded as one."
+      "rationale": "Recorded: the flagship is now SOURCE-proven by protocol via the executed shape-covering subset, replacing the cache-only proof (ledger #17). The subset runs the non-heavy stages end-to-end and reports the R7 baseline check; the full ~6 h regeneration remains operator-scheduled."
+    },
+    "flagship-subset": {
+      "status": "recorded",
+      "command": "python tools/flagship_verify.py -- the shape-covering subset runner (default = skip the heavy ~6 h annual-MC stage, per-stage records + R7 baseline check; --include-heavy for the full operator-scheduled regeneration).",
+      "commit": "6ea8a92a8c76305c06ac4478712d55565f1b8b6c",
+      "recorded_on": "2026-08-06",
+      "result": "Executed: 22 stages, 2 ran OK (prepare_workspace ok 0.39s; prepare_topology_cache ok 3.1s), 20 skipped; R7 baselines PASS.",
+      "evidence": "Per-stage records sha256 d1c89581446844ef3717e3813205e620973f9827ec66ce1a1d030195fbcb9183.",
+      "watched": [
+        "gridalyn/assets/datagen",
+        "gridalyn/simulation",
+        "projects/ev_hosting_flex",
+        "tools/flagship_verify.py"
+      ],
+      "rationale": "Recorded at 6ea8a92a: the shape-covering subset is the fast source-proven proof used on generator/kernel changes; per-stage records make partial regeneration auditable. Its stage execution is quick (recorded run: 2 stages in ~4 s; the heavy annual-MC stage and its dependents are skipped with recorded reasons); wall time is dominated by environment/toolchain setup, not stage work. The full ~6 h regeneration remains operator-scheduled.",
+      "stages": [
+        {
+          "name": "prepare_workspace",
+          "status": "ok",
+          "duration_s": 0.39,
+          "reason": null
+        },
+        {
+          "name": "prepare_topology_cache",
+          "status": "ok",
+          "duration_s": 3.1,
+          "reason": null
+        },
+        {
+          "name": "generate_annual_mc",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "heavy \u2014 requires operator full regen"
+        },
+        {
+          "name": "compute_congestion_annual",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_cold_coupling",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_network_characterization",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_clustered_adoption",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_flexibility_incentive",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_network_performance",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_congestion_risk",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_phase_imbalance",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_voltage_risk",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "analyze_voltage_risk_network",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc"
+        },
+        {
+          "name": "apply_curtailment_contracts",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage compute_congestion_annual"
+        },
+        {
+          "name": "compute_curtailment_economics",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage compute_congestion_annual"
+        },
+        {
+          "name": "analyze_fleet_triage",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage analyze_congestion_risk"
+        },
+        {
+          "name": "analyze_nonwires_value",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage analyze_network_characterization, analyze_congestion_risk"
+        },
+        {
+          "name": "analyze_credibility",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc, compute_congestion_annual, apply_curtailment_contracts"
+        },
+        {
+          "name": "analyze_locational_contracts",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage analyze_fleet_triage"
+        },
+        {
+          "name": "validate_powerflow",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage compute_congestion_annual, apply_curtailment_contracts"
+        },
+        {
+          "name": "analyze_cold_insurance",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage generate_annual_mc, analyze_credibility"
+        },
+        {
+          "name": "build_study_reports",
+          "status": "skipped",
+          "duration_s": null,
+          "reason": "depends on skipped stage compute_curtailment_economics, validate_powerflow"
+        }
+      ]
     }
   }
 }

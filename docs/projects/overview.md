@@ -26,8 +26,10 @@ individual studies.
 ### Research studies
 
 Full arcs with calibrated inputs, pinned headline metrics, and findings intended
-to be cited. They Monte-Carlo an annual horizon, take tens of minutes, and are
-verified by an operator rather than by CI.
+to be cited. They Monte-Carlo an annual horizon and are verified by an operator
+rather than by CI: a full `ev_hosting_flex` regeneration is roughly six hours
+across 22 stages (receipt-pinned), while `admm_thermal_consensus` regenerates in
+about ten minutes.
 
 | Project | Stages | Pins |
 | --- | --- | --- |
