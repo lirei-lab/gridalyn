@@ -73,15 +73,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          # The action's default timeout is 600000 ms. Four consecutive
-          # deployments of 35c6cd6b (2026-08-06 12:59, 13:10, 13:36, 14:48)
-          # each sat in `deployment_in_progress` for exactly ten minutes, hit
-          # that default, cancelled the deployment and reported failure -- yet
-          # the content went live: the audit amendment added by 1118312e is
-          # served at lirei.ca/gridalyn today. The publish succeeds; only the
-          # status poll gives up too early, so the red was false and the docs
-          # were never stale. Widening the observation window is the fix for
-          # that; it does not paper over a failed publish, because there was
-          # none. If a future deployment burns all 20 minutes, that IS a real
-          # failure and should be investigated rather than widened again.
+          # Widened from the action's 600000 ms default, and kept only as a
+          # margin -- NOT because this deployment is slow.
+          #
+          # The history, because the first version of this comment drew the
+          # wrong conclusion from it. On 2026-08-06 four consecutive
+          # deployments of 35c6cd6b each sat in `deployment_in_progress` for
+          # exactly ten minutes, hit the default, cancelled and reported
+          # failure -- while the content went live regardless. That much was
+          # right: the publish succeeded and only the status poll gave up. What
+          # was wrong was inferring that this repository's Pages deployments
+          # routinely need more than ten minutes, and that widening the window
+          # was therefore the fix.
+          #
+          # Measured on 2026-08-07, the first deployment after the platform
+          # recovered: build 2m56s, DEPLOY 11 SECONDS. The ten-minute stalls
+          # were a transient platform condition -- GitHub declared a major
+          # Actions and Pages outage hours later -- not a property of this
+          # repository. This setting did not fix anything; the outage ending
+          # did.
+          #
+          # It stays because a margin costs nothing. But read it as a margin:
+          # a deployment that burns twenty minutes is a real failure to
+          # investigate, not a number to raise again.
           timeout: 1200000
