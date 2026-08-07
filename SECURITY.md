@@ -23,7 +23,7 @@ meant for local or trusted-network use.
 
 ## Reporting
 
-Report suspected vulnerabilities privately to **nilson.henao@uqtr.ca** rather
+Report suspected vulnerabilities privately to **lirei.info@uqtr.ca** rather
 than opening a public issue. Please include what you did, what happened, and the
 version or commit you were on.
 
