@@ -20,7 +20,8 @@ Why the declared set is the derived set (pyproject keeps them honest)
 ``OPTIONAL_CAPABILITY_MODULES`` declares only the *truly-optional* modules —
 modules absent from ``pyproject.toml`` ``[project] dependencies`` — so there
 is no runtime exclusion: the declared set and the derived set are the same
-four modules (``lightsim2grid``, ``cvxpy``, ``osmnx``, ``falkordb``). The
+three modules (``lightsim2grid``, ``cvxpy``, ``osmnx``) since the ``semantic``
+capability (``falkordb``) was removed on 2026-08-07. The
 ``derive_optional_modules`` subtraction is kept as the pyproject cross-check
 that keeps the two honest: if a declared capability module ever migrates into
 ``[project] dependencies`` (as ``lightgbm`` did), it drops out of the derived
@@ -176,7 +177,7 @@ class ImportHygieneTest(unittest.TestCase):
         # migration has precedent (lightgbm became a base dependency in
         # 49a20ef5). Update this set deliberately when that is intended.
         self.assertEqual(
-            {"cvxpy", "falkordb", "lightsim2grid", "osmnx"},
+            {"cvxpy", "lightsim2grid", "osmnx"},
             set(optional),
             f"derived truly-optional set changed: {sorted(optional)}",
         )

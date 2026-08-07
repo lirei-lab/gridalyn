@@ -213,6 +213,9 @@ Migration rule of thumb:
 
 1. Build the Parquet graph.
 2. Pass validation.
-3. Dry-run Cypher batches from the adapter.
-4. Load FalkorDB.
-5. Compare counts and relationship integrity against the Parquet manifest.
+3. Dry-run Cypher batches from the adapter (`to_falkor_batches`).
+4. Load FalkorDB — **not implemented in-repo**: gridalyn has no FalkorDB
+   connection or loader (Phase 9, 2026-08-07); loading the exported batches is
+   a manual, out-of-repo step.
+5. Compare counts and relationship integrity against the Parquet manifest —
+   **not implemented**: no in-repo reader exists to perform the comparison.

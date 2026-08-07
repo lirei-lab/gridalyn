@@ -1,4 +1,10 @@
-"""Backend-neutral adapter for the federated semantic graph artifacts."""
+"""Backend-neutral adapter for the federated semantic graph artifacts.
+
+This adapter GENERATES Cypher batches (``to_falkor_batches``) for migrating the
+semantic graph (``nodes.parquet`` / ``edges.parquet``) into FalkorDB-compatible
+stores. It does NOT connect to, load, or query a FalkorDB server, and requires
+no graph-database runtime (Phase 9, 2026-08-07).
+"""
 
 from __future__ import annotations
 
@@ -37,13 +43,17 @@ class FederatedGraphAdapter:
             return None
         return matches.iloc[0].to_dict()
 
-    def neighbors(self, node_id: str, relationship_type: str | None = None) -> list[str]:
+    def neighbors(
+        self, node_id: str, relationship_type: str | None = None
+    ) -> list[str]:
         edges = self.edges.loc[self.edges["source_id"] == node_id]
         if relationship_type is not None:
             edges = edges.loc[edges["relationship_type"] == relationship_type]
         return edges["target_id"].tolist()
 
-    def to_falkor_batches(self, batch_size: int = 500) -> dict[str, list[dict[str, Any]]]:
+    def to_falkor_batches(
+        self, batch_size: int = 500
+    ) -> dict[str, list[dict[str, Any]]]:
         node_batches: list[dict[str, Any]] = []
         edge_batches: list[dict[str, Any]] = []
         for start in range(0, len(self.nodes), batch_size):

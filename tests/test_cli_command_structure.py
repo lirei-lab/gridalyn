@@ -305,7 +305,10 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertNotIn("cvxpy", core_dependencies)
 
         optional = pyproject["project"]["optional-dependencies"]
-        for extra in ["geo", "sim", "ops", "dashboard", "semantic", "all"]:
+        # The ``semantic`` extra was removed 2026-08-07 (its only packages,
+        # falkordblite/rdflib, had no in-repo consumer); the remaining
+        # capability extras plus the composed all/dev extras still hold.
+        for extra in ["geo", "sim", "ops", "dashboard", "all"]:
             self.assertIn(extra, optional)
 
     def test_pyproject_exposes_only_gridalyn_entrypoints(self):

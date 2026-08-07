@@ -22,11 +22,13 @@ OPTIONAL_CAPABILITY_MODULES: dict[str, list[str]] = {
     # pandapower (sim), geopandas and shapely (geo), rdflib (semantic), and
     # folium and leafmap -- the last two emptied the 'dashboard' capability,
     # which was removed entirely, because an empty capability is itself an
-    # always-green check.
+    # always-green check. On 2026-08-07 the 'semantic' capability was removed
+    # too: its only module (falkordb) had no functional consumer, and the
+    # semantic build/validate commands are parquet-only, so the gate was a
+    # spurious hard dependency on a graph database the pipeline never opens.
     "geo": ["osmnx"],
     "sim": ["lightsim2grid"],
     "ops": ["cvxpy"],
-    "semantic": ["falkordb"],
 }
 
 

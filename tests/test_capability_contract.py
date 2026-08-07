@@ -8,15 +8,14 @@ never fail on a supported install. This gate pins the reformed contract
 (a) No declared module is a ``pyproject.toml`` base dependency -- a base
     dependency is present on every supported install, so requiring it is an
     always-green check.
-(b) The declared capability keys are exactly {geo, sim, ops, semantic}, and
+(b) The declared capability keys are exactly {geo, sim, ops}, and
     every key names at least one module -- an empty capability is itself an
-    always-green check.
+    always-green check. (The ``semantic`` capability, whose only module was
+    the unconsumed ``falkordb``, was removed 2026-08-07.)
 (c) Every key has at least one ``require_capabilities("<key>"`` call site
     under ``gridalyn/`` -- a real consumer that goes red without the extra.
     Generic map iteration (the ``_doctor`` pattern) deliberately does NOT
     count: it touches every key of any map, so it can never fail for one.
-    This also closes the retracted-finding-#4 question -- falkordb's consumer
-    is ``gridalyn/interfaces/cli/semantic.py``.
 (d) An unknown capability key raises the located, enumerating ``KeyError``.
 """
 
@@ -44,7 +43,7 @@ _DISTRIBUTION_TO_MODULE = {"scikit-learn": "sklearn"}
 _REQUIREMENT_NAME_TERMINATORS = "><=~![; "
 
 #: The reformed capability contract. Update deliberately, never as drift.
-_EXPECTED_CAPABILITY_KEYS = frozenset({"geo", "ops", "sim", "semantic"})
+_EXPECTED_CAPABILITY_KEYS = frozenset({"geo", "ops", "sim"})
 
 
 def _normalize_requirement(requirement: str) -> str:

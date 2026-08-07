@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-08-06T00:11:23.856439+00:00",
+  "created_at": "2026-08-07T14:27:33.189029+00:00",
   "report_id": "digital_twin_report_manifest",
   "reports": {
     "network_capacity": "instances/default/digital_twin/reports/canonical/network_capacity_report.json",
