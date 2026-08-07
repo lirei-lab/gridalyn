@@ -1,10 +1,42 @@
-# Advanced Power Grid Use Cases with FalkorDB
+# FalkorDB and the gridalyn Semantic Graph
 
-Now that your grid topology is mathematically mapped into a Graph Database using **openCypher**, you unlock a massive suite of operations that were previously very difficult or extremely slow using pure Python/NetworkX architectures.
+> **Current state (2026-08-07, Phase 9).** gridalyn does **not** connect to,
+> load, or query a FalkorDB server today. The only FalkorDB-facing surface is
+> `FederatedGraphAdapter.to_falkor_batches`
+> (`gridalyn/twin/db/federated_graph_adapter.py`), which exports the semantic
+> graph (`nodes.parquet` / `edges.parquet`) as Cypher `UNWIND ... MERGE` batches
+> ready for loading into FalkorDB or compatible graph stores. There is no
+> in-repo writer, reader, or query path — the migration path ends at the
+> dry-run Cypher step.
 
-Because FalkorDB runs as a sub-process engine specifically tuned for linear algebra (*GraphBLAS*), it serves as the perfect "Brain" to parse graph hierarchies before forwarding results to physics solvers like `pandapower`.
+## What gridalyn provides today
 
-Here are the most powerful capabilities FalkorDB gives your `gridalyn` Digital Twin:
+1. Build the Parquet semantic graph (`gridalyn semantic build`).
+2. Validate it (`gridalyn semantic validate`).
+3. Dry-run the Cypher export:
+
+```python
+from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
+
+adapter = FederatedGraphAdapter.from_parquet(
+    "instances/default/digital_twin/semantic"
+)
+batches = adapter.to_falkor_batches(batch_size=500)
+```
+
+The exported batches use `SemanticAsset {node_id}` nodes and
+`SEMANTIC_RELATION {edge_id}` edges, with labels derived from `semantic_type`.
+Loading those batches into your own FalkorDB instance is a manual, out-of-repo
+step today.
+
+## What FalkorDB enables, once you load the exported graph
+
+The use cases below are **illustrative** — they describe what FalkorDB offers
+as a graph engine, not features gridalyn implements. After you load the
+exported batches into your own FalkorDB instance, the engine enables the kinds
+of operations shown (fault isolation, rerouting, centrality, multi-domain
+queries, vector search). The example Cypher is written against a loaded graph,
+not against anything gridalyn runs:
 
 ---
 
