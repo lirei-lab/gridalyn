@@ -10,6 +10,18 @@ on:
 permissions:
   contents: read
 
+# Jobs run on `sti-k8s`, a self-hosted Actions Runner Controller scale set on
+# the UQTR STI Kubernetes cluster, registered at the organisation level
+# (github.com/lirei-lab) with minRunners 0 and maxRunners 4. Scale-from-zero
+# means the first job of a run waits for a pod to start; that is expected, not
+# a hang.
+#
+# TO GO BACK TO GITHUB-HOSTED RUNNERS, replace `sti-k8s` with `ubuntu-latest`
+# below -- nothing else in these workflows depends on the runner. Worth knowing
+# before debugging a stuck run: with no matching runner online, a job queues
+# silently instead of failing, so "nothing is happening" is the symptom of a
+# label that matches nothing.
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -26,7 +38,7 @@ jobs:
     # tree the baselines and the published docs come from. It only trims the PR
     # path, where the base commit is known and the diff is exact.
     name: Classify the change surface
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     timeout-minutes: 5
     outputs:
       code: ${{ steps.classify.outputs.code }}
@@ -83,7 +95,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     timeout-minutes: 40
     steps:
       - name: Checkout
@@ -164,7 +176,7 @@ jobs:
     # packaging metadata or these workflows changed -- see the `changes` job.
     # Always runs on a push to `main`.
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     timeout-minutes: 25
     steps:
       - name: Checkout
@@ -293,7 +305,7 @@ jobs:
     # Lints only the files changed in the pull request, mirroring the local
     # pre-commit hook behavior; the full tree does not yet pass all hooks.
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     timeout-minutes: 15
     steps:
       - name: Checkout

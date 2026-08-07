@@ -9,6 +9,18 @@ on:
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
+# Jobs run on `sti-k8s`, a self-hosted Actions Runner Controller scale set on
+# the UQTR STI Kubernetes cluster, registered at the organisation level
+# (github.com/lirei-lab) with minRunners 0 and maxRunners 4. Scale-from-zero
+# means the first job of a run waits for a pod to start; that is expected, not
+# a hang.
+#
+# TO GO BACK TO GITHUB-HOSTED RUNNERS, replace `sti-k8s` with `ubuntu-latest`
+# below -- nothing else in these workflows depends on the runner. Worth knowing
+# before debugging a stuck run: with no matching runner online, a job queues
+# silently instead of failing, so "nothing is happening" is the symptom of a
+# label that matches nothing.
+
 permissions:
   contents: read
   pages: write
@@ -20,7 +32,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,7 +61,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: sti-k8s
     # Bounded well above the step timeout below so a genuine hang still ends,
     # rather than occupying a runner for the 6 h default.
     timeout-minutes: 30
