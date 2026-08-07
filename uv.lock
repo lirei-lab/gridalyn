@@ -1105,7 +1105,6 @@ dependencies = [
     { name = "pandas" },
     { name = "pvlib" },
     { name = "pyyaml" },
-    { name = "rdflib" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
@@ -1130,7 +1129,6 @@ all = [
     { name = "osmnx" },
     { name = "pandapower" },
     { name = "pvlib" },
-    { name = "rdflib" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
@@ -1140,7 +1138,6 @@ all = [
 ]
 cim = [
     { name = "cim-graph" },
-    { name = "rdflib" },
 ]
 dashboard = [
     { name = "folium" },
@@ -1180,7 +1177,6 @@ dev = [
     { name = "pvlib" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "rdflib" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
@@ -1212,7 +1208,6 @@ ops = [
 ]
 semantic = [
     { name = "falkordblite" },
-    { name = "rdflib" },
 ]
 sim = [
     { name = "lightsim2grid" },
@@ -1320,11 +1315,6 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=2.8.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=2.8.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "rdflib", specifier = ">=7.1.0" },
-    { name = "rdflib", marker = "extra == 'all'", specifier = ">=7.1.0" },
-    { name = "rdflib", marker = "extra == 'cim'", specifier = ">=7.1.0" },
-    { name = "rdflib", marker = "extra == 'dev'", specifier = ">=7.1.0" },
-    { name = "rdflib", marker = "extra == 'semantic'", specifier = ">=7.1.0" },
     { name = "scikit-learn", specifier = ">=0.24.0" },
     { name = "scikit-learn", marker = "extra == 'all'", specifier = ">=0.24.0" },
     { name = "scikit-learn", marker = "extra == 'dev'", specifier = ">=0.24.0" },

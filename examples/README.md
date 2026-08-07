@@ -75,12 +75,16 @@ examples/
 ```
 
 Archived/debug examples are intentionally kept out of the public source tree.
-If you need to experiment with PNNL CIM-Graph/CIMantic Graphs, install the
-optional integration first:
+If you want to experiment with PNNL CIM-Graph/CIMantic Graphs yourself, install
+the `cim` extra (external experimentation only — no in-repo code imports it):
 
 ```bash
 uv sync --extra cim
 ```
+
+The in-repo CIM surface is the `cim_parquet` adapter
+(`gridalyn.twin.adapters.cim`), which ingests CIM-like Parquet interchange
+tables; it does not parse CIM RDF/XML.
 
 ## Contributing
 

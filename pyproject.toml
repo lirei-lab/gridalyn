@@ -30,7 +30,6 @@ dependencies = [
     # depending on the weather series. A reproducibility promise cannot depend
     # on an extra.
     "lightgbm>=4.6.0",
-    "rdflib>=7.1.0",
     "jsonschema>=4.0.0",
     "folium<1.0.0,>=0.19.4",
     "timeout-decorator<1.0.0,>=0.5.0",
@@ -104,7 +103,6 @@ dashboard = [
 ]
 semantic = [
     "falkordblite>=0.9.0",
-    "rdflib>=7.1.0",
 ]
 all = [
     "contextily>=1.7.0",
@@ -120,7 +118,6 @@ all = [
     "osmnx<3.0.0,>=2.0.1",
     "pandapower>=3.1.2",
     "pvlib>=0.10.0",
-    "rdflib>=7.1.0",
     "scikit-learn>=0.24.0",
     "scipy>=1.7.0",
     "seaborn>=0.13.2",
@@ -130,7 +127,6 @@ all = [
 ]
 cim = [
     "cim-graph>=0.4.3a12",
-    "rdflib>=7.1.0",
 ]
 docs = [
     "mkdocs>=1.6.1",
@@ -181,7 +177,6 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=2.8.0",
     "pvlib>=0.10.0",
-    "rdflib>=7.1.0",
     "scikit-learn>=0.24.0",
     "scipy>=1.7.0",
     "seaborn>=0.13.2",
