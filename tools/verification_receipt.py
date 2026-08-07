@@ -52,6 +52,7 @@ SCHEMA_VERSION = "1.0"
 #: prose and then quietly forgotten.
 REQUIRED_PROTOCOLS: tuple[str, ...] = (
     "flagship-reproduce",
+    "flagship-subset",
     "docs-instruction-sweep",
     "subprocess-coverage",
 )
@@ -63,6 +64,9 @@ _COMMON_FIELDS: tuple[str, ...] = ("status", "command", "watched", "rationale")
 _RECORDED_FIELDS: tuple[str, ...] = ("commit", "recorded_on", "result", "evidence")
 
 _STATUSES: tuple[str, ...] = ("recorded", "deferred")
+
+#: Outcomes a per-stage record may claim.
+_STAGE_STATUSES: tuple[str, ...] = ("ok", "skipped", "failed")
 
 
 @dataclass(frozen=True)
@@ -117,12 +121,28 @@ def _git(*args: str) -> tuple[int, str]:
     return completed.returncode, completed.stdout.strip()
 
 
+def repository_is_shallow() -> bool:
+    """Return True when this checkout carries a truncated history.
+
+    ``actions/checkout`` clones at depth 1 unless told otherwise, and a
+    truncated history cannot answer an ancestry question about any commit but
+    its own tip.
+    """
+    _code, out = _git("rev-parse", "--is-shallow-repository")
+    return out.strip() == "true"
+
+
 def _commit_is_in_history(commit: str) -> bool:
     """Return True when ``commit`` exists and is an ancestor of HEAD.
 
     A receipt naming a commit outside this history is either fabricated or
     recorded on a branch that was discarded; either way it vouches for a tree
     nobody can inspect.
+
+    Callers must consult :func:`repository_is_shallow` first: on a truncated
+    clone this returns False for every commit but the tip, which is absence of
+    evidence and not evidence of absence. Conflating the two turned a green
+    gate red on a legitimate receipt the first time this ran in CI.
     """
     exists, _ = _git("cat-file", "-e", f"{commit}^{{commit}}")
     if exists != 0:
@@ -246,6 +266,15 @@ def _recorded_problems(
     commit = str(receipt.get("commit") or "").strip()
     if not commit:
         return findings
+    if repository_is_shallow():
+        # A depth-1 checkout knows only its own tip, so it can neither confirm
+        # nor refute any other commit. Reporting "fabricated" here would be a
+        # claim the checkout is not entitled to make -- and it made exactly
+        # that claim about four legitimate receipts the first time this gate
+        # ran under `actions/checkout`, whose default depth is 1. The job that
+        # is meant to enforce this rule therefore fetches full history; see
+        # `fetch-depth: 0` in .github/workflows/ci.yml.
+        return findings
     if not _commit_is_in_history(commit):
         findings.append(
             Finding(
@@ -261,12 +290,66 @@ def _recorded_problems(
     return findings
 
 
+def _stages_problems(name: str, stages: Any) -> list[Finding]:
+    """Return the problems an optional per-stage record list can have.
+
+    ``stages`` is optional and never required; when present it must be a list
+    of mappings, each carrying a non-empty ``name`` and ``status`` (the
+    per-stage outcome — ``ok``, ``skipped`` or ``failed``), and any per-stage
+    ``commit`` must name a commit that exists in this history and leads to
+    HEAD (the same anti-forgery rule the top-level commit obeys).
+
+    Args:
+        name: Protocol the stages belong to.
+        stages: The parsed ``stages`` value, or ``None`` when absent.
+
+    Returns:
+        Findings describing any malformed or unverifiable stage records.
+    """
+    if stages is None:
+        return []
+    if not isinstance(stages, list):
+        return [Finding(name, "schema", "'stages' must be a list of stage records")]
+    findings: list[Finding] = []
+    for index, stage in enumerate(stages):
+        where = f"stages[{index}]"
+        if not isinstance(stage, dict):
+            findings.append(Finding(name, "schema", f"{where} must be a mapping"))
+            continue
+        for field in ("name", "status"):
+            if not str(stage.get(field) or "").strip():
+                findings.append(
+                    Finding(name, "incomplete", f"{where}.{field} is empty")
+                )
+        status = str(stage.get("status") or "")
+        if status and status not in _STAGE_STATUSES:
+            findings.append(
+                Finding(
+                    name,
+                    "schema",
+                    f"{where}.status {status!r} is not one of "
+                    f"{', '.join(_STAGE_STATUSES)}",
+                )
+            )
+        commit = str(stage.get("commit") or "").strip()
+        if commit and not _commit_is_in_history(commit):
+            findings.append(
+                Finding(
+                    name,
+                    "unverifiable-commit",
+                    f"{where}.commit {commit} is not an ancestor of HEAD",
+                )
+            )
+    return findings
+
+
 def _audit_one(name: str, receipt: Any, stale: list[str]) -> list[Finding]:
     """Check a single receipt, appending to ``stale`` when it is out of date."""
     if not isinstance(receipt, dict):
         return [Finding(name, "schema", "receipt must be a mapping")]
 
     findings = _shape_problems(name, receipt)
+    findings += _stages_problems(name, receipt.get("stages"))
     status = receipt.get("status")
     if status not in _STATUSES or status == "deferred":
         # A deferral is a decision, so it needs a reason and nothing else.
@@ -278,6 +361,16 @@ def format_report(ledger: dict[str, Any], stale: list[str]) -> str:
     """Render the human-facing summary of the ledger's state."""
     receipts = ledger.get("receipts", {})
     lines = ["### Operator-run verification protocols", ""]
+    if repository_is_shallow():
+        # Say so, loudly. A green from a checkout that could not perform the
+        # ancestry check is not the same green as one that did, and a reader
+        # who cannot tell them apart will trust the weaker one.
+        lines += [
+            "> This checkout is **shallow**, so the commit-ancestry check was "
+            "not performed. Staleness is unknown here too. Run with full "
+            "history (`fetch-depth: 0`) for the enforcing report.",
+            "",
+        ]
     lines.append("| Protocol | Status | Recorded at | Current |")
     lines.append("|---|---|---|---|")
     for name in sorted(receipts):

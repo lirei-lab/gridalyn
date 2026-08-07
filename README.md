@@ -176,8 +176,10 @@ the two long-running studies (`ev_hosting_flex`, `admm_thermal_consensus`).
 When you need the full research arc — calibrated inputs, pinned headline
 metrics, and reproduce-and-pin verification — run the flagship study. It also
 exercises the flexibility-market API end to end (locational clearing, provider
-registry, settlement) inside its contract stage. It is long-running (tens of
-minutes) and operator-verified rather than gated in CI:
+registry, settlement) inside its contract stage. A full source regeneration is
+long-running — roughly six hours across 22 stages — and operator-verified via a
+pinned verification receipt rather than gated in CI; warm runs against an
+existing cache take minutes. To run it:
 
 ```bash
 uv run gridalyn project run projects/ev_hosting_flex

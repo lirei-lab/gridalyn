@@ -197,6 +197,43 @@ An offline build is possible with `PIP_NO_INDEX=1 --no-build-isolation` **if** t
 environment already carries `setuptools>=77.0`; with build isolation it cannot
 be, because isolation always reaches for an index.
 
+## 6. Staged Regeneration And Per-Stage Receipts
+
+The flagship `ev_hosting_flex` study is verified **by protocol** rather than by
+a single opaque run: a shape-covering subset (`python tools/flagship_verify.py`)
+executes the pipeline's non-heavy stages end to end against the study workspace,
+skips the hours-long heavy stages with a recorded reason, and reports the R7
+baseline check. Per-stage records — name, status, duration, and a reason when a
+stage is skipped — are captured so a partial regeneration is auditable, and the
+verification-receipt ledger accepts an optional per-stage record list on any
+receipt (each stage must carry a `name` and a `status` — `ok`, `skipped` or
+`failed` — and any per-stage `commit` must exist in this history and lead to
+HEAD).
+
+Two operator commands:
+
+- `python tools/flagship_verify.py` — the shape-covering subset, the fast
+  source-proven proof used on generator/kernel changes. Its stage execution is
+  quick (the recorded run executed 2 stages in ~4 s; the heavy annual-MC stage
+  and its dependents are skipped with recorded reasons), so its wall time is
+  dominated by environment/toolchain setup rather than stage work.
+- `python tools/flagship_verify.py --include-heavy` — the full regeneration
+  (roughly six hours), operator-scheduled at milestones; the resulting receipt is
+  recorded at the commit it ran at.
+
+The full six-hour regeneration remains operator-scheduled; the subset is what
+keeps the study source-proven between those runs.
+
+### Executed run (2026-08-06, recorded at 6ea8a92a)
+
+The shape-covering subset was executed and its receipts recorded: 22 stages,
+2 ran OK (`prepare_workspace` 0.4 s, `prepare_topology_cache` 3.1 s, topology
+cache 4320 buses), 20 skipped (the heavy `generate_annual_mc` plus its
+downstream dependents), and the R7 baseline check returned **PASS — baselines
+byte-identical**. Per-stage records are embedded on the `flagship-subset`
+receipt; the `flagship-reproduce` receipt is now `recorded` (source-proven by
+protocol). The full ~6 h regeneration remains operator-scheduled.
+
 ## Related Pages
 
 - [Testing And Validation](testing-and-validation.md) — the per-change checklist.

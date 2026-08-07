@@ -123,9 +123,10 @@ uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
 That study also exercises the locational clearing API — provider registry,
-constraint events and contract selection. It is
-long-running (tens of minutes) and is verified by an operator rather than in
-CI.
+constraint events and contract selection. It is long-running (a full source
+regeneration is roughly six hours across 22 stages) and is verified by an
+operator rather than in CI, via a pinned verification receipt; warm runs
+against an existing cache take minutes.
 
 ## Documentation Map
 

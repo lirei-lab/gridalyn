@@ -271,8 +271,12 @@ says so — this is deliberate:
 
 ## Reproducing It
 
-The study is heavy — the AC and Monte-Carlo stages run for tens of minutes, so it
-is **not** executed in CI. Its regression baseline is **operator-verified**:
+The study is heavy — the annual Monte-Carlo base and the AC power-flow stages
+are the multi-hour core of the roughly six-hour full regeneration, so it is
+**not** executed in CI. Its regression baseline is **operator-verified** (a
+shape-covering subset runs the non-heavy stages via
+`tools/flagship_verify.py`; the full regeneration is scheduled and recorded in
+the verification receipts):
 
 ```bash
 # run a stage

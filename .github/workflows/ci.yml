@@ -100,6 +100,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history, because this job hosts the verification-receipt gate
+          # and that gate's load-bearing rule is "the commit this receipt names
+          # is really an ancestor of HEAD". A depth-1 checkout -- the action's
+          # default -- knows only its own tip, so it answered "fabricated" for
+          # four legitimate receipts the first time the gate ran here. The tool
+          # now refuses to make that claim on a shallow clone, which means
+          # WITHOUT this line the rule would silently check nothing and still
+          # report green. That is the worse failure of the two.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
