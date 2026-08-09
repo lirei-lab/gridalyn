@@ -27,11 +27,13 @@ def build_ieee33_benchmark_feeder(
         )
     if len(net.line) != spec.expected_line_count:
         raise ValueError(
-            f"{spec.display_name} expected {spec.expected_line_count} lines, got {len(net.line)}"
+            f"{spec.display_name} expected {spec.expected_line_count} lines, "
+            f"got {len(net.line)}"
         )
     if len(net.load) != spec.expected_load_count:
         raise ValueError(
-            f"{spec.display_name} expected {spec.expected_load_count} loads, got {len(net.load)}"
+            f"{spec.display_name} expected {spec.expected_load_count} loads, "
+            f"got {len(net.load)}"
         )
     if run_powerflow:
         solve_power_flow(net)

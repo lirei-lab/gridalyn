@@ -30,6 +30,11 @@ class DERVoltageDispatchConfig:
     solver_name: str = "CLARABEL"
 
 
+# Module-level default so the dataclass is not constructed in an argument
+# default (bugbear B008). Safe to share: the config is frozen and immutable.
+_DEFAULT_DISPATCH_CONFIG = DERVoltageDispatchConfig()
+
+
 @dataclass(frozen=True)
 class DERVoltageDispatchResult:
     """Tables and metadata produced by a DER voltage dispatch run."""
@@ -45,7 +50,7 @@ class DERVoltageDispatchResult:
 def run_der_voltage_dispatch(
     build_feeder: Callable[[], pp.pandapowerNet],
     der_assets: pd.DataFrame,
-    config: DERVoltageDispatchConfig = DERVoltageDispatchConfig(),
+    config: DERVoltageDispatchConfig = _DEFAULT_DISPATCH_CONFIG,
 ) -> DERVoltageDispatchResult:
     """Solve DER dispatch and verify the result with an AC pandapower snapshot."""
     base_voltage = _base_voltage(build_feeder)

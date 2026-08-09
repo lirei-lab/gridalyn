@@ -379,7 +379,8 @@ def run_scenarios(
         )
         if ev_kw.shape != building_kw.shape:
             raise RuntimeError(
-                f"{scenario_id}: EV matrix {ev_kw.shape} does not match building matrix {building_kw.shape}."
+                f"{scenario_id}: EV matrix {ev_kw.shape} does not match "
+                f"building matrix {building_kw.shape}."
             )
 
         p_total_mw = (building_kw + ev_kw) / 1000.0

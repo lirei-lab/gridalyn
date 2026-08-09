@@ -64,8 +64,10 @@ def run_single_realization(
     # The output is (time_steps, n_houses)
     total_kw_matrix = heat_kw + bg_kw
 
-    # Global Behavioral Wander: Instead of a flat single multiplier (which makes all realizations perfectly parallel),
-    # the entire population stochastically wanders over the day via Macroscopic AR(1) noise (rho=0.95 -> extremely smooth).
+    # Global Behavioral Wander: Instead of a flat single multiplier (which makes
+    # all realizations perfectly parallel), the entire population stochastically
+    # wanders over the day via Macroscopic AR(1) noise (rho=0.95 -> extremely
+    # smooth).
     time_steps_len = total_kw_matrix.shape[
         0
     ]  # Respect natively computed simulation resolution
@@ -79,7 +81,8 @@ def run_single_realization(
         )
     behavioral_wander = 1.0 + ar1_macro
 
-    # 3. Apply macro-stochastic Behavioral Wander (to simulate non-parallel temporal social drifting)
+    # 3. Apply macro-stochastic Behavioral Wander (to simulate non-parallel
+    # temporal social drifting)
     profiles_sliced = [
         (total_kw_matrix[:, i] * behavioral_wander) for i in range(n_houses)
     ]
@@ -101,7 +104,8 @@ def run_single_realization(
     num_nans = p_mw_df.isna().sum().sum() + np.isinf(p_mw_df).sum().sum()
     if num_nans > 0:
         print(
-            f"\\n[!] Worker {sim_idx}: Detected {num_nans} NaN/Inf anomalies from building simulator! Truncating to 0.0..."
+            f"\\n[!] Worker {sim_idx}: Detected {num_nans} NaN/Inf anomalies "
+            "from building simulator! Truncating to 0.0..."
         )
         p_mw_df = (
             p_mw_df.fillna(0.0)
@@ -163,7 +167,8 @@ def run_single_realization(
             )
     except Exception as exc:
         print(
-            f"\\n🔥 [TRÁGICO CRASH] Trabajador {sim_idx} falló estrepitosamente! Traceback completo:"
+            f"\\n🔥 [TRÁGICO CRASH] Trabajador {sim_idx} falló estrepitosamente! "
+            "Traceback completo:"
         )
         traceback.print_exc()
         raise exc
@@ -289,12 +294,14 @@ class PowerflowMonteCarloRunner:
                     self.net = pickle.load(f)
                 self.pp_net = self.net
                 print(
-                    f"Loaded Cached Grid: {len(self.pp_net.bus)} buses, {len(self.pp_net.line)} lines."
+                    f"Loaded Cached Grid: {len(self.pp_net.bus)} buses, "
+                    f"{len(self.pp_net.line)} lines."
                 )
                 return cache_pp
             except ModuleNotFoundError as exc:
                 print(
-                    f"====== Stage 1: Ignoring stale cache from old package layout: {exc} ======"
+                    "====== Stage 1: Ignoring stale cache from old package "
+                    f"layout: {exc} ======"
                 )
                 force_rebuild = True
 
@@ -329,10 +336,12 @@ class PowerflowMonteCarloRunner:
 
             if self.pp_net is None:
                 print(
-                    "[!] Pandapower network build failed — pp_net_cache.pkl will NOT be written."
+                    "[!] Pandapower network build failed — pp_net_cache.pkl "
+                    "will NOT be written."
                 )
                 print(
-                    "[!] Check transformer std_type in config.json — must be a valid pandapower type."
+                    "[!] Check transformer std_type in config.json — must be a "
+                    "valid pandapower type."
                 )
                 raise RuntimeError(
                     "Pandapower network build failed; aborting simulation."
@@ -379,7 +388,8 @@ class PowerflowMonteCarloRunner:
         net_json_path = self._prepare_grid(force_rebuild=force_rebuild)
 
         print(
-            "\n====== Stage 2 & 3: Monte Carlo Stochastic Simulation (PARALLEL ACCELERATOR) ======"
+            "\n====== Stage 2 & 3: Monte Carlo Stochastic Simulation "
+            "(PARALLEL ACCELERATOR) ======"
         )
         t_start = time.time()
 
@@ -393,20 +403,26 @@ class PowerflowMonteCarloRunner:
 
         labels_lv = self.pg_graph.labels_lv
         areas = self.pg_graph.building_data["Area (sq. meters)"].values
-        # Sobreescribimos n_blocks para enviarle a la rutina paralela el total estricto de inmuebles
+        # Sobreescribimos n_blocks para enviarle a la rutina paralela el total
+        # estricto de inmuebles
         n_houses = len(areas)
         import concurrent.futures
         import multiprocessing
 
-        # Loky/Joblib reuses workers by default, causing accumulated C++ memory leaks inside Pandas/LightSim2Grid matrices.
-        # This inevitably triggers OOM fragmentation and Numpy FloatingPointError random crashes down the line.
-        # By enforcing 'spawn' and 'max_tasks_per_child=1', we violently nuke the worker's address space after EACH realization.
+        # Loky/Joblib reuses workers by default, causing accumulated C++ memory
+        # leaks inside Pandas/LightSim2Grid matrices.
+        # This inevitably triggers OOM fragmentation and Numpy FloatingPointError
+        # random crashes down the line.
+        # By enforcing 'spawn' and 'max_tasks_per_child=1', we violently nuke the
+        # worker's address space after EACH realization.
         concurrency = max(1, os.cpu_count() // 2)
         print(
-            f"\nDispatching {n_realizations} realizations across {concurrency} isolated spawn-workers (Nuking RAM per loop)..."
+            f"\nDispatching {n_realizations} realizations across {concurrency} "
+            "isolated spawn-workers (Nuking RAM per loop)..."
         )
 
-        # Decouple the series completely from pandas internal BlockManager locks to prevent ProcessPool spawn crashes
+        # Decouple the series completely from pandas internal BlockManager locks
+        # to prevent ProcessPool spawn crashes
         clean_temp_series = pd.Series(
             cold_day["temp_air"].values.copy(), index=cold_day["temp_air"].index.copy()
         )
@@ -474,7 +490,8 @@ class PowerflowMonteCarloRunner:
         mc_spatial_line_np = np.array(self.mc_spatial_line)
         mc_spatial_trafo_np = np.array(self.mc_spatial_trafo)
 
-        # Cast the deepest analytical structural boundaries into the original un-simulated pandapower object
+        # Cast the deepest analytical structural boundaries into the original
+        # un-simulated pandapower object
         # Taking MIN for voltage to find voltage-drops.
         self.pp_net.res_bus = getattr(
             self.pp_net, "res_bus", pd.DataFrame(index=self.pp_net.bus.index)
@@ -492,7 +509,8 @@ class PowerflowMonteCarloRunner:
 
         t_end = time.time()
         print(
-            f"\n[BENCHMARK] Parallel {n_realizations}x Simulation Execution Time: {t_end - t_start:.2f} seconds"
+            f"\n[BENCHMARK] Parallel {n_realizations}x Simulation Execution "
+            f"Time: {t_end - t_start:.2f} seconds"
         )
 
         self._verify_grid_stats()
@@ -508,7 +526,8 @@ class PowerflowMonteCarloRunner:
             print(f"Voltage (p.u.): Min={min_v:.3f}, Max={max_v:.3f}")
             if under_voltage > 0 or over_voltage > 0:
                 print(
-                    f"  WARNING: {under_voltage:.1f}% buses < 0.95 p.u. | {over_voltage:.1f}% buses > 1.05 p.u."
+                    f"  WARNING: {under_voltage:.1f}% buses < 0.95 p.u. | "
+                    f"{over_voltage:.1f}% buses > 1.05 p.u."
                 )
             else:
                 print("  SUCCESS: All buses within 0.95 - 1.05 p.u. limits.")
@@ -534,7 +553,8 @@ class PowerflowMonteCarloRunner:
             print(f"Trafo Loading (%): Mean={mean_trafo:.1f}%, Max={max_trafo:.1f}%")
             if overloaded_trafos > 0:
                 print(
-                    f"  WARNING: {overloaded_trafos} transformers are overloaded (>100% capacity)!"
+                    f"  WARNING: {overloaded_trafos} transformers are "
+                    "overloaded (>100% capacity)!"
                 )
             else:
                 print("  SUCCESS: No transformers are overloaded.")
