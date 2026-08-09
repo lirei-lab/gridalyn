@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
 
 import pandapower as pp
 
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
-
+from gridalyn.simulation.backends.registry import solve_power_flow
 
 _SCENARIO_RE = re.compile(r"^S\d+_(\d+)pct$")
 
@@ -135,7 +135,7 @@ def validate_transformer_peak_scenarios(
         p_peak_mw = float(data.get("unmanaged_peak_mw", 0.0))
         net.load.at[0, "p_mw"] = p_peak_mw
         net.load.at[0, "q_mvar"] = p_peak_mw * config.load_q_to_p_ratio
-        pp.runpp(net)
+        solve_power_flow(net)
 
         static_pct = float(net.res_trafo.at[trafo_idx, "loading_percent"])
         dynamic_pct = (p_peak_mw / p_dynamic_mw) * 100.0 if p_dynamic_mw > 0 else 0.0

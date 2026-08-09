@@ -20,12 +20,14 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import pandapower as pp
+import pandas as pd
 from pandapower.control import ConstControl
 from pandapower.timeseries import DFData, OutputWriter, run_timeseries
 
 from gridalyn.foundation import GridalynWorkspace
+from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
+from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
 ROOT = Path(__file__).resolve().parents[4]
 WORKSPACE = GridalynWorkspace(ROOT)
@@ -103,7 +105,9 @@ def _generate_base_building_loads(
     shock_std = 0.04 * np.sqrt(1 - rho_macro**2)
     ar1_macro[0] = macro_rng.normal(0, 0.04)
     for t_step in range(1, n_steps):
-        ar1_macro[t_step] = rho_macro * ar1_macro[t_step - 1] + macro_rng.normal(0, shock_std)
+        ar1_macro[t_step] = rho_macro * ar1_macro[t_step - 1] + macro_rng.normal(
+            0, shock_std
+        )
 
     total_kw = total_kw * (1.0 + ar1_macro)[:, np.newaxis]
     temperature = (
@@ -116,7 +120,9 @@ def _generate_base_building_loads(
     return total_kw.astype(np.float32), temperature[:n_steps]
 
 
-def _load_ev_matrix(path: Path, timestamps: pd.Index, load_index: pd.Index) -> np.ndarray:
+def _load_ev_matrix(
+    path: Path, timestamps: pd.Index, load_index: pd.Index
+) -> np.ndarray:
     ev = pd.read_parquet(path, columns=["timestamp", "pandapower_load", "p_ev_kw"])
     ev_wide = (
         ev.pivot(index="timestamp", columns="pandapower_load", values="p_ev_kw")
@@ -178,8 +184,13 @@ def _run_powerflow(net, p_total_mw: np.ndarray, q_total_mvar: np.ndarray):
     ow.log_variable("res_trafo", "loading_percent")
     ow.log_variable("res_ext_grid", "p_mw")
 
+    # Resolved once, outside the per-timestep closure: the backend carries
+    # `lightsim2grid=True` in its descriptor, so the engine is recorded rather
+    # than restated at the call site.
+    klu_backend = resolve_powerflow_backend(LIGHTSIM2GRID_BACKEND_ID)
+
     def run_klu(net_obj, **kwargs):
-        pp.runpp(net_obj, lightsim2grid=True, **kwargs)
+        klu_backend.solve(net_obj, **kwargs)
 
     with np.errstate(divide="ignore", invalid="ignore", over="ignore", under="ignore"):
         run_timeseries(net, time_steps=time_steps, run=run_klu, verbose=False)
@@ -188,7 +199,10 @@ def _run_powerflow(net, p_total_mw: np.ndarray, q_total_mvar: np.ndarray):
         "spatial_v": ow.output["res_bus.vm_pu"].to_numpy(copy=True),
         "spatial_line": ow.output["res_line.loading_percent"].to_numpy(copy=True),
         "spatial_trafo": ow.output["res_trafo.loading_percent"].to_numpy(copy=True),
-        "ext_p_mw": ow.output["res_ext_grid.p_mw"].sum(axis=1).abs().to_numpy(copy=True),
+        "ext_p_mw": ow.output["res_ext_grid.p_mw"]
+        .sum(axis=1)
+        .abs()
+        .to_numpy(copy=True),
     }
 
 
@@ -218,47 +232,63 @@ def _export_results(
         )
     bus_ref = pd.DataFrame(bus_rows)
 
-    node_df = pd.DataFrame(results["spatial_v"], index=timestamp_values, columns=net.bus.index)
+    node_df = pd.DataFrame(
+        results["spatial_v"], index=timestamp_values, columns=net.bus.index
+    )
     node_long = node_df.reset_index(names="timestamp").melt(
         id_vars="timestamp", var_name="bus_idx", value_name="v_pu"
     )
     node_long["scenario_id"] = scenario_id
     node_long = node_long.merge(bus_ref, on="bus_idx", how="left")
-    node_long.to_parquet(out_dir / f"{scenario_id}_powerflow_nodes.parquet", index=False)
+    node_long.to_parquet(
+        out_dir / f"{scenario_id}_powerflow_nodes.parquet", index=False
+    )
 
     line_ref = net.line[["from_bus", "to_bus"]].reset_index(names="line_idx")
     line_ref["line_idx"] = line_ref["line_idx"].astype(int)
-    line_df = pd.DataFrame(results["spatial_line"], index=timestamp_values, columns=net.line.index)
+    line_df = pd.DataFrame(
+        results["spatial_line"], index=timestamp_values, columns=net.line.index
+    )
     line_long = line_df.reset_index(names="timestamp").melt(
         id_vars="timestamp", var_name="line_idx", value_name="loading_percent"
     )
     line_long["scenario_id"] = scenario_id
     line_long = line_long.merge(line_ref, on="line_idx", how="left")
-    line_long.to_parquet(out_dir / f"{scenario_id}_powerflow_lines.parquet", index=False)
-
-    trafo_ref = net.trafo[["hv_bus", "lv_bus", "sn_mva", "vn_hv_kv", "vn_lv_kv"]].reset_index(
-        names="trafo_idx"
+    line_long.to_parquet(
+        out_dir / f"{scenario_id}_powerflow_lines.parquet", index=False
     )
+
+    trafo_ref = net.trafo[
+        ["hv_bus", "lv_bus", "sn_mva", "vn_hv_kv", "vn_lv_kv"]
+    ].reset_index(names="trafo_idx")
     trafo_ref["trafo_idx"] = trafo_ref["trafo_idx"].astype(int)
-    trafo_df = pd.DataFrame(results["spatial_trafo"], index=timestamp_values, columns=net.trafo.index)
+    trafo_df = pd.DataFrame(
+        results["spatial_trafo"], index=timestamp_values, columns=net.trafo.index
+    )
     trafo_long = trafo_df.reset_index(names="timestamp").melt(
         id_vars="timestamp", var_name="trafo_idx", value_name="loading_percent"
     )
     trafo_long["scenario_id"] = scenario_id
     trafo_long = trafo_long.merge(trafo_ref, on="trafo_idx", how="left")
-    trafo_long.to_parquet(out_dir / f"{scenario_id}_powerflow_transformers.parquet", index=False)
+    trafo_long.to_parquet(
+        out_dir / f"{scenario_id}_powerflow_transformers.parquet", index=False
+    )
 
     p_total_mw = (building_kw + ev_kw) / 1000.0
     power = pd.DataFrame(
         {
             "timestamp": np.repeat(timestamp_values, len(net.load.index)),
             "scenario_id": scenario_id,
-            "pandapower_load": np.tile(net.load.index.to_numpy(dtype=np.int64), len(timestamp_values)),
+            "pandapower_load": np.tile(
+                net.load.index.to_numpy(dtype=np.int64), len(timestamp_values)
+            ),
             "p_building_mw": building_kw.reshape(-1) / 1000.0,
             "p_ev_mw": ev_kw.reshape(-1) / 1000.0,
             "p_total_mw": p_total_mw.reshape(-1),
             "q_total_mvar": (building_kw.reshape(-1) / 1000.0) * 0.1,
-            "temperature_c": np.repeat(temperature_c[: len(timestamp_values)], len(net.load.index)),
+            "temperature_c": np.repeat(
+                temperature_c[: len(timestamp_values)], len(net.load.index)
+            ),
         }
     )
     power.to_parquet(out_dir / f"{scenario_id}_powerflow_power.parquet", index=False)
@@ -281,10 +311,20 @@ def _export_results(
         "trafo_max_loading_percent": float(np.max(results["spatial_trafo"])),
         "q_ev_policy": "zero_reactive_power",
         "paths": {
-            "nodes": str((out_dir / f"{scenario_id}_powerflow_nodes.parquet").relative_to(ROOT)),
-            "lines": str((out_dir / f"{scenario_id}_powerflow_lines.parquet").relative_to(ROOT)),
-            "transformers": str((out_dir / f"{scenario_id}_powerflow_transformers.parquet").relative_to(ROOT)),
-            "power": str((out_dir / f"{scenario_id}_powerflow_power.parquet").relative_to(ROOT)),
+            "nodes": str(
+                (out_dir / f"{scenario_id}_powerflow_nodes.parquet").relative_to(ROOT)
+            ),
+            "lines": str(
+                (out_dir / f"{scenario_id}_powerflow_lines.parquet").relative_to(ROOT)
+            ),
+            "transformers": str(
+                (out_dir / f"{scenario_id}_powerflow_transformers.parquet").relative_to(
+                    ROOT
+                )
+            ),
+            "power": str(
+                (out_dir / f"{scenario_id}_powerflow_power.parquet").relative_to(ROOT)
+            ),
         },
     }
     with (out_dir / f"{scenario_id}_powerflow_summary.json").open("w") as f:
@@ -306,10 +346,16 @@ def run_scenarios(
     seed = int(sim_config.get("seed", 42))
     generator_type = str(sim_config.get("generator", "parametric"))
 
-    buildings = pd.read_parquet(base_dir / "buildings.parquet").sort_values("pandapower_load")
+    buildings = pd.read_parquet(base_dir / "buildings.parquet").sort_values(
+        "pandapower_load"
+    )
     net_probe = _load_net(cache_dir)
-    if list(buildings["pandapower_load"].astype(int)) != list(net_probe.load.index.astype(int)):
-        raise RuntimeError("Base twin pandapower_load order does not match cached pandapower net.")
+    if list(buildings["pandapower_load"].astype(int)) != list(
+        net_probe.load.index.astype(int)
+    ):
+        raise RuntimeError(
+            "Base twin pandapower_load order does not match cached pandapower net."
+        )
 
     print("Generating shared base building load matrix...")
     building_kw, temperature_c = _generate_base_building_loads(
@@ -318,7 +364,9 @@ def run_scenarios(
         seed=seed,
         generator_type=generator_type,
     )
-    timestamps = pd.date_range(start_timestamp, periods=building_kw.shape[0], freq=f"{resolution_minutes}min")
+    timestamps = pd.date_range(
+        start_timestamp, periods=building_kw.shape[0], freq=f"{resolution_minutes}min"
+    )
 
     summaries = []
     for scenario_id in scenarios:
@@ -330,7 +378,9 @@ def run_scenarios(
             load_index=net.load.index,
         )
         if ev_kw.shape != building_kw.shape:
-            raise RuntimeError(f"{scenario_id}: EV matrix {ev_kw.shape} does not match building matrix {building_kw.shape}.")
+            raise RuntimeError(
+                f"{scenario_id}: EV matrix {ev_kw.shape} does not match building matrix {building_kw.shape}."
+            )
 
         p_total_mw = (building_kw + ev_kw) / 1000.0
         q_total_mvar = (building_kw / 1000.0) * 0.1
@@ -381,7 +431,9 @@ def run_scenarios(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run digital-twin EV powerflow smoke scenarios.")
+    parser = argparse.ArgumentParser(
+        description="Run digital-twin EV powerflow smoke scenarios."
+    )
     parser.add_argument("--scenarios", nargs="+", default=list(DEFAULT_SCENARIOS))
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)

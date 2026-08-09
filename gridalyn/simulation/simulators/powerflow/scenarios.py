@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pandas as pd
 import pandapower as pp
+import pandas as pd
+
+from gridalyn.simulation.backends.registry import solve_power_flow
 
 
 @dataclass(frozen=True)
@@ -72,7 +74,7 @@ def run_standard_powerflow_scenario(
 ) -> tuple[dict[str, object], pd.DataFrame]:
     """Apply and solve a standard operating scenario."""
     apply_standard_powerflow_scenario(net, scenario)
-    pp.runpp(net, algorithm=algorithm, init=init)
+    solve_power_flow(net, algorithm=algorithm, init=init)
 
     voltage = net.res_bus.vm_pu.reset_index()
     voltage.columns = ["bus_id", "vm_pu"]

@@ -168,6 +168,47 @@ def _macro_model_provenance() -> dict[str, Any]:
     }
 
 
+def _powerflow_backend_provenance() -> dict[str, Any]:
+    """Which power-flow backend a stage of this run would solve through.
+
+    Before the backend contract existed, eleven call sites solved power flow
+    with three different effective configurations and none of them reached the
+    manifest -- so a run solved through lightsim2grid and a run solved through
+    pandapower's own Newton-Raphson were indistinguishable in every governed
+    artifact. This records the default backend, its settings, and which of the
+    registered backends the environment can actually serve.
+
+    Backends resolve by explicit ID only: there is no ``entry_points``
+    discovery, so this list is exactly what the repository registers.
+
+    Side-effect-free, following ``_macro_model_provenance``: it reads
+    descriptors and checks importability, and never constructs a backend,
+    never solves, and never draws from any RNG.
+
+    Returns:
+        The default backend's descriptor fields, the registered IDs, and an
+        availability flag per backend.
+    """
+    from gridalyn.foundation.platform.capabilities import missing_capability_modules
+    from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
+    from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
+
+    registry = default_powerflow_backend_registry()
+    descriptors = registry.list_descriptors()
+    available = {
+        descriptor.backend_id: (
+            not missing_capability_modules(descriptor.capability)
+            if descriptor.capability
+            else True
+        )
+        for descriptor in descriptors
+    }
+    provenance = registry.get_descriptor(DEFAULT_POWERFLOW_BACKEND_ID).as_dict()
+    provenance["registered"] = [descriptor.backend_id for descriptor in descriptors]
+    provenance["available"] = available
+    return provenance
+
+
 def _build_provenance(
     project: StudyProject, planned: list[WorkflowStage]
 ) -> dict[str, Any]:
@@ -185,6 +226,7 @@ def _build_provenance(
         },
         "seeds": _resolve_seeds(project, planned),
         "macro_model": _macro_model_provenance(),
+        "powerflow_backend": _powerflow_backend_provenance(),
         "input_hashes": _input_hashes(project),
     }
 

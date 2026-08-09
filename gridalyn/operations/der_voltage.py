@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pandapower as pp
+import pandas as pd
 
+from gridalyn.simulation.backends.registry import solve_power_flow
 from gridalyn.simulation.simulators.powerflow.der_dispatch import (
     apply_der_dispatch_setpoints_to_pandapower,
     build_der_dispatch_pandapower_network,
@@ -133,9 +134,25 @@ def write_der_voltage_dispatch_figure(
         figsize=(9.4, 7.0),
         gridspec_kw={"height_ratios": [1.2, 1.0]},
     )
-    axes[0].plot(verification["bus_id"], verification["full_pv_vm_pu"], marker="o", label="Full PV")
-    axes[0].plot(verification["bus_id"], verification["optimized_vm_pu"], marker="o", label="Optimized")
-    axes[0].axhline(voltage_max_pu, color="#c0392b", linestyle="--", linewidth=1.2, label="1.05 p.u.")
+    axes[0].plot(
+        verification["bus_id"],
+        verification["full_pv_vm_pu"],
+        marker="o",
+        label="Full PV",
+    )
+    axes[0].plot(
+        verification["bus_id"],
+        verification["optimized_vm_pu"],
+        marker="o",
+        label="Optimized",
+    )
+    axes[0].axhline(
+        voltage_max_pu,
+        color="#c0392b",
+        linestyle="--",
+        linewidth=1.2,
+        label="1.05 p.u.",
+    )
     axes[0].set_ylabel("Voltage [p.u.]")
     axes[0].set_title("DER Dispatch Verified With Pandapower")
     axes[0].grid(True, alpha=0.3)
@@ -144,7 +161,9 @@ def write_der_voltage_dispatch_figure(
     x = np.arange(len(dispatch))
     axes[1].bar(x - 0.25, dispatch["pv_available_mw"], width=0.25, label="PV available")
     axes[1].bar(x, dispatch["pv_dispatch_mw"], width=0.25, label="PV dispatch")
-    axes[1].bar(x + 0.25, dispatch["battery_charge_mw"], width=0.25, label="Battery charge")
+    axes[1].bar(
+        x + 0.25, dispatch["battery_charge_mw"], width=0.25, label="Battery charge"
+    )
     axes[1].set_xticks(x)
     axes[1].set_xticklabels(dispatch["der_id"])
     axes[1].set_ylabel("Power [MW]")
@@ -158,7 +177,7 @@ def write_der_voltage_dispatch_figure(
 
 def _base_voltage(build_feeder: Callable[[], pp.pandapowerNet]) -> np.ndarray:
     net = build_feeder()
-    pp.runpp(net, algorithm="nr", init="auto")
+    solve_power_flow(net)
     return net.res_bus.vm_pu.to_numpy(dtype=float)
 
 
@@ -177,8 +196,10 @@ def _voltage_sensitivity(
             np.array([config.perturbation_mw], dtype=float),
             np.array([0.0], dtype=float),
         )
-        pp.runpp(net, algorithm="nr", init="auto")
-        delta = (net.res_bus.vm_pu.to_numpy(dtype=float) - base_voltage) / config.perturbation_mw
+        solve_power_flow(net)
+        delta = (
+            net.res_bus.vm_pu.to_numpy(dtype=float) - base_voltage
+        ) / config.perturbation_mw
         for bus_id, value in enumerate(delta):
             rows.append(
                 {
@@ -202,7 +223,9 @@ def _solve_dispatch(
     der_ids = list(der_assets["der_id"])
     bus_ids = sorted(sensitivity["bus_id"].unique())
     s_matrix = (
-        sensitivity.pivot(index="bus_id", columns="der_id", values="dvm_dpinj_pu_per_mw")
+        sensitivity.pivot(
+            index="bus_id", columns="der_id", values="dvm_dpinj_pu_per_mw"
+        )
         .loc[bus_ids, der_ids]
         .to_numpy(dtype=float)
     )
@@ -235,9 +258,13 @@ def _solve_dispatch(
 
     dispatch = der_assets.copy()
     dispatch["pv_dispatch_mw"] = np.asarray(pv_dispatch.value, dtype=float)
-    dispatch["pv_curtailment_mw"] = dispatch["pv_available_mw"] - dispatch["pv_dispatch_mw"]
+    dispatch["pv_curtailment_mw"] = (
+        dispatch["pv_available_mw"] - dispatch["pv_dispatch_mw"]
+    )
     dispatch["battery_charge_mw"] = np.asarray(battery_charge.value, dtype=float)
-    dispatch["net_injection_mw"] = dispatch["pv_dispatch_mw"] - dispatch["battery_charge_mw"]
+    dispatch["net_injection_mw"] = (
+        dispatch["pv_dispatch_mw"] - dispatch["battery_charge_mw"]
+    )
     dispatch["predicted_voltage_at_bus_pu"] = [
         float(predicted_voltage.value[int(bus_id)]) for bus_id in dispatch["bus_id"]
     ]

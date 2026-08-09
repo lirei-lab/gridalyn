@@ -8,12 +8,13 @@ what capability gating exists to prevent.
 Why this check is BEHAVIORAL, not syntactic
 -------------------------------------------
 The obvious cheap check -- assert every package ``__init__.py`` contains the
-literal ``_LAZY_EXPORTS`` map -- is wrong here. Of the 35 ``__init__.py``
-files in this tree, 17 carry that literal and 19 do not, yet none of those 19
-pulls an optional dependency: only 2 sub-packages ever did, and both now carry
-the map. A syntactic check would therefore produce 19 false positives while
-proving nothing about what actually gets imported. This test instead imports
-each sub-package for real and inspects the resulting ``sys.modules``.
+literal ``_LAZY_EXPORTS`` map -- is wrong here. Of the 36 ``__init__.py``
+files in this tree, 19 carry that literal and 17 do not (measured 2026-08-07),
+yet none of those 17 pulls an optional dependency: only 2 sub-packages ever
+did, and both now carry the map. A syntactic check would therefore produce 17
+false positives while proving nothing about what actually gets imported. This
+test instead imports each sub-package for real and inspects the resulting
+``sys.modules``.
 
 Why the declared set is the derived set (pyproject keeps them honest)
 ---------------------------------------------------------------------
@@ -74,8 +75,12 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: package is added or removed. 36 -> 35 on 2026-08-06, when
 #: ``gridalyn.projects.workflows.flexibility`` was deleted with the
 #: orphaned-input chain (its two modules read an artifact that no command in
-#: this repository produces), leaving the package empty.
-_EXPECTED_SUBPACKAGE_COUNT = 35
+#: this repository produces), leaving the package empty. 35 -> 36 on
+#: 2026-08-07, when ``gridalyn.simulation.backends`` was added: it is the one
+#: place a power flow is solved, and it reaches ``lightsim2grid`` (and
+#: ``pandapower``, whose import carries ``lightsim2grid``), so it is exactly
+#: the kind of package this sweep exists to check.
+_EXPECTED_SUBPACKAGE_COUNT = 36
 
 _PROBE = """\
 import json

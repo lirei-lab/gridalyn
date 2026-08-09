@@ -6,14 +6,15 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 import pandapower as pp
+import pandas as pd
 
 from gridalyn.simulation import (
     apply_battery_dispatch_to_pandapower,
     apply_pv_generation_to_pandapower,
     configure_headless_matplotlib,
 )
+from gridalyn.simulation.backends.registry import solve_power_flow
 
 
 @dataclass(frozen=True)
@@ -280,7 +281,7 @@ def run_prosumer_powerflow(
     apply_pv_generation_to_pandapower(net, prosumers, pv_factor=pv_factor)
     apply_battery_dispatch_to_pandapower(net, dispatch)
 
-    pp.runpp(net, algorithm="nr", init="auto")
+    solve_power_flow(net)
     return {
         "converged": bool(net.converged),
         "min_voltage_pu": float(net.res_bus.vm_pu.min()),

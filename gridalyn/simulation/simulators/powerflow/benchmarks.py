@@ -9,6 +9,7 @@ from gridalyn.assets.modeling.benchmarks import (
     IEEE_33_BUS_BENCHMARK,
     IeeeBenchmarkFeederSpec,
 )
+from gridalyn.simulation.backends.registry import solve_power_flow
 
 
 def build_ieee33_benchmark_feeder(
@@ -33,7 +34,7 @@ def build_ieee33_benchmark_feeder(
             f"{spec.display_name} expected {spec.expected_load_count} loads, got {len(net.load)}"
         )
     if run_powerflow:
-        pp.runpp(net, algorithm="nr", init="auto")
+        solve_power_flow(net)
     return net
 
 
