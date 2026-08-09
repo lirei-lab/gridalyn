@@ -75,8 +75,12 @@ PUBLIC_LAYER_FACADES = (
 #: removing the eager ``digital_twin`` import behind the runpy RuntimeWarning).
 #: 18 -> 19 on 2026-08-07: ``gridalyn.simulation.backends`` was added and needs
 #: the map, because every backend reaches ``pandapower`` (whose import carries
-#: the truly-optional ``lightsim2grid``).
-EXPECTED_LAZY_MODULE_COUNT = 19
+#: the truly-optional ``lightsim2grid``). 19 -> 20 on 2026-08-09:
+#: ``gridalyn.simulation.surrogates`` was added with a map, because its
+#: registry pulls the whole ``analytics.network_impact`` closure (pandas plus
+#: the ``rdflib``-backed semantic profile) that a bare ``ErrorBound`` consumer
+#: should not pay for.
+EXPECTED_LAZY_MODULE_COUNT = 20
 
 #: Total ``_LAZY_EXPORTS`` entries across those modules. Lower bound, not an
 #: equality: adding a public export must not require editing this test.

@@ -79,8 +79,11 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: 2026-08-07, when ``gridalyn.simulation.backends`` was added: it is the one
 #: place a power flow is solved, and it reaches ``lightsim2grid`` (and
 #: ``pandapower``, whose import carries ``lightsim2grid``), so it is exactly
-#: the kind of package this sweep exists to check.
-_EXPECTED_SUBPACKAGE_COUNT = 36
+#: the kind of package this sweep exists to check. 36 -> 37 on 2026-08-09,
+#: when ``gridalyn.simulation.surrogates`` was added: it reaches only base
+#: dependencies, so it is expected to be clean, and this sweep is what proves
+#: that rather than assumes it.
+_EXPECTED_SUBPACKAGE_COUNT = 37
 
 _PROBE = """\
 import json

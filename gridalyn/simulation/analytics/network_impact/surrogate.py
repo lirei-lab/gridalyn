@@ -9,6 +9,13 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.simulation.surrogates.contract import (
+    RELIEF_ERROR_METRIC,
+    RELIEF_ERROR_UNITS,
+    ErrorBound,
+    SurrogateDescriptor,
+    measure_relief_error_bound,
+)
 from gridalyn.twin.semantic.profile import NAMESPACES, SEMANTIC_TYPE, semantic_uri
 
 NODE_COLUMNS = [
@@ -617,3 +624,133 @@ def write_surrogate_artifacts(
     predictions.to_parquet(paths["predictions"], index=False)
     paths["report"].write_text(json.dumps(report, indent=2, sort_keys=True))
     return paths
+
+
+#: Registry ID of the deterministic topology surrogate.
+NETWORK_IMPACT_TABULAR_SURROGATE_ID = "network_impact_tabular_v1"
+
+#: Physics labels the bound below was measured against. Gitignored
+#: (``.gitignore:186``), so the number is *not* reproducible from a clean
+#: checkout -- it is reproducible on a workspace that has run the
+#: perturbation-sampler stage.
+_MEASUREMENT_DATASET = (
+    "instances/default/digital_twin/flexibility/"
+    "network_impact_physics_labels.parquet"
+)
+
+#: Measured accuracy of :class:`NetworkImpactTabularSurrogate` against the
+#: pandapower finite-difference labels.
+#:
+#: The number is large on purpose and is reported as measured: this surrogate
+#: derives deliverability from topology alone, predicting 1.0 percentage point
+#: of constraint relief per curtailed kW wherever a provider sits downstream
+#: of the constraint, while AC power flow delivers ~0.53. The error is
+#: therefore almost entirely systematic over-prediction (mean signed error
+#: +0.470028, i.e. equal to the MAE), not scatter. Treat its output as a
+#: screening rank, never as a relief quantity.
+TABULAR_SURROGATE_ERROR_BOUND = ErrorBound(
+    metric=RELIEF_ERROR_METRIC,
+    units=RELIEF_ERROR_UNITS,
+    value=0.470028,
+    sample_size=3429,
+    method=(
+        "Mean absolute error of predicted relief per kW against pandapower "
+        "AC finite-difference labels, over every label whose perturbation "
+        "landed (actual_perturbation_kw > 0): 3429 of 3888 rows, scenario S4, "
+        "69 providers x 6 transformer constraints x 18 timesteps. The "
+        "surrogate is fit-free, so every label is out-of-sample. Measured "
+        f"2026-08-09 on {_MEASUREMENT_DATASET}, which is gitignored and so "
+        "absent from a clean checkout. Re-derive with "
+        "NetworkImpactTabularSurrogate().verify(predictions, labels)."
+    ),
+    reference="pandapower_ac_powerflow_finite_difference",
+)
+
+
+class NetworkImpactTabularSurrogate:
+    """The deterministic topology surrogate, on the surrogate contract.
+
+    An adaptation, not a reimplementation: :meth:`predict` delegates verbatim
+    to :func:`build_provider_impact_predictions`, so the frame it returns --
+    and therefore ``network_impact_predictions.parquet`` -- is value-identical
+    to the pre-contract pipeline.
+    """
+
+    DESCRIPTOR = SurrogateDescriptor(
+        surrogate_id=NETWORK_IMPACT_TABULAR_SURROGATE_ID,
+        name="Deterministic topology surrogate (tabular_deterministic_v1)",
+        physical_model="pandapower AC power flow (finite-difference labels)",
+        error_bound=TABULAR_SURROGATE_ERROR_BOUND,
+    )
+
+    @property
+    def descriptor(self) -> SurrogateDescriptor:
+        """Return this surrogate's identity and stated error bound.
+
+        Returns:
+            The class-level descriptor.
+        """
+        return self.DESCRIPTOR
+
+    def fit(
+        self,
+        training: pd.DataFrame,
+        labels: pd.DataFrame | None = None,
+    ) -> dict[str, Any]:
+        """Return the (empty) model this fit-free surrogate predicts with.
+
+        Args:
+            training: Feature table from :func:`build_training_dataset`.
+            labels: Ignored; this surrogate is closed-form over topology and
+                consumes no supervision.
+
+        Returns:
+            A model record naming the family, so a caller that logs the model
+            still gets an identity rather than an empty dict.
+        """
+        return {
+            "model_family": "tabular_deterministic_v1",
+            "fitted": False,
+            "n_training_rows": int(len(training)),
+        }
+
+    def predict(
+        self,
+        training: pd.DataFrame,
+        model: dict[str, Any] | None = None,
+    ) -> pd.DataFrame:
+        """Score provider/constraint pairs, identically to the v1 pipeline.
+
+        Args:
+            training: Feature table from :func:`build_training_dataset`.
+            model: Ignored; kept for contract compatibility.
+
+        Returns:
+            Exactly :func:`build_provider_impact_predictions`'s frame.
+        """
+        return build_provider_impact_predictions(training)
+
+    def verify(
+        self,
+        predictions: pd.DataFrame,
+        labels: pd.DataFrame,
+    ) -> ErrorBound:
+        """Re-measure the stated bound from a prediction frame and labels.
+
+        Args:
+            predictions: A frame returned by :meth:`predict`.
+            labels: Finite-difference labels from ``perturbation_sampler``.
+
+        Returns:
+            A freshly measured :class:`ErrorBound` over the supplied data.
+        """
+        return measure_relief_error_bound(
+            predictions,
+            labels,
+            reference=TABULAR_SURROGATE_ERROR_BOUND.reference,
+            method=(
+                "Mean absolute error of predicted relief per kW against the "
+                "supplied pandapower finite-difference labels; fit-free "
+                "surrogate, so every label is out-of-sample."
+            ),
+        )

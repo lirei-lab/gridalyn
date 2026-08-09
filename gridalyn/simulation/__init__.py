@@ -34,6 +34,50 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.backends",
         "solve_power_flow",
     ),
+    "ErrorBound": (
+        "gridalyn.simulation.surrogates",
+        "ErrorBound",
+    ),
+    "Surrogate": (
+        "gridalyn.simulation.surrogates",
+        "Surrogate",
+    ),
+    "SurrogateDescriptor": (
+        "gridalyn.simulation.surrogates",
+        "SurrogateDescriptor",
+    ),
+    "SurrogateRegistry": (
+        "gridalyn.simulation.surrogates",
+        "SurrogateRegistry",
+    ),
+    "UnboundedSurrogateError": (
+        "gridalyn.simulation.surrogates",
+        "UnboundedSurrogateError",
+    ),
+    "UnknownSurrogateError": (
+        "gridalyn.simulation.surrogates",
+        "UnknownSurrogateError",
+    ),
+    "default_surrogate_registry": (
+        "gridalyn.simulation.surrogates",
+        "default_surrogate_registry",
+    ),
+    "measure_relief_error_bound": (
+        "gridalyn.simulation.surrogates",
+        "measure_relief_error_bound",
+    ),
+    "registered_error_bounds": (
+        "gridalyn.simulation.surrogates",
+        "registered_error_bounds",
+    ),
+    "resolve_surrogate": (
+        "gridalyn.simulation.surrogates",
+        "resolve_surrogate",
+    ),
+    "unmeasured_error_bound": (
+        "gridalyn.simulation.surrogates",
+        "unmeasured_error_bound",
+    ),
     "PandapowerGridBuilder": (
         "gridalyn.simulation.simulators.powerflow.builder",
         "PandapowerGridBuilder",
