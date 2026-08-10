@@ -10,11 +10,18 @@ import numpy as np
 import pandapower as pp
 import pandas as pd
 
+from gridalyn.assets.modeling.feeders import RadialFeederSpec
+from gridalyn.assets.modeling.voltage_control import VoltageControlDERSpec
+from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
 from gridalyn.simulation.backends.registry import solve_power_flow
 from gridalyn.simulation.observation.contract import NetworkObservation, observe_network
+from gridalyn.simulation.policies.contract import voltage_at_bus
 from gridalyn.simulation.simulators.powerflow.der_dispatch import (
     apply_der_dispatch_setpoints_to_pandapower,
     build_der_dispatch_pandapower_network,
+)
+from gridalyn.simulation.simulators.powerflow.voltage_control import (
+    build_voltage_control_feeder,
 )
 
 
@@ -306,9 +313,59 @@ def _solve_dispatch(
     return dispatch, metadata
 
 
+def measure_local_voltage_sensitivity(
+    feeder: RadialFeederSpec,
+    der: VoltageControlDERSpec,
+    *,
+    perturbation_mw: float = 0.01,
+    backend_id: str = DEFAULT_POWERFLOW_BACKEND_ID,
+) -> float:
+    """Measure the local dV/dP sensitivity at one bus for one battery.
+
+    Paradigm 2 (sensitivity dispatch) adapted from :func:`_voltage_sensitivity`'s
+    multi-DER finite-difference technique -- perturb, resolve, take the delta
+    -- to :class:`gridalyn.simulation.environments.voltage_control.
+    VoltageControlEnvironment`'s single controlled bus and single battery.
+    Where :func:`_voltage_sensitivity` perturbs every DER in a batch against a
+    shared base voltage, this measures exactly one DER against its own,
+    freshly solved base case, because the caller (a
+    :class:`gridalyn.simulation.policies.registry.SensitivityDispatchPolicy`)
+    needs one scalar coefficient, not a per-DER table.
+
+    Args:
+        feeder: The feeder to measure on.
+        der: DER spec naming the controlled bus and the battery's discharge
+            ``sgen``.
+        perturbation_mw: Injection step applied to the battery's discharge
+            ``sgen`` to measure the response.
+        backend_id: Power-flow backend to solve both cases with. Both the
+            base and the perturbed case use the same backend, so the
+            measured sensitivity is not itself an artifact of a backend
+            disagreement -- the concern 10-01 exists to close.
+
+    Returns:
+        ``(perturbed_vm - base_vm) / perturbation_mw`` at ``der.
+        controlled_bus_id``, in per-unit voltage per MW.
+    """
+    base_net = build_voltage_control_feeder(feeder, der)
+    solve_power_flow(base_net, backend_id=backend_id)
+    base_vm = voltage_at_bus(observe_network(base_net), der.controlled_bus_id)
+
+    perturbed_net = build_voltage_control_feeder(feeder, der)
+    battery_sgen_idx = perturbed_net.sgen.index[
+        perturbed_net.sgen["name"] == "battery_discharge"
+    ][0]
+    perturbed_net.sgen.at[battery_sgen_idx, "p_mw"] = float(perturbation_mw)
+    solve_power_flow(perturbed_net, backend_id=backend_id)
+    perturbed_vm = voltage_at_bus(observe_network(perturbed_net), der.controlled_bus_id)
+
+    return float((perturbed_vm - base_vm) / perturbation_mw)
+
+
 __all__ = [
     "DERVoltageDispatchConfig",
     "DERVoltageDispatchResult",
+    "measure_local_voltage_sensitivity",
     "run_der_voltage_dispatch",
     "summarize_der_voltage_dispatch",
     "write_der_voltage_dispatch_figure",

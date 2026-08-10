@@ -86,8 +86,13 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: ``gridalyn.simulation.observation`` was added: it is the one definition of
 #: what a solved network shows, and although its contract reaches only base
 #: dependencies, it exists to be extended with observers for producers that do
-#: reach ``pandapower``, so it belongs in the sweep.
-_EXPECTED_SUBPACKAGE_COUNT = 38
+#: reach ``pandapower``, so it belongs in the sweep. 38 -> 39 on 2026-08-10,
+#: when ``gridalyn.simulation.policies`` was added: it registers
+#: voltage-control policies, and although the contract itself reaches only
+#: base dependencies, it exists to be extended with policies that do reach
+#: ``pandapower``-backed measurement helpers, so it belongs in the sweep for
+#: the same reason ``observation`` does.
+_EXPECTED_SUBPACKAGE_COUNT = 39
 
 _PROBE = """\
 import json

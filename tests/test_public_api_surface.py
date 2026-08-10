@@ -83,8 +83,12 @@ PUBLIC_LAYER_FACADES = (
 #: observation`` was added with a map. Its contract reaches only pandas today,
 #: so the map is defensive rather than required -- it keeps the first observer
 #: for a ``pandapower``-backed producer from leaking ``lightsim2grid`` out of a
-#: package import.
-EXPECTED_LAZY_MODULE_COUNT = 21
+#: package import. 21 -> 22 on 2026-08-10: ``gridalyn.simulation.policies``
+#: was added with a map. Its contract reaches only pandas/numpy today, so the
+#: map is defensive rather than required -- the same reasoning ``observation``
+#: carries, since a policy that measures its own sensitivity is expected to
+#: reach ``pandapower`` eventually.
+EXPECTED_LAZY_MODULE_COUNT = 22
 
 #: Total ``_LAZY_EXPORTS`` entries across those modules. Lower bound, not an
 #: equality: adding a public export must not require editing this test.
