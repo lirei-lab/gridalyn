@@ -12,6 +12,7 @@ from pandapower.timeseries import DFData, OutputWriter, run_timeseries
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
 from gridalyn.simulation.backends.registry import resolve_powerflow_backend
+from gridalyn.simulation.observation.contract import observe_network
 from gridalyn.simulation.simulators.powerflow.synthetic_network import (
     build_synthetic_network_from_config,
 )
@@ -517,11 +518,19 @@ class PowerflowMonteCarloRunner:
 
     def _verify_grid_stats(self):
         print("\n====== Verification: Grid Statistics ======")
-        vm_pu = self.pp_net.res_bus.vm_pu.dropna()
+        # drop_missing() is the explicit form of the dropna() these counts have
+        # always been taken over: the extremes agree either way, but the
+        # denominator below must exclude buses the solve did not report.
+        observed = observe_network(self.pp_net).drop_missing()
+        vm_pu = observed.bus_voltage_pu
         if len(vm_pu) > 0:
-            min_v, max_v = vm_pu.min(), vm_pu.max()
-            under_voltage = (vm_pu < 0.95).sum() / len(vm_pu) * 100
-            over_voltage = (vm_pu > 1.05).sum() / len(vm_pu) * 100
+            min_v, max_v = observed.min_voltage_pu, observed.max_voltage_pu
+            under_count, over_count = observed.voltage_violation_counts(
+                below_pu=0.95,
+                above_pu=1.05,
+            )
+            under_voltage = under_count / len(vm_pu) * 100
+            over_voltage = over_count / len(vm_pu) * 100
 
             print(f"Voltage (p.u.): Min={min_v:.3f}, Max={max_v:.3f}")
             if under_voltage > 0 or over_voltage > 0:
@@ -532,9 +541,13 @@ class PowerflowMonteCarloRunner:
             else:
                 print("  SUCCESS: All buses within 0.95 - 1.05 p.u. limits.")
 
-        line_loading = self.pp_net.res_line.loading_percent.dropna()
+        # Mean loading and the overload count have exactly one consumer -- this
+        # diagnostic -- so they are computed here rather than promoted into the
+        # observation contract on a single site.
+        line_loading = observed.line_loading_percent
         if len(line_loading) > 0:
-            mean_line, max_line = line_loading.mean(), line_loading.max()
+            mean_line = line_loading.mean()
+            max_line = observed.max_line_loading_percent
             overloaded_lines = (line_loading > 100).sum()
 
             print(f"Line Loading (%): Mean={mean_line:.1f}%, Max={max_line:.1f}%")

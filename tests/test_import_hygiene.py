@@ -82,8 +82,12 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: the kind of package this sweep exists to check. 36 -> 37 on 2026-08-09,
 #: when ``gridalyn.simulation.surrogates`` was added: it reaches only base
 #: dependencies, so it is expected to be clean, and this sweep is what proves
-#: that rather than assumes it.
-_EXPECTED_SUBPACKAGE_COUNT = 37
+#: that rather than assumes it. 37 -> 38 on 2026-08-09, when
+#: ``gridalyn.simulation.observation`` was added: it is the one definition of
+#: what a solved network shows, and although its contract reaches only base
+#: dependencies, it exists to be extended with observers for producers that do
+#: reach ``pandapower``, so it belongs in the sweep.
+_EXPECTED_SUBPACKAGE_COUNT = 38
 
 _PROBE = """\
 import json

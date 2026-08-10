@@ -34,6 +34,14 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.backends",
         "solve_power_flow",
     ),
+    "NetworkObservation": (
+        "gridalyn.simulation.observation",
+        "NetworkObservation",
+    ),
+    "observe_network": (
+        "gridalyn.simulation.observation",
+        "observe_network",
+    ),
     "ErrorBound": (
         "gridalyn.simulation.surrogates",
         "ErrorBound",

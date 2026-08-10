@@ -11,6 +11,7 @@ import pandapower as pp
 import pandas as pd
 
 from gridalyn.simulation.backends.registry import solve_power_flow
+from gridalyn.simulation.observation.contract import NetworkObservation, observe_network
 from gridalyn.simulation.simulators.powerflow.der_dispatch import (
     apply_der_dispatch_setpoints_to_pandapower,
     build_der_dispatch_pandapower_network,
@@ -37,7 +38,24 @@ _DEFAULT_DISPATCH_CONFIG = DERVoltageDispatchConfig()
 
 @dataclass(frozen=True)
 class DERVoltageDispatchResult:
-    """Tables and metadata produced by a DER voltage dispatch run."""
+    """Tables and metadata produced by a DER voltage dispatch run.
+
+    The two observations are kept apart on purpose. They are two *network
+    states* -- the feeder at full PV output and the feeder at the optimized
+    setpoints -- not a full and a filtered view of one state, and the summary
+    reports a maximum for both but a minimum only for the optimized one.
+    Collapsing them would change what the study reports.
+
+    Attributes:
+        sensitivity: Per-bus, per-DER voltage sensitivity table.
+        dispatch: Per-DER dispatch decision table.
+        verification: Per-bus voltages under both verified network states.
+        optimization_metadata: Solver name, status and objective value.
+        full_pv_converged: Whether the full-PV verification net converged.
+        optimized_converged: Whether the optimized verification net converged.
+        full_pv_observation: Observation of the full-PV verification net.
+        optimized_observation: Observation of the optimized verification net.
+    """
 
     sensitivity: pd.DataFrame
     dispatch: pd.DataFrame
@@ -45,6 +63,8 @@ class DERVoltageDispatchResult:
     optimization_metadata: dict
     full_pv_converged: bool
     optimized_converged: bool
+    full_pv_observation: NetworkObservation
+    optimized_observation: NetworkObservation
 
 
 def run_der_voltage_dispatch(
@@ -79,11 +99,16 @@ def run_der_voltage_dispatch(
         dispatch["pv_dispatch_mw"].to_numpy(dtype=float),
         dispatch["battery_charge_mw"].to_numpy(dtype=float),
     )
+    full_pv_observation = observe_network(full_pv_net)
+    optimized_observation = observe_network(optimized_net)
     verification = pd.DataFrame(
         {
+            # Positional, not the result index: preserved verbatim from before
+            # the observation contract, because the figure and the study
+            # artifact both key off it.
             "bus_id": list(range(len(optimized_net.bus))),
-            "full_pv_vm_pu": full_pv_net.res_bus.vm_pu.to_numpy(dtype=float),
-            "optimized_vm_pu": optimized_net.res_bus.vm_pu.to_numpy(dtype=float),
+            "full_pv_vm_pu": full_pv_observation.bus_voltage_pu,
+            "optimized_vm_pu": optimized_observation.bus_voltage_pu,
         }
     )
     return DERVoltageDispatchResult(
@@ -91,8 +116,10 @@ def run_der_voltage_dispatch(
         dispatch=dispatch,
         verification=verification,
         optimization_metadata=optimization_metadata,
-        full_pv_converged=bool(full_pv_net.converged),
-        optimized_converged=bool(optimized_net.converged),
+        full_pv_converged=full_pv_observation.converged,
+        optimized_converged=optimized_observation.converged,
+        full_pv_observation=full_pv_observation,
+        optimized_observation=optimized_observation,
     )
 
 
@@ -101,7 +128,6 @@ def summarize_der_voltage_dispatch(
 ) -> dict:
     """Build the canonical report summary for a DER voltage dispatch result."""
     dispatch = result.dispatch
-    verification = result.verification
     return {
         "algorithm": "cvxpy_linearized_voltage_constrained_der_dispatch",
         "solver": result.optimization_metadata["solver_name"],
@@ -112,9 +138,9 @@ def summarize_der_voltage_dispatch(
         "total_pv_dispatch_mw": float(dispatch["pv_dispatch_mw"].sum()),
         "total_pv_curtailment_mw": float(dispatch["pv_curtailment_mw"].sum()),
         "total_battery_charge_mw": float(dispatch["battery_charge_mw"].sum()),
-        "verified_max_voltage_before_pu": float(verification["full_pv_vm_pu"].max()),
-        "verified_max_voltage_after_pu": float(verification["optimized_vm_pu"].max()),
-        "verified_min_voltage_after_pu": float(verification["optimized_vm_pu"].min()),
+        "verified_max_voltage_before_pu": result.full_pv_observation.max_voltage_pu,
+        "verified_max_voltage_after_pu": result.optimized_observation.max_voltage_pu,
+        "verified_min_voltage_after_pu": result.optimized_observation.min_voltage_pu,
     }
 
 
@@ -183,7 +209,7 @@ def write_der_voltage_dispatch_figure(
 def _base_voltage(build_feeder: Callable[[], pp.pandapowerNet]) -> np.ndarray:
     net = build_feeder()
     solve_power_flow(net)
-    return net.res_bus.vm_pu.to_numpy(dtype=float)
+    return observe_network(net).bus_voltage_pu
 
 
 def _voltage_sensitivity(
@@ -202,9 +228,8 @@ def _voltage_sensitivity(
             np.array([0.0], dtype=float),
         )
         solve_power_flow(net)
-        delta = (
-            net.res_bus.vm_pu.to_numpy(dtype=float) - base_voltage
-        ) / config.perturbation_mw
+        perturbed = observe_network(net).bus_voltage_pu
+        delta = (perturbed - base_voltage) / config.perturbation_mw
         for bus_id, value in enumerate(delta):
             rows.append(
                 {

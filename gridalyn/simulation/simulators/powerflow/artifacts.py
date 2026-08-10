@@ -6,14 +6,20 @@ import os
 from pathlib import Path
 from typing import Any, Iterable
 
-import pandas as pd
 import pandapower as pp
+import pandas as pd
 
 from gridalyn.foundation import ReportMetadata, file_reference, write_report
+from gridalyn.simulation.observation.contract import observe_network
+
+# Module-level default so the Path is not constructed in an argument default
+# (bugbear B008). Safe to share: Path is immutable, and this is already the
+# single object every caller has received since the default was introduced.
+_DEFAULT_MATPLOTLIB_CACHE_DIR = Path("outputs/cache/matplotlib")
 
 
 def configure_headless_matplotlib(
-    cache_dir: Path | str = Path("outputs/cache/matplotlib"),
+    cache_dir: Path | str = _DEFAULT_MATPLOTLIB_CACHE_DIR,
 ) -> None:
     """Configure Matplotlib for workflow scripts that run without a display."""
     os.environ.setdefault("MPLCONFIGDIR", str(Path(cache_dir).resolve()))
@@ -67,8 +73,7 @@ def build_pandapower_summary(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a compact, stable summary for a solved pandapower network."""
-    res_bus = getattr(net, "res_bus", pd.DataFrame())
-    res_line = getattr(net, "res_line", pd.DataFrame())
+    observation = observe_network(net)
     summary: dict[str, Any] = {
         "simulation_engine": simulation_engine,
         "bus_count": int(len(getattr(net, "bus", []))),
@@ -77,32 +82,27 @@ def build_pandapower_summary(
         "slack_count": int(len(getattr(net, "ext_grid", []))),
         "sgen_count": int(len(getattr(net, "sgen", []))),
         "transformer_count": int(len(getattr(net, "trafo", []))),
-        "converged": bool(getattr(net, "converged", False)),
+        "converged": observation.converged,
         "total_load_mw": float(net.load.p_mw.sum()) if hasattr(net, "load") else 0.0,
-        "total_load_mvar": float(net.load.q_mvar.sum()) if hasattr(net, "load") else 0.0,
+        "total_load_mvar": (
+            float(net.load.q_mvar.sum()) if hasattr(net, "load") else 0.0
+        ),
         "total_generation_mw": (
-            float(net.sgen.p_mw.sum()) if hasattr(net, "sgen") and len(net.sgen) else 0.0
+            float(net.sgen.p_mw.sum())
+            if hasattr(net, "sgen") and len(net.sgen)
+            else 0.0
         ),
-        "min_voltage_pu": (
-            _optional_float(res_bus.vm_pu.min())
-            if isinstance(res_bus, pd.DataFrame) and "vm_pu" in res_bus
-            else None
+        # An unobserved quantity reduces to nan and an unobserved loss column
+        # to None; _optional_float maps both to None, which is what the
+        # per-table isinstance/column guards this replaces produced. The one
+        # case where they differ -- a reported but empty loss column, which
+        # sums to 0.0 rather than None -- the contract preserves.
+        "min_voltage_pu": _optional_float(observation.min_voltage_pu),
+        "max_voltage_pu": _optional_float(observation.max_voltage_pu),
+        "max_line_loading_percent": _optional_float(
+            observation.max_line_loading_percent
         ),
-        "max_voltage_pu": (
-            _optional_float(res_bus.vm_pu.max())
-            if isinstance(res_bus, pd.DataFrame) and "vm_pu" in res_bus
-            else None
-        ),
-        "max_line_loading_percent": (
-            _optional_float(res_line.loading_percent.max())
-            if isinstance(res_line, pd.DataFrame) and "loading_percent" in res_line
-            else None
-        ),
-        "total_line_loss_mw": (
-            _optional_float(res_line.pl_mw.sum())
-            if isinstance(res_line, pd.DataFrame) and "pl_mw" in res_line
-            else None
-        ),
+        "total_line_loss_mw": _optional_float(observation.total_line_loss_mw),
     }
     if network is not None:
         summary["network"] = network
@@ -128,8 +128,7 @@ def write_voltage_profile_figure(
 
     figure_path = Path(path)
     figure_path.parent.mkdir(parents=True, exist_ok=True)
-    voltage = net.res_bus.vm_pu.reset_index()
-    voltage.columns = ["bus_id", "vm_pu"]
+    voltage = observe_network(net).voltage_frame()
 
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot(voltage["bus_id"], voltage["vm_pu"], marker="o", linewidth=1.8)

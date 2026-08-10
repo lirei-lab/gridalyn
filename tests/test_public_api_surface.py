@@ -79,8 +79,12 @@ PUBLIC_LAYER_FACADES = (
 #: ``gridalyn.simulation.surrogates`` was added with a map, because its
 #: registry pulls the whole ``analytics.network_impact`` closure (pandas plus
 #: the ``rdflib``-backed semantic profile) that a bare ``ErrorBound`` consumer
-#: should not pay for.
-EXPECTED_LAZY_MODULE_COUNT = 20
+#: should not pay for. 20 -> 21 on 2026-08-09: ``gridalyn.simulation.
+#: observation`` was added with a map. Its contract reaches only pandas today,
+#: so the map is defensive rather than required -- it keeps the first observer
+#: for a ``pandapower``-backed producer from leaking ``lightsim2grid`` out of a
+#: package import.
+EXPECTED_LAZY_MODULE_COUNT = 21
 
 #: Total ``_LAZY_EXPORTS`` entries across those modules. Lower bound, not an
 #: equality: adding a public export must not require editing this test.
