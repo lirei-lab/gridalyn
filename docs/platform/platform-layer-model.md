@@ -216,9 +216,11 @@ with known error.
 
 ### Network Control Registries (Phase 10, Milestone 5, 2026-08-10)
 
-Four network-control roles are each an explicit-ID registry rather than a
-hardcoded choice: which physical solver runs, which surrogate stands in for
-it, what a controller observes, and which policy decides an action.
+Four network-control roles resolve by explicit ID rather than a hardcoded
+choice: which physical solver runs, which surrogate stands in for it, what a
+controller observes, and which policy decides an action. Three of the four
+are registries; the fourth (observation) is a single contract, not a
+registry — see the note below the table.
 
 | Role | Registry | IDs registered |
 | --- | --- | --- |

@@ -148,6 +148,45 @@ def _long_profile_spec() -> VoltageControlEnvironmentSpec:
     )
 
 
+def test_backend_registry_path_agrees_with_the_pre_decomposition_adapter() -> None:
+    """Pins the disclosed backend-swap divergence to a tight, checkable bound.
+
+    Before 10-04, this environment solved every step through
+    `LightSimPowerflowAdapter.solve_voltage_magnitudes()` -- a warm-started
+    incremental C++ solve that never touched `pandapower.runpp`. It now solves
+    through `solve_power_flow` -> `pp.runpp(net, lightsim2grid=True)`, flat-started
+    every step. The two are not bit-identical: Newton-Raphson converges to the
+    same physical fixed point from two different starting points, not to the
+    same floating-point bit pattern. The reference values below were captured
+    directly from the pre-decomposition adapter on this exact 6-step episode
+    (git-stashed at commit ac6e376c, immediately before 10-04) and are pinned
+    here so a *regression* in solver agreement -- not the expected ~1e-13
+    noise -- is caught before it could reach the governed
+    `rl_voltage_control_lightsim` baseline's much coarser 1e-3 pu tolerance.
+    """
+    spec = _long_profile_spec()
+    pre_decomposition_controlled_vm_pu = [
+        1.0097066591136141,
+        1.010540671090323,
+        1.0098316973664967,
+        1.0100413619887185,
+        1.0104359658507316,
+        1.0097560453302161,
+    ]
+
+    episode = _run_episode(spec, LIGHTSIM2GRID_BACKEND_ID)
+
+    for step, (record, reference) in enumerate(
+        zip(episode, pre_decomposition_controlled_vm_pu, strict=True)
+    ):
+        relative_difference = abs(record["controlled_vm_pu"] - reference) / reference
+        assert relative_difference < 1e-9, (
+            f"step {step}: controlled_vm_pu diverged from the pre-decomposition "
+            f"adapter by {relative_difference:.3e} relative, exceeding the "
+            "1e-9 regression bound (expected noise floor is ~1e-13)"
+        )
+
+
 def test_environment_defaults_to_the_lightsim2grid_backend() -> None:
     """The default backend_id matches this environment's pre-10-04 behaviour."""
     env = VoltageControlEnvironment(_problem_spec())

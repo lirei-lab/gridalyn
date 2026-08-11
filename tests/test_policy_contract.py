@@ -1,3 +1,7 @@
+import ast
+import unittest
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -8,6 +12,7 @@ from gridalyn.simulation.control.tabular_voltage import (
     _select_action,
 )
 from gridalyn.simulation.observation.contract import NetworkObservation
+from gridalyn.simulation.policies import registry as registry_module
 from gridalyn.simulation.policies.contract import (
     SENSITIVITY_DISPATCH_POLICY_ID,
     TABULAR_RL_POLICY_ID,
@@ -179,3 +184,61 @@ def test_tabular_rl_policy_matches_select_action_directly() -> None:
     )
 
     assert decided == expected
+
+
+def test_registry_create_builds_a_working_tabular_rl_policy() -> None:
+    """The registry's create() path, not just direct construction, is exercised."""
+    registry = default_policy_registry()
+    q_table = {(1, 1, 0, -0.08): 0.1, (1, 1, 0, 0.0): 0.9, (1, 1, 0, 0.08): 0.2}
+
+    policy = registry.create(
+        TABULAR_RL_POLICY_ID,
+        q_table=q_table,
+        action_space_mw=(-0.08, 0.0, 0.08),
+        controlled_bus_id=3,
+    )
+
+    assert policy.descriptor.policy_id == TABULAR_RL_POLICY_ID
+    observation = _observation(bus_ids=[3], voltages=[1.01])
+    assert policy.decide(observation, soc_mwh=0.20, step=0) == 0.0
+
+
+def test_registry_create_builds_a_working_sensitivity_dispatch_policy() -> None:
+    """The registry's create() path builds a policy that actually decides."""
+    registry = default_policy_registry()
+
+    policy = registry.create(
+        SENSITIVITY_DISPATCH_POLICY_ID,
+        sensitivity_pu_per_mw=0.05,
+        action_space_mw=(-0.08, 0.0, 0.08),
+        controlled_bus_id=3,
+        voltage_target_pu=1.01,
+    )
+
+    assert policy.descriptor.policy_id == SENSITIVITY_DISPATCH_POLICY_ID
+    below_target = _observation(bus_ids=[3], voltages=[1.00])
+    assert policy.decide(below_target, soc_mwh=0.12, step=0) > 0
+
+
+class NoEntryPointsDiscoveryTest(unittest.TestCase):
+    """Resolution is by explicit ID only; nothing is auto-discovered."""
+
+    def _registry_module_sources(self) -> dict[str, str]:
+        package_dir = Path(registry_module.__file__).parent
+        return {
+            path.name: path.read_text(encoding="utf-8")
+            for path in sorted(package_dir.glob("*.py"))
+        }
+
+    def test_no_entry_points_call_anywhere_in_the_policies_package(self) -> None:
+        # An AST check, not a grep: a grep counts the explanatory comments in
+        # contract.py and registry.py that document why discovery is absent,
+        # and would fail on the documentation rather than on code.
+        offenders: list[str] = []
+        for name, source in self._registry_module_sources().items():
+            for node in ast.walk(ast.parse(source)):
+                if isinstance(node, ast.Attribute) and node.attr == "entry_points":
+                    offenders.append(f"{name}:{node.lineno} attribute entry_points")
+                elif isinstance(node, ast.Name) and node.id == "entry_points":
+                    offenders.append(f"{name}:{node.lineno} name entry_points")
+        self.assertEqual([], offenders, offenders)

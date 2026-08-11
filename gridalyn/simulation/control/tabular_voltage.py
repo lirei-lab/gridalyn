@@ -448,6 +448,7 @@ def _violation_count(
 
 
 __all__ = [
+    "TabularRLPolicy",
     "TabularVoltageControlConfig",
     "TabularVoltageControlResult",
     "summarize_tabular_voltage_control",
