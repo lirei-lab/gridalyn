@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import numpy as np
-import pandas as pd
 import pandapower as pp
+import pandas as pd
+
+from gridalyn.simulation.backends.registry import solve_power_flow
 
 
 def apply_der_dispatch_setpoints_to_pandapower(
@@ -59,7 +61,7 @@ def build_der_dispatch_pandapower_network(
         battery_charge_mw,
     )
     if run_powerflow:
-        pp.runpp(net, algorithm="nr", init="auto")
+        solve_power_flow(net)
     return net
 
 

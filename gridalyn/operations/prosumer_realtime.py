@@ -6,14 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 import pandapower as pp
+import pandas as pd
 
 from gridalyn.simulation import (
     apply_battery_dispatch_to_pandapower,
     apply_pv_generation_to_pandapower,
     configure_headless_matplotlib,
 )
+from gridalyn.simulation.backends.registry import solve_power_flow
+from gridalyn.simulation.observation.contract import observe_network
 
 
 @dataclass(frozen=True)
@@ -271,8 +273,14 @@ def run_prosumer_powerflow(
     prosumers: pd.DataFrame,
     pv_factor: float,
     dispatch: pd.DataFrame,
-) -> dict[str, float | bool]:
-    """Run feeder verification for one prosumer market interval."""
+) -> dict[str, float | bool | None]:
+    """Run feeder verification for one prosumer market interval.
+
+    ``None`` enters the return type with the observation contract: a network
+    that reports no line-loss column at all is a different answer from one
+    that reports zero loss. Every value produced here is unchanged -- the
+    feeder is solved immediately above, so the loss is always a float.
+    """
     net = build_feeder()
     net.load["p_mw"] = net.load["p_mw"] * load_multiplier
     net.load["q_mvar"] = net.load["q_mvar"] * load_multiplier
@@ -280,13 +288,14 @@ def run_prosumer_powerflow(
     apply_pv_generation_to_pandapower(net, prosumers, pv_factor=pv_factor)
     apply_battery_dispatch_to_pandapower(net, dispatch)
 
-    pp.runpp(net, algorithm="nr", init="auto")
+    solve_power_flow(net)
+    observation = observe_network(net)
     return {
-        "converged": bool(net.converged),
-        "min_voltage_pu": float(net.res_bus.vm_pu.min()),
-        "max_voltage_pu": float(net.res_bus.vm_pu.max()),
-        "max_line_loading_percent": float(net.res_line.loading_percent.max()),
-        "line_loss_mw": float(net.res_line.pl_mw.sum()),
+        "converged": observation.converged,
+        "min_voltage_pu": observation.min_voltage_pu,
+        "max_voltage_pu": observation.max_voltage_pu,
+        "max_line_loading_percent": observation.max_line_loading_percent,
+        "line_loss_mw": observation.total_line_loss_mw,
     }
 
 

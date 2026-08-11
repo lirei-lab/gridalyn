@@ -73,7 +73,22 @@ PUBLIC_LAYER_FACADES = (
 #: quietly collecting zero parametrized cases. 17 -> 18 on 2026-08-06:
 #: ``gridalyn.interfaces.reporting`` converted to a lazy facade (ledger #35,
 #: removing the eager ``digital_twin`` import behind the runpy RuntimeWarning).
-EXPECTED_LAZY_MODULE_COUNT = 18
+#: 18 -> 19 on 2026-08-07: ``gridalyn.simulation.backends`` was added and needs
+#: the map, because every backend reaches ``pandapower`` (whose import carries
+#: the truly-optional ``lightsim2grid``). 19 -> 20 on 2026-08-09:
+#: ``gridalyn.simulation.surrogates`` was added with a map, because its
+#: registry pulls the whole ``analytics.network_impact`` closure (pandas plus
+#: the ``rdflib``-backed semantic profile) that a bare ``ErrorBound`` consumer
+#: should not pay for. 20 -> 21 on 2026-08-09: ``gridalyn.simulation.
+#: observation`` was added with a map. Its contract reaches only pandas today,
+#: so the map is defensive rather than required -- it keeps the first observer
+#: for a ``pandapower``-backed producer from leaking ``lightsim2grid`` out of a
+#: package import. 21 -> 22 on 2026-08-10: ``gridalyn.simulation.policies``
+#: was added with a map. Its contract reaches only pandas/numpy today, so the
+#: map is defensive rather than required -- the same reasoning ``observation``
+#: carries, since a policy that measures its own sensitivity is expected to
+#: reach ``pandapower`` eventually.
+EXPECTED_LAZY_MODULE_COUNT = 22
 
 #: Total ``_LAZY_EXPORTS`` entries across those modules. Lower bound, not an
 #: equality: adding a public export must not require editing this test.

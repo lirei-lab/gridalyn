@@ -38,6 +38,23 @@ The strict rule is that asset modelers do not import solver engines,
 operations, project workflows, or datagen. They define reusable contracts that
 other layers consume.
 
+**This is layer ownership, not role separation.** The table above answers
+"which of the seven packages owns this kind of code" — a different question
+from "which swappable role does a network-control component play." Phase 10
+(Milestone 5, 2026-08-10) built that second separation *inside*
+`gridalyn.simulation`: physical power-flow backend
+(`gridalyn.simulation.backends`), surrogate (`gridalyn.simulation.surrogates`),
+observation (`gridalyn.simulation.observation`) and control policy
+(`gridalyn.simulation.policies`) are each an explicit-ID registry, resolved by
+name rather than fused into one class, with the choice recorded in
+`provenance.powerflow_backend`. Before Phase 10, `VoltageControlEnvironment`
+fused all four of those roles into one 138-line class — a layer-ownership
+violation the table above never flagged, because "solver modelers" already
+correctly described where the code lived; it just did not separate the roles
+*within* that one home. Both claims are true after Phase 10, and they are
+about different axes: this table is package boundaries, the four registries
+are role boundaries within a package.
+
 See [Building Models](../platform/building-models.md).
 
 For stochastic load profiles, weather windows, packaged ARX weights, and

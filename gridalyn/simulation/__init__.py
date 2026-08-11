@@ -3,8 +3,89 @@
 from __future__ import annotations
 
 from importlib import import_module
+from typing import Any
 
-_LAZY_EXPORTS = {
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "PowerFlowBackend": (
+        "gridalyn.simulation.backends",
+        "PowerFlowBackend",
+    ),
+    "PowerFlowBackendDescriptor": (
+        "gridalyn.simulation.backends",
+        "PowerFlowBackendDescriptor",
+    ),
+    "PowerFlowBackendRegistry": (
+        "gridalyn.simulation.backends",
+        "PowerFlowBackendRegistry",
+    ),
+    "UnknownPowerFlowBackendError": (
+        "gridalyn.simulation.backends",
+        "UnknownPowerFlowBackendError",
+    ),
+    "default_powerflow_backend_registry": (
+        "gridalyn.simulation.backends",
+        "default_powerflow_backend_registry",
+    ),
+    "resolve_powerflow_backend": (
+        "gridalyn.simulation.backends",
+        "resolve_powerflow_backend",
+    ),
+    "solve_power_flow": (
+        "gridalyn.simulation.backends",
+        "solve_power_flow",
+    ),
+    "NetworkObservation": (
+        "gridalyn.simulation.observation",
+        "NetworkObservation",
+    ),
+    "observe_network": (
+        "gridalyn.simulation.observation",
+        "observe_network",
+    ),
+    "ErrorBound": (
+        "gridalyn.simulation.surrogates",
+        "ErrorBound",
+    ),
+    "Surrogate": (
+        "gridalyn.simulation.surrogates",
+        "Surrogate",
+    ),
+    "SurrogateDescriptor": (
+        "gridalyn.simulation.surrogates",
+        "SurrogateDescriptor",
+    ),
+    "SurrogateRegistry": (
+        "gridalyn.simulation.surrogates",
+        "SurrogateRegistry",
+    ),
+    "UnboundedSurrogateError": (
+        "gridalyn.simulation.surrogates",
+        "UnboundedSurrogateError",
+    ),
+    "UnknownSurrogateError": (
+        "gridalyn.simulation.surrogates",
+        "UnknownSurrogateError",
+    ),
+    "default_surrogate_registry": (
+        "gridalyn.simulation.surrogates",
+        "default_surrogate_registry",
+    ),
+    "measure_relief_error_bound": (
+        "gridalyn.simulation.surrogates",
+        "measure_relief_error_bound",
+    ),
+    "registered_error_bounds": (
+        "gridalyn.simulation.surrogates",
+        "registered_error_bounds",
+    ),
+    "resolve_surrogate": (
+        "gridalyn.simulation.surrogates",
+        "resolve_surrogate",
+    ),
+    "unmeasured_error_bound": (
+        "gridalyn.simulation.surrogates",
+        "unmeasured_error_bound",
+    ),
     "PandapowerGridBuilder": (
         "gridalyn.simulation.simulators.powerflow.builder",
         "PandapowerGridBuilder",
@@ -194,7 +275,18 @@ _LAZY_EXPORTS = {
 __all__ = sorted(_LAZY_EXPORTS)
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
+    """Lazily resolve a simulation symbol from its implementation module.
+
+    Args:
+        name: Public attribute requested on ``gridalyn.simulation``.
+
+    Returns:
+        The resolved attribute, cached into module globals for free re-access.
+
+    Raises:
+        AttributeError: If ``name`` is not a known simulation symbol.
+    """
     if name in _LAZY_EXPORTS:
         module_name, attr_name = _LAZY_EXPORTS[name]
         value = getattr(import_module(module_name), attr_name)

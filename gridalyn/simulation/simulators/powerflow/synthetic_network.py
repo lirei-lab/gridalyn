@@ -20,6 +20,7 @@ from typing import Any, Sequence
 import numpy as np
 import pandapower as pp
 
+from gridalyn.simulation.backends.registry import solve_power_flow
 from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 from gridalyn.twin.core.graph import PowerGridGraph
 
@@ -209,9 +210,7 @@ def _warn_on_line_sizing(net: pp.pandapowerNet) -> None:
             stacklevel=2,
         )
 
-    pearson = (
-        diag.correlations.get("downstream_load_vs_max_i_ka", {}).get("pearson")
-    )
+    pearson = diag.correlations.get("downstream_load_vs_max_i_ka", {}).get("pearson")
     if pearson is not None and np.isfinite(pearson) and abs(float(pearson)) < 0.1:
         warnings.warn(
             "check_line_sizing: downstream-load vs max_i_ka correlation is "
@@ -380,7 +379,7 @@ def _run_optional_powerflow(
     if not run_powerflow:
         return {"attempted": False, "converged": None, "error": None}
     try:
-        pp.runpp(
+        solve_power_flow(
             net,
             algorithm="nr",
             init="auto",

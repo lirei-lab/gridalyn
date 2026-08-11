@@ -4467,7 +4467,7 @@
       "ordinal": 0,
       "rationale": "fence language text is not executable as written",
       "sequence": null,
-      "sha1": "04be8b70f9970cd74f746a0022ab5ed646f3e5ed",
+      "sha1": "0cc8cbea75636fc945d99bf1d94cc84f38566c92",
       "verdict": "DOCUMENTED"
     },
     "docs/semantic-layer/falkordb.md#0": {

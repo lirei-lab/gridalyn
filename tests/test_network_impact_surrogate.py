@@ -4,6 +4,8 @@ import unittest
 import pandas as pd
 
 from gridalyn.simulation.analytics.network_impact.surrogate import (
+    NETWORK_IMPACT_TABULAR_SURROGATE_ID,
+    NetworkImpactTabularSurrogate,
     build_edge_features,
     build_graph_snapshot,
     build_node_features,
@@ -11,6 +13,7 @@ from gridalyn.simulation.analytics.network_impact.surrogate import (
     build_surrogate_report,
     build_training_dataset,
 )
+from gridalyn.simulation.surrogates.registry import resolve_surrogate
 
 
 class NetworkImpactSurrogateTest(unittest.TestCase):
@@ -200,6 +203,37 @@ class NetworkImpactSurrogateTest(unittest.TestCase):
         self.assertEqual(report["validation"]["authority"], "pandapower_ac_powerflow")
         self.assertEqual(report["summary"]["n_training_rows"], 4)
         self.assertGreater(report["summary"]["positive_prediction_count"], 0)
+
+    def test_contract_adapter_emits_the_pre_contract_predictions_verbatim(self):
+        # The surrogate contract (plan 10-02) adapts this pipeline; it does
+        # not re-implement it. Values, column order and dtypes must all match,
+        # because operations/artifacts.py and the dashboard catalog read the
+        # emitted frame positionally as well as by name.
+        training = build_training_dataset(
+            self.providers, self.sensitivity, scenario_id="S4"
+        )
+        expected = build_provider_impact_predictions(training)
+
+        surrogate = resolve_surrogate(NETWORK_IMPACT_TABULAR_SURROGATE_ID)
+        actual = surrogate.predict(training, surrogate.fit(training))
+
+        pd.testing.assert_frame_equal(expected, actual, check_exact=True)
+        self.assertEqual(list(expected.columns), list(actual.columns))
+        self.assertEqual(
+            NETWORK_IMPACT_TABULAR_SURROGATE_ID,
+            NetworkImpactTabularSurrogate.DESCRIPTOR.surrogate_id,
+        )
+
+    def test_the_registered_surrogate_states_a_measured_error_bound(self):
+        bound = resolve_surrogate(
+            NETWORK_IMPACT_TABULAR_SURROGATE_ID
+        ).descriptor.error_bound
+
+        self.assertIsNotNone(bound)
+        self.assertEqual("measured", bound.status)
+        self.assertEqual("mae_relief_pct_per_kw", bound.metric)
+        self.assertGreater(bound.sample_size, 0)
+        self.assertIn("finite-difference", bound.method)
 
 
 if __name__ == "__main__":

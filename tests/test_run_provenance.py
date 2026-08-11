@@ -16,12 +16,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from gridalyn.foundation.platform.reports import (
-    REQUIRED_REPORT_FIELDS,
-    validate_report,
-)
+from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS, validate_report
 from gridalyn.projects import init_project, run_workflow
 from gridalyn.projects.runner import CLEARING_ENGINE_NAME
+from gridalyn.simulation.backends.contract import (
+    DEFAULT_POWERFLOW_BACKEND_ID,
+    LIGHTSIM2GRID_BACKEND_ID,
+    PANDAPOWER_NATIVE_BACKEND_ID,
+)
 
 
 def _grid_study_project(tmp: str) -> Path:
@@ -80,6 +82,52 @@ class TestRunProvenance(unittest.TestCase):
             provenance = _run_manifest(tmp)["provenance"]
             self.assertIn("seeds", provenance)
             self.assertIsInstance(provenance["seeds"], dict)
+
+    def test_powerflow_backend_block_present(self) -> None:
+        # Phase 10, plan 10-01. Before this key existed, a run solved through
+        # lightsim2grid and a run solved through pandapower's own
+        # Newton-Raphson were indistinguishable in every governed artifact.
+        with tempfile.TemporaryDirectory() as tmp:
+            provenance = _run_manifest(tmp)["provenance"]
+            self.assertIn("powerflow_backend", provenance)
+            self.assertIsInstance(provenance["powerflow_backend"], dict)
+
+    def test_powerflow_backend_records_engine_id_and_settings(self) -> None:
+        # "Engine AND settings" is the point: an engine id alone would not say
+        # what was asked of the solver.
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
+            self.assertEqual(DEFAULT_POWERFLOW_BACKEND_ID, backend["backend_id"])
+            self.assertEqual(PANDAPOWER_NATIVE_BACKEND_ID, backend["backend_id"])
+            self.assertIsInstance(backend["settings"], dict)
+            self.assertEqual({"algorithm": "nr", "init": "auto"}, backend["settings"])
+            self.assertIsInstance(backend["name"], str)
+            self.assertTrue(backend["name"])
+            # The default must need no optional extra, or the manifest would
+            # record a backend the environment cannot serve.
+            self.assertIsNone(backend["capability"])
+
+    def test_powerflow_backend_lists_registered_ids_and_availability(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
+            self.assertEqual(
+                sorted([LIGHTSIM2GRID_BACKEND_ID, PANDAPOWER_NATIVE_BACKEND_ID]),
+                sorted(backend["registered"]),
+            )
+            self.assertEqual(
+                sorted(backend["registered"]), sorted(backend["available"])
+            )
+            for backend_id, is_available in backend["available"].items():
+                self.assertIsInstance(is_available, bool, backend_id)
+            # The default backend needs no extra, so it is always available.
+            self.assertTrue(backend["available"][DEFAULT_POWERFLOW_BACKEND_ID])
+
+    def test_powerflow_backend_block_is_json_native(self) -> None:
+        # It is embedded in the manifest with the stdlib encoder; a
+        # MappingProxyType or a class would break the write, not the read.
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
+            self.assertEqual(backend, json.loads(json.dumps(backend)))
 
     def test_input_hashes_block_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

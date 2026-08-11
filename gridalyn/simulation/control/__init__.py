@@ -26,6 +26,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.control.tabular_voltage",
         "write_tabular_voltage_control_figure",
     ),
+    "TabularRLPolicy": (
+        "gridalyn.simulation.control.tabular_voltage",
+        "TabularRLPolicy",
+    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)

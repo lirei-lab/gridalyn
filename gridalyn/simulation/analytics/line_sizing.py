@@ -394,8 +394,9 @@ def _converge_on_copy(net: Any) -> tuple[Any, bool]:
     """
     import copy
 
-    import pandapower as pp
+    from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
+    backend = resolve_powerflow_backend()
     work = copy.deepcopy(net)
     converged = bool(getattr(work, "converged", False))
     if converged:
@@ -407,7 +408,7 @@ def _converge_on_copy(net: Any) -> tuple[Any, bool]:
     )
     for kwargs in fallbacks:
         try:
-            pp.runpp(work, **kwargs)
+            backend.solve(work, **kwargs)
         except Exception:
             continue
         converged = bool(work.converged)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,11 @@ import pandas as pd
 from gridalyn.simulation.environments import (
     VoltageControlEnvironment,
     VoltageControlEnvironmentSpec,
+)
+from gridalyn.simulation.policies.contract import (
+    TABULAR_RL_POLICY_ID,
+    PolicyDescriptor,
+    voltage_at_bus,
 )
 
 
@@ -44,9 +50,14 @@ class TabularVoltageControlResult:
     policy: pd.DataFrame
 
 
+# Module-level default so the dataclass is not constructed in an argument
+# default (bugbear B008). Safe to share: the config is frozen and immutable.
+_DEFAULT_TABULAR_CONFIG = TabularVoltageControlConfig()
+
+
 def train_tabular_voltage_controller(
     spec: VoltageControlEnvironmentSpec,
-    config: TabularVoltageControlConfig = TabularVoltageControlConfig(),
+    config: TabularVoltageControlConfig = _DEFAULT_TABULAR_CONFIG,
 ) -> TabularVoltageControlResult:
     """Train and evaluate a tabular Q-learning voltage controller."""
     q_table, episodes = _train(spec, config)
@@ -65,7 +76,7 @@ def train_tabular_voltage_controller(
 def summarize_tabular_voltage_control(
     result: TabularVoltageControlResult,
     spec: VoltageControlEnvironmentSpec,
-    config: TabularVoltageControlConfig = TabularVoltageControlConfig(),
+    config: TabularVoltageControlConfig = _DEFAULT_TABULAR_CONFIG,
 ) -> dict:
     """Build the canonical report summary for a tabular voltage-control run."""
     action_space = [float(action) for action in spec.der.action_space_mw]
@@ -77,8 +88,12 @@ def summarize_tabular_voltage_control(
         "action_space_mw": action_space,
         "total_reward_first_episode": float(result.episodes.iloc[0]["total_reward"]),
         "total_reward_last_episode": float(result.episodes.iloc[-1]["total_reward"]),
-        "controlled_voltage_deviation_sum": _deviation_sum(result.controlled, spec.voltage_target_pu),
-        "uncontrolled_voltage_deviation_sum": _deviation_sum(result.uncontrolled, spec.voltage_target_pu),
+        "controlled_voltage_deviation_sum": _deviation_sum(
+            result.controlled, spec.voltage_target_pu
+        ),
+        "uncontrolled_voltage_deviation_sum": _deviation_sum(
+            result.uncontrolled, spec.voltage_target_pu
+        ),
         "voltage_violation_count_controlled": _violation_count(
             result.controlled,
             voltage_high_pu=spec.voltage_high_pu,
@@ -90,7 +105,9 @@ def summarize_tabular_voltage_control(
             voltage_low_pu=spec.voltage_low_pu,
         ),
         "max_voltage_controlled_pu": float(result.controlled["controlled_vm_pu"].max()),
-        "max_voltage_uncontrolled_pu": float(result.uncontrolled["controlled_vm_pu"].max()),
+        "max_voltage_uncontrolled_pu": float(
+            result.uncontrolled["controlled_vm_pu"].max()
+        ),
     }
 
 
@@ -115,7 +132,9 @@ def write_tabular_voltage_control_figure(
         figsize=(9.5, 8.0),
         gridspec_kw={"height_ratios": [1.0, 1.2, 1.0]},
     )
-    axes[0].plot(result.episodes["episode"], result.episodes["total_reward"], linewidth=1.7)
+    axes[0].plot(
+        result.episodes["episode"], result.episodes["total_reward"], linewidth=1.7
+    )
     axes[0].set_title("Tabular Q-Learning With LightSim2Grid")
     axes[0].set_ylabel("Episode reward")
     axes[0].grid(True, alpha=0.3)
@@ -153,8 +172,16 @@ def _state(
     config: TabularVoltageControlConfig,
 ) -> tuple[int, int, int]:
     vm = float(record["controlled_vm_pu"])
-    voltage_bin = 0 if vm < config.voltage_low_bin_pu else 2 if vm > config.voltage_high_bin_pu else 1
-    soc_bin = 0 if soc_mwh < config.soc_low_bin_mwh else 2 if soc_mwh > config.soc_high_bin_mwh else 1
+    voltage_bin = (
+        0
+        if vm < config.voltage_low_bin_pu
+        else 2 if vm > config.voltage_high_bin_pu else 1
+    )
+    soc_bin = (
+        0
+        if soc_mwh < config.soc_low_bin_mwh
+        else 2 if soc_mwh > config.soc_high_bin_mwh else 1
+    )
     return voltage_bin, soc_bin, step
 
 
@@ -171,7 +198,10 @@ def _select_action(
 ) -> float:
     if rng.random() < epsilon:
         return float(rng.choice(action_space))
-    values = [(q_table.get(_q_key(state, action), 0.0), float(action)) for action in action_space]
+    values = [
+        (q_table.get(_q_key(state, action), 0.0), float(action))
+        for action in action_space
+    ]
     return max(values, key=lambda item: (item[0], -abs(item[1])))[1]
 
 
@@ -184,7 +214,11 @@ def _seed_q_table(
     neutral_action = min(action_space, key=abs)
     discharge_action = max(action_space)
     for voltage_bin in range(3):
-        preferred = discharge_action if voltage_bin == 0 else charge_action if voltage_bin == 2 else neutral_action
+        preferred = (
+            discharge_action
+            if voltage_bin == 0
+            else charge_action if voltage_bin == 2 else neutral_action
+        )
         for soc_bin in range(3):
             for time_bin in range(step_count):
                 q_table[_q_key((voltage_bin, soc_bin, time_bin), preferred)] = 0.04
@@ -208,10 +242,17 @@ def _train(
         state = _state(prev_record, env.soc_mwh, 0, config)
         epsilon = _episode_epsilon(episode, config)
         for step in range(config.step_count):
-            action = 0.0 if episode == 0 else _select_action(q_table, state, action_space, epsilon, rng)
+            action = (
+                0.0
+                if episode == 0
+                else _select_action(q_table, state, action_space, epsilon, rng)
+            )
             record = env.step(step, action)
             next_state = _state(record, env.soc_mwh, step, config)
-            best_next = max(q_table.get(_q_key(next_state, next_action), 0.0) for next_action in action_space)
+            best_next = max(
+                q_table.get(_q_key(next_state, next_action), 0.0)
+                for next_action in action_space
+            )
             key = _q_key(state, action)
             q_table[key] = q_table.get(key, 0.0) + config.alpha * (
                 record["reward"] + config.gamma * best_next - q_table.get(key, 0.0)
@@ -240,7 +281,9 @@ def _evaluate(
     record = env.step(0, 0.0)
     state = _state(record, env.soc_mwh, 0, config)
     for step in range(config.step_count):
-        action = _select_action(q_table, state, action_space, 0.0, np.random.default_rng(0))
+        action = _select_action(
+            q_table, state, action_space, 0.0, np.random.default_rng(0)
+        )
         record = env.step(step, action)
         record["state"] = str(state)
         record["step"] = step
@@ -287,7 +330,9 @@ def _policy_frame(
         for soc_bin in range(3):
             for time_bin in range(config.step_count):
                 state = (voltage_bin, soc_bin, time_bin)
-                action = _select_action(q_table, state, action_space, 0.0, np.random.default_rng(0))
+                action = _select_action(
+                    q_table, state, action_space, 0.0, np.random.default_rng(0)
+                )
                 rows.append(
                     {
                         "voltage_bin": voltage_bin,
@@ -299,10 +344,89 @@ def _policy_frame(
     return pd.DataFrame(rows)
 
 
+class TabularRLPolicy:
+    """Deterministic, greedy lookup over an already-trained Q-table (paradigm 1).
+
+    Wraps the exact ``_state`` / ``_select_action(epsilon=0.0)`` pair
+    :func:`_evaluate` already uses, as a :class:`gridalyn.simulation.policies.
+    contract.Policy`. Training itself is not part of this contract: Q-learning
+    needs epsilon-greedy exploration against arbitrary actions, which a fixed
+    ``decide`` interface cannot express, so :func:`train_tabular_voltage_controller`
+    keeps calling ``VoltageControlEnvironment.step`` directly with externally
+    chosen actions. This class is the *evaluation-time* policy a trained
+    Q-table becomes once training is done.
+    """
+
+    DESCRIPTOR = PolicyDescriptor(
+        policy_id=TABULAR_RL_POLICY_ID,
+        name="Tabular Q-learning voltage-control policy (greedy lookup)",
+        paradigm="reinforcement_learning",
+    )
+
+    def __init__(
+        self,
+        *,
+        q_table: dict[tuple[int, int, int, float], float],
+        action_space_mw: tuple[float, ...],
+        controlled_bus_id: int,
+        config: TabularVoltageControlConfig = _DEFAULT_TABULAR_CONFIG,
+    ) -> None:
+        """Build the policy from an already-trained Q-table.
+
+        Args:
+            q_table: A Q-table produced by :func:`train_tabular_voltage_controller`.
+            action_space_mw: The discrete actions the Q-table was trained over.
+            controlled_bus_id: The bus this policy reads voltage from.
+            config: Binning thresholds; must match the config the Q-table was
+                trained with, since the bins are how a continuous voltage/SOC
+                state maps to a Q-table key.
+        """
+        self._q_table = q_table
+        self._action_space = tuple(float(a) for a in action_space_mw)
+        self._controlled_bus_id = int(controlled_bus_id)
+        self._config = config
+
+    @property
+    def descriptor(self) -> PolicyDescriptor:
+        """Return this policy's descriptor.
+
+        Returns:
+            The class-level :data:`DESCRIPTOR`.
+        """
+        return self.DESCRIPTOR
+
+    def decide(self, observation: Any, *, soc_mwh: float, step: int) -> float:
+        """Return the greedy action for the binned state at this step.
+
+        Args:
+            observation: The controller's view of the solved network.
+            soc_mwh: Current battery state of charge in MWh.
+            step: Zero-based step index, used directly as the Q-table's time
+                bin -- matching :func:`_state`'s existing convention.
+
+        Returns:
+            One entry from ``action_space_mw`` -- the highest-value action
+            for this state, ties broken toward the smallest-magnitude action,
+            exactly as :func:`_select_action` with ``epsilon=0.0`` chooses.
+        """
+        vm = voltage_at_bus(observation, self._controlled_bus_id)
+        state = _state({"controlled_vm_pu": vm}, soc_mwh, step, self._config)
+        return _select_action(
+            self._q_table,
+            state,
+            self._action_space,
+            0.0,
+            np.random.default_rng(0),
+        )
+
+
 def _episode_epsilon(episode: int, config: TabularVoltageControlConfig) -> float:
     if episode == 0:
         return config.baseline_epsilon
-    return max(config.min_epsilon, config.initial_epsilon * (1.0 - episode / config.episode_count))
+    return max(
+        config.min_epsilon,
+        config.initial_epsilon * (1.0 - episode / config.episode_count),
+    )
 
 
 def _deviation_sum(frame: pd.DataFrame, voltage_target_pu: float) -> float:
@@ -324,6 +448,7 @@ def _violation_count(
 
 
 __all__ = [
+    "TabularRLPolicy",
     "TabularVoltageControlConfig",
     "TabularVoltageControlResult",
     "summarize_tabular_voltage_control",

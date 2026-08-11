@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pandas as pd
 import pandapower as pp
+import pandas as pd
+
+from gridalyn.simulation.backends.registry import solve_power_flow
+from gridalyn.simulation.observation.contract import observe_network
 
 
 @dataclass(frozen=True)
@@ -72,13 +75,17 @@ def run_standard_powerflow_scenario(
 ) -> tuple[dict[str, object], pd.DataFrame]:
     """Apply and solve a standard operating scenario."""
     apply_standard_powerflow_scenario(net, scenario)
-    pp.runpp(net, algorithm=algorithm, init=init)
+    solve_power_flow(net, algorithm=algorithm, init=init)
 
-    voltage = net.res_bus.vm_pu.reset_index()
-    voltage.columns = ["bus_id", "vm_pu"]
+    observation = observe_network(net)
+    voltage = observation.voltage_frame()
     voltage["scenario_id"] = scenario.scenario_id
     total_generation_mw = float(net.sgen.p_mw.sum()) if len(net.sgen) else 0.0
     total_load_mw = float(net.load.p_mw.sum())
+    under_voltage, over_voltage = observation.voltage_violation_counts(
+        below_pu=0.95,
+        above_pu=1.05,
+    )
     result = {
         "scenario_id": scenario.scenario_id,
         "description": scenario.description,
@@ -87,17 +94,15 @@ def run_standard_powerflow_scenario(
         "pv_total_mw": len(scenario.pv_buses) * scenario.pv_mw_per_bus,
         "ev_bus_count": len(scenario.ev_buses),
         "ev_total_mw": len(scenario.ev_buses) * scenario.ev_mw_per_bus,
-        "converged": bool(net.converged),
+        "converged": observation.converged,
         "total_load_mw": total_load_mw,
         "total_generation_mw": total_generation_mw,
         "net_demand_mw": total_load_mw - total_generation_mw,
-        "line_loss_mw": float(net.res_line.pl_mw.sum()),
-        "min_voltage_pu": float(net.res_bus.vm_pu.min()),
-        "max_voltage_pu": float(net.res_bus.vm_pu.max()),
-        "max_line_loading_percent": float(net.res_line.loading_percent.max()),
-        "voltage_violation_count": int(
-            (net.res_bus.vm_pu < 0.95).sum() + (net.res_bus.vm_pu > 1.05).sum()
-        ),
+        "line_loss_mw": observation.total_line_loss_mw,
+        "min_voltage_pu": observation.min_voltage_pu,
+        "max_voltage_pu": observation.max_voltage_pu,
+        "max_line_loading_percent": observation.max_line_loading_percent,
+        "voltage_violation_count": under_voltage + over_voltage,
     }
     return result, voltage
 

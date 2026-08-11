@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from gridalyn.simulation.surrogates.contract import ErrorBound
 
 
 def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> None:
@@ -90,7 +93,9 @@ def build_provider_ranking(
             return merged
         merged["rank_score"] = merged["selection_score"].astype(float)
         merged["expected_relief_kw"] = merged["predicted_relief_kw"].astype(float)
-        merged["deliverability_factor"] = merged["predicted_deliverability_factor"].astype(float)
+        merged["deliverability_factor"] = merged[
+            "predicted_deliverability_factor"
+        ].astype(float)
     elif method == "topology":
         if sensitivity is None:
             raise ValueError("sensitivity is required for topology ranking")
@@ -144,10 +149,14 @@ def build_provider_ranking(
         "expected_relief_kw",
         "rank_score",
     ]
-    return merged[columns].sort_values(
-        ["rank_score", "expected_relief_kw", "provider_id"],
-        ascending=[False, False, True],
-    ).reset_index(drop=True)
+    return (
+        merged[columns]
+        .sort_values(
+            ["rank_score", "expected_relief_kw", "provider_id"],
+            ascending=[False, False, True],
+        )
+        .reset_index(drop=True)
+    )
 
 
 def _allocate_ranked_reduction(
@@ -247,7 +256,9 @@ def build_constraint_aware_dispatch(
     ev = np.asarray(ev_kw, dtype=float).copy()
     if building.shape != ev.shape:
         raise ValueError("building_kw and ev_kw must have matching shapes")
-    _require_columns(requirements, ["timestep", "constraint_id", "required_kw"], "requirements")
+    _require_columns(
+        requirements, ["timestep", "constraint_id", "required_kw"], "requirements"
+    )
     _require_columns(
         provider_ranking,
         [
@@ -274,7 +285,13 @@ def build_constraint_aware_dispatch(
         1,
     )
     ranking = ranking.sort_values(
-        ["constraint_id", "provider_priority", "rank_score", "expected_relief_kw", "provider_id"],
+        [
+            "constraint_id",
+            "provider_priority",
+            "rank_score",
+            "expected_relief_kw",
+            "provider_id",
+        ],
         ascending=[True, True, False, False, True],
     )
 
@@ -412,18 +429,25 @@ def summarize_dispatch(
     return {
         "soft_delivered_mwh": float(soft_delivered.sum() * dt_h / 1000.0),
         "hard_delivered_mwh": float(hard_delivered.sum() * dt_h / 1000.0),
-        "total_delivered_mwh": float((soft_delivered.sum() + hard_delivered.sum()) * dt_h / 1000.0),
+        "total_delivered_mwh": float(
+            (soft_delivered.sum() + hard_delivered.sum()) * dt_h / 1000.0
+        ),
         "soft_shortfall_mwh": float(soft_shortfall.sum() * dt_h / 1000.0),
         "hard_shortfall_mwh": float(hard_shortfall.sum() * dt_h / 1000.0),
-        "total_shortfall_mwh": float((soft_shortfall.sum() + hard_shortfall.sum()) * dt_h / 1000.0),
+        "total_shortfall_mwh": float(
+            (soft_shortfall.sum() + hard_shortfall.sum()) * dt_h / 1000.0
+        ),
         "shortfall_event_count": int(np.sum((soft_shortfall + hard_shortfall) > 1e-9)),
     }
 
 
-def _compare_to_unmanaged(metrics: dict[str, Any], unmanaged: dict[str, Any]) -> dict[str, float | int]:
+def _compare_to_unmanaged(
+    metrics: dict[str, Any], unmanaged: dict[str, Any]
+) -> dict[str, float | int]:
     return {
         "trafo_max_loading_reduction_pctpt": float(
-            unmanaged["trafo_max_loading_percent"] - metrics["trafo_max_loading_percent"]
+            unmanaged["trafo_max_loading_percent"]
+            - metrics["trafo_max_loading_percent"]
         ),
         "line_max_loading_reduction_pctpt": float(
             unmanaged["line_max_loading_percent"] - metrics["line_max_loading_percent"]
@@ -432,8 +456,12 @@ def _compare_to_unmanaged(metrics: dict[str, Any], unmanaged: dict[str, Any]) ->
         "ext_grid_peak_reduction_mw": float(
             unmanaged["ext_grid_peak_mw"] - metrics["ext_grid_peak_mw"]
         ),
-        "trafo_overload_delta": int(metrics["n_trafo_overloads"] - unmanaged["n_trafo_overloads"]),
-        "line_overload_delta": int(metrics["n_line_overloads"] - unmanaged["n_line_overloads"]),
+        "trafo_overload_delta": int(
+            metrics["n_trafo_overloads"] - unmanaged["n_trafo_overloads"]
+        ),
+        "line_overload_delta": int(
+            metrics["n_line_overloads"] - unmanaged["n_line_overloads"]
+        ),
     }
 
 
@@ -443,8 +471,28 @@ def build_network_impact_verification_report(
     constraint_ids: list[str],
     case_metrics: dict[str, dict[str, Any]],
     dispatch_summaries: dict[str, dict[str, Any]],
+    surrogate_error_bounds: Mapping[str, ErrorBound] | None = None,
 ) -> dict[str, Any]:
-    """Build the canonical network-impact verification report."""
+    """Build the canonical network-impact verification report.
+
+    Args:
+        scenario_id: Scenario the cases were solved for.
+        constraint_ids: Constraints the dispatch targeted.
+        case_metrics: Solved metrics per case; must include ``unmanaged``.
+        dispatch_summaries: Delivery/shortfall summaries per case.
+        surrogate_error_bounds: Stated accuracy of the surrogates whose
+            rankings fed the dispatch, keyed by surrogate ID. Omitted from the
+            payload when ``None``, so an existing caller's report is
+            unchanged; supply it to make the screening accuracy part of the
+            verification record rather than folklore.
+
+    Returns:
+        The verification report payload.
+
+    Raises:
+        ValueError: If ``case_metrics`` has no ``unmanaged`` baseline to
+            compare the managed cases against.
+    """
     if "unmanaged" not in case_metrics:
         raise ValueError("case_metrics must include an unmanaged baseline")
     comparisons = {}
@@ -454,7 +502,7 @@ def build_network_impact_verification_report(
             continue
         comparisons[f"{label}_vs_unmanaged"] = _compare_to_unmanaged(metrics, unmanaged)
 
-    return {
+    report = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "network_impact_verification",
         "schema_version": "1.0",
@@ -468,9 +516,17 @@ def build_network_impact_verification_report(
         "dispatch": dispatch_summaries,
         "comparisons": comparisons,
     }
+    if surrogate_error_bounds is not None:
+        report["surrogate_error_bounds"] = {
+            surrogate_id: bound.as_dict()
+            for surrogate_id, bound in sorted(surrogate_error_bounds.items())
+        }
+    return report
 
 
-def write_network_impact_verification_report(path: Path, report: dict[str, Any]) -> Path:
+def write_network_impact_verification_report(
+    path: Path, report: dict[str, Any]
+) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True))
     return path

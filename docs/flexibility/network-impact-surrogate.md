@@ -33,6 +33,33 @@ explainable and reproducible. The exported graph, node-feature, edge-feature,
 training, and prediction tables are shaped so that a later heterogeneous GNN can
 consume the same artifacts.
 
+## Stated Accuracy
+
+Both surrogates are registered through `gridalyn.simulation.surrogates`, which
+refuses a registration that carries no error bound. Read the bound before you
+read a prediction:
+
+| Surrogate ID | MAE (loading pct-point per kW) | n | Method |
+| --- | ---: | ---: | --- |
+| `network_impact_tabular_v1` (**default**) | **0.470028** | 3429 | Fit-free, so every label is out-of-sample |
+| `network_impact_physics_lookup_v1` | **0.002383** | 3429 | Grouped leave-one-timestep-out, 18 folds |
+
+Both are measured against pandapower AC finite-difference labels on scenario S4
+(69 providers x 6 transformer constraints x 18 timesteps).
+
+**The default is roughly 200x looser than its sibling, and its error is
+systematic rather than scattered** — its mean signed error equals its MAE, so it
+over-predicts by about 1.9x almost everywhere. It predicts 1.0 loading
+pct-point of relief per kW wherever a provider is topologically downstream;
+AC power flow delivers about 0.53. Treat `network_impact_tabular_v1` output as
+a **screening rank, never as a relief quantity**, and never let a market or
+settlement path consume it as a magnitude.
+
+Retrieve the bounds programmatically with
+`gridalyn.simulation.registered_error_bounds()`. The underlying label set is
+gitignored, so the figures above are not reproducible from a clean checkout;
+each bound's `method` string names the dataset and the call that re-derives it.
+
 ## Generated Artifacts
 
 Generate the layer with:
