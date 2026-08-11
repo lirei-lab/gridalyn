@@ -32,6 +32,29 @@ Every control mechanism should produce:
 The same structure applies whether the policy is a simple threshold controller,
 a CVXPY optimization, or an RL agent.
 
+## Policy Registry
+
+The table above is the target taxonomy. What exists in code today is a `Policy`
+contract and an explicit-ID registry under `gridalyn.simulation.policies`,
+covering two of those families:
+
+| Policy ID | Family | Decides from |
+| --- | --- | --- |
+| `tabular_rl` | Reinforcement learning | Greedy lookup over a trained Q-table |
+| `sensitivity_dispatch` | Convex optimization / OPF-style | A measured local dV/dP coefficient, inverted toward a voltage target |
+
+A policy consumes a `NetworkObservation` and returns an action; it does not see
+a solved `pandapowerNet` and does not choose how power flow was solved, so the
+same policy runs against any registered backend. Resolution is by explicit ID —
+there is no `entry_points` discovery, for the same provenance reason the
+power-flow backends refuse it.
+
+Market clearing and replay/forecast are **deliberately not** behind this
+contract yet. Market clearing is a governed, baseline-bearing surface with its
+own contracts, and replay is forecast-driven with no solved-network observation
+to decide from; bringing either under the policy contract is a separately
+justified change rather than an oversight.
+
 ## RL Positioning
 
 The `rl_voltage_control_lightsim` demo should be read as a control example, not

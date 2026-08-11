@@ -339,3 +339,45 @@ jobs:
         run: |
           git fetch origin ${{ github.base_ref }}
           pre-commit run --from-ref "origin/${{ github.base_ref }}" --to-ref HEAD
+
+  docs:
+    # `pages.yml` already runs this exact command -- but only on a push to
+    # `main`, which is *after* merge. That ordering has now cost this repository
+    # twice: Phase 4 broke the deploy with a plugin that needed the package
+    # installed, and Phase 10 broke it again with a docstring griffe could not
+    # annotate under `--strict`. Both were found by hand, on `main`, with the
+    # published site already failing to rebuild.
+    #
+    # The build is not covered by the `test` job: that job installs
+    # `.[all,test]`, which carries no mkdocs toolchain, and adding one there
+    # would slow every run for a check most PRs do not need. A separate job
+    # keeps the cost where it belongs and makes the signal legible.
+    #
+    # `.[all,docs]` and not `.[docs]`: `force_inspection: true` makes griffe
+    # import the package, and `twin/geoprocess/downloader.py` imports `osmnx` at
+    # module scope, so the build needs the `geo` extra. `pages.yml` learned this
+    # the same way and installs the same set -- keep the two in step.
+    name: Documentation build
+    runs-on: sti-k8s
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install package with runtime and docs extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[all,docs]"
+
+      - name: Build the documentation site
+        # `--strict` turns every mkdocs and griffe warning into a failure, which
+        # is the point: a broken cross-reference, an unrenderable docstring or a
+        # page that fell out of `nav` all fail here rather than on the published
+        # site.
+        run: mkdocs build --strict -f docs/mkdocs.yml

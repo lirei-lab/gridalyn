@@ -110,10 +110,16 @@ inside demos.
 ## Voltage-Control Environment
 
 `VoltageControlEnvironment` packages a Gridalyn feeder specification, a
-PV/battery control asset, load/PV profiles, and a LightSim2Grid adapter into a
-small deterministic environment. Projects can use it for tabular RL, policy
-evaluation, or optimization loops without reimplementing low-level grid-model
-mutation.
+PV/battery control asset, and load/PV profiles into a small deterministic
+environment. Projects can use it for tabular RL, policy evaluation, or
+optimization loops without reimplementing low-level grid-model mutation.
+
+It *composes* rather than hardcodes its parts: the solver is resolved from the
+power-flow backend registry (`backend_id=` defaults to `lightsim2grid`, the
+engine this environment has always used), what a step returns is built through
+the observation contract, and `run_policy_episode` drives a full episode from a
+registered policy. Substituting any of the three does not require touching the
+environment.
 
 ```python
 import numpy as np

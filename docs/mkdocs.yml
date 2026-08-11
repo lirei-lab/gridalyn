@@ -12,6 +12,10 @@ docs_dir: .
 # in a clean checkout, which is why it is silent rather than an error there.
 exclude_docs: |
   superpowers/
+  development/ai-agent-guide.md
+  development/agent-task-templates/
+  development/cleanup-inventory.md
+  development/release-cleanup-audit.md
 not_in_nav: |
   development/code-structure-audit.md
   development/report-contract-audit.md
@@ -104,6 +108,7 @@ nav:
       - Contribution Workflow: development/developer-workflow.md
       - Project Hygiene: development/project-hygiene.md
       - Testing And Validation: development/testing-and-validation.md
+      - Operator Verification: development/verification.md
       - Instruction Verification: development/instruction-verification.md
       - Release Readiness: platform/release-readiness.md
 theme:
@@ -163,6 +168,23 @@ plugins:
           options:
             docstring_style: google
             docstring_section_style: table
+            docstring_options:
+              # Griffe's Google parser defaults this to ``true``, which splits a
+              # multi-line ``Returns:`` block into one returned value per line
+              # and reads a leading ``float:`` as a value *name* rather than a
+              # type. This repository documents a single return in prose, never
+              # several named values, so ``false`` is what its docstrings
+              # actually mean. Left at the default, every ``@property`` with a
+              # multi-line ``Returns:`` fails ``mkdocs build --strict``: the
+              # signature annotation is unavailable under ``force_inspection``
+              # (below), so each split line renders as an un-annotated return.
+              returns_multiple_items: false
+              # Also a griffe default (``true``) that misreads this repo's
+              # style: it parses ``float: description`` as a *named* return
+              # value called "float" instead of a return *typed* ``float``.
+              # Nothing here names its return values, so a leading token before
+              # the colon is always a type.
+              returns_named_value: false
             # The layer facades expose their public names through a lazy
             # ``__getattr__`` over ``_LAZY_EXPORTS``. Static analysis cannot see
             # those names, so the handler must inspect the imported module.

@@ -177,8 +177,8 @@ class NetworkObservation:
         """Return the lowest bus voltage magnitude in per-unit.
 
         Returns:
-            The minimum over non-``NaN`` entries, or ``nan`` when no bus
-            voltage was observed.
+            float: The minimum over non-``NaN`` entries, or ``nan`` when no
+                bus voltage was observed.
         """
         return _skipna_extreme(self.bus_voltage_pu, largest=False)
 
@@ -187,8 +187,8 @@ class NetworkObservation:
         """Return the highest bus voltage magnitude in per-unit.
 
         Returns:
-            The maximum over non-``NaN`` entries, or ``nan`` when no bus
-            voltage was observed.
+            float: The maximum over non-``NaN`` entries, or ``nan`` when no
+                bus voltage was observed.
         """
         return _skipna_extreme(self.bus_voltage_pu, largest=True)
 
@@ -197,8 +197,8 @@ class NetworkObservation:
         """Return the highest line loading as a percentage of rating.
 
         Returns:
-            The maximum over non-``NaN`` entries, or ``nan`` when no line
-            loading was observed.
+            float: The maximum over non-``NaN`` entries, or ``nan`` when no
+                line loading was observed.
         """
         return _skipna_extreme(self.line_loading_percent, largest=True)
 
