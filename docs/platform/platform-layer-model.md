@@ -29,6 +29,18 @@ The architecture takes lessons from several platform families:
 The consensus is: **Gridalyn should be model-centered, operation-aware, and
 application-friendly.**
 
+**HELICS precondition update (Phase 10, Milestone 5, 2026-08-10).** The row
+above records that co-simulation should wait for "stable local model
+contracts." Phase 10 built those: an explicit-ID `PowerFlowBackend` registry,
+a `Surrogate` registry, an observation contract, and a `Policy` registry, each
+resolved by name and recorded in run provenance rather than discovered
+ambiently. The precondition is therefore satisfied. This is **not** a decision
+to adopt HELICS, mosaik, or any external co-simulation framework — the user's
+Milestone 5 strategy was in-repo contracts with no new external dependency,
+and that stands. What changes is only that adopting co-simulation later is now
+a separately-decidable option with a real foundation under it, not a
+prerequisite still unmet.
+
 ## Layer Stack
 
 ```mermaid
@@ -201,6 +213,45 @@ This layer answers the physical question: what happens to the grid?
 **Design rule:** market logic may use fast estimates, but final operational
 claims must be explainable against physical validation or a calibrated surrogate
 with known error.
+
+### Network Control Registries (Phase 10, Milestone 5, 2026-08-10)
+
+Four network-control roles are each an explicit-ID registry rather than a
+hardcoded choice: which physical solver runs, which surrogate stands in for
+it, what a controller observes, and which policy decides an action.
+
+| Role | Registry | IDs registered |
+| --- | --- | --- |
+| Power-flow backend | `gridalyn.simulation.backends.registry.PowerFlowBackendRegistry` | `pandapower_native` (default), `lightsim2grid` |
+| Surrogate | `gridalyn.simulation.surrogates.registry.SurrogateRegistry` | `network_impact_tabular_v1` (default), `network_impact_physics_lookup_v1` |
+| Control policy | `gridalyn.simulation.policies.registry.PolicyRegistry` | `sensitivity_dispatch`, `tabular_rl` |
+
+(Observation, `gridalyn.simulation.observation`, is a contract and a single
+pandapower-shaped builder function, `observe_network` — not a registry. It has
+one implementation because nothing in this repository yet needs a second one;
+adding a registry ahead of that need would be exactly the speculative
+abstraction the platform's own conventions warn against.)
+
+**Explicit-ID resolution, every time.** Each registry exposes `register(...,
+replace=False)`, `get_descriptor`, `list_descriptors()` (sorted, for a stable
+manifest sequence), and `create(id, **kwargs)`. A caller names the
+implementation it wants; there is no default-discovery path that silently
+picks one for it beyond the one documented default ID per registry.
+
+**Why none of them use `entry_points` discovery.** An ambient plugin
+discovered via `importlib.metadata.entry_points` would change a run's solved
+result, surrogate prediction, or control decision without that choice
+appearing anywhere in the run manifest — installing an unrelated package into
+the same environment could silently change what a study reports. This is the
+exact failure mode `provenance.macro_model` was added to close for the load
+generator (see `CLAUDE.md`'s data-generation constraints): a run's behaviour
+must be reconstructable from its own manifest, not from what happened to be
+importable in the environment that produced it. `provenance.powerflow_backend`
+records the resolved backend's descriptor for the same reason. A future
+contributor who wants to add a new solver, surrogate, or policy registers it
+explicitly in the relevant `default_*_registry()` function — a one-line,
+reviewable, provenance-visible change — rather than dropping a package on the
+path and letting it be discovered.
 
 ## 5. Operations And Markets
 
