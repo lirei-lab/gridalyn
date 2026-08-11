@@ -242,3 +242,22 @@ class NoEntryPointsDiscoveryTest(unittest.TestCase):
                 elif isinstance(node, ast.Name) and node.id == "entry_points":
                     offenders.append(f"{name}:{node.lineno} name entry_points")
         self.assertEqual([], offenders, offenders)
+
+    def test_policies_package_imports_no_plugin_discovery_module(self) -> None:
+        # A literal `entry_points` call is not the only way to implement
+        # ambient discovery -- importing the machinery that provides it is
+        # the earlier, equally-forbidden step. Mirrors the backend registry's
+        # equivalent guard (tests/test_powerflow_backend_contract.py).
+        forbidden = {"pkg_resources", "importlib.metadata", "entrypoints", "stevedore"}
+        offenders: list[str] = []
+        for name, source in self._registry_module_sources().items():
+            for node in ast.walk(ast.parse(source)):
+                if isinstance(node, ast.Import):
+                    offenders += [
+                        f"{name}: import {a.name}"
+                        for a in node.names
+                        if a.name in forbidden
+                    ]
+                elif isinstance(node, ast.ImportFrom) and node.module in forbidden:
+                    offenders.append(f"{name}: from {node.module} import ...")
+        self.assertEqual([], offenders, offenders)
