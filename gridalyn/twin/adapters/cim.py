@@ -14,12 +14,11 @@ from gridalyn.twin.adapters.network import (
     DEFAULT_NETWORK_ADAPTER_CAPABILITIES,
     NetworkAdapterDescriptor,
     NetworkExportResult,
-    NetworkSnapshot,
     describe_network_source_adapter,
 )
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.network.metadata import write_base_metadata
-
+from gridalyn.twin.network.model import NetworkModel
 
 CIM_PARQUET_TABLES = {
     "connectivity_nodes": "connectivity_nodes.parquet",
@@ -44,7 +43,7 @@ class CimParquetAdapter:
         """Return stable adapter identity and capability metadata."""
         return describe_network_source_adapter(self)
 
-    def load_snapshot(self) -> NetworkSnapshot:
+    def load_snapshot(self) -> NetworkModel:
         """Load CIM-like source tables and normalize them to canonical tables."""
         nodes = _read_required(self.source_dir, "connectivity_nodes")
         lines = _read_optional(self.source_dir, "ac_line_segments")
@@ -52,8 +51,17 @@ class CimParquetAdapter:
         consumers = _read_optional(self.source_dir, "energy_consumers")
 
         buses = _make_bus_table(nodes)
-        bus_lookup = dict(zip(nodes["mRID"].astype(str), buses["bus_id"].astype(str)))
-        return NetworkSnapshot(
+        # strict=True is safe and load-bearing: _make_bus_table emits exactly one
+        # row per node, so a length mismatch means that invariant broke and the
+        # lookup would silently lose buses.
+        bus_lookup = dict(
+            zip(
+                nodes["mRID"].astype(str),
+                buses["bus_id"].astype(str),
+                strict=True,
+            )
+        )
+        return NetworkModel(
             buses=buses,
             lines=_make_line_table(lines, bus_lookup),
             transformers=_make_transformer_table(transformers, bus_lookup),
@@ -78,7 +86,8 @@ class CimParquetAdapter:
             source_standard=self.source_standard,
             source_format=self.source_format,
             adapter_capabilities=self.capabilities,
-            adapter_validation_report=out_dir / "network_adapter_validation_report.json",
+            adapter_validation_report=out_dir
+            / "network_adapter_validation_report.json",
             notes=[
                 "Source tables use a CIM-like Parquet interchange profile.",
                 "This adapter does not parse CIM RDF/XML.",
@@ -127,14 +136,18 @@ def _make_bus_table(nodes: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for index, row in nodes.reset_index(drop=True).iterrows():
         source_id = str(row["mRID"])
-        voltage = _first_value(row, ["nominal_voltage_kv", "base_voltage_kv", "voltage_kv"])
+        voltage = _first_value(
+            row, ["nominal_voltage_kv", "base_voltage_kv", "voltage_kv"]
+        )
         rows.append(
             {
                 "bus_id": f"bus:{source_id}",
                 "source_id": source_id,
                 "name": _first_value(row, ["name"], default=source_id),
                 "voltage_kv": float(voltage) if voltage is not None else None,
-                "category": _first_value(row, ["category"], default=_category_from_voltage(voltage)),
+                "category": _first_value(
+                    row, ["category"], default=_category_from_voltage(voltage)
+                ),
                 "lat": _first_value(row, ["lat", "latitude"]),
                 "lon": _first_value(row, ["lon", "longitude"]),
                 "in_service": bool(_first_value(row, ["in_service"], default=True)),
@@ -151,7 +164,9 @@ def _make_line_table(lines: pd.DataFrame, bus_lookup: dict[str, str]) -> pd.Data
     rows = []
     for index, row in lines.reset_index(drop=True).iterrows():
         source_id = str(_first_value(row, ["mRID", "line_id"], default=f"line:{index}"))
-        from_node = str(_first_value(row, ["from_connectivity_node", "from_node", "from_mrid"]))
+        from_node = str(
+            _first_value(row, ["from_connectivity_node", "from_node", "from_mrid"])
+        )
         to_node = str(_first_value(row, ["to_connectivity_node", "to_node", "to_mrid"]))
         rows.append(
             {
@@ -175,9 +190,15 @@ def _make_transformer_table(
         return pd.DataFrame()
     rows = []
     for index, row in transformers.reset_index(drop=True).iterrows():
-        source_id = str(_first_value(row, ["mRID", "transformer_id"], default=f"tx:{index}"))
-        high_node = str(_first_value(row, ["high_connectivity_node", "hv_node", "high_mrid"]))
-        low_node = str(_first_value(row, ["low_connectivity_node", "lv_node", "low_mrid"]))
+        source_id = str(
+            _first_value(row, ["mRID", "transformer_id"], default=f"tx:{index}")
+        )
+        high_node = str(
+            _first_value(row, ["high_connectivity_node", "hv_node", "high_mrid"])
+        )
+        low_node = str(
+            _first_value(row, ["low_connectivity_node", "lv_node", "low_mrid"])
+        )
         rows.append(
             {
                 "transformer_id": f"transformer:{source_id}",
@@ -200,9 +221,13 @@ def _make_building_table(
         return pd.DataFrame()
     rows = []
     for index, row in consumers.reset_index(drop=True).iterrows():
-        source_id = str(_first_value(row, ["mRID", "consumer_id"], default=f"consumer:{index}"))
+        source_id = str(
+            _first_value(row, ["mRID", "consumer_id"], default=f"consumer:{index}")
+        )
         node = str(_first_value(row, ["connectivity_node", "node", "node_mrid"]))
-        building_id = _first_value(row, ["building_id"], default=f"building:{source_id}")
+        building_id = _first_value(
+            row, ["building_id"], default=f"building:{source_id}"
+        )
         load_id = _first_value(row, ["load_id"], default=f"load:{source_id}")
         rows.append(
             {
@@ -228,10 +253,14 @@ def _make_connectivity_table(
     transformer_by_low_bus = _transformer_by_low_bus(transformers, bus_lookup)
     rows = []
     for index, row in consumers.reset_index(drop=True).iterrows():
-        source_id = str(_first_value(row, ["mRID", "consumer_id"], default=f"consumer:{index}"))
+        source_id = str(
+            _first_value(row, ["mRID", "consumer_id"], default=f"consumer:{index}")
+        )
         node = str(_first_value(row, ["connectivity_node", "node", "node_mrid"]))
         bus_id = bus_lookup.get(node, f"bus:{node}")
-        building_id = str(_first_value(row, ["building_id"], default=f"building:{source_id}"))
+        building_id = str(
+            _first_value(row, ["building_id"], default=f"building:{source_id}")
+        )
         load_id = str(_first_value(row, ["load_id"], default=f"load:{source_id}"))
         rows.append(
             {
@@ -255,9 +284,15 @@ def _transformer_by_low_bus(
     if transformers.empty:
         return mapping
     for index, row in transformers.reset_index(drop=True).iterrows():
-        source_id = str(_first_value(row, ["mRID", "transformer_id"], default=f"tx:{index}"))
-        low_node = str(_first_value(row, ["low_connectivity_node", "lv_node", "low_mrid"]))
-        mapping[bus_lookup.get(low_node, f"bus:{low_node}")] = f"transformer:{source_id}"
+        source_id = str(
+            _first_value(row, ["mRID", "transformer_id"], default=f"tx:{index}")
+        )
+        low_node = str(
+            _first_value(row, ["low_connectivity_node", "lv_node", "low_mrid"])
+        )
+        mapping[bus_lookup.get(low_node, f"bus:{low_node}")] = (
+            f"transformer:{source_id}"
+        )
     return mapping
 
 
@@ -284,7 +319,9 @@ def _source_hash(source_dir: Path) -> str:
     for table, filename in sorted(CIM_PARQUET_TABLES.items()):
         path = source_dir / filename
         payload[table] = _file_hash(path) if path.exists() else None
-    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
     return f"sha256:{digest}"
 
 

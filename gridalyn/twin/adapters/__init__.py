@@ -17,9 +17,11 @@ _LAZY_EXPORTS = {
         "gridalyn.twin.adapters.registry",
         "NetworkAdapterRegistration",
     ),
-    "NetworkAdapterRegistry": ("gridalyn.twin.adapters.registry", "NetworkAdapterRegistry"),
+    "NetworkAdapterRegistry": (
+        "gridalyn.twin.adapters.registry",
+        "NetworkAdapterRegistry",
+    ),
     "NetworkExportResult": ("gridalyn.twin.adapters.network", "NetworkExportResult"),
-    "NetworkSnapshot": ("gridalyn.twin.adapters.network", "NetworkSnapshot"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters.network", "NetworkSourceAdapter"),
     "SyntheticPandapowerAdapter": (
         "gridalyn.twin.adapters.network",
@@ -43,7 +45,10 @@ _LAZY_EXPORTS = {
         "gridalyn.twin.adapters.network",
         "describe_network_source_adapter",
     ),
-    "extract_building_data": ("gridalyn.twin.adapters.geojson", "extract_building_data"),
+    "extract_building_data": (
+        "gridalyn.twin.adapters.geojson",
+        "extract_building_data",
+    ),
     "validate_geojson": ("gridalyn.twin.adapters.geojson", "validate_geojson"),
     "write_network_adapter_validation_report": (
         "gridalyn.twin.adapters.validation",

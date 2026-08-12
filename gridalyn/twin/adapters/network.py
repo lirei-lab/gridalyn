@@ -15,14 +15,18 @@ import pandas as pd
 from gridalyn.foundation import ArtifactLayout
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.network.metadata import write_base_metadata
+from gridalyn.twin.network.model import BASE_TABLE_FILENAMES, NetworkModel
 
-BASE_TABLE_FILENAMES = {
-    "grid_buses": "grid_buses.parquet",
-    "grid_lines": "grid_lines.parquet",
-    "grid_transformers": "grid_transformers.parquet",
-    "buildings": "buildings.parquet",
-    "building_grid_connectivity": "building_grid_connectivity.parquet",
-}
+__all__ = [
+    "BASE_EXPORT_NOTES",
+    "BASE_TABLE_FILENAMES",
+    "DEFAULT_NETWORK_ADAPTER_CAPABILITIES",
+    "NetworkAdapterDescriptor",
+    "NetworkExportResult",
+    "NetworkSourceAdapter",
+    "SyntheticPandapowerAdapter",
+    "describe_network_source_adapter",
+]
 
 BASE_EXPORT_NOTES = [
     "Building area is exported as metadata only.",
@@ -58,55 +62,11 @@ class NetworkSourceAdapter(Protocol):
     source_format: str
     capabilities: tuple[str, ...]
 
-    def load_snapshot(self) -> "NetworkSnapshot":
-        """Load a source model into canonical in-memory tables."""
+    def load_snapshot(self) -> NetworkModel:
+        """Load a source model into the canonical in-memory tables."""
 
     def export(self, *, out_dir: Path, root: Path) -> "NetworkExportResult":
         """Write canonical base artifacts and metadata."""
-
-
-@dataclass(frozen=True)
-class NetworkSnapshot:
-    """Canonical base network tables produced by a source adapter."""
-
-    buses: pd.DataFrame
-    lines: pd.DataFrame
-    transformers: pd.DataFrame
-    buildings: pd.DataFrame
-    connectivity: pd.DataFrame
-    source_adapter: str
-    source_standard: str
-
-    @property
-    def counts(self) -> dict[str, int]:
-        load_count = 0
-        if "load_id" in self.buildings.columns:
-            load_count = int(self.buildings["load_id"].dropna().nunique())
-        return {
-            "buses": int(len(self.buses)),
-            "lines": int(len(self.lines)),
-            "transformers": int(len(self.transformers)),
-            "buildings": int(len(self.buildings)),
-            "loads": load_count,
-            "connectivity": int(len(self.connectivity)),
-        }
-
-    def write_parquet(self, out_dir: Path) -> dict[str, Path]:
-        """Write the snapshot to canonical base Parquet artifacts."""
-        out_dir.mkdir(parents=True, exist_ok=True)
-        frames = {
-            "grid_buses": self.buses,
-            "grid_lines": self.lines,
-            "grid_transformers": self.transformers,
-            "buildings": self.buildings,
-            "building_grid_connectivity": self.connectivity,
-        }
-        artifact_paths: dict[str, Path] = {}
-        for artifact_name, frame in frames.items():
-            path = out_dir / BASE_TABLE_FILENAMES[artifact_name]
-            frame.to_parquet(path, index=False)
-            artifact_paths[artifact_name] = path
-        return artifact_paths
 
 
 @dataclass(frozen=True)
@@ -136,7 +96,7 @@ class SyntheticPandapowerAdapter:
         """Return stable adapter identity and capability metadata."""
         return describe_network_source_adapter(self)
 
-    def load_snapshot(self) -> NetworkSnapshot:
+    def load_snapshot(self) -> NetworkModel:
         """Load cached synthetic grid objects and normalize them to base tables."""
         net, pg = _load_cache(self.cache_dir)
         buses = _make_bus_table(net)
@@ -157,7 +117,7 @@ class SyntheticPandapowerAdapter:
             raise RuntimeError(
                 f"Connectivity export has {len(missing)} missing transformer mappings."
             )
-        return NetworkSnapshot(
+        return NetworkModel(
             buses=buses,
             lines=lines,
             transformers=transformers,

@@ -6,10 +6,13 @@ from unittest.mock import patch
 
 import pandas as pd
 
+from gridalyn.projects.workflows.scripts.export_digital_twin_base import (
+    export_base_twin,
+)
+from gridalyn.twin import NetworkModelRepository
 from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkExportResult,
-    NetworkSnapshot,
     SyntheticPandapowerAdapter,
     describe_network_source_adapter,
 )
@@ -22,13 +25,12 @@ from gridalyn.twin.adapters.validation import (
     build_network_adapter_validation_report,
     write_network_adapter_validation_report,
 )
-from gridalyn.twin import NetworkModelRepository
-from gridalyn.projects.workflows.scripts.export_digital_twin_base import export_base_twin
+from gridalyn.twin.network.model import NetworkModel
 
 
 class NetworkAdaptersTest(unittest.TestCase):
-    def _snapshot(self) -> NetworkSnapshot:
-        return NetworkSnapshot(
+    def _snapshot(self) -> NetworkModel:
+        return NetworkModel(
             buses=pd.DataFrame(
                 [
                     {"bus_id": "bus:0", "category": "MV"},
@@ -39,13 +41,31 @@ class NetworkAdaptersTest(unittest.TestCase):
                 [{"line_id": "line:0", "from_bus_id": "bus:0", "to_bus_id": "bus:1"}]
             ),
             transformers=pd.DataFrame(
-                [{"transformer_id": "transformer:0", "hv_bus_id": "bus:0", "lv_bus_id": "bus:1"}]
+                [
+                    {
+                        "transformer_id": "transformer:0",
+                        "hv_bus_id": "bus:0",
+                        "lv_bus_id": "bus:1",
+                    }
+                ]
             ),
             buildings=pd.DataFrame(
-                [{"building_id": "building:0", "load_id": "load:0", "lv_bus_id": "bus:1"}]
+                [
+                    {
+                        "building_id": "building:0",
+                        "load_id": "load:0",
+                        "lv_bus_id": "bus:1",
+                    }
+                ]
             ),
             connectivity=pd.DataFrame(
-                [{"building_id": "building:0", "load_id": "load:0", "load_bus_id": "bus:1"}]
+                [
+                    {
+                        "building_id": "building:0",
+                        "load_id": "load:0",
+                        "load_bus_id": "bus:1",
+                    }
+                ]
             ),
             source_adapter="SyntheticPandapowerAdapter",
             source_standard="pandapower",
@@ -105,15 +125,46 @@ class NetworkAdaptersTest(unittest.TestCase):
             ]
         ).to_parquet(source_dir / "energy_consumers.parquet", index=False)
 
-    def test_network_snapshot_writes_repository_compatible_parquets(self):
+    def test_network_snapshot_is_removed_not_aliased(self):
+        # Proven by import, not by grep: a grep would match this very comment.
+        with self.assertRaises(ImportError):
+            from gridalyn.twin.adapters.network import NetworkSnapshot  # noqa: F401
+
+        import gridalyn.twin.adapters as adapters
+        import gridalyn.twin.adapters.network as network_module
+
+        self.assertFalse(hasattr(network_module, "NetworkSnapshot"))
+        self.assertFalse(hasattr(adapters, "NetworkSnapshot"))
+        self.assertNotIn("NetworkSnapshot", adapters.__all__)
+
+    def test_both_adapters_return_the_one_canonical_model_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_dir = Path(tmp) / "cim_source"
+            self._write_cim_parquet_source(source_dir)
+            cim_snapshot = CimParquetAdapter(source_dir=source_dir).load_snapshot()
+
+        self.assertIsInstance(cim_snapshot, NetworkModel)
+        self.assertIsInstance(self._snapshot(), NetworkModel)
+        self.assertEqual(cim_snapshot.source_standard, "cim")
+
+    def test_canonical_model_writes_repository_compatible_parquets(self):
         with tempfile.TemporaryDirectory() as tmp:
             out_dir = Path(tmp) / "base"
             artifacts = self._snapshot().write_parquet(out_dir)
-            repo = NetworkModelRepository.from_parquet(out_dir)
+            repo = NetworkModelRepository.from_parquet(out_dir, provenance="ignore")
             model = repo.load_model()
             validation = repo.validate_integrity()
 
-        self.assertEqual(set(artifacts), {"grid_buses", "grid_lines", "grid_transformers", "buildings", "building_grid_connectivity"})
+        self.assertEqual(
+            set(artifacts),
+            {
+                "grid_buses",
+                "grid_lines",
+                "grid_transformers",
+                "buildings",
+                "building_grid_connectivity",
+            },
+        )
         self.assertEqual(model.counts["loads"], 1)
         self.assertTrue(validation.valid)
 
@@ -242,10 +293,16 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertIn("write_validation_report", report["adapter"]["capabilities"])
 
     def test_adapter_validation_report_marks_broken_endpoint_invalid(self):
-        snapshot = NetworkSnapshot(
+        snapshot = NetworkModel(
             buses=pd.DataFrame([{"bus_id": "bus:0", "category": "MV"}]),
             lines=pd.DataFrame(
-                [{"line_id": "line:bad", "from_bus_id": "bus:0", "to_bus_id": "bus:missing"}]
+                [
+                    {
+                        "line_id": "line:bad",
+                        "from_bus_id": "bus:0",
+                        "to_bus_id": "bus:missing",
+                    }
+                ]
             ),
             transformers=pd.DataFrame(),
             buildings=pd.DataFrame(),
@@ -293,7 +350,12 @@ class NetworkAdaptersTest(unittest.TestCase):
                 def export(self, *, out_dir, root):
                     out_dir.mkdir(parents=True)
                     metadata_path.write_text(
-                        json.dumps({"counts": {"buses": 1}, "source_adapter": self.source_adapter})
+                        json.dumps(
+                            {
+                                "counts": {"buses": 1},
+                                "source_adapter": self.source_adapter,
+                            }
+                        )
                     )
                     return NetworkExportResult(
                         out_dir=out_dir,

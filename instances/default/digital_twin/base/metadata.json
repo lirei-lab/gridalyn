@@ -1,17 +1,111 @@
 {
-  "cache_dir": "projects/flexibility_cls/outputs/cache",
-  "config_hash": "e8857d138776e59e3a343c3d45601106d840f97e7da7bb542abc1487e70dfcd2",
+  "adapter_capabilities": [],
+  "adapter_id": "synthetic_pandapower",
+  "adapter_validation_report": "instances/default/digital_twin/reports/network_adapter_validation_report.json",
+  "artifacts": {
+    "building_grid_connectivity": {
+      "path": "instances/default/digital_twin/base/building_grid_connectivity.parquet",
+      "row_count": 3235,
+      "sha256": "bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac"
+    },
+    "buildings": {
+      "path": "instances/default/digital_twin/base/buildings.parquet",
+      "row_count": 3235,
+      "sha256": "1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc"
+    },
+    "grid_buses": {
+      "path": "instances/default/digital_twin/base/grid_buses.parquet",
+      "row_count": 3562,
+      "sha256": "045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e"
+    },
+    "grid_lines": {
+      "path": "instances/default/digital_twin/base/grid_lines.parquet",
+      "row_count": 3398,
+      "sha256": "5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260"
+    },
+    "grid_transformers": {
+      "path": "instances/default/digital_twin/base/grid_transformers.parquet",
+      "row_count": 163,
+      "sha256": "2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3"
+    }
+  },
+  "base_dir": "instances/default/digital_twin/base",
+  "cache_dir": null,
+  "config_hash": "a5984a0de453a87b2a8909f9d437a54b597243e9193e3062b8ef0e20fcb8631c",
   "config_path": "configs/grid/config.json",
   "counts": {
     "buildings": 3235,
     "buses": 3562,
+    "connectivity": 3235,
     "lines": 3398,
+    "loads": 3235,
     "transformers": 163
   },
-  "created_at": "2026-05-08T17:45:03.817072+00:00",
+  "created_at": "2026-08-12T14:10:53.931227+00:00",
+  "model_version": {
+    "artifact_hashes": {
+      "building_grid_connectivity": "bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac",
+      "buildings": "1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc",
+      "grid_buses": "045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e",
+      "grid_lines": "5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260",
+      "grid_transformers": "2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3"
+    },
+    "counts": {
+      "buildings": 3235,
+      "buses": 3562,
+      "connectivity": 3235,
+      "lines": 3398,
+      "loads": 3235,
+      "transformers": 163
+    },
+    "created_at": "2026-08-12T14:10:53.931227+00:00",
+    "id": "model:sha256:0b4ee802edf44e52e55e4fbf243da9fe0e90a03e75c3d2b11e8a69c12bedef59",
+    "lineage": {
+      "base_dir": "instances/default/digital_twin/base",
+      "cache_dir": null,
+      "config_hash": "a5984a0de453a87b2a8909f9d437a54b597243e9193e3062b8ef0e20fcb8631c",
+      "config_path": "configs/grid/config.json"
+    },
+    "schema_version": "1.0",
+    "source_adapter": "SyntheticPandapowerAdapter",
+    "source_format": "pandapower-cache",
+    "source_standard": "pandapower",
+    "source_system": "synthetic_pandapower",
+    "validation_status": "valid"
+  },
+  "model_version_id": "model:sha256:0b4ee802edf44e52e55e4fbf243da9fe0e90a03e75c3d2b11e8a69c12bedef59",
   "notes": [
     "Building area is exported as metadata only.",
     "Load generation remains independent of area_m2.",
-    "Connectivity is derived from pandapower load buses and LV cluster labels."
-  ]
+    "Connectivity is derived from pandapower load buses and LV cluster labels.",
+    "cache_dir is null: the source cache that produced these base artifacts belonged to a study retired on 2026-08-03 and is not recoverable. It is carried as explicitly absent rather than repointed at a different cache that did not produce them.",
+    "config_hash is the digest of configs/grid/config.json as of this regeneration; it does not match the digest recorded when the base artifacts were first written (2026-05-08), because that config has since changed."
+  ],
+  "report_id": "digital_twin_base_metadata",
+  "schema_version": "1.0",
+  "source_adapter": "SyntheticPandapowerAdapter",
+  "source_format": "pandapower-cache",
+  "source_standard": "pandapower",
+  "source_tables": [
+    "grid_buses",
+    "grid_lines",
+    "grid_transformers",
+    "buildings",
+    "building_grid_connectivity"
+  ],
+  "validation": {
+    "errors": [],
+    "summary": {
+      "buildings": 3235,
+      "bus_endpoint_errors": 0,
+      "buses": 3562,
+      "connectivity": 3235,
+      "lines": 3398,
+      "loads": 3235,
+      "transformers": 163,
+      "warning_count": 0
+    },
+    "valid": true,
+    "warnings": []
+  }
 }

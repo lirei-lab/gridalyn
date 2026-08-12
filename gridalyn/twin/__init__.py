@@ -14,7 +14,6 @@ _LAZY_EXPORTS = {
     "NetworkIntegrityReport": ("gridalyn.twin.network", "NetworkIntegrityReport"),
     "NetworkModel": ("gridalyn.twin.network", "NetworkModel"),
     "NetworkModelRepository": ("gridalyn.twin.network", "NetworkModelRepository"),
-    "NetworkSnapshot": ("gridalyn.twin.adapters", "NetworkSnapshot"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters", "NetworkSourceAdapter"),
     "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
     "SyntheticPandapowerAdapter": (

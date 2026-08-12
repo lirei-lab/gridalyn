@@ -2,38 +2,125 @@
 
 from __future__ import annotations
 
+import json
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 
 from gridalyn.twin.network.model import (
+    BASE_PROFILE_ID,
+    PROVENANCE_DECLARED,
     ConnectedEquipment,
     DownstreamAssets,
+    ModelIdentity,
     NetworkIntegrityReport,
     NetworkModel,
 )
 
+METADATA_FILENAME = "metadata.json"
+
+ProvenancePolicy = Literal["require", "warn", "ignore"]
+
+
+class MissingProvenanceWarning(UserWarning):
+    """Warn that a network model was loaded without its metadata manifest."""
+
 
 @dataclass(frozen=True)
 class NetworkModelRepository:
-    """Read and query a canonical network model snapshot."""
+    """Read and query a canonical network model snapshot.
+
+    Attributes:
+        base_dir: Directory holding the canonical base Parquet artifacts and
+            their ``metadata.json`` manifest.
+        provenance: What to do when the manifest is absent. ``"require"``
+            raises, ``"warn"`` (the default) returns an explicitly degraded
+            model and warns, ``"ignore"`` returns the degraded model silently
+            and exists for the manifest *producer*, which by construction runs
+            before the manifest it writes. A model loaded without provenance is
+            never a silent success under the default policy.
+    """
 
     base_dir: Path
+    provenance: ProvenancePolicy = "warn"
 
     @classmethod
-    def from_parquet(cls, base_dir: Path | str) -> "NetworkModelRepository":
-        return cls(base_dir=Path(base_dir))
+    def from_parquet(
+        cls,
+        base_dir: Path | str,
+        *,
+        provenance: ProvenancePolicy = "warn",
+    ) -> "NetworkModelRepository":
+        return cls(base_dir=Path(base_dir), provenance=provenance)
 
     def load_model(self) -> NetworkModel:
-        """Load available canonical network tables from the repository path."""
+        """Load the canonical network tables together with their provenance.
+
+        Returns:
+            A :class:`NetworkModel` whose ``identity`` and
+            ``provenance_status`` come from ``metadata.json`` when it is
+            present, and which is explicitly marked ``"absent"`` when it is not.
+
+        Raises:
+            FileNotFoundError: If the manifest is missing and this repository
+                was constructed with ``provenance="require"``.
+            ValueError: If the manifest exists but is not a JSON object.
+        """
+        frames = {
+            "buses": self._read_table("grid_buses.parquet"),
+            "lines": self._read_table("grid_lines.parquet"),
+            "transformers": self._read_table("grid_transformers.parquet"),
+            "buildings": self._read_table("buildings.parquet"),
+            "connectivity": self._read_table("building_grid_connectivity.parquet"),
+        }
+        manifest = self._read_metadata()
+        if manifest is None:
+            return NetworkModel(**frames)
         return NetworkModel(
-            buses=self._read_table("grid_buses.parquet"),
-            lines=self._read_table("grid_lines.parquet"),
-            transformers=self._read_table("grid_transformers.parquet"),
-            buildings=self._read_table("buildings.parquet"),
-            connectivity=self._read_table("building_grid_connectivity.parquet"),
+            **frames,
+            source_adapter=_text_or_none(manifest.get("source_adapter")),
+            source_standard=_text_or_none(manifest.get("source_standard")),
+            identity=_build_identity(manifest),
+            provenance_status=PROVENANCE_DECLARED,
         )
+
+    def _read_metadata(self) -> dict[str, Any] | None:
+        path = self.base_dir / METADATA_FILENAME
+        if not path.exists():
+            self._report_missing_provenance(path)
+            return None
+        try:
+            payload = json.loads(path.read_text())
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                f"{path}: metadata manifest is not valid JSON ({error}); "
+                "regenerate it with "
+                "gridalyn.twin.network.metadata.write_base_metadata"
+            ) from error
+        if not isinstance(payload, dict):
+            raise ValueError(
+                f"{path}: metadata manifest must be a JSON object, "
+                f"found {type(payload).__name__}; regenerate it with "
+                "gridalyn.twin.network.metadata.write_base_metadata"
+            )
+        return payload
+
+    def _report_missing_provenance(self, path: Path) -> None:
+        message = (
+            f"{path}: metadata manifest not found, so this network model has no "
+            f"recoverable provenance (base_dir={self.base_dir}); regenerate it "
+            "with gridalyn.twin.network.metadata.write_base_metadata"
+            "(base_dir=..., root=...), or construct the repository with "
+            "provenance='ignore' if the model is loaded before its manifest is "
+            "written"
+        )
+        if self.provenance == "require":
+            raise FileNotFoundError(message)
+        if self.provenance == "warn":
+            warnings.warn(message, MissingProvenanceWarning, stacklevel=3)
 
     def get_downstream(self, constraint_id: str) -> DownstreamAssets:
         """Return buildings, loads, and buses downstream of a transformer ID."""
@@ -129,7 +216,9 @@ class NetworkModelRepository:
         return ConnectedEquipment(
             bus_id=bus_key,
             line_ids=self._unique_strings(connected_lines, ["line_id"]),
-            transformer_ids=self._unique_strings(connected_transformers, ["transformer_id"]),
+            transformer_ids=self._unique_strings(
+                connected_transformers, ["transformer_id"]
+            ),
             building_ids=self._unique_strings(customer_rows, ["building_id"]),
             load_ids=self._unique_strings(customer_rows, ["load_id"]),
         )
@@ -169,7 +258,9 @@ class NetworkModelRepository:
         if {"building_id"}.issubset(model.connectivity.columns):
             for value in model.connectivity["building_id"].dropna().astype(str):
                 if value not in building_ids:
-                    errors.append(f"connectivity references missing building_id {value}")
+                    errors.append(
+                        f"connectivity references missing building_id {value}"
+                    )
 
         if {"load_id"}.issubset(model.connectivity.columns) and load_ids:
             for value in model.connectivity["load_id"].dropna().astype(str):
@@ -244,7 +335,9 @@ class NetworkModelRepository:
             return
         entity_label = label or id_column.removesuffix("_id")
         for _, row in frame.iterrows():
-            entity_id = str(row[id_column]) if id_column in frame.columns else entity_label
+            entity_id = (
+                str(row[id_column]) if id_column in frame.columns else entity_label
+            )
             for column in endpoint_columns:
                 if column not in frame.columns or pd.isna(row[column]):
                     continue
@@ -253,3 +346,49 @@ class NetworkModelRepository:
                     errors.append(
                         f"{entity_label} {entity_id} references missing {column} {endpoint}"
                     )
+
+
+def _build_identity(manifest: Mapping[str, Any]) -> ModelIdentity:
+    """Map a ``metadata.json`` manifest onto CGMES ``FullModel`` identity.
+
+    Args:
+        manifest: Parsed contents of the base ``metadata.json``.
+
+    Returns:
+        The model identity. ``scenario_time`` is always ``None`` — see
+        :data:`gridalyn.twin.network.model.SCENARIO_TIME_ABSENT_REASON`.
+    """
+    model_version = manifest.get("model_version")
+    version = (
+        model_version.get("schema_version")
+        if isinstance(model_version, Mapping)
+        else None
+    )
+    schema_version = _text_or_none(manifest.get("schema_version"))
+    return ModelIdentity(
+        id=_text_or_none(manifest.get("model_version_id")),
+        created=_text_or_none(manifest.get("created_at")),
+        scenario_time=None,
+        version=_text_or_none(version),
+        profile=(
+            None if schema_version is None else f"{BASE_PROFILE_ID}:{schema_version}"
+        ),
+        dependent_on=_declared_artifact_paths(manifest),
+    )
+
+
+def _declared_artifact_paths(manifest: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return the artifact paths the manifest declares this model depends on."""
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, Mapping):
+        return ()
+    paths = {
+        str(entry["path"])
+        for entry in artifacts.values()
+        if isinstance(entry, Mapping) and entry.get("path")
+    }
+    return tuple(sorted(paths))
+
+
+def _text_or_none(value: Any) -> str | None:
+    return None if value is None else str(value)
