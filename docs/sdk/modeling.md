@@ -41,19 +41,36 @@ other layers consume.
 **This is layer ownership, not role separation.** The table above answers
 "which of the seven packages owns this kind of code" — a different question
 from "which swappable role does a network-control component play." Phase 10
-(Milestone 5, 2026-08-10) built that second separation *inside*
-`gridalyn.simulation`: physical power-flow backend
-(`gridalyn.simulation.backends`), surrogate (`gridalyn.simulation.surrogates`),
-observation (`gridalyn.twin.observation`) and control policy
-(`gridalyn.simulation.policies`) are each an explicit-ID registry, resolved by
-name rather than fused into one class, with the choice recorded in
-`provenance.powerflow_backend`. Before Phase 10, `VoltageControlEnvironment`
-fused all four of those roles into one 138-line class — a layer-ownership
-violation the table above never flagged, because "solver modelers" already
-correctly described where the code lived; it just did not separate the roles
-*within* that one home. Both claims are true after Phase 10, and they are
-about different axes: this table is package boundaries, the four registries
-are role boundaries within a package.
+(Milestone 5, 2026-08-10) built that second separation for **four** roles:
+physical power-flow backend, surrogate, observation, and control policy.
+
+**Three of the four are registries; observation is not.** Say "four roles,
+three registries" — the two counts differ on purpose.
+
+| Role | Home | Resolution |
+| --- | --- | --- |
+| Power-flow backend | `gridalyn.simulation.backends` | `PowerFlowBackendRegistry`, explicit ID |
+| Surrogate | `gridalyn.simulation.surrogates` | `SurrogateRegistry`, explicit ID |
+| Control policy | `gridalyn.simulation.policies` | `PolicyRegistry`, explicit ID |
+| Observation | `gridalyn.twin.observation` | A contract plus one builder, `observe_network` — **no registry** |
+
+Observation has one implementation because nothing in this repository yet needs
+a second; a registry ahead of that need would be the speculative abstraction the
+platform's own conventions warn against, and its absence is asserted by a test
+rather than left to look like an oversight. It also no longer lives in
+`gridalyn.simulation`: Phase 11 (Milestone 6, 2026-08-12) moved it down to
+`gridalyn.twin.observation`, because what a network currently shows is a
+property of the model, not of the solver. `gridalyn.simulation.observation`
+still resolves as a deprecated re-export that emits a `DeprecationWarning`.
+
+Each registry resolves by name rather than being fused into one class, with the
+choice recorded in `provenance.powerflow_backend`. Before Phase 10,
+`VoltageControlEnvironment` fused all four roles into one 138-line class — a
+layer-ownership violation the table above never flagged, because "solver
+modelers" already correctly described where the code lived; it just did not
+separate the roles *within* that one home. Both claims are true after Phase 10,
+and they are about different axes: the first table is package boundaries, this
+one is role boundaries.
 
 See [Building Models](../platform/building-models.md).
 

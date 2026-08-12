@@ -2,7 +2,7 @@
 
 Why a ledger and not a "run everything" script
 ----------------------------------------------
-The documentation surface carries 350 fenced code blocks. Executing all of them
+The documentation surface carries 345 fenced code blocks. Executing all of them
 is neither possible nor meaningful: most are not commands at all, several are
 destructive, one chain takes six hours, and a large fraction only works as an
 *ordered* group because block 5 of a tutorial consumes the project block 3
@@ -143,7 +143,7 @@ Measured on this tree: 84 markdown documents are walked, **7 of which
 ``docs/development/agent-task-templates/`` files, all AI-assistant records
 deliberately kept out of the public repository, together carrying 11 blocks.
 ``CLAUDE.md`` and ``AGENTS.md`` are excluded for the same reason, one level up in
-:data:`_ROOT_DOCS`. The corpus is therefore **77 documents and 350 blocks**, and
+:data:`_ROOT_DOCS`. The corpus is therefore **63 block-bearing documents and 345 blocks**, and
 that is what a clean checkout carries.
 
 The exclusion is a declared list rather than a ``git`` call, so classification

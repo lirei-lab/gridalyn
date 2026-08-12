@@ -195,6 +195,7 @@ key fields are:
 | `adapter_validation_report` | Validation report emitted by the adapter export. |
 | `artifacts` | Path, row count, and SHA-256 for each base Parquet artifact. |
 | `validation` | Endpoint and customer-connectivity validation from `NetworkModelRepository`. |
+| `model_authority` | The producing adapter's Model Authority Sets and profiles, JSON-native. `null` when a producer declares none. See [Model Authority Sets and Profiles](#model-authority-sets-and-profiles). |
 
 The current base export command is a thin wrapper around
 the default `gridalyn.twin.adapters.NetworkAdapterRegistry`, which resolves
@@ -245,26 +246,41 @@ beside it. Earlier design notes describing the twin as "a synthetic base plus
 GeoJSON geography" are measurably wrong — do not repeat that framing.
 
 A `ModelProfile` carries a stable id, a version, its artifacts, and a
-`dependent_on` list. **`dependent_on` is derived, never authored**: it is
-computed at import from `ColumnSpec.references` in the declared schema, so it
-cannot be invented and cannot go stale. Five per-artifact profiles plus one
-aggregate are declared under the `gridalyn:digital-twin-base` namespace; the
-four artifacts that carry a bus reference depend on that namespace's
-`grid_buses` profile, and the `grid_buses` profile itself depends on nothing.
+`depends_on` list. **`depends_on` is derived, never authored**: it is computed
+at import from `ColumnSpec.references` in the declared schema, so it cannot be
+invented and cannot go stale. Five per-artifact profiles plus one aggregate are
+declared under the `gridalyn:digital-twin-base` namespace; the four artifacts
+that carry a bus reference depend on that namespace's `grid_buses` profile, and
+the `grid_buses` profile itself depends on nothing.
 
-`validate_authority_partition()` runs at the top of
-`CimParquetAdapter.load_snapshot()`, before any IO, so the declaration is a rule
-that gets checked rather than metadata nothing reads. It catches genuine drift:
-the canonical artifact list is single-sourced from `BASE_TABLE_FILENAMES`, so
-adding a sixth canonical table without giving it an owner turns that load red.
+`depends_on` holds **profile ids**, and is named and serialized for that. It is
+*not* CGMES `Model.DependentOn`, which references other models by mRID: a base
+here is one model assembled from files, so that header field has nothing to
+point at.
 
-**Read the scope of that check precisely.** `CimParquetAdapter.load_snapshot()`
-is its *only* call site. `SyntheticPandapowerAdapter` declares no
-`authority_sets()` method and never invokes the check — so on the path that
-actually produces the committed base, and that every workflow runs, the
-`gridalyn:mas:synthetic-pandapower` set is **declared but not enforced**. Wiring
-the synthetic producer to the same preflight is the outstanding work; until then
-do not describe the rule as running on every model load.
+`validate_authority_partition()` runs at the top of **both** producers'
+`load_snapshot()`, before any IO, so the declaration is a rule that gets checked
+rather than metadata nothing reads. It catches genuine drift: the canonical
+artifact list is single-sourced from `BASE_TABLE_FILENAMES`, while each
+authority set writes the artifacts it owns as a **literal**, so adding a sixth
+canonical table without giving it an owner turns both loads red.
+
+**That literal is load-bearing, and it is why the declarations live in
+`gridalyn/twin/adapters/authority.py`.** As first written, both sets were
+declared `artifacts=CANONICAL_ARTIFACTS` — the same object — so the rule asked
+whether the canonical list partitions itself and a sixth table did *not* turn it
+red. The declarations also lived in `adapters/cim.py`, which imports
+`adapters/network.py` and not the reverse, so `SyntheticPandapowerAdapter` — the
+producer of the committed base — could not reach its own declaration without an
+import cycle. Both are fixed: `authority.py` imports only from
+`gridalyn/twin/network/`, both producers import it, and
+`test_no_authority_set_aliases_the_canonical_artifact_list` fails on a
+reintroduced alias.
+
+Both producers also render their declarations into the manifest they write: as
+prose in `notes`, and as the structured, machine-readable `model_authority`
+field carrying every `as_dict()`. The committed
+`instances/default/digital_twin/base/metadata.json` carries both.
 
 #### Why there is no `rdflib`, and why adding it back would be a regression
 

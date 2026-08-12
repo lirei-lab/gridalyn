@@ -12,10 +12,10 @@ from pandapower.timeseries import DFData, OutputWriter, run_timeseries
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
 from gridalyn.simulation.backends.registry import resolve_powerflow_backend
-from gridalyn.simulation.observation.contract import observe_network
 from gridalyn.simulation.simulators.powerflow.synthetic_network import (
     build_synthetic_network_from_config,
 )
+from gridalyn.twin.observation.contract import observe_network
 
 
 def run_single_realization(

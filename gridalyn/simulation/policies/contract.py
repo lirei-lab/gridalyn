@@ -7,12 +7,12 @@ sensitivity dispatch, market clearing, replay/forecast) with no shared
 interface between any pair of them.
 
 A :class:`Policy` is the seam that lets a controller be swapped without
-touching the environment: it consumes a :class:`~gridalyn.simulation.
-observation.contract.NetworkObservation` (10-03) plus the battery state of
-charge and the step index, and returns a battery action in MW. It does not
-see a solved ``pandapowerNet`` and does not decide *how* power flow was
-solved -- that is the backend's job (10-01) -- so a policy is reusable across
-whichever backend the environment was constructed with.
+touching the environment: it consumes a :class:`~gridalyn.twin.observation.
+contract.NetworkObservation` (10-03, relocated to ``twin`` in 11-04) plus the
+battery state of charge and the step index, and returns a battery action in
+MW. It does not see a solved ``pandapowerNet`` and does not decide *how* power
+flow was solved -- that is the backend's job (10-01) -- so a policy is reusable
+across whichever backend the environment was constructed with.
 
 Resolution is by explicit ID only -- see :mod:`gridalyn.simulation.policies.
 registry`. There is deliberately no ``entry_points`` discovery, for the same
@@ -34,7 +34,7 @@ from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
-from gridalyn.simulation.observation.contract import NetworkObservation
+from gridalyn.twin.observation.contract import NetworkObservation
 
 #: The tabular Q-learning policy trained per-repository in
 #: ``simulation.control.tabular_voltage`` (paradigm 1).
@@ -129,8 +129,8 @@ def voltage_at_bus(observation: NetworkObservation, bus_id: int) -> float:
     re-derived per policy.
 
     Args:
-        observation: A solved-network observation from :func:`gridalyn.
-            simulation.observation.contract.observe_network`.
+        observation: A solved-network observation from :func:`gridalyn.twin.
+            observation.contract.observe_network`.
         bus_id: The bus identifier to look up; matched against
             ``observation.bus_ids``, not against array position.
 

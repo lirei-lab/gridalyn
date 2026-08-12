@@ -33,15 +33,42 @@ certainly not a twin. Specifically:
 
 ### What would move it to the next class
 
-Exactly one thing: an ingest path that reads a real measurement stream and joins
-it to the model's `building_id` / `bus_id` namespace, stamping `as_of` from the
-measurement's own timestamp. The seam is already cut — `as_of` is keyword-only
-and caller-supplied, and `AS_OF_ABSENT_REASON` travels with the field to say why
-it is empty. What is missing is not code but a **key**: the candidate dataset
-(`datasets/hq`) is 35,041 × 1000 with columns `'0'`…`'999'`, anonymous ordinals
-with nothing joining them to a building. Binding a home to a building would
-invent the join rather than measure it, so the producer is deliberately deferred
-and no state-producer registry was built.
+Exactly one thing: an ingest path that stamps `as_of` from a real producer's own
+timestamp and joins its readings to the model's `building_id` / `bus_id`
+namespace. The seam is already cut — `as_of` is keyword-only and
+caller-supplied, and `AS_OF_ABSENT_REASON` travels with the field to say why it
+is empty. What is missing is the producer on the other side of that seam.
+
+**The producer will be the synthetic generator plus the weather system, not a
+measured dataset.** The generator already supplies both things the seam needs,
+by construction rather than by inference: a real tz-aware 15-minute
+`DatetimeIndex`, and a `unit_000…` → bus join that
+`gridalyn.assets.datagen` builds itself. It even computes a usable instant and
+throws it away — `coincident_peak_loads_mw` collapses the profile frame with
+`per_bus.loc[per_bus.sum(axis=1).idxmax()]`, and that `idxmax()` is a genuine
+`Timestamp` (measured `2023-12-18 20:00:00-05:00` on a 12-unit cold day)
+discarded on the next line. `as_of` for that snapshot does not need inventing;
+it needs *not discarding*.
+
+**Why not `datasets/hq`.** The real Hydro-Québec 1000-home set was the original
+candidate and is **disqualified on distribution**, which is the decisive
+constraint: the directory is 544 MB, git-ignored, and outside `pyproject.toml`'s
+`include = ["gridalyn*"]`, so it cannot ship in the package. A producer whose
+only data source cannot be distributed is dead for everyone who installs
+Gridalyn from PyPI — it would be an SDK capability that exists in one working
+copy and nowhere else. A second problem, that the set's columns are anonymous
+ordinals `'0'`…`'999'` with no key joining a home to a building, made the branch
+*hard to build*; distribution makes it **wrong to build**, and would still
+disqualify it if the join key appeared tomorrow.
+
+HQ keeps the role it already has and is good at: an offline validation reference
+for the generators — the all-electric n=215 subset documented in
+`projects/ev_hosting_flex/CALIBRATION.md` — run by an operator, never a runtime
+dependency.
+
+The producer is therefore deliberately deferred, and no state-producer registry
+was built: one real producer plus a placeholder is the speculative abstraction
+the platform's registries exist to avoid.
 
 Bidirectional flow — writing control actions back to physical equipment — is a
 recorded **non-goal**, not an omission.

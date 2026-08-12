@@ -58,6 +58,11 @@ class NetworkModelRepository:
             and exists for the manifest *producer*, which by construction runs
             before the manifest it writes. A model loaded without provenance is
             never a silent success under the default policy.
+
+            Each policy has a production caller, which is why all three are
+            kept: ``"ignore"`` in :func:`build_base_metadata`, ``"require"`` in
+            :func:`gridalyn.twin.adapters.network.exported_model_identity` (the
+            export post-condition), ``"warn"`` everywhere else by default.
     """
 
     base_dir: Path
@@ -483,17 +488,19 @@ class NetworkModelRepository:
 
 
 def _build_identity(manifest: Mapping[str, Any]) -> ModelIdentity:
-    """Map a ``metadata.json`` manifest onto CGMES ``FullModel`` identity.
+    """Map a ``metadata.json`` manifest onto a :class:`ModelIdentity`.
 
     Args:
         manifest: Parsed contents of the base ``metadata.json``.
 
     Returns:
         The model identity. ``scenario_time`` is always ``None`` — see
-        :data:`gridalyn.twin.network.model.SCENARIO_TIME_ABSENT_REASON`.
+        :data:`gridalyn.twin.network.model.SCENARIO_TIME_ABSENT_REASON`. Which
+        of its fields carry CGMES semantics, and which two deliberately do not,
+        is documented on :class:`ModelIdentity` itself.
     """
     model_version = manifest.get("model_version")
-    version = (
+    governance_schema_version = (
         model_version.get("schema_version")
         if isinstance(model_version, Mapping)
         else None
@@ -503,11 +510,11 @@ def _build_identity(manifest: Mapping[str, Any]) -> ModelIdentity:
         id=_text_or_none(manifest.get("model_version_id")),
         created=_text_or_none(manifest.get("created_at")),
         scenario_time=None,
-        version=_text_or_none(version),
+        governance_schema_version=_text_or_none(governance_schema_version),
         profile=(
             None if schema_version is None else f"{BASE_PROFILE_ID}:{schema_version}"
         ),
-        dependent_on=_declared_artifact_paths(manifest),
+        artifact_paths=_declared_artifact_paths(manifest),
     )
 
 

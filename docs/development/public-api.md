@@ -9,7 +9,7 @@ New code should use the native seven-module structure:
 | Module | Stable responsibility |
 | --- | --- |
 | `gridalyn.foundation` | Workspaces, artifact policy, reports, manifests, validation, and governance. |
-| `gridalyn.twin` | Network repositories, topology, source adapters, IO helpers, and semantic graph. |
+| `gridalyn.twin` | Network repositories, the canonical `NetworkModel` and its `ModelIdentity`, observed state (`NetworkObservation`, `observe_network`), topology, source adapters, IO helpers, and semantic graph. |
 | `gridalyn.assets` | Building, EV, DER, thermal, load, and asset-model generation. |
 | `gridalyn.simulation` | Synthetic-network builders, power-flow builders, solver adapters, network impact, and validation analytics. |
 | `gridalyn.operations` | Providers, aggregators, offers, clearing, dispatch, settlement, constraints, and KPIs. |
@@ -63,6 +63,27 @@ downstream = repo.get_downstream("transformer:25")
 equipment = repo.get_connected_equipment("bus:17")
 integrity = repo.validate_integrity()
 ```
+
+Three things about that snippet changed in Phase 11 (2026-08-12) and are worth
+knowing before you build on it:
+
+- **`load_model()` now carries identity.** The returned `NetworkModel` exposes
+  `.identity`, a `ModelIdentity` with a content-addressed `model:sha256:…` id
+  and CGMES `FullModel` semantics, read from the base `metadata.json`. It is
+  `None` only when no manifest is present.
+- **`validate_integrity()` fails loudly on an absent artifact.** It reports
+  three states, not two: a required artifact that is missing is an error, an
+  artifact that exists but is empty is a warning that still validates. An empty
+  directory no longer reports `valid=True`.
+- **`from_parquet` takes a `provenance` policy** — `"require" | "warn" |
+  "ignore"`. The default warns and records a degraded `provenance_status`;
+  `"require"` raises `FileNotFoundError` naming the remedy, and is what an
+  export uses to check its own post-condition.
+
+Observed state is published from the same module: `twin.NetworkObservation` and
+`twin.observe_network` describe what a *solved* network shows, with a
+keyword-only, caller-supplied `as_of`. `gridalyn.simulation.observation` still
+resolves as a deprecated re-export.
 
 Adapter discovery uses the same module:
 

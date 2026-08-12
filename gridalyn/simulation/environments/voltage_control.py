@@ -10,8 +10,9 @@ seams instead:
 
 * the solver is resolved from the :mod:`gridalyn.simulation.backends`
   registry (10-01), not hardcoded;
-* what a step observes is built through :func:`gridalyn.simulation.
-  observation.contract.observe_network` (10-03), not a bespoke adapter call;
+* what a step observes is built through :func:`gridalyn.twin.observation.
+  contract.observe_network` (10-03, relocated to ``twin`` in 11-04), not a
+  bespoke adapter call;
 * an action can come from a registered :class:`gridalyn.simulation.policies.
   contract.Policy` (10-04) via :func:`run_policy_episode`, though
   :meth:`VoltageControlEnvironment.step` itself still accepts an externally
@@ -38,11 +39,11 @@ from gridalyn.assets.modeling.feeders import RadialFeederSpec
 from gridalyn.assets.modeling.voltage_control import VoltageControlDERSpec
 from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
 from gridalyn.simulation.backends.registry import resolve_powerflow_backend
-from gridalyn.simulation.observation.contract import observe_network
 from gridalyn.simulation.policies.contract import voltage_at_bus
 from gridalyn.simulation.simulators.powerflow.voltage_control import (
     build_voltage_control_feeder,
 )
+from gridalyn.twin.observation.contract import observe_network
 
 
 @dataclass(frozen=True)

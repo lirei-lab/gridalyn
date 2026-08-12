@@ -13,9 +13,23 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.twin.adapters.authority import (
+    ModelAuthoritySet,
+    ModelProfile,
+    authority_set_partition,
+    base_model_profiles,
+    cgmes_export_notes,
+    model_authority_payload,
+    validate_authority_partition,
+)
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.network.metadata import write_base_metadata
-from gridalyn.twin.network.model import BASE_TABLE_FILENAMES, NetworkModel
+from gridalyn.twin.network.model import (
+    BASE_TABLE_FILENAMES,
+    ModelIdentity,
+    NetworkModel,
+)
+from gridalyn.twin.network.repository import NetworkModelRepository
 
 __all__ = [
     "BASE_EXPORT_NOTES",
@@ -26,6 +40,7 @@ __all__ = [
     "NetworkSourceAdapter",
     "SyntheticPandapowerAdapter",
     "describe_network_source_adapter",
+    "exported_model_identity",
 ]
 
 BASE_EXPORT_NOTES = [
@@ -71,13 +86,59 @@ class NetworkSourceAdapter(Protocol):
 
 @dataclass(frozen=True)
 class NetworkExportResult:
-    """Result of exporting a canonical base network snapshot."""
+    """Result of exporting a canonical base network snapshot.
+
+    Attributes:
+        out_dir: Directory the canonical artifacts were written to.
+        metadata_path: Path of the ``metadata.json`` manifest written.
+        validation_report_path: Path of the adapter validation report.
+        artifact_paths: Canonical artifact name to the path written.
+        counts: Row counts per canonical table.
+        identity: Identity of the model just exported, read back through the
+            repository read path rather than assembled by the producer -- see
+            :func:`exported_model_identity`.
+    """
 
     out_dir: Path
     metadata_path: Path
     validation_report_path: Path
     artifact_paths: dict[str, Path]
     counts: dict[str, int]
+    identity: ModelIdentity
+
+
+def exported_model_identity(out_dir: Path) -> ModelIdentity:
+    """Read an export's own manifest back and return the model identity.
+
+    This is the export post-condition, and the one production caller of
+    ``provenance="require"``. An export that wrote its artifacts but not a
+    manifest a reader can resolve is a failed export, not a successful one that
+    happens to be unidentifiable -- and the producer is the last place able to
+    say so. Reading it back through :class:`NetworkModelRepository` rather than
+    trusting the payload just handed to the writer is what makes producer and
+    consumer agree on the same manifest.
+
+    Args:
+        out_dir: The directory the export wrote its manifest into.
+
+    Returns:
+        The :class:`ModelIdentity` the manifest declares.
+
+    Raises:
+        FileNotFoundError: If no manifest is present -- raised by the
+            ``"require"`` provenance policy, which names the remedy.
+        ValueError: If the manifest is present but is not a JSON object.
+        RuntimeError: If the manifest parsed but declared no identity.
+    """
+    repository = NetworkModelRepository.from_parquet(out_dir, provenance="require")
+    identity = repository.load_model().identity
+    if identity is None:  # pragma: no cover - "require" raises before this
+        raise RuntimeError(
+            f"{out_dir}: the exported manifest parsed but declared no model "
+            "identity; regenerate it with "
+            "gridalyn.twin.network.metadata.write_base_metadata"
+        )
+    return identity
 
 
 @dataclass(frozen=True)
@@ -96,8 +157,42 @@ class SyntheticPandapowerAdapter:
         """Return stable adapter identity and capability metadata."""
         return describe_network_source_adapter(self)
 
+    def authority_sets(self) -> tuple[ModelAuthoritySet, ...]:
+        """Return the Model Authority Sets partitioning models this produces.
+
+        Returns:
+            The declared partition. Measured today it has exactly one member --
+            see
+            :data:`~gridalyn.twin.adapters.authority.AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER`.
+
+        Raises:
+            UnknownModelAuthoritySetError: If this adapter declares no set.
+        """
+        return authority_set_partition(self.adapter_id)
+
+    def profiles(self) -> tuple[ModelProfile, ...]:
+        """Return the declared profiles of the base this adapter exports.
+
+        Returns:
+            Every profile in
+            :data:`~gridalyn.twin.adapters.authority.BASE_MODEL_PROFILES`,
+            ordered by profile ID.
+        """
+        return base_model_profiles()
+
     def load_snapshot(self) -> NetworkModel:
-        """Load cached synthetic grid objects and normalize them to base tables."""
+        """Load cached synthetic grid objects and normalize them to base tables.
+
+        Returns:
+            The canonical :class:`NetworkModel`.
+
+        Raises:
+            ValueError: If this adapter's declared Model Authority Sets do not
+                partition the canonical base artifacts. Checked here, before any
+                IO, so the declarations are consumed on the path that actually
+                produces the committed base rather than only on the CIM path.
+        """
+        validate_authority_partition(self.authority_sets(), adapter_id=self.adapter_id)
         net, pg = _load_cache(self.cache_dir)
         buses = _make_bus_table(net)
         lines = _make_line_table(net, buses)
@@ -145,7 +240,10 @@ class SyntheticPandapowerAdapter:
             source_format=self.source_format,
             adapter_capabilities=self.capabilities,
             adapter_validation_report=validation_report_path,
-            notes=BASE_EXPORT_NOTES,
+            notes=self._export_notes(),
+            model_authority=model_authority_payload(
+                self.authority_sets(), self.profiles()
+            ),
         )
         write_network_adapter_validation_report(
             path=validation_report_path,
@@ -165,7 +263,22 @@ class SyntheticPandapowerAdapter:
             validation_report_path=validation_report_path,
             artifact_paths=artifact_paths,
             counts=snapshot.counts,
+            identity=exported_model_identity(out_dir),
         )
+
+    def _export_notes(self) -> list[str]:
+        """Build the manifest provenance notes, including the CGMES posture.
+
+        The CGMES lines are rendered from the declarations themselves rather
+        than retyped, so the committed base -- a synthetic export -- carries the
+        same posture as a CIM export instead of leaving
+        ``gridalyn:mas:synthetic-pandapower`` invisible to every reader of the
+        artifact.
+
+        Returns:
+            Provenance note lines, recorded verbatim in ``metadata.json``.
+        """
+        return [*BASE_EXPORT_NOTES, *cgmes_export_notes(self.authority_sets())]
 
 
 def _load_json(path: Path) -> dict[str, Any]:

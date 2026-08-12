@@ -1,8 +1,12 @@
 """Pins for the CGMES semantics adopted over parquet (Phase 11, plan 11-05).
 
 Model Authority Sets and profile declarations are adopted as **fields and
-rules** over the surviving parquet ``CimParquetAdapter``, never as a
-serialization format.
+rules** over the canonical parquet artifacts, never as a serialization format.
+They are enforced on **both** producers: plan 11-05 declared them inside
+``adapters/cim.py``, where ``SyntheticPandapowerAdapter`` could not reach them
+without an import cycle, so the set declared for the producer of the committed
+base was checked by nothing. Review cycle 1 moved them to
+``adapters/authority.py`` and wired the second producer.
 
 The dependency-posture pin -- real ``rdflib`` imports under ``gridalyn/`` are
 0 -- deliberately does **not** live here. It lives with its siblings in
@@ -20,12 +24,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from gridalyn.twin.adapters.cim import (
+from gridalyn.twin.adapters import authority
+from gridalyn.twin.adapters.authority import (
     AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER,
     BASE_MODEL_PROFILES,
     CANONICAL_ARTIFACTS,
     MODEL_AUTHORITY_SETS,
-    CimParquetAdapter,
     ModelAuthoritySet,
     ModelProfile,
     UnknownModelAuthoritySetError,
@@ -35,6 +39,8 @@ from gridalyn.twin.adapters.cim import (
     model_profile,
     validate_authority_partition,
 )
+from gridalyn.twin.adapters.cim import CimParquetAdapter
+from gridalyn.twin.adapters.network import SyntheticPandapowerAdapter
 from gridalyn.twin.adapters.registry import default_network_adapter_registry
 from gridalyn.twin.network.model import BASE_PROFILE_ID, BASE_TABLE_FILENAMES
 from gridalyn.twin.network.schema import table_schema
@@ -128,6 +134,54 @@ def test_the_untested_multi_member_case_is_declared_not_implied() -> None:
     assert "UNTESTED" in AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER
 
 
+def test_no_authority_set_aliases_the_canonical_artifact_list() -> None:
+    """The partition rule must not be asked whether a list partitions itself.
+
+    Plan 11-05 declared both sets as ``artifacts=CANONICAL_ARTIFACTS`` -- the
+    same object, not a copy -- so ``validate_authority_partition`` compared
+    ``CANONICAL_ARTIFACTS`` against ``CANONICAL_ARTIFACTS`` and could not fail.
+    A reviewer added a sixth canonical table and the rule did not fire. Identity
+    is the assertion, not equality: equality is expected and correct, because
+    both producers genuinely emit all five artifacts.
+    """
+    for adapter_id, authority_set in sorted(MODEL_AUTHORITY_SETS.items()):
+        assert authority_set.artifacts is not CANONICAL_ARTIFACTS, adapter_id
+        assert authority_set.artifacts == CANONICAL_ARTIFACTS, adapter_id
+
+
+def test_a_sixth_canonical_artifact_is_unowned_and_turns_the_partition_red(
+    monkeypatch,
+) -> None:
+    """The drift the rule exists to catch, exercised rather than asserted.
+
+    This is the reviewer's experiment in miniature: widen the canonical artifact
+    list without giving the new entry an owner, and every declared partition
+    must go red. Widening :data:`CANONICAL_ARTIFACTS` directly rather than
+    editing ``BASE_TABLE_FILENAMES`` keeps the check on the partition rule --
+    editing the filename map also trips ``schema.py``'s ``table_schema()``,
+    which raises first and masks this result.
+
+    This does *not* subsume
+    ``test_no_authority_set_aliases_the_canonical_artifact_list``: rebinding the
+    name leaves an aliased set pointing at the old tuple, so an aliased
+    declaration goes red here too. Only the identity assertion catches the alias
+    on the real, unpatched list.
+    """
+    monkeypatch.setattr(
+        authority,
+        "CANONICAL_ARTIFACTS",
+        CANONICAL_ARTIFACTS + ("weather_timeseries",),
+    )
+
+    for adapter_id in sorted(MODEL_AUTHORITY_SETS):
+        with pytest.raises(ValueError) as excinfo:
+            validate_authority_partition(
+                authority_set_partition(adapter_id), adapter_id=adapter_id
+            )
+
+        assert "'weather_timeseries' has no declared owner" in str(excinfo.value)
+
+
 def test_partition_rule_rejects_an_artifact_with_no_owner() -> None:
     incomplete = ModelAuthoritySet(
         authority_set_id="test:mas:partial",
@@ -215,6 +269,53 @@ def test_load_snapshot_consumes_the_partition_rule(monkeypatch) -> None:
     assert "do not partition the canonical base artifacts" in str(excinfo.value)
 
 
+def test_the_synthetic_producer_consumes_the_partition_rule(monkeypatch) -> None:
+    """The producer of the committed base checks its own declaration.
+
+    Until review cycle 1 this was impossible: the declarations lived in
+    ``adapters/cim.py``, which imports ``adapters/network.py`` and not the other
+    way round, so ``gridalyn:mas:synthetic-pandapower`` was declared where its
+    only possible consumer was structurally barred from reaching it. The check
+    runs before any IO, so a non-existent cache directory is enough to prove
+    which failure comes first.
+    """
+    monkeypatch.setitem(
+        MODEL_AUTHORITY_SETS,
+        "synthetic_pandapower",
+        ModelAuthoritySet(
+            authority_set_id="gridalyn:mas:synthetic-pandapower",
+            authority="SyntheticPandapowerAdapter",
+            adapter_id="synthetic_pandapower",
+            source_standard="pandapower",
+            artifacts=CANONICAL_ARTIFACTS[:2],
+        ),
+    )
+    adapter = SyntheticPandapowerAdapter(
+        cache_dir=Path("does-not-exist"),
+        config_path=Path("does-not-exist.json"),
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        adapter.load_snapshot()
+
+    assert "do not partition the canonical base artifacts" in str(excinfo.value)
+
+
+def test_the_synthetic_producer_declares_the_same_surface_as_the_cim_one() -> None:
+    """Both producers expose the declaration, not just the one that ships CIM."""
+    adapter = SyntheticPandapowerAdapter(
+        cache_dir=Path("unused"),
+        config_path=Path("unused.json"),
+    )
+
+    assert [item.authority_set_id for item in adapter.authority_sets()] == [
+        "gridalyn:mas:synthetic-pandapower"
+    ]
+    assert [item.profile_id for item in adapter.profiles()] == sorted(
+        BASE_MODEL_PROFILES
+    )
+
+
 def test_unknown_authority_set_error_enumerates_the_declared_ids() -> None:
     with pytest.raises(UnknownModelAuthoritySetError) as excinfo:
         model_authority_set("iec_61850_scl")
@@ -233,8 +334,9 @@ def test_export_records_the_authority_set_and_profile_in_the_manifest() -> None:
 
         adapter = CimParquetAdapter(source_dir=root / "cim_source")
         result = adapter.export(out_dir=root / "base", root=root)
-        notes = json.loads(result.metadata_path.read_text())["notes"]
+        manifest = json.loads(result.metadata_path.read_text())
 
+    notes = manifest["notes"]
     joined = " ".join(notes)
     assert "gridalyn:mas:cim-parquet" in joined
     assert BASE_PROFILE_ID in joined
@@ -242,10 +344,56 @@ def test_export_records_the_authority_set_and_profile_in_the_manifest() -> None:
     assert AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER in notes
 
 
-# --- (b) dependentOn names only artifact sets that exist ---------------------
+def test_export_records_the_structured_payload_not_only_prose() -> None:
+    """A machine reader gets fields, not a sentence it has to parse.
+
+    ``notes`` is a ``list[str]``, so plan 11-05 could only render the
+    declarations as prose and recorded the structured form as a hand-off. This
+    pins the field that closed it.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write_cim_source(root / "cim_source")
+
+        adapter = CimParquetAdapter(source_dir=root / "cim_source")
+        result = adapter.export(out_dir=root / "base", root=root)
+        manifest = json.loads(result.metadata_path.read_text())
+
+    payload = manifest["model_authority"]
+    assert [item["authority_set_id"] for item in payload["authority_sets"]] == [
+        "gridalyn:mas:cim-parquet"
+    ]
+    assert payload["authority_sets"][0]["artifacts"] == list(CANONICAL_ARTIFACTS)
+    assert [item["profile_id"] for item in payload["profiles"]] == sorted(
+        BASE_MODEL_PROFILES
+    )
 
 
-def test_dependent_on_names_only_declared_profiles() -> None:
+def test_export_returns_the_identity_it_read_back_off_disk() -> None:
+    """The export post-condition: a base without a resolvable manifest fails.
+
+    ``provenance="require"`` had no production caller until review cycle 1; this
+    is it. The identity is read back through ``NetworkModelRepository`` rather
+    than assembled by the producer, so producer and consumer are proven to agree
+    on the manifest that was just written.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write_cim_source(root / "cim_source")
+
+        adapter = CimParquetAdapter(source_dir=root / "cim_source")
+        result = adapter.export(out_dir=root / "base", root=root)
+        manifest = json.loads(result.metadata_path.read_text())
+
+    assert result.identity.id == manifest["model_version_id"]
+    assert result.identity.profile == f"{BASE_PROFILE_ID}:1.0"
+    assert "base/grid_buses.parquet" in result.identity.artifact_paths
+
+
+# --- (b) profile dependencies name only profiles that exist -----------------
+
+
+def test_profile_dependencies_name_only_declared_profiles() -> None:
     for profile in BASE_MODEL_PROFILES.values():
         for dependency in profile.depends_on:
             assert (
@@ -331,6 +479,21 @@ def test_descriptors_serialize_without_a_custom_encoder() -> None:
         text = json.dumps(payload, sort_keys=True, allow_nan=False)
 
         assert json.loads(text) == payload
+
+
+def test_profile_dependencies_serialize_under_their_own_name() -> None:
+    """A profile ID list must not be serialized as CGMES ``Model.DependentOn``.
+
+    Plan 11-05's ``as_dict`` renamed ``depends_on`` to ``dependent_on`` on the
+    way out, which dressed *profile IDs* as the CGMES header field that
+    references other *models* by mRID. There is one model per base here, so that
+    field has nothing to point at; the key now matches the attribute.
+    """
+    for profile in BASE_MODEL_PROFILES.values():
+        payload = profile.as_dict()
+
+        assert payload["depends_on"] == list(profile.depends_on)
+        assert "dependent_on" not in payload
 
 
 def test_descriptor_values_are_strings_or_lists_of_strings() -> None:

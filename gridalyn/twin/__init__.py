@@ -24,11 +24,14 @@ Names deliberately NOT re-exported here, each for a measured reason:
   *inside* this layer, so promoting it would advertise an internal contract as
   SDK surface.
 * ``ModelAuthoritySet`` / ``ModelProfile`` — these *do* meet the criterion
-  (``CimParquetAdapter.authority_sets()`` and ``.profiles()`` return them), but
-  every entry here resolves through a sub-facade, and reaching them would mean
-  either pointing at the implementation module ``gridalyn.twin.adapters.cim``
-  or first re-exporting them from ``gridalyn.twin.adapters``. Both are outside
-  this change's scope; recorded rather than done half-way.
+  (both source adapters' ``authority_sets()`` and ``.profiles()`` return them),
+  but every entry here resolves through a sub-facade, and reaching them would
+  mean either pointing at the implementation module
+  ``gridalyn.twin.adapters.authority`` or first re-exporting them from
+  ``gridalyn.twin.adapters``. Both are outside this change's scope; recorded
+  rather than done half-way. (The module path moved from ``…adapters.cim`` to
+  ``…adapters.authority`` in review cycle 1 of Phase 11 — see that module's
+  docstring for why.)
 * ``AS_OF_ABSENT_REASON`` / ``SCENARIO_TIME_ABSENT_REASON`` — documentation
   constants that travel with their fields, not API.
 """

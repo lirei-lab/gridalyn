@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import pandas as pd
 
@@ -39,6 +39,7 @@ def build_base_metadata(
     adapter_capabilities: tuple[str, ...] | list[str] | None = None,
     adapter_validation_report: Path | None = None,
     notes: list[str] | None = None,
+    model_authority: Mapping[str, Any] | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
     """Build a repository-centric manifest for a base digital-twin snapshot.
@@ -57,6 +58,14 @@ def build_base_metadata(
         adapter_capabilities: Capabilities the producing adapter declares.
         adapter_validation_report: Path of the adapter validation report.
         notes: Free-text provenance notes recorded verbatim.
+        model_authority: The producing adapter's Model Authority Sets and
+            profiles, already rendered JSON-native by
+            :func:`gridalyn.twin.adapters.authority.model_authority_payload`.
+            Passed in rather than derived here: the declarations live in
+            ``twin/adapters``, one layer *above* this module, so deriving them
+            from ``adapter_id`` would be an upward import. Recorded as ``null``
+            when a producer declares none, which is a statement rather than an
+            omission.
         created_at: ISO-8601 UTC timestamp to stamp instead of "now". Pin it to
             make regeneration byte-deterministic; leaving it ``None`` stamps the
             current time, which changes on every regeneration by design.
@@ -123,6 +132,7 @@ def build_base_metadata(
         "counts": model.counts,
         "artifacts": artifact_metadata,
         "validation": validation_payload,
+        "model_authority": dict(model_authority) if model_authority else None,
         "notes": notes or [],
     }
     if adapter_validation_report is not None:
@@ -146,6 +156,7 @@ def write_base_metadata(
     adapter_capabilities: tuple[str, ...] | list[str] | None = None,
     adapter_validation_report: Path | None = None,
     notes: list[str] | None = None,
+    model_authority: Mapping[str, Any] | None = None,
     created_at: str | None = None,
 ) -> Path:
     """Write `metadata.json` for a base digital-twin snapshot.
@@ -163,6 +174,8 @@ def write_base_metadata(
         adapter_capabilities: Capabilities the producing adapter declares.
         adapter_validation_report: Path of the adapter validation report.
         notes: Free-text provenance notes recorded verbatim.
+        model_authority: The producing adapter's Model Authority Sets and
+            profiles, JSON-native. See :func:`build_base_metadata`.
         created_at: ISO-8601 UTC timestamp to stamp instead of "now".
 
     Returns:
@@ -181,6 +194,7 @@ def write_base_metadata(
         adapter_capabilities=adapter_capabilities,
         adapter_validation_report=adapter_validation_report,
         notes=notes,
+        model_authority=model_authority,
         created_at=created_at,
     )
     path = base_dir / "metadata.json"

@@ -134,6 +134,22 @@ model version, run context, and validation state can be traced.
 This layer is the utility model backbone. It should not be treated as a folder
 of simulation leftovers.
 
+**What class of thing it is — read this before quoting the section title.**
+The heading names the layer's *target*, not its measured class. Under the
+Kritzinger taxonomy — which separates the classes by *automated data flow*, not
+by fidelity — `gridalyn.twin` today is a **digital model with provenance, a
+declared schema, and a place for a clock**. It is not a digital shadow, which
+would need automated one-way flow from a physical counterpart, and not a digital
+twin, which would need both directions. Every `NetworkObservation` in the
+repository is read off a *solved* network — a simulation result, not a
+measurement — and every production `observe_network(...)` call site passes
+`as_of=None`, correctly, because none has a real instant to offer. The list
+below is what the layer **owns**; it is not a claim that any of it is fed from a
+physical feeder. See
+[Network Model](../concepts/network-model.md#what-class-of-thing-this-is) for
+the measurement and for the single thing that would move it up a class.
+Bidirectional flow is a recorded **non-goal**, not an omission.
+
 **Owns:**
 
 - canonical network model;
@@ -151,6 +167,7 @@ of simulation leftovers.
 - `gridalyn.twin`
 - `gridalyn.twin.network`
 - `gridalyn.twin.adapters`
+- `gridalyn.twin.observation`
 - `gridalyn.twin.semantic`
 - `instances/default/digital_twin/base`
 - `instances/default/digital_twin/scenarios`

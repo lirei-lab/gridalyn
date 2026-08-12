@@ -32,11 +32,10 @@ PROVENANCE_ABSENT: ProvenanceStatus = "absent"
 
 @dataclass(frozen=True)
 class ModelIdentity:
-    """CGMES ``FullModel`` identity semantics for a canonical network model.
+    """Identity of a canonical network model, read from its manifest.
 
-    Field names are this repository's snake_case rendering of the CGMES header
-    fields; the semantics — not the RDF/XML serialization — are what is adopted
-    (see the Phase 11 shadow design). The CGMES mapping is:
+    Three fields carry CGMES ``FullModel`` header semantics — not the RDF/XML
+    serialization, which this repository does not produce:
 
     ==================  ==========================================================
     CGMES header field  Source in this repository
@@ -46,20 +45,51 @@ class ModelIdentity:
     ``created``         ``metadata.json`` ``created_at``
     ``scenarioTime``    **no source** — always ``None``; see
                         :data:`SCENARIO_TIME_ABSENT_REASON`
-    ``version``         ``model_version.schema_version`` — the governance model
-                        version contract that :func:`build_model_version` stamps
     ``profile``         :data:`BASE_PROFILE_ID` joined to the manifest's
                         ``BASE_METADATA_SCHEMA_VERSION``
-    ``dependentOn``     the declared artifact paths the model is assembled from
     ==================  ==========================================================
+
+    ``profile`` is constant for every model this repository can produce, and
+    that is correct rather than a defect: a CGMES profile identifier names the
+    profile a model conforms to, so all models conforming to one profile share
+    it. It varies when a second profile is declared, not per model.
+
+    **Two fields deliberately do not claim a CGMES mapping**, because the values
+    they carry do not honour one. Both were named for CGMES fields by plan
+    11-01 and renamed in review cycle 1 of Phase 11:
+
+    * ``artifact_paths`` (was ``dependent_on``) holds workspace-relative
+      **parquet paths**. CGMES ``Model.DependentOn`` references other *models*
+      by mRID; a base here is assembled from files, not from other models, and
+      there is exactly one model per base, so the CGMES field has nothing to
+      point at. The name now says what the field holds.
+    * ``governance_schema_version`` (was ``version``) holds
+      ``model_version.schema_version``, which is
+      :data:`~gridalyn.foundation.platform.governance.GOVERNANCE_SCHEMA_VERSION`
+      — the literal ``"1.0"`` for every model this repository can produce. CGMES
+      ``version`` exists to order successive revisions of the *same* model;
+      nothing here revises a model, and what does distinguish two models is the
+      content digest already carried in ``id``. A constant cannot do the job the
+      CGMES name advertises, so the field is named for the constant it is.
+
+    Attributes:
+        id: Content digest identifying this model, the CGMES mRID analogue.
+        created: ISO-8601 UTC instant the model version was stamped.
+        scenario_time: Always ``None``; see
+            :data:`SCENARIO_TIME_ABSENT_REASON`.
+        governance_schema_version: Governance contract version the manifest's
+            ``model_version`` record was built against.
+        profile: Profile identifier the base conforms to.
+        artifact_paths: Workspace-relative paths of the parquet artifacts the
+            manifest declares this model is assembled from, sorted.
     """
 
     id: str | None = None
     created: str | None = None
     scenario_time: None = None
-    version: str | None = None
+    governance_schema_version: str | None = None
     profile: str | None = None
-    dependent_on: tuple[str, ...] = ()
+    artifact_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

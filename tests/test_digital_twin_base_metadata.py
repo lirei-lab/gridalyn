@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from gridalyn.twin.adapters.authority import base_model_profiles, model_authority_set
+from gridalyn.twin.adapters.registry import default_network_adapter_registry
 from gridalyn.twin.network.metadata import build_base_metadata, write_base_metadata
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +104,60 @@ class CommittedBaseMetadataStalenessTest(unittest.TestCase):
         )
         self.assertEqual(
             sorted(self.manifest["artifacts"]), sorted(_BASE_ARTIFACT_NAMES)
+        )
+
+    def test_declares_the_capabilities_its_producing_adapter_registers(self):
+        """The manifest must not contradict the registry about its own producer.
+
+        11-01 regenerated this file without passing ``adapter_capabilities=``,
+        so it shipped ``[]`` while the registry declared four. Nothing read
+        either, so the disagreement survived a whole phase. Compared against the
+        registry rather than a hardcoded list: a capability added to the adapter
+        and not to this manifest is the same defect in the other direction.
+        """
+        descriptor = default_network_adapter_registry().get_descriptor(
+            self.manifest["adapter_id"]
+        )
+
+        self.assertEqual(
+            self.manifest["adapter_capabilities"],
+            list(descriptor.capabilities),
+            f"{_COMMITTED_BASE_METADATA}: adapter_capabilities disagrees with "
+            f"the registry entry for {self.manifest['adapter_id']!r}; regenerate "
+            "it with gridalyn.twin.network.metadata.write_base_metadata, passing "
+            "adapter_capabilities=",
+        )
+
+    def test_declares_the_authority_set_of_the_adapter_that_produced_it(self):
+        """The CGMES declarations reach the artifact a reader actually opens.
+
+        Plan 11-05 declared ``gridalyn:mas:synthetic-pandapower`` and rendered
+        nothing into this file: ``'authority' in json.dumps(manifest).lower()``
+        was ``False``. The set is now the structured ``model_authority`` field,
+        and it must name the adapter this manifest says produced the base.
+        """
+        adapter_id = self.manifest["adapter_id"]
+        payload = self.manifest.get("model_authority")
+
+        self.assertIsNotNone(
+            payload,
+            f"{_COMMITTED_BASE_METADATA}: no model_authority field; regenerate "
+            "it with gridalyn.twin.network.metadata.write_base_metadata, passing "
+            "model_authority=gridalyn.twin.adapters.authority."
+            "model_authority_payload(...)",
+        )
+        self.assertEqual(
+            [item["adapter_id"] for item in payload["authority_sets"]], [adapter_id]
+        )
+        self.assertEqual(
+            payload["authority_sets"][0],
+            model_authority_set(adapter_id).as_dict(),
+            f"{_COMMITTED_BASE_METADATA}: the declared authority set has drifted "
+            "from gridalyn.twin.adapters.authority.MODEL_AUTHORITY_SETS",
+        )
+        self.assertEqual(
+            [item["profile_id"] for item in payload["profiles"]],
+            [profile.profile_id for profile in base_model_profiles()],
         )
 
     def test_every_declared_path_is_rooted_in_a_directory_that_still_exists(self):

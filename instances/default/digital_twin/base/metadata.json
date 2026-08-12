@@ -1,5 +1,10 @@
 {
-  "adapter_capabilities": [],
+  "adapter_capabilities": [
+    "load_snapshot",
+    "export_base_parquet",
+    "write_base_metadata",
+    "write_validation_report"
+  ],
   "adapter_id": "synthetic_pandapower",
   "adapter_validation_report": "instances/default/digital_twin/reports/network_adapter_validation_report.json",
   "artifacts": {
@@ -42,6 +47,91 @@
     "transformers": 163
   },
   "created_at": "2026-08-12T14:10:53.931227+00:00",
+  "model_authority": {
+    "authority_sets": [
+      {
+        "adapter_id": "synthetic_pandapower",
+        "artifacts": [
+          "grid_buses",
+          "grid_lines",
+          "grid_transformers",
+          "buildings",
+          "building_grid_connectivity"
+        ],
+        "authority": "SyntheticPandapowerAdapter",
+        "authority_set_id": "gridalyn:mas:synthetic-pandapower",
+        "source_standard": "pandapower"
+      }
+    ],
+    "profiles": [
+      {
+        "artifacts": [
+          "grid_buses",
+          "grid_lines",
+          "grid_transformers",
+          "buildings",
+          "building_grid_connectivity"
+        ],
+        "depends_on": [
+          "gridalyn:digital-twin-base/grid_buses",
+          "gridalyn:digital-twin-base/grid_lines",
+          "gridalyn:digital-twin-base/grid_transformers",
+          "gridalyn:digital-twin-base/buildings",
+          "gridalyn:digital-twin-base/building_grid_connectivity"
+        ],
+        "profile_id": "gridalyn:digital-twin-base",
+        "version": "1.0"
+      },
+      {
+        "artifacts": [
+          "building_grid_connectivity"
+        ],
+        "depends_on": [
+          "gridalyn:digital-twin-base/grid_buses"
+        ],
+        "profile_id": "gridalyn:digital-twin-base/building_grid_connectivity",
+        "version": "1.0"
+      },
+      {
+        "artifacts": [
+          "buildings"
+        ],
+        "depends_on": [
+          "gridalyn:digital-twin-base/grid_buses"
+        ],
+        "profile_id": "gridalyn:digital-twin-base/buildings",
+        "version": "1.0"
+      },
+      {
+        "artifacts": [
+          "grid_buses"
+        ],
+        "depends_on": [],
+        "profile_id": "gridalyn:digital-twin-base/grid_buses",
+        "version": "1.0"
+      },
+      {
+        "artifacts": [
+          "grid_lines"
+        ],
+        "depends_on": [
+          "gridalyn:digital-twin-base/grid_buses"
+        ],
+        "profile_id": "gridalyn:digital-twin-base/grid_lines",
+        "version": "1.0"
+      },
+      {
+        "artifacts": [
+          "grid_transformers"
+        ],
+        "depends_on": [
+          "gridalyn:digital-twin-base/grid_buses"
+        ],
+        "profile_id": "gridalyn:digital-twin-base/grid_transformers",
+        "version": "1.0"
+      }
+    ]
+  },
   "model_version": {
     "artifact_hashes": {
       "building_grid_connectivity": "bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac",
@@ -78,6 +168,9 @@
     "Building area is exported as metadata only.",
     "Load generation remains independent of area_m2.",
     "Connectivity is derived from pandapower load buses and LV cluster labels.",
+    "CGMES Model Authority Sets: gridalyn:mas:synthetic-pandapower owns grid_buses/grid_lines/grid_transformers/buildings/building_grid_connectivity.",
+    "CGMES profile: gridalyn:digital-twin-base:1.0, composed of gridalyn:digital-twin-base/grid_buses, gridalyn:digital-twin-base/grid_lines, gridalyn:digital-twin-base/grid_transformers, gridalyn:digital-twin-base/buildings, gridalyn:digital-twin-base/building_grid_connectivity.",
+    "Measured 2026-08-12 against every in-repo producer: the two classes that define load_snapshot -- SyntheticPandapowerAdapter and CimParquetAdapter -- each produce all five canonical artifacts (3626/3430/195/3235/3235 and 2/1/1/1/1 rows respectively), neither produces a proper subset, and export_base_twin selects exactly one of them per model. gridalyn/twin/geoprocess/ produces no canonical artifact at all: its building footprints reach the model as an *input* to PowerGridGraph.building_data, inside the synthetic authority set, not beside it. The partition of any model is therefore a SINGLE member owning all five artifacts. The multi-member case this mechanism supports is UNTESTED against a real second owner.",
     "cache_dir is null: the source cache that produced these base artifacts belonged to a study retired on 2026-08-03 and is not recoverable. It is carried as explicitly absent rather than repointed at a different cache that did not produce them.",
     "config_hash is the digest of configs/grid/config.json as of this regeneration; it does not match the digest recorded when the base artifacts were first written (2026-05-08), because that config has since changed."
   ],

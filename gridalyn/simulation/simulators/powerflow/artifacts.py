@@ -10,7 +10,7 @@ import pandapower as pp
 import pandas as pd
 
 from gridalyn.foundation import ReportMetadata, file_reference, write_report
-from gridalyn.simulation.observation.contract import observe_network
+from gridalyn.twin.observation.contract import observe_network
 
 # Module-level default so the Path is not constructed in an argument default
 # (bugbear B008). Safe to share: Path is immutable, and this is already the

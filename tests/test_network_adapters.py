@@ -15,6 +15,7 @@ from gridalyn.twin.adapters.network import (
     NetworkExportResult,
     SyntheticPandapowerAdapter,
     describe_network_source_adapter,
+    exported_model_identity,
 )
 from gridalyn.twin.adapters.registry import (
     NetworkAdapterRegistry,
@@ -25,7 +26,7 @@ from gridalyn.twin.adapters.validation import (
     build_network_adapter_validation_report,
     write_network_adapter_validation_report,
 )
-from gridalyn.twin.network.model import NetworkModel
+from gridalyn.twin.network.model import ModelIdentity, NetworkModel
 
 
 class NetworkAdaptersTest(unittest.TestCase):
@@ -331,6 +332,24 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertFalse(report["validation"]["valid"])
         self.assertIn("bus:missing", " ".join(report["validation"]["errors"]))
 
+    def test_exported_model_identity_refuses_a_base_without_a_manifest(self):
+        """The export post-condition fails loudly, and names the remedy.
+
+        This is the one production caller of ``provenance="require"``. An export
+        whose artifacts landed but whose manifest did not is a failed export;
+        without this it returned a result claiming success for a base no reader
+        could identify.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "base"
+            self._snapshot().write_parquet(out_dir)
+
+            with self.assertRaises(FileNotFoundError) as caught:
+                exported_model_identity(out_dir)
+
+        self.assertIn("metadata.json", str(caught.exception))
+        self.assertIn("write_base_metadata", str(caught.exception))
+
     def test_export_base_twin_delegates_to_synthetic_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:
             out_dir = Path(tmp) / "base"
@@ -363,6 +382,7 @@ class NetworkAdaptersTest(unittest.TestCase):
                         validation_report_path=out_dir / "validation.json",
                         artifact_paths={},
                         counts={"buses": 1},
+                        identity=ModelIdentity(id="model:sha256:fake"),
                     )
 
             registry = NetworkAdapterRegistry()

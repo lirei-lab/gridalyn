@@ -5,12 +5,23 @@ because that is where the need surfaced. Phase 11 moved it down to
 ``gridalyn.twin.observation``: what a solved network shows is a property of the
 network, not of the solver, and ``twin`` sits below ``simulation``.
 
-Four behaviours are held here:
+Five behaviours are held here:
 
 (a) ``twin`` *owns* the contract -- the old path defines nothing;
 (b) the old path warns;
 (c) both paths yield the **same object**, not two classes with one name;
-(d) importing ``gridalyn.twin.observation`` pulls no optional dependency.
+(d) importing ``gridalyn.twin.observation`` pulls no optional dependency;
+(e) **no in-repo module imports through the shim.**
+
+(e) is the correction of a real defect. Plan 11-04 left the seven modules that
+had imported the contract through ``gridalyn.simulation.observation`` untouched,
+on the reasoning that the shim proved they did not *need* editing. The
+consequence was that ``python -W error::DeprecationWarning -c "import
+gridalyn.operations.der_voltage"`` exited 1 and the warning appeared in the
+suite's own warnings summary on every run. A deprecation shim exists to protect
+*external* consumers; warning the repository at its own code trains every reader
+to ignore the warning, which is the one thing that must not happen to it. Review
+cycle 1 repointed all seven onto :data:`CANONICAL_MODULE`.
 
 (a) is an :mod:`ast` scan of the shim rather than a grep, for the reason Phase-9
 retrospective item 3 records: the shim's docstring names ``NetworkObservation``
@@ -38,8 +49,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 #: Where the contract lives now.
 CANONICAL_MODULE = "gridalyn.twin.observation.contract"
 
-#: The deprecated path, kept resolving for the public surface shipped
-#: 2026-08-11 and for the seven in-repo modules that still import it.
+#: The deprecated path, kept resolving for the public import surface shipped
+#: 2026-08-11. It has **no in-repo consumer** -- see
+#: :data:`REPOINTED_CONSUMERS` and
+#: :func:`test_no_in_repo_module_imports_the_deprecated_path`.
 SHIM_PACKAGE = "gridalyn.simulation.observation"
 
 #: Names the contract publishes. Each must be one object under every path.
@@ -52,11 +65,11 @@ CONTRACT_NAMES = (
     "observe_network",
 )
 
-#: Import surfaces that must all resolve to the *same* objects. The last two
-#: are the exact import lines of the two consumer files this plan was forbidden
-#: to edit -- ``gridalyn/operations/der_voltage.py`` and
-#: ``gridalyn/simulation/policies/contract.py`` both import from the deprecated
-#: deep path, and the relocation is only correct if they keep working untouched.
+#: Import surfaces that must all resolve to the *same* objects. The two
+#: deprecated entries have no in-repo consumer left, so they are held here for
+#: the external surface alone: an outside caller that pinned
+#: ``from gridalyn.simulation.observation.contract import NetworkObservation``
+#: must still receive the twin's class, not a second one wearing its name.
 IMPORT_SURFACES = (
     "gridalyn.twin.observation.contract",
     "gridalyn.twin.observation",
@@ -65,11 +78,17 @@ IMPORT_SURFACES = (
     "gridalyn.simulation",
 )
 
-#: Consumer modules left unedited by plan 11-04, each importing the contract
-#: through the deprecated deep path. Their bound names must be the twin objects.
-UNEDITED_CONSUMERS = (
+#: The seven modules 11-04 left importing through the shim and review cycle 1
+#: repointed onto :data:`CANONICAL_MODULE`. Importing any of them -- and
+#: ``gridalyn`` itself -- must be silent under ``-W error::DeprecationWarning``.
+REPOINTED_CONSUMERS = (
     "gridalyn.operations.der_voltage",
+    "gridalyn.operations.prosumer_realtime",
+    "gridalyn.simulation.environments.voltage_control",
     "gridalyn.simulation.policies.contract",
+    "gridalyn.simulation.simulators.powerflow.artifacts",
+    "gridalyn.simulation.simulators.powerflow.runner",
+    "gridalyn.simulation.simulators.powerflow.scenarios",
 )
 
 #: Why no measured-state producer and no producer registry were built.
@@ -225,19 +244,23 @@ def test_every_import_surface_yields_one_object() -> None:
         assert len(identities) == 1, f"{attribute} has {len(identities)} identities"
 
 
-def test_the_unedited_consumers_resolve_to_the_twin_objects() -> None:
-    """The forbidden consumer files keep working, untouched.
+def test_the_repointed_consumers_bind_the_twin_objects() -> None:
+    """The repointed consumers bind the contract, not a look-alike.
 
-    ``operations/der_voltage.py`` and ``simulation/policies/contract.py`` were
-    out of scope for the relocation. If either had needed editing, the shim
-    would be wrong -- so what their module-level imports actually bound is the
-    proof, not the fact that they still parse.
+    What each module's import statement actually bound is the proof, not the
+    fact that it still parses -- a second class with the same name would parse
+    just as well.
     """
     import importlib
 
     from gridalyn.twin.observation.contract import NetworkObservation, observe_network
 
-    for name in UNEDITED_CONSUMERS:
+    # The two of the seven that bind the class itself; the other five bind
+    # only the builder, which the assertion below covers for one of them.
+    for name in (
+        "gridalyn.operations.der_voltage",
+        "gridalyn.simulation.policies.contract",
+    ):
         module = importlib.import_module(name)
         assert module.NetworkObservation is NetworkObservation, name
 
@@ -279,6 +302,101 @@ def test_the_leak_probe_would_notice_an_optional_dependency() -> None:
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == ["lightsim2grid"]
+
+
+# --------------------------------------------------------------------------
+# (e) no in-repo module imports through the shim
+# --------------------------------------------------------------------------
+
+
+def _shim_importers(source: str) -> list[str]:
+    """Return every import in ``source`` that reaches the deprecated package.
+
+    Walks the parsed module rather than matching text: the shim's own name
+    appears in this file's docstring, in the shim's docstring and in several
+    explanatory comments, so a grep would report offenders that are prose.
+    Both statement forms count -- ``from gridalyn.simulation.observation...
+    import x`` and a bare ``import gridalyn.simulation.observation`` -- because
+    either one executes the package body and therefore fires the warning.
+
+    Args:
+        source: Python source of a module to scan.
+
+    Returns:
+        The offending module paths, in the order they appear.
+    """
+    found: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        elif isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        else:
+            continue
+        found += [
+            name
+            for name in names
+            if name == SHIM_PACKAGE or name.startswith(f"{SHIM_PACKAGE}.")
+        ]
+    return found
+
+
+def test_no_in_repo_module_imports_the_deprecated_path() -> None:
+    """The shim serves external callers only.
+
+    Scanned across the whole package rather than over
+    :data:`REPOINTED_CONSUMERS`, so a *new* module reaching for the old path is
+    caught as well as a regression in one of the seven.
+    """
+    package = REPO_ROOT / "gridalyn"
+    shim_dir = package / "simulation" / "observation"
+
+    offenders = {
+        str(path.relative_to(REPO_ROOT)): imported
+        for path in sorted(package.rglob("*.py"))
+        if shim_dir not in path.parents
+        for imported in [_shim_importers(path.read_text(encoding="utf-8"))]
+        if imported
+    }
+
+    assert not offenders, (
+        f"{len(offenders)} module(s) import the deprecated "
+        f"{SHIM_PACKAGE!r}: {offenders}. Import {CANONICAL_MODULE!r} instead -- "
+        "the shim is for external callers, and warning the repository at its "
+        "own code trains readers to ignore the warning"
+    )
+
+
+def test_the_shim_scan_would_catch_a_reintroduced_import() -> None:
+    """The scan is not vacuous: it finds both forms it exists to forbid."""
+    assert _shim_importers(
+        "from gridalyn.simulation.observation.contract import observe_network"
+    ) == [f"{SHIM_PACKAGE}.contract"]
+    assert _shim_importers("import gridalyn.simulation.observation") == [SHIM_PACKAGE]
+    # Prose naming the path must not be mistaken for an import of it.
+    assert _shim_importers("# gridalyn.simulation.observation was the old home") == []
+    # The canonical path is not an offender.
+    assert _shim_importers(f"from {CANONICAL_MODULE} import observe_network") == []
+
+
+def test_importing_the_repointed_consumers_emits_no_deprecation() -> None:
+    """The seven, plus ``gridalyn`` itself, are silent under -W error.
+
+    This is the consequence the AST scan exists to prevent, asserted directly:
+    before review cycle 1 each of these exited 1. One subprocess covers all
+    eight -- a traceback names the module that failed, and eight separate
+    interpreters would pay the pandapower import cost eight times.
+
+    Its anti-vacuity guard is
+    :func:`test_importing_either_deprecated_path_warns`, which proves the same
+    flag really does turn *this* warning into a non-zero exit.
+    """
+    imports = "".join(
+        f"import {module};" for module in ("gridalyn", *REPOINTED_CONSUMERS)
+    )
+    result = _run(imports, flags=("-W", "error::DeprecationWarning"))
+
+    assert result.returncode == 0, result.stderr
 
 
 # --------------------------------------------------------------------------

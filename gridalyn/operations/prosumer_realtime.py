@@ -15,7 +15,7 @@ from gridalyn.simulation import (
     configure_headless_matplotlib,
 )
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.simulation.observation.contract import observe_network
+from gridalyn.twin.observation.contract import observe_network
 
 
 @dataclass(frozen=True)

@@ -132,9 +132,14 @@ class NetworkModelRepositoryTest(unittest.TestCase):
         assert model.identity is not None
         self.assertEqual(model.identity.id, manifest["model_version_id"])
         self.assertEqual(model.identity.created, "2026-08-12T00:00:00+00:00")
-        self.assertEqual(model.identity.version, "1.0")
+        # Renamed in review cycle 1 of Phase 11: this holds the governance
+        # contract version, a constant for every model this repo can produce,
+        # not the CGMES `version` that orders revisions of one model.
+        self.assertEqual(model.identity.governance_schema_version, "1.0")
         self.assertEqual(model.identity.profile, "gridalyn:digital-twin-base:1.0")
-        self.assertIn("base/grid_buses.parquet", model.identity.dependent_on)
+        # Renamed from `dependent_on`: these are parquet paths, not the model
+        # mRIDs CGMES `Model.DependentOn` references.
+        self.assertIn("base/grid_buses.parquet", model.identity.artifact_paths)
         self.assertEqual(model.source_adapter, "SyntheticPandapowerAdapter")
         # scenarioTime has no source in the base artifacts and is never faked.
         self.assertIsNone(model.identity.scenario_time)
