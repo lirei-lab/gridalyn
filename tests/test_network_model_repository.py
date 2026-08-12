@@ -161,6 +161,7 @@ class NetworkModelRepositoryTest(unittest.TestCase):
             model = repo.load_model()
             downstream = repo.get_downstream("transformer:0")
 
+        self.assertEqual(downstream.upstream_id, "transformer:0")
         self.assertEqual(model.counts["buses"], 4)
         self.assertIn("building:0", downstream.building_ids)
         self.assertIn("building:1", downstream.building_ids)
@@ -175,7 +176,9 @@ class NetworkModelRepositoryTest(unittest.TestCase):
             repo = NetworkModelRepository.from_parquet(base, provenance="ignore")
             feeder = repo.get_feeder("bus:lv_0")
 
-        self.assertEqual(feeder.constraint_id, "bus:lv_0")
+        # Renamed from `constraint_id` in Phase 11 (plan 11-03): this query
+        # takes a feeder, and the field never held a constraint.
+        self.assertEqual(feeder.upstream_id, "bus:lv_0")
         self.assertEqual(feeder.building_ids, ("building:0", "building:1"))
         self.assertEqual(feeder.load_ids, ("load:0", "load:1"))
         self.assertEqual(feeder.bus_ids, ("bus:load_0", "bus:load_1"))

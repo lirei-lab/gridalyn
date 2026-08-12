@@ -136,9 +136,23 @@ class NetworkModel:
 
 @dataclass(frozen=True)
 class DownstreamAssets:
-    """Assets served by a network constraint such as an MV/LV transformer."""
+    """Customer assets served by one upstream network element.
 
-    constraint_id: str
+    Attributes:
+        upstream_id: Identifier of the element the assets hang off -- a
+            transformer for :meth:`NetworkModelRepository.get_downstream`, a
+            feeder for :meth:`NetworkModelRepository.get_feeder`. It was called
+            ``constraint_id`` until Phase 11 (plan 11-03), which was wrong twice
+            over: ``get_feeder`` stored a feeder id in it, and neither query
+            takes a constraint. ``constraint_zone_id`` in
+            ``gridalyn/operations`` is a different, live concept -- the
+            flexibility-market zone -- and is untouched.
+        building_ids: Buildings served, sorted and deduplicated.
+        load_ids: Loads served, sorted and deduplicated.
+        bus_ids: Buses the served customers connect to, sorted and deduplicated.
+    """
+
+    upstream_id: str
     building_ids: tuple[str, ...]
     load_ids: tuple[str, ...]
     bus_ids: tuple[str, ...]
