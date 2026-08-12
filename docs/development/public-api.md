@@ -64,13 +64,16 @@ equipment = repo.get_connected_equipment("bus:17")
 integrity = repo.validate_integrity()
 ```
 
-Three things about that snippet changed in Phase 11 (2026-08-12) and are worth
+Four things about that snippet changed in Phase 11 (2026-08-12) and are worth
 knowing before you build on it:
 
 - **`load_model()` now carries identity.** The returned `NetworkModel` exposes
-  `.identity`, a `ModelIdentity` with a content-addressed `model:sha256:…` id
-  and CGMES `FullModel` semantics, read from the base `metadata.json`. It is
-  `None` only when no manifest is present.
+  `.identity`, a `ModelIdentity` with a content-addressed `model:sha256:…` id,
+  read from the base `metadata.json`. It is `None` only when no manifest is
+  present. **Three** of its six fields carry CGMES `FullModel` header
+  semantics; `artifact_paths` and `governance_schema_version` deliberately
+  carry none, because the values they hold do not honour one — see the
+  `ModelIdentity` docstring for which is which and why.
 - **`validate_integrity()` fails loudly on an absent artifact.** It reports
   three states, not two: a required artifact that is missing is an error, an
   artifact that exists but is empty is a warning that still validates. An empty
@@ -79,6 +82,14 @@ knowing before you build on it:
   "ignore"`. The default warns and records a degraded `provenance_status`;
   `"require"` raises `FileNotFoundError` naming the remedy, and is what an
   export uses to check its own post-condition.
+- **`NetworkExportResult` gained a required `identity` field** — a breaking
+  change for out-of-tree adapters. `NetworkSourceAdapter` is a `Protocol` whose
+  `export()` must return one, and third-party adapters are an intended,
+  registry-backed extension point, so an existing implementation now raises
+  `TypeError` until it supplies the field. The one-line fix is
+  `identity=exported_model_identity(out_dir)`, which reads the manifest the
+  export just wrote back through `NetworkModelRepository` — so the producer and
+  the consumer are proven to agree rather than assumed to.
 
 Observed state is published from the same module: `twin.NetworkObservation` and
 `twin.observe_network` describe what a *solved* network shows, with a

@@ -10,6 +10,11 @@ from gridalyn.projects.workflows.scripts.export_digital_twin_base import (
     export_base_twin,
 )
 from gridalyn.twin import NetworkModelRepository
+from gridalyn.twin.adapters.authority import (
+    AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER,
+    base_model_profiles,
+    model_authority_set,
+)
 from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkExportResult,
@@ -426,6 +431,59 @@ class NetworkAdaptersTest(unittest.TestCase):
             self.assertEqual(metadata["adapter_id"], "synthetic_pandapower")
             self.assertEqual(metadata["source_format"], "pandapower-cache")
             self.assertTrue(report["validation"]["valid"])
+
+    def test_synthetic_export_renders_the_cgmes_declarations_into_its_manifest(self):
+        """The producer of the committed base must emit what it declares.
+
+        Cycle 1 wired ``SyntheticPandapowerAdapter`` to *validate* the authority
+        partition, and that is gated. Its *rendering* was not: a cycle-2
+        reviewer deleted the ``model_authority=`` argument and the CGMES note
+        lines and 200 relevant tests stayed green. Nothing else covers it --
+        ``test_digital_twin_base_metadata`` reads the checked-in manifest as a
+        fixture, so it cannot observe the producer ceasing to write the field,
+        and the R7 harness captures over the committed base without
+        re-exporting, so ``model_authority`` is outside its digest entirely.
+
+        This test is deliberately cache-free. The sibling export test above is
+        ``skipUnless`` on ``examples/generated/outputs``, an uncommitted local
+        artifact, so it skips in CI -- which is how the hole stayed open.
+        """
+        adapter = SyntheticPandapowerAdapter(
+            cache_dir=Path("unused-by-this-test"),
+            config_path=Path("configs/grid/config.json"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.object(
+                SyntheticPandapowerAdapter,
+                "load_snapshot",
+                return_value=self._snapshot(),
+            ):
+                result = adapter.export(out_dir=root / "base", root=root)
+            manifest = json.loads(result.metadata_path.read_text())
+
+        payload = manifest.get("model_authority")
+        self.assertIsNotNone(
+            payload, "producer stopped passing model_authority= to write_base_metadata"
+        )
+        self.assertEqual(
+            [entry["adapter_id"] for entry in payload["authority_sets"]],
+            ["synthetic_pandapower"],
+        )
+        self.assertEqual(
+            payload["authority_sets"][0],
+            model_authority_set("synthetic_pandapower").as_dict(),
+        )
+        self.assertEqual(
+            [profile["profile_id"] for profile in payload["profiles"]],
+            [profile.profile_id for profile in base_model_profiles()],
+        )
+        self.assertIn(
+            "gridalyn:mas:synthetic-pandapower",
+            " ".join(manifest["notes"]),
+            "producer stopped rendering the CGMES authority-set note",
+        )
+        self.assertIn(AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER, manifest["notes"])
 
 
 if __name__ == "__main__":

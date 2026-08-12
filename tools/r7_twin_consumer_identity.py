@@ -240,10 +240,23 @@ def flatten(payload: Any, prefix: str = "") -> dict[str, str]:
     Returns:
         One entry per leaf. Lists are leaves rather than being indexed, because
         a re-ordered list is a changed value, not a set of moved keys.
+
+    Raises:
+        ValueError: If a dict key contains ``"."``. The separator would make
+            ``{"a.b": 1}`` and ``{"a": {"b": 1}}`` collide on one path, so a
+            restructuring between two refs could read as ``identical``. No
+            captured key contains a dot today; this refuses to compare rather
+            than reporting a comparison it cannot make soundly.
     """
     if isinstance(payload, dict):
         flat: dict[str, str] = {}
         for key, value in payload.items():
+            if "." in str(key):
+                raise ValueError(
+                    f"key {key!r} at path {prefix or '<root>'!r} contains '.', "
+                    "which collides with the path separator; this comparison "
+                    "cannot distinguish it from a nested structure"
+                )
             flat |= flatten(value, f"{prefix}.{key}" if prefix else str(key))
         return flat
     return {prefix: json.dumps(payload, sort_keys=True)}

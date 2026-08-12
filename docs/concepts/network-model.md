@@ -21,7 +21,8 @@ declared schema, and a place for a clock**. It is not yet a shadow, and it is
 certainly not a twin. Specifically:
 
 - It **has** durable identity (`ModelIdentity`, a content-addressed
-  `model:sha256:…` version id carrying CGMES `FullModel` semantics), a declared
+  `model:sha256:…` version id; three of its six fields carry CGMES
+  `FullModel` header semantics and two deliberately claim none), a declared
   column contract that makes an absent artifact distinguishable from an intact
   one, model authority sets that say which producer owns which artifact, and an
   `as_of` field on observed state.

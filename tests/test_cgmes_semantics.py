@@ -17,6 +17,7 @@ drifts out of agreement with itself.
 
 from __future__ import annotations
 
+import ast
 import json
 import tempfile
 from pathlib import Path
@@ -147,6 +148,55 @@ def test_no_authority_set_aliases_the_canonical_artifact_list() -> None:
     for adapter_id, authority_set in sorted(MODEL_AUTHORITY_SETS.items()):
         assert authority_set.artifacts is not CANONICAL_ARTIFACTS, adapter_id
         assert authority_set.artifacts == CANONICAL_ARTIFACTS, adapter_id
+
+
+def test_every_authority_set_writes_its_artifacts_as_a_source_literal() -> None:
+    """Identity is the wrong instrument for "this is written out in source".
+
+    The gate above catches object aliasing, and a cycle-2 reviewer measured
+    exactly which re-derivations it catches: ``tuple(t)``, ``t[:]``, ``t + ()``
+    and ``t * 1`` all return the *same* object in CPython, so ``is not`` sees
+    them. ``(*t,)`` does not -- it builds a new tuple, passes the identity
+    gate, and still tracks ``CANONICAL_ARTIFACTS`` at import time, which is the
+    plan-11-05 tautology restored with every test green. Measured: patching
+    both declarations to ``artifacts=(*CANONICAL_ARTIFACTS,)`` left this file
+    at 24 passed.
+
+    The behavioural gate below cannot close it either: ``monkeypatch.setattr``
+    rebinds the module name *after* import, so already-built sets keep the old
+    tuple and go red for the wrong reason. The property being asserted is
+    "someone wrote these names down", and only reading the source settles that
+    -- the same technique ``test_cim_dependency_policy`` uses for its import pin.
+    """
+    source = Path(authority.__file__).read_text(encoding="utf-8")
+    declarations = 0
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        if getattr(node.func, "id", None) != "ModelAuthoritySet":
+            continue
+        for keyword in node.keywords:
+            if keyword.arg != "artifacts":
+                continue
+            declarations += 1
+            assert isinstance(keyword.value, ast.Tuple), (
+                f"authority.py:{keyword.value.lineno}: artifacts= must be a "
+                f"tuple literal, found {type(keyword.value).__name__} -- "
+                "deriving it from CANONICAL_ARTIFACTS makes the partition rule "
+                "ask whether the canonical list partitions itself"
+            )
+            for element in keyword.value.elts:
+                assert isinstance(element, ast.Constant) and isinstance(
+                    element.value, str
+                ), (
+                    f"authority.py:{getattr(element, 'lineno', '?')}: every "
+                    f"artifacts= entry must be a string literal, found "
+                    f"{ast.unparse(element)!r}"
+                )
+    assert declarations >= 2, (
+        f"expected at least 2 declared authority sets to scan, found "
+        f"{declarations} -- a scan that finds nothing passes vacuously"
+    )
 
 
 def test_a_sixth_canonical_artifact_is_unowned_and_turns_the_partition_red(

@@ -53,13 +53,18 @@ its artifacts out as a literal, and
 AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER = (
     "Measured 2026-08-12 against every in-repo producer: the two classes that "
     "define load_snapshot -- SyntheticPandapowerAdapter and CimParquetAdapter "
-    "-- each produce all five canonical artifacts (3626/3430/195/3235/3235 and "
-    "2/1/1/1/1 rows respectively), neither produces a proper subset, and "
+    "-- each produce all five canonical artifacts (3626/3430/195/3235/3235 from "
+    "the examples/generated/outputs cache and 2/1/1/1/1 from the CIM parquet "
+    "fixture), neither produces a proper subset, and "
     "export_base_twin selects exactly one of them per model. gridalyn/twin/"
     "geoprocess/ produces no canonical artifact at all: its building footprints "
     "reach the model as an *input* to PowerGridGraph.building_data, inside the "
     "synthetic authority set, not beside it. The partition of any model is "
-    "therefore a SINGLE member owning all five artifacts. The multi-member case "
+    "therefore a SINGLE member owning all five artifacts. Those row counts "
+    "describe the caches the two producers were measured against, NOT the "
+    "committed base, whose own counts block reads 3562/3398/163/3235/3235: the "
+    "cache that produced it belonged to a retired study and is carried as "
+    "cache_dir=null. The multi-member case "
     "this mechanism supports is UNTESTED against a real second owner."
 )
 

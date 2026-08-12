@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.twin.adapters.authority import base_model_profiles, model_authority_set
+from gridalyn.twin.adapters.authority import (
+    AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER,
+    base_model_profiles,
+    model_authority_set,
+)
 from gridalyn.twin.adapters.registry import default_network_adapter_registry
 from gridalyn.twin.network.metadata import build_base_metadata, write_base_metadata
 
@@ -87,6 +91,29 @@ class CommittedBaseMetadataStalenessTest(unittest.TestCase):
             "regenerate it with gridalyn.twin.network.metadata.write_base_metadata",
         )
         self.manifest = json.loads(_COMMITTED_BASE_METADATA.read_text())
+
+    def test_the_committed_notes_match_the_constant_the_producer_renders(self):
+        """The tracked manifest is a fixture, so it can drift from its producer.
+
+        A cycle-2 reviewer found the general form of this: the committed
+        manifest is read as a fixture everywhere, so no test can observe the
+        producer changing what it writes. The specific instance appeared while
+        fixing that reviewer's finding 3 -- editing
+        ``AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER`` left the tracked manifest
+        carrying the previous wording, and every gate stayed green.
+
+        Notes do not feed ``model_version_id`` (verified: the digest is
+        unchanged across this edit), so drift here is silent by construction and
+        needs its own assertion.
+        """
+        self.assertIn(
+            AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER,
+            self.manifest.get("notes", []),
+            "the tracked manifest's authority note has drifted from "
+            "gridalyn.twin.adapters.authority."
+            "AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER; re-export the base, or "
+            "update the note in place -- it does not affect model_version_id",
+        )
 
     def test_declares_the_full_manifest_contract(self):
         # Without this, a manifest that declares nothing would pass the path
