@@ -91,8 +91,13 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: voltage-control policies, and although the contract itself reaches only
 #: base dependencies, it exists to be extended with policies that do reach
 #: ``pandapower``-backed measurement helpers, so it belongs in the sweep for
-#: the same reason ``observation`` does.
-_EXPECTED_SUBPACKAGE_COUNT = 39
+#: the same reason ``observation`` does. 39 -> 40 on 2026-08-12, when
+#: ``gridalyn.twin.observation`` was added: Phase 11 moved the observation
+#: contract down to the layer that owns network state, and
+#: ``gridalyn.simulation.observation`` stayed behind as a deprecation shim, so
+#: the sweep now covers both. This is an addition, not a relocation of the
+#: count -- the shim is still a real package and still has to be proven clean.
+_EXPECTED_SUBPACKAGE_COUNT = 40
 
 _PROBE = """\
 import json

@@ -8,6 +8,14 @@ Four behaviours are held here:
     identical observations -- the seam proof;
 (c) no in-scope file recomputes ``res_bus.vm_pu`` min/max directly any more;
 (d) importing the package pulls no optional dependency.
+(e) ``as_of`` is carried, and its absence is explicit rather than fabricated.
+
+Behaviour (d) probes ``gridalyn.simulation.observation``, which Phase 11 turned
+into an eager deprecation shim. Eager is the stricter case: the ``_LAZY_EXPORTS``
+map that used to defer its imports is gone, so anything the re-export chain
+touches is loaded at package import. The canonical home,
+``gridalyn.twin.observation``, is probed by
+``tests/test_twin_observation_relocation.py``.
 
 Behaviour (c) is an :mod:`ast` scan, never a bare identifier grep. A grep for
 ``res_bus.vm_pu`` would match the prose in this docstring and in the contract's
@@ -22,6 +30,7 @@ import ast
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -35,9 +44,13 @@ from gridalyn.simulation.backends.contract import (
     PANDAPOWER_NATIVE_BACKEND_ID,
 )
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.simulation.observation.contract import NetworkObservation, observe_network
 from gridalyn.simulation.simulators.powerflow.benchmarks import (
     build_ieee33_benchmark_feeder,
+)
+from gridalyn.twin.observation.contract import (
+    AS_OF_ABSENT_REASON,
+    NetworkObservation,
+    observe_network,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -252,6 +265,56 @@ def test_the_contract_does_not_require_a_pandapower_network() -> None:
         name: str(value) for name, value in NetworkObservation.__annotations__.items()
     }
     assert not any("pandapower" in value.lower() for value in annotations.values())
+
+
+# --------------------------------------------------------------------------
+# (e) the clock: carried when supplied, explicitly absent when not
+# --------------------------------------------------------------------------
+
+
+def test_observing_without_an_instant_leaves_as_of_absent() -> None:
+    """A solved network carries no clock, so nothing is invented for it.
+
+    The failure this forbids is a default of ``datetime.now()``: it would make
+    every observation look timestamped, and a fabricated instant reads as
+    evidence. ``None`` is the honest answer and the reason travels with it.
+    """
+    before = datetime.now(timezone.utc)
+    observation = observe_network(_solved_ieee33())
+
+    assert observation.as_of is None
+    assert "fabricate" in AS_OF_ABSENT_REASON
+    # Not merely "not now": no field acquired a wall-clock value at all.
+    assert not [
+        name
+        for name, value in vars(observation).items()
+        if isinstance(value, datetime) and value >= before
+    ]
+
+
+def test_a_supplied_instant_is_carried_through_unchanged() -> None:
+    """``as_of`` is caller-supplied, keyword-only, and stored verbatim."""
+    instant = datetime(2018, 1, 15, 17, 45, tzinfo=timezone.utc)
+    observation = observe_network(_solved_ieee33(), as_of=instant)
+
+    assert observation.as_of == instant
+    assert observation.as_of.tzinfo is timezone.utc
+
+    with pytest.raises(TypeError):
+        observe_network(_solved_ieee33(), instant)  # type: ignore[misc]
+
+
+def test_filtering_unobserved_buses_does_not_move_the_instant() -> None:
+    """``drop_missing`` narrows the arrays; it does not re-time the state."""
+    instant = datetime(2018, 1, 15, 17, 45, tzinfo=timezone.utc)
+    net = _solved_ieee33()
+    net.res_bus.loc[net.res_bus.index[:3], "vm_pu"] = np.nan
+
+    timed = observe_network(net, as_of=instant)
+    untimed = observe_network(net)
+
+    assert timed.drop_missing().as_of == instant
+    assert untimed.drop_missing().as_of is None
 
 
 # --------------------------------------------------------------------------

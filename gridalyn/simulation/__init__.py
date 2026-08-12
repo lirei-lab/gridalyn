@@ -34,12 +34,17 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.backends",
         "solve_power_flow",
     ),
+    # Resolved from ``gridalyn.twin.observation``, which owns the contract
+    # since Phase 11. Pointing at the deprecated
+    # ``gridalyn.simulation.observation`` shim instead would make every
+    # ``from gridalyn.simulation import NetworkObservation`` emit a
+    # DeprecationWarning for an import that is not deprecated.
     "NetworkObservation": (
-        "gridalyn.simulation.observation",
+        "gridalyn.twin.observation",
         "NetworkObservation",
     ),
     "observe_network": (
-        "gridalyn.simulation.observation",
+        "gridalyn.twin.observation",
         "observe_network",
     ),
     "ErrorBound": (
