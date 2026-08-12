@@ -234,6 +234,55 @@ byte-identical**. Per-stage records are embedded on the `flagship-subset`
 receipt; the `flagship-reproduce` receipt is now `recorded` (source-proven by
 protocol). The full ~6 h regeneration remains operator-scheduled.
 
+## 7. R7 Twin Consumer Identity
+
+`r7-twin-consumer-identity` is the second operator protocol in the receipt
+ledger. It answers a question the flagship subset cannot: **did restructuring
+`gridalyn/twin` change what a consumer of the twin sees?** No study reads the
+twin, so no baseline can move and the usual R7 guardrail has nothing to grip.
+This protocol supplies the missing evidence directly.
+
+Run it with `python tools/r7_twin_consumer_identity.py <before-ref> <after-ref>`
+— for the Phase 11 record, `python tools/r7_twin_consumer_identity.py d6aa606e
+6ed179c0`. It takes about 40 seconds.
+
+**What it does.** It checks out each ref into its own git worktree, and from
+each one captures `NetworkModelRepository.load_model()`,
+`.validate_integrity()` and `build_dashboard_catalog()` over the **same** base
+directory. It hashes each capture and classifies the difference as `identical`,
+`additive` or `regressed`. Comparing two code revisions over one set of
+artifacts is the point: a regenerated base would change the digest by itself,
+and the comparison would measure the regeneration instead of the code.
+
+**What the digest covers**, and only this: `load_model()`'s six counts,
+`source_adapter`, `source_standard`, `provenance_status`, every `ModelIdentity`
+field, and a content SHA-256 of each of the five canonical tables (columns,
+dtypes, rows); `validate_integrity()`'s `valid`/`errors`/`warnings`/`summary`;
+and the whole `build_dashboard_catalog()` mapping minus `created_at`. Stating
+the field set is not a formality — two earlier hand-rolled comparisons of this
+same phase disagreed purely because they hashed different fields.
+
+**Two controls make a green result mean something.** A *determinism* control
+captures the same ref twice in two independent worktrees and requires an
+identical digest. A *vacuity* control has each child report the directory it
+imported `gridalyn` from, and the parent asserts that directory lies inside
+that ref's worktree — so a capture that silently read the main checkout fails
+loudly instead of reporting a perfect match against itself.
+
+**Two disclosed weaknesses.** `created_at` is stripped, because
+`build_dashboard_catalog` derives it from `datetime.now()` — a pre-existing
+non-determinism, disclosed rather than hidden. `identity.created` is **not**
+stripped: it is read from the base manifest, so it is constant for a fixed base,
+and code that stopped propagating it is a real difference.
+
+**Why CI cannot run it.** The base parquet files are git-ignored, so a runner
+has no base to capture over; the protocol also needs full git history and two
+working trees. Re-run it whenever anything under the receipt's `watched` list
+moves — `gridalyn/twin/network`, `gridalyn/projects/dashboard_catalog.py`,
+`instances/default/digital_twin/base`, or the tool itself. The receipt gate
+reporting the entry `STALE` after such a change is the intended signal, not a
+failure.
+
 ## Related Pages
 
 - [Testing And Validation](testing-and-validation.md) — the per-change checklist.

@@ -6,7 +6,7 @@ publish a coherent, reproducible platform core that can grow toward that target.
 
 ## V0.1 Positioning
 
-Gridalyn v0.1 is a **utility digital-twin platform seed**:
+Gridalyn v0.1 is a **utility network-model platform seed**:
 
 - synthetic data first;
 - model-centric rather than script-centric;
@@ -16,6 +16,15 @@ Gridalyn v0.1 is a **utility digital-twin platform seed**:
 - reproducible demo workflows;
 - dashboard-ready catalog and reports;
 - import/export adapter contracts ready for richer utility data sources.
+
+**What v0.1 does not claim.** `gridalyn.twin` is a digital **model** with
+provenance, a declared schema and a place for a clock — under the Kritzinger
+taxonomy it is neither a digital shadow (which needs automated one-way flow from
+a physical counterpart) nor a digital twin (which needs both directions). No
+automated path carries measurements from a physical feeder into it. Treat
+"digital twin" in the package and directory names as a target, and see
+[Network Model](../concepts/network-model.md#what-class-of-thing-this-is) for
+the measurement behind that statement.
 
 The public demos are included because they exercise different platform
 capabilities. None of them is the platform boundary.

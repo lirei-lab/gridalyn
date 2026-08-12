@@ -30,7 +30,10 @@ class PlatformModuleFacadeTest(unittest.TestCase):
 
         self.assertTrue(hasattr(twin, "NetworkModelRepository"))
         self.assertTrue(hasattr(twin, "NetworkModel"))
-        self.assertTrue(hasattr(twin, "NetworkSnapshot"))
+        # NetworkSnapshot was merged into NetworkModel (plan 11-01). The facade
+        # entry for it is stale until plan 11-06 consolidates the export maps;
+        # the name must not resolve either way.
+        self.assertFalse(hasattr(twin, "NetworkSnapshot"))
         self.assertTrue(hasattr(twin, "SemanticGraphRepository"))
         self.assertTrue(hasattr(twin, "build_semantic_graph"))
         self.assertTrue(hasattr(twin, "validate_semantic_graph"))

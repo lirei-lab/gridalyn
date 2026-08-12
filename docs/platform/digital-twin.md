@@ -5,6 +5,15 @@ workflows, the dashboard, and semantic graph tooling. It is not a database
 service; it is a materialized workspace of Parquet and JSON artifacts that can
 later be loaded into DuckDB, FalkorDB, or another operational backend.
 
+!!! note "The name is aspirational — read this before quoting it"
+
+    Under Kritzinger's taxonomy this layer is a **digital model with provenance,
+    a declared schema, and a place for a clock**, not a digital shadow and not a
+    digital twin. Nothing automatically carries measurements from a physical
+    feeder into it; every observation is read off a *solved* network. See
+    [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
+    for the measurement and for the one thing that would move it up a class.
+
 The default runtime instance lives at:
 
 ```text
@@ -146,6 +155,16 @@ model = repo.load_model()
 integrity = repo.validate_integrity()
 ```
 
+`validate_integrity()` reports **three** states, not two: a required artifact
+that is **absent** is an error and fails validation; an artifact that exists but
+holds **no rows** is a warning and still validates; an intact base is checked
+against the declared column contract. A missing `metadata.json` is a separate,
+softer axis — it warns and records a degraded `provenance_status` rather than
+failing, and the repository takes `provenance="require" | "warn" | "ignore"` to
+change that. See
+[Network Repository](../sdk/network-repository.md#validation-has-three-states-not-two)
+for the full contract and the error text.
+
 The same repository is used by platform services such as dashboard catalog
 generation so that topology counts, feeder queries, transformer downstream
 queries, and validation metadata stay consistent across studies.
@@ -176,6 +195,7 @@ key fields are:
 | `adapter_validation_report` | Validation report emitted by the adapter export. |
 | `artifacts` | Path, row count, and SHA-256 for each base Parquet artifact. |
 | `validation` | Endpoint and customer-connectivity validation from `NetworkModelRepository`. |
+| `model_authority` | The producing adapter's Model Authority Sets and profiles, JSON-native. `null` when a producer declares none. See [Model Authority Sets and Profiles](#model-authority-sets-and-profiles). |
 
 The current base export command is a thin wrapper around
 the default `gridalyn.twin.adapters.NetworkAdapterRegistry`, which resolves
@@ -196,6 +216,118 @@ The registry also exposes `cim_parquet` through
 CIM-like Parquet source tables and emits the same canonical base snapshot as the
 synthetic pandapower path. It is a pragmatic interchange adapter, not a full CIM
 RDF/XML importer.
+
+### Model Authority Sets and Profiles
+
+The twin adopts CGMES **semantics** — who owns which artifact, and which
+artifact depends on which — without adopting CGMES **serialization**.
+
+A `ModelAuthoritySet` names the single authority responsible for a set of
+canonical artifacts. Two are declared, one per producer:
+
+| Authority set | Authority | Source standard | Artifacts |
+| --- | --- | --- | --- |
+| `gridalyn:mas:synthetic-pandapower` | `SyntheticPandapowerAdapter` | `pandapower` | all five |
+| `gridalyn:mas:cim-parquet` | `CimParquetAdapter` | `cim` | all five |
+
+**The partition of any one model is single-member, and the code says so.** Both
+producers emit all five canonical artifacts, neither is a proper subset of the
+other, and a base export selects exactly one of them — so the two sets are
+*alternatives*, not co-owners, and `authority_set_partition()` returns a
+one-tuple. The multi-member case the mechanism supports is therefore
+**untested against a real second owner**; that is recorded in-code as
+`AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER` and asserted by a test, so it cannot
+quietly drop out of the documentation.
+
+Geography is **not** a second authority. `gridalyn/twin/geoprocess/` constructs
+zero canonical artifacts; building footprints reach the model as an *input* to
+`PowerGridGraph.building_data`, inside the synthetic authority set rather than
+beside it. Earlier design notes describing the twin as "a synthetic base plus
+GeoJSON geography" are measurably wrong — do not repeat that framing.
+
+A `ModelProfile` carries a stable id, a version, its artifacts, and a
+`depends_on` list. **`depends_on` is derived, never authored**: it is computed
+at import from `ColumnSpec.references` in the declared schema, so it cannot be
+invented and cannot go stale. Five per-artifact profiles plus one aggregate are
+declared under the `gridalyn:digital-twin-base` namespace; the four artifacts
+that carry a bus reference depend on that namespace's `grid_buses` profile, and
+the `grid_buses` profile itself depends on nothing.
+
+`depends_on` holds **profile ids**, and is named and serialized for that. It is
+*not* CGMES `Model.DependentOn`, which references other models by mRID: a base
+here is one model assembled from files, so that header field has nothing to
+point at.
+
+`validate_authority_partition()` runs at the top of **both** producers'
+`load_snapshot()`, before any IO, so the declaration is a rule that gets checked
+rather than metadata nothing reads. It catches genuine drift: the canonical
+artifact list is single-sourced from `BASE_TABLE_FILENAMES`, while each
+authority set writes the artifacts it owns as a **literal**, so adding a sixth
+canonical table without giving it an owner turns both loads red.
+
+**That literal is load-bearing, and it is why the declarations live in
+`gridalyn/twin/adapters/authority.py`.** As first written, both sets were
+declared `artifacts=CANONICAL_ARTIFACTS` — the same object — so the rule asked
+whether the canonical list partitions itself and a sixth table did *not* turn it
+red. The declarations also lived in `adapters/cim.py`, which imports
+`adapters/network.py` and not the reverse, so `SyntheticPandapowerAdapter` — the
+producer of the committed base — could not reach its own declaration without an
+import cycle. Both are fixed: `authority.py` imports only from
+`gridalyn/twin/network/`, both producers import it, and
+`test_no_authority_set_aliases_the_canonical_artifact_list` fails on a
+reintroduced alias.
+
+Both producers also render their declarations into the manifest they write: as
+prose in `notes`, and as the structured, machine-readable `model_authority`
+field carrying every `as_dict()`. The committed
+`instances/default/digital_twin/base/metadata.json` carries both.
+
+#### Why there is no `rdflib`, and why adding it back would be a regression
+
+**Real `rdflib` imports under `gridalyn/` are zero, and a test pins that at
+zero by AST scan.** This is deliberate and load-bearing; a future contributor
+reaching for a graph library to "finish" CGMES support should read this first.
+
+- The repository *used* to ship an RDF/XML exporter. It was removed in Phase 9
+  because it had **no importers and no tests** — it was dead code, and `rdflib`
+  came off the dependency list with it.
+- What this layer needs from CGMES is its **vocabulary**: `FullModel` identity
+  fields, authority sets, profile dependencies. Those are expressible as frozen
+  dataclasses with JSON-native `as_dict()` over the surviving parquet adapter,
+  and in that form at least one of them is checked by running code (see the
+  scope note above). A serializer would add a dependency, a file format and a
+  second source of truth to produce an artifact that, on today's evidence,
+  nothing would read.
+- The pin is an **AST** scan, not a text scan, and the difference is tested in
+  both directions: an `import rdflib` hidden inside a never-executed function
+  body turns it red, while a doc comment that merely *names* the import stays
+  green. A text scan gets both of those backwards.
+
+If a consumer for CGMES RDF/XML ever appears, the honest move is to add the
+dependency *with* that consumer and delete this section — not to add the
+serializer first and hope a reader arrives.
+
+### Observed State
+
+`gridalyn.twin.observation` owns `NetworkObservation` and `observe_network`:
+one definition of what a solved network shows, in the same layer as the model
+it describes. `gridalyn.simulation.observation` still resolves — it re-binds the
+same objects and emits a `DeprecationWarning` — so no consumer had to change.
+
+An observation carries a keyword-only `as_of: datetime | None`, and it is
+**caller-supplied**, never inferred. A solved `pandapowerNet` holds one
+converged operating point with no record of which instant it represents; only
+the caller that chose the point knows. All **13** production
+`observe_network(...)` call sites pass `as_of=None` today, which is correct
+rather than a gap — a sensitivity perturbation, a
+named scenario and a Monte-Carlo draw index have no real instant to offer, and
+stamping one would fabricate evidence. `AS_OF_ABSENT_REASON` travels with the
+field to say exactly that.
+
+There is deliberately **no state-producer registry**. One real producer plus a
+placeholder is the speculative abstraction the platform's registries exist to
+avoid; the absence is asserted by a test rather than left to be mistaken for an
+oversight.
 
 ## Building Model Layer
 

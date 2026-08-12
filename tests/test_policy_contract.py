@@ -11,7 +11,6 @@ from gridalyn.simulation.control.tabular_voltage import (
     TabularVoltageControlConfig,
     _select_action,
 )
-from gridalyn.simulation.observation.contract import NetworkObservation
 from gridalyn.simulation.policies import registry as registry_module
 from gridalyn.simulation.policies.contract import (
     SENSITIVITY_DISPATCH_POLICY_ID,
@@ -23,6 +22,7 @@ from gridalyn.simulation.policies.registry import (
     UnknownPolicyError,
     default_policy_registry,
 )
+from gridalyn.twin.observation.contract import NetworkObservation
 
 
 def _observation(bus_ids, voltages) -> NetworkObservation:

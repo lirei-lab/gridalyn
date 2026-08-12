@@ -1,73 +1,60 @@
-"""Network observation: one definition of what a solved network shows.
+"""Deprecated location of the network observation contract.
 
-The map below is not stylistic. :mod:`gridalyn.simulation.observation.contract`
-imports pandas, and this package exists to be extended with observers for
-producers that do reach an optional dependency -- ``lightsim2grid`` through
-``pandapower``, or a surrogate. Resolving eagerly would make the first such
-addition leak an optional dependency out of ``import gridalyn.simulation.
-observation``, which ``tests/test_import_hygiene.py`` fails on. The contract
-itself reaches only base dependencies today, and that sweep is what proves it
-rather than assumes it.
+The contract moved down to :mod:`gridalyn.twin.observation` in Phase 11: "what
+a solved network shows" is a property of the network, not of the solver, and
+``twin`` sits below ``simulation``. This package remains so that the public
+import surface shipped on 2026-08-11 keeps resolving.
+
+**It re-exports, it does not redefine.** Every name below is the object
+:mod:`gridalyn.twin.observation.contract` defines, so
+``gridalyn.simulation.observation.NetworkObservation is
+gridalyn.twin.observation.contract.NetworkObservation`` holds. A shim that
+built a second class would give two types with one name -- the
+``NetworkModel``/``NetworkSnapshot`` split Phase 11 exists to end.
+
+The :class:`DeprecationWarning` is emitted here rather than in the sibling
+``contract`` module because Python imports a package before any of its
+submodules, so this runs exactly once for either import path -- ``import
+gridalyn.simulation.observation`` and ``import
+gridalyn.simulation.observation.contract`` alike -- instead of warning twice
+for the deeper one.
+
+Imports here are eager, unlike the ``_LAZY_EXPORTS`` map this package used to
+carry. A deprecation shim has to execute to warn, and what it re-exports
+reaches only pandas and numpy, both base dependencies; the laziness that
+matters now lives in :mod:`gridalyn.twin.observation`.
 """
 
 from __future__ import annotations
 
-from importlib import import_module
-from typing import Any
+import warnings
 
-_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    "BUS_VOLTAGE_COLUMN": (
-        "gridalyn.simulation.observation.contract",
-        "BUS_VOLTAGE_COLUMN",
-    ),
-    "LINE_LOADING_COLUMN": (
-        "gridalyn.simulation.observation.contract",
-        "LINE_LOADING_COLUMN",
-    ),
-    "LINE_LOSS_COLUMN": (
-        "gridalyn.simulation.observation.contract",
-        "LINE_LOSS_COLUMN",
-    ),
-    "NetworkObservation": (
-        "gridalyn.simulation.observation.contract",
-        "NetworkObservation",
-    ),
-    "observe_network": (
-        "gridalyn.simulation.observation.contract",
-        "observe_network",
-    ),
-}
+from gridalyn.twin.observation.contract import (
+    AS_OF_ABSENT_REASON,
+    BUS_VOLTAGE_COLUMN,
+    LINE_LOADING_COLUMN,
+    LINE_LOSS_COLUMN,
+    NetworkObservation,
+    observe_network,
+)
 
-__all__ = sorted(_LAZY_EXPORTS)
+#: Emitted on import of this package or of its ``contract`` submodule.
+DEPRECATION_MESSAGE = (
+    "gridalyn.simulation.observation moved to gridalyn.twin.observation in "
+    "Phase 11, because observed state belongs to the layer that owns the "
+    "network rather than to the solver; this shim re-exports the same objects "
+    "and will be removed in a future release -- import from "
+    "gridalyn.twin.observation.contract instead"
+)
 
+warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
 
-def __getattr__(name: str) -> Any:
-    """Lazily resolve an observation symbol from its implementation module.
-
-    Args:
-        name: Public attribute requested on ``gridalyn.simulation.observation``.
-
-    Returns:
-        The resolved attribute, cached into module globals for free re-access.
-
-    Raises:
-        AttributeError: If ``name`` is not a known observation symbol.
-    """
-    if name in _LAZY_EXPORTS:
-        module_name, attr_name = _LAZY_EXPORTS[name]
-        value = getattr(import_module(module_name), attr_name)
-        globals()[name] = value
-        return value
-    raise AttributeError(
-        f"module 'gridalyn.simulation.observation' has no attribute {name!r}"
-    )
-
-
-def __dir__() -> list[str]:
-    """List the module namespace plus every lazily exported public name.
-
-    Returns:
-        Sorted names, so ``dir()`` and :func:`inspect.getmembers` see the
-        lazy exports that ``__getattr__`` resolves on demand.
-    """
-    return sorted(set(globals()) | set(_LAZY_EXPORTS))
+__all__ = [
+    "AS_OF_ABSENT_REASON",
+    "BUS_VOLTAGE_COLUMN",
+    "DEPRECATION_MESSAGE",
+    "LINE_LOADING_COLUMN",
+    "LINE_LOSS_COLUMN",
+    "NetworkObservation",
+    "observe_network",
+]

@@ -6,13 +6,24 @@ research today while keeping the core close to the shape of a utility platform:
 model-centric, traceable, adapter-driven, and ready for operational
 applications.
 
+!!! note "The package is called `gridalyn.twin`, and that name is aspirational"
+
+    Under the Kritzinger taxonomy — which separates the classes by *automated
+    data flow*, not fidelity — this layer is a **digital model with provenance,
+    a declared schema, and a place for a clock**. It is not a digital shadow and
+    not a digital twin: nothing automatically carries measurements from a
+    physical feeder into it, and every observation is read off a *solved*
+    network. See
+    [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
+    for the measurement and for the one thing that would move it up a class.
+
 ## What It Does
 
 Gridalyn provides:
 
 | Capability | Description |
 | --- | --- |
-| Digital twin core | Canonical grid, building, scenario, time-series, semantic, and report artifacts. |
+| Network model core | Canonical grid, building, scenario, time-series, semantic, and report artifacts, each carrying a content-addressed model identity. |
 | Project workflows | Reproducible project contracts with `project.yaml`, `workflow.yaml`, scripts, outputs, manifests, and regression checks. |
 | Synthetic model generation | GeoJSON and configuration-driven building, asset, load, and solver-ready network generation through native SDK modules. |
 | Simulation and validation | Powerflow and network-impact validation using generated or imported model snapshots. |

@@ -74,7 +74,7 @@
           "name": "generate_annual_mc",
           "status": "skipped",
           "duration_s": null,
-          "reason": "heavy \u2014 requires operator full regen"
+          "reason": "heavy — requires operator full regen"
         },
         {
           "name": "compute_congestion_annual",
@@ -191,6 +191,21 @@
           "reason": "depends on skipped stage compute_curtailment_economics, validate_powerflow"
         }
       ]
+    },
+    "r7-twin-consumer-identity": {
+      "status": "recorded",
+      "command": "python tools/r7_twin_consumer_identity.py d6aa606e 6ed179c0 -- captures NetworkModelRepository.load_model(), .validate_integrity() and build_dashboard_catalog() over ONE base directory through each ref's own git worktree, hashes the result, and classifies the difference as identical / additive / regressed.",
+      "commit": "6ed179c08cd326c85579493dbb721ba1f67b1ea6",
+      "recorded_on": "2026-08-12",
+      "result": "ADDITIVE - R7 HOLDS. d6aa606e (pre-phase) sha256 b814f5be4e2d393ec7f0f717a4a96bcdf4c84236b72e1a7863db50bbc33a280b; 6ed179c0 (post-phase) sha256 f0e989a69c8e75ce92d2de7585995adf4be6e1cbbe6e764fab45ffd86d736a2f. 9 keys added (load_model.identity.{created,dependent_on,id,profile,scenario_time,version} plus load_model.{provenance_status,source_adapter,source_standard}), 0 keys removed, 0 pre-existing values changed. The five table content digests, the six counts and the whole validate_integrity summary are bit-for-bit equal on both sides.",
+      "evidence": "The digest covers, and only covers: load_model() counts (6 keys), source_adapter, source_standard, provenance_status, every ModelIdentity field, and a content sha256 of each of the five canonical tables (columns, dtypes, rows); validate_integrity() valid/errors/warnings/summary; and the whole build_dashboard_catalog() mapping minus created_at. created_at is stripped because build_dashboard_catalog derives it from datetime.now() -- a pre-existing non-determinism, disclosed in tools/r7_twin_consumer_identity.py rather than hidden. identity.created is NOT stripped: it is read from the base manifest, so it is constant for a fixed base and a code change that stopped propagating it is a real difference. Base fingerprint at the recorded run: metadata.json 7b4279cf8d9541b18f6cb005e9f096fbcb99bb4749da1c150499f683e8aacad0, grid_buses 045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e, grid_lines 5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260, grid_transformers 2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3, buildings 1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc, building_grid_connectivity bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac. Determinism control: the same ref captured twice in two independent worktrees yields the identical digest b814f5be. Vacuity control: each child reports the directory it imported gridalyn from and the parent asserts it lies inside that ref's worktree, so a capture that silently read the main checkout fails instead of reporting a perfect match against itself. Supersedes the unreproducible sha256 7dbcbb4c cited in 11-06-SUMMARY.md, whose harness was not preserved, and the reviewer's independent ee5a3e4b; those two disagree because they hashed different field sets, which is exactly why this receipt states its field set.",
+      "watched": [
+        "gridalyn/twin/network",
+        "gridalyn/projects/dashboard_catalog.py",
+        "instances/default/digital_twin/base",
+        "tools/r7_twin_consumer_identity.py"
+      ],
+      "rationale": "CI cannot run this. The base parquets are gitignored, so a runner has no base to capture over, and regenerating one produces a different created_at and therefore a different digest -- the comparison would measure the regeneration rather than the code. The protocol also needs full git history and two working trees. It is cheap for an operator (~40 s) and is the check to re-run whenever anything under `watched` moves; the gate will report it STALE, which is the intended signal, not a failure."
     }
   }
 }

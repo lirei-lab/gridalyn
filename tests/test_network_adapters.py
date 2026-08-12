@@ -6,12 +6,21 @@ from unittest.mock import patch
 
 import pandas as pd
 
+from gridalyn.projects.workflows.scripts.export_digital_twin_base import (
+    export_base_twin,
+)
+from gridalyn.twin import NetworkModelRepository
+from gridalyn.twin.adapters.authority import (
+    AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER,
+    base_model_profiles,
+    model_authority_set,
+)
 from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkExportResult,
-    NetworkSnapshot,
     SyntheticPandapowerAdapter,
     describe_network_source_adapter,
+    exported_model_identity,
 )
 from gridalyn.twin.adapters.registry import (
     NetworkAdapterRegistry,
@@ -22,13 +31,12 @@ from gridalyn.twin.adapters.validation import (
     build_network_adapter_validation_report,
     write_network_adapter_validation_report,
 )
-from gridalyn.twin import NetworkModelRepository
-from gridalyn.projects.workflows.scripts.export_digital_twin_base import export_base_twin
+from gridalyn.twin.network.model import ModelIdentity, NetworkModel
 
 
 class NetworkAdaptersTest(unittest.TestCase):
-    def _snapshot(self) -> NetworkSnapshot:
-        return NetworkSnapshot(
+    def _snapshot(self) -> NetworkModel:
+        return NetworkModel(
             buses=pd.DataFrame(
                 [
                     {"bus_id": "bus:0", "category": "MV"},
@@ -39,13 +47,31 @@ class NetworkAdaptersTest(unittest.TestCase):
                 [{"line_id": "line:0", "from_bus_id": "bus:0", "to_bus_id": "bus:1"}]
             ),
             transformers=pd.DataFrame(
-                [{"transformer_id": "transformer:0", "hv_bus_id": "bus:0", "lv_bus_id": "bus:1"}]
+                [
+                    {
+                        "transformer_id": "transformer:0",
+                        "hv_bus_id": "bus:0",
+                        "lv_bus_id": "bus:1",
+                    }
+                ]
             ),
             buildings=pd.DataFrame(
-                [{"building_id": "building:0", "load_id": "load:0", "lv_bus_id": "bus:1"}]
+                [
+                    {
+                        "building_id": "building:0",
+                        "load_id": "load:0",
+                        "lv_bus_id": "bus:1",
+                    }
+                ]
             ),
             connectivity=pd.DataFrame(
-                [{"building_id": "building:0", "load_id": "load:0", "load_bus_id": "bus:1"}]
+                [
+                    {
+                        "building_id": "building:0",
+                        "load_id": "load:0",
+                        "load_bus_id": "bus:1",
+                    }
+                ]
             ),
             source_adapter="SyntheticPandapowerAdapter",
             source_standard="pandapower",
@@ -105,15 +131,46 @@ class NetworkAdaptersTest(unittest.TestCase):
             ]
         ).to_parquet(source_dir / "energy_consumers.parquet", index=False)
 
-    def test_network_snapshot_writes_repository_compatible_parquets(self):
+    def test_network_snapshot_is_removed_not_aliased(self):
+        # Proven by import, not by grep: a grep would match this very comment.
+        with self.assertRaises(ImportError):
+            from gridalyn.twin.adapters.network import NetworkSnapshot  # noqa: F401
+
+        import gridalyn.twin.adapters as adapters
+        import gridalyn.twin.adapters.network as network_module
+
+        self.assertFalse(hasattr(network_module, "NetworkSnapshot"))
+        self.assertFalse(hasattr(adapters, "NetworkSnapshot"))
+        self.assertNotIn("NetworkSnapshot", adapters.__all__)
+
+    def test_both_adapters_return_the_one_canonical_model_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_dir = Path(tmp) / "cim_source"
+            self._write_cim_parquet_source(source_dir)
+            cim_snapshot = CimParquetAdapter(source_dir=source_dir).load_snapshot()
+
+        self.assertIsInstance(cim_snapshot, NetworkModel)
+        self.assertIsInstance(self._snapshot(), NetworkModel)
+        self.assertEqual(cim_snapshot.source_standard, "cim")
+
+    def test_canonical_model_writes_repository_compatible_parquets(self):
         with tempfile.TemporaryDirectory() as tmp:
             out_dir = Path(tmp) / "base"
             artifacts = self._snapshot().write_parquet(out_dir)
-            repo = NetworkModelRepository.from_parquet(out_dir)
+            repo = NetworkModelRepository.from_parquet(out_dir, provenance="ignore")
             model = repo.load_model()
             validation = repo.validate_integrity()
 
-        self.assertEqual(set(artifacts), {"grid_buses", "grid_lines", "grid_transformers", "buildings", "building_grid_connectivity"})
+        self.assertEqual(
+            set(artifacts),
+            {
+                "grid_buses",
+                "grid_lines",
+                "grid_transformers",
+                "buildings",
+                "building_grid_connectivity",
+            },
+        )
         self.assertEqual(model.counts["loads"], 1)
         self.assertTrue(validation.valid)
 
@@ -242,10 +299,16 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertIn("write_validation_report", report["adapter"]["capabilities"])
 
     def test_adapter_validation_report_marks_broken_endpoint_invalid(self):
-        snapshot = NetworkSnapshot(
+        snapshot = NetworkModel(
             buses=pd.DataFrame([{"bus_id": "bus:0", "category": "MV"}]),
             lines=pd.DataFrame(
-                [{"line_id": "line:bad", "from_bus_id": "bus:0", "to_bus_id": "bus:missing"}]
+                [
+                    {
+                        "line_id": "line:bad",
+                        "from_bus_id": "bus:0",
+                        "to_bus_id": "bus:missing",
+                    }
+                ]
             ),
             transformers=pd.DataFrame(),
             buildings=pd.DataFrame(),
@@ -274,6 +337,24 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertFalse(report["validation"]["valid"])
         self.assertIn("bus:missing", " ".join(report["validation"]["errors"]))
 
+    def test_exported_model_identity_refuses_a_base_without_a_manifest(self):
+        """The export post-condition fails loudly, and names the remedy.
+
+        This is the one production caller of ``provenance="require"``. An export
+        whose artifacts landed but whose manifest did not is a failed export;
+        without this it returned a result claiming success for a base no reader
+        could identify.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "base"
+            self._snapshot().write_parquet(out_dir)
+
+            with self.assertRaises(FileNotFoundError) as caught:
+                exported_model_identity(out_dir)
+
+        self.assertIn("metadata.json", str(caught.exception))
+        self.assertIn("write_base_metadata", str(caught.exception))
+
     def test_export_base_twin_delegates_to_synthetic_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:
             out_dir = Path(tmp) / "base"
@@ -293,7 +374,12 @@ class NetworkAdaptersTest(unittest.TestCase):
                 def export(self, *, out_dir, root):
                     out_dir.mkdir(parents=True)
                     metadata_path.write_text(
-                        json.dumps({"counts": {"buses": 1}, "source_adapter": self.source_adapter})
+                        json.dumps(
+                            {
+                                "counts": {"buses": 1},
+                                "source_adapter": self.source_adapter,
+                            }
+                        )
                     )
                     return NetworkExportResult(
                         out_dir=out_dir,
@@ -301,6 +387,7 @@ class NetworkAdaptersTest(unittest.TestCase):
                         validation_report_path=out_dir / "validation.json",
                         artifact_paths={},
                         counts={"buses": 1},
+                        identity=ModelIdentity(id="model:sha256:fake"),
                     )
 
             registry = NetworkAdapterRegistry()
@@ -344,6 +431,59 @@ class NetworkAdaptersTest(unittest.TestCase):
             self.assertEqual(metadata["adapter_id"], "synthetic_pandapower")
             self.assertEqual(metadata["source_format"], "pandapower-cache")
             self.assertTrue(report["validation"]["valid"])
+
+    def test_synthetic_export_renders_the_cgmes_declarations_into_its_manifest(self):
+        """The producer of the committed base must emit what it declares.
+
+        Cycle 1 wired ``SyntheticPandapowerAdapter`` to *validate* the authority
+        partition, and that is gated. Its *rendering* was not: a cycle-2
+        reviewer deleted the ``model_authority=`` argument and the CGMES note
+        lines and 200 relevant tests stayed green. Nothing else covers it --
+        ``test_digital_twin_base_metadata`` reads the checked-in manifest as a
+        fixture, so it cannot observe the producer ceasing to write the field,
+        and the R7 harness captures over the committed base without
+        re-exporting, so ``model_authority`` is outside its digest entirely.
+
+        This test is deliberately cache-free. The sibling export test above is
+        ``skipUnless`` on ``examples/generated/outputs``, an uncommitted local
+        artifact, so it skips in CI -- which is how the hole stayed open.
+        """
+        adapter = SyntheticPandapowerAdapter(
+            cache_dir=Path("unused-by-this-test"),
+            config_path=Path("configs/grid/config.json"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.object(
+                SyntheticPandapowerAdapter,
+                "load_snapshot",
+                return_value=self._snapshot(),
+            ):
+                result = adapter.export(out_dir=root / "base", root=root)
+            manifest = json.loads(result.metadata_path.read_text())
+
+        payload = manifest.get("model_authority")
+        self.assertIsNotNone(
+            payload, "producer stopped passing model_authority= to write_base_metadata"
+        )
+        self.assertEqual(
+            [entry["adapter_id"] for entry in payload["authority_sets"]],
+            ["synthetic_pandapower"],
+        )
+        self.assertEqual(
+            payload["authority_sets"][0],
+            model_authority_set("synthetic_pandapower").as_dict(),
+        )
+        self.assertEqual(
+            [profile["profile_id"] for profile in payload["profiles"]],
+            [profile.profile_id for profile in base_model_profiles()],
+        )
+        self.assertIn(
+            "gridalyn:mas:synthetic-pandapower",
+            " ".join(manifest["notes"]),
+            "producer stopped rendering the CGMES authority-set note",
+        )
+        self.assertIn(AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER, manifest["notes"])
 
 
 if __name__ == "__main__":

@@ -65,8 +65,8 @@ repository folders.
       <span class="platform-step__number">02</span>
       <div>
         <span class="platform-step__eyebrow">Core</span>
-        <strong>Digital Twin</strong>
-        <p>Network model, assets, scenarios, model states, telemetry metadata, and semantic graph.</p>
+        <strong>Network Model</strong>
+        <p>Identified network model, assets, scenarios, model states, and semantic graph. A digital <em>model</em> with provenance — not a shadow, not a twin.</p>
       </div>
     </div>
     <div class="platform-arrow">

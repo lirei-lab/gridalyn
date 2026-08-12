@@ -14,7 +14,6 @@ from gridalyn.assets.modeling.feeders import RadialFeederSpec
 from gridalyn.assets.modeling.voltage_control import VoltageControlDERSpec
 from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.simulation.observation.contract import NetworkObservation, observe_network
 from gridalyn.simulation.policies.contract import voltage_at_bus
 from gridalyn.simulation.simulators.powerflow.der_dispatch import (
     apply_der_dispatch_setpoints_to_pandapower,
@@ -23,6 +22,7 @@ from gridalyn.simulation.simulators.powerflow.der_dispatch import (
 from gridalyn.simulation.simulators.powerflow.voltage_control import (
     build_voltage_control_feeder,
 )
+from gridalyn.twin.observation.contract import NetworkObservation, observe_network
 
 
 @dataclass(frozen=True)

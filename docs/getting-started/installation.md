@@ -35,10 +35,15 @@ the heavier capability groups:
 uv sync --extra geo        # geospatial preprocessing and OSM tooling
 uv sync --extra sim        # pandapower and LightSim2Grid helpers
 uv sync --extra ops        # optimization and operational analytics
-uv sync --extra semantic   # semantic graph and database tooling
 uv sync --extra dashboard  # dashboard and visualization helpers
 uv sync --extra all        # full runtime capability set
 ```
+
+The complete set is `all`, `cim`, `dashboard`, `dev`, `docs`, `geo`, `ops`,
+`sim`, `test` and `typing`. **There is no `semantic` extra** — it was removed on
+2026-08-07 together with the dead RDF/XML exporter and `rdflib`. The semantic
+graph needs no extra at all: it is Parquet and pandas, both base dependencies,
+so plain `uv sync` is enough to build and validate it.
 
 `uv sync` synchronises the environment exactly: each command above *replaces*
 the installed set rather than adding to it, so running `uv sync --extra geo`

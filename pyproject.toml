@@ -43,6 +43,16 @@ dependencies = [
 ]
 name = "gridalyn"
 version = "0.1.0"
+# The product framing below is deliberate and pinned by
+# tests/test_project_hygiene.py::test_public_readme_uses_current_platform_contract
+# since the public release (0b085f8d, 2026-05-19): "utility digital-twin
+# platform" describes what this SDK is *for building*, not a claim that any
+# shipped layer is a digital twin today.
+# Do not conflate it with the class of `gridalyn.twin`, which is narrower: under
+# the Kritzinger taxonomy (classes differ by automated data flow, not fidelity)
+# that layer is a digital *model* with provenance -- not a shadow, not a twin.
+# Both statements are true at once, and the docs state the second wherever they
+# state the first. See docs/concepts/network-model.md#what-class-of-thing-this-is.
 description = "Utility digital-twin platform for distribution networks, governed workflows, and flexibility operations"
 readme = "README.md"
 
@@ -121,6 +131,19 @@ all = [
     "tables>=3.11.1",
     "timeout-decorator<1.0.0,>=0.5.0",
 ]
+# NO `rdflib` HERE, AND NOT IN `dependencies` -- THIS IS DELIBERATE.
+# Phase 9 (2026-08-07) deleted gridalyn/twin/io/cim.py, an RDF/XML exporter with
+# zero importers and zero tests, and dropped rdflib with it because that exporter
+# was its only consumer. The reasoning was "no consumer", not "CIM is wrong":
+# CGMES is adopted as *fields and rules over parquet* in
+# gridalyn/twin/adapters/authority.py -- Model Authority Sets and profile
+# declarations, validated on every load_snapshot of both producers -- with no
+# serialization format and no graph library. A test pins real rdflib imports
+# under gridalyn/ at 0 by AST scan, so adding the dependency back without a
+# consumer turns the suite red rather than passing unnoticed.
+# If a consumer for CGMES RDF/XML ever appears, add the dependency *with* it.
+# Rationale in full: docs/platform/digital-twin.md, "Why there is no rdflib".
+# `cim-graph` below is for external experimentation only; it has no in-repo consumer.
 cim = [
     "cim-graph>=0.4.3a12",
 ]

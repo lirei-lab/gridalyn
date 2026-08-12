@@ -123,6 +123,15 @@ directory, and the default materialized twin lives in
 `instances/default/digital_twin/`. A browser dashboard under `dashboard/`
 consumes the generated catalogs and reports.
 
+**On the name `twin`.** It is aspirational, and the docs say so rather than
+letting readers assume otherwise. Under the Kritzinger taxonomy — which
+separates the classes by *automated data flow*, not fidelity — `gridalyn.twin`
+is a **digital model with provenance, a declared schema, and a place for a
+clock**: not a digital shadow, and not a digital twin. Nothing automatically
+carries measurements from a physical feeder into it; every observation is read
+off a *solved* network. What would move it up a class is written down in
+[Network Model](https://lirei.ca/gridalyn/concepts/network-model/#what-class-of-thing-this-is).
+
 ## Install
 
 Requires Python 3.12+ and [`uv`](https://github.com/astral-sh/uv) (plain `pip
@@ -140,7 +149,6 @@ capability groups keep the heavy integrations out of it:
 uv sync --extra geo        # GeoJSON, OSM, geospatial preprocessing
 uv sync --extra sim        # pandapower and LightSim2Grid simulation helpers
 uv sync --extra ops        # optimization and operational analytics
-uv sync --extra semantic   # RDF / graph database tooling
 uv sync --extra dashboard  # map and visualization helpers
 uv sync --extra all        # full platform runtime
 ```
@@ -148,6 +156,12 @@ uv sync --extra all        # full platform runtime
 Each `uv sync` synchronises the environment exactly, replacing the installed
 set rather than adding to it — combine groups in one command
 (`uv sync --extra dev --extra geo`) instead of running them in sequence.
+
+The complete set of extras is `all`, `cim`, `dashboard`, `dev`, `docs`, `geo`,
+`ops`, `sim`, `test` and `typing`. **There is no `semantic` extra**; it was
+removed on 2026-08-07 when the dead RDF/XML exporter and `rdflib` went with it.
+The semantic graph needs no extra — it is Parquet and pandas, both base
+dependencies — so `uv sync` alone is enough to build and validate it.
 
 Synthetic load and weather generation is documented in
 `docs/sdk/data-generation.md`; treat its output as a synthetic baseline unless

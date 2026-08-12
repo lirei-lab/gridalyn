@@ -12,7 +12,6 @@ __all__ = [
     "projects",
     "simulation",
     "twin",
-    "NetworkAnalyzer",
     "PandapowerGridBuilder",
     "GridPlotter",
     "BatteryAsset",
@@ -66,7 +65,6 @@ _LAZY_EXPORTS = {
     "projects": ("gridalyn.projects", "projects"),
     "simulation": ("gridalyn.simulation", "simulation"),
     "twin": ("gridalyn.twin", "twin"),
-    "NetworkAnalyzer": ("gridalyn.twin.core.topology", "NetworkAnalyzer"),
     "PandapowerGridBuilder": (
         "gridalyn.simulation.simulators.powerflow.builder",
         "PandapowerGridBuilder",

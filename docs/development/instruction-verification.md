@@ -11,20 +11,30 @@ a reader is told to type.
 
 ## Why a ledger rather than "run the docs"
 
-The corpus is **78 documents carrying 354 fenced blocks** — including this page,
-which is classified in the ledger like any other. Executing all of them is
-neither possible nor meaningful. Only 162 are runnable at all:
+The corpus is **345 fenced blocks**, spread over the 63 documents that carry at
+least one — including this page, which is classified in the ledger like any
+other. Executing all of them is neither possible nor meaningful. Only **151**
+are runnable at all:
 
 | Class | Count | What verification means |
 | --- | ---: | --- |
-| `RUNNABLE-INDEPENDENT` | 88 | Run it alone in a prepared environment |
-| `RUNNABLE-SEQUENCE` | 74 | Run the whole chain in one shared workspace |
-| `ILLUSTRATIVE` | 150 | Read it — output samples, YAML, diagrams, sketches |
+| `RUNNABLE-INDEPENDENT` | 87 | Run it alone in a prepared environment |
+| `RUNNABLE-SEQUENCE` | 64 | Run the whole chain in one shared workspace |
+| `ILLUSTRATIVE` | 152 | Read it — output samples, YAML, diagrams, sketches |
 | `LONG-RUNNING` | 24 | Over ten minutes; documented, with the decision recorded |
 | `DESTRUCTIVE` | 4 | Deletes state or mutates a remote; never executed |
 | `ENV-DEPENDENT` | 14 | Needs a runtime beyond Python — npm, docker, network |
 
-A gate that tried to run all 354 would be red forever. A gate that ran none of
+These are the current counts, re-derived from the tracked ledger on 2026-08-12;
+the gate proves the ledger covers the corpus exactly, so they are the corpus's
+counts too. The figures this page carried before — 354 blocks and 162 runnable —
+were the pre-2026-08-06 corpus, from before the orphaned-input chain was retired
+and took 9 blocks with it (see *Open findings*). Print them yourself with
+`python tools/check_doc_instructions.py --report` rather than quoting this
+table if the two ever disagree; the ledger is the record, this page is prose
+about it.
+
+A gate that tried to run all 345 would be red forever. A gate that ran none of
 them would prove nothing. So each block is classified once, by reading it, and
 the classification is pinned in a tracked ledger keyed by
 `<path>#<ordinal>` with the block's `sha1`. Edit a classified block and the hash
@@ -42,8 +52,12 @@ about text that no longer exists.
 | `UNVERIFIED` | Nobody has answered for it yet — the state the gate now forbids |
 
 As of the 2026-08-06 close-out the corpus carries **zero `UNVERIFIED`
-instructions**. Resolved per runnable instruction, the distribution is
-95 `PASS-AS-WRITTEN`, 63 `FIXED-DOC`, 3 `DOCUMENTED` and 1 `FIXED-CODE`.
+instructions**, and the gate keeps it that way. The verdict distribution
+recorded at that close-out — 95 `PASS-AS-WRITTEN`, 63 `FIXED-DOC`, 3
+`DOCUMENTED`, 1 `FIXED-CODE` — was taken over the 162-instruction corpus of that
+date and has **not** been re-derived since the retirement that dropped the
+corpus to 151 runnable. Treat it as historical. For the live distribution run
+`python tools/check_doc_instructions.py --report`.
 
 ## Reading the ledger
 
@@ -82,8 +96,8 @@ The sweep that produced the current verdicts ran in three waves.
 1. **Classify.** Read every block; record `class`, `family`, `sha1` and a
    rationale for anything not runnable. The tool offers a structural suggestion
    from the fence language and command names, but it is advice only — 124 of the
-   354 entries override it, which is what distinguishes a reviewed ledger from a
-   generated one.
+   354 entries in the corpus of that date overrode it, which is what
+   distinguishes a reviewed ledger from a generated one.
 2. **Execute, by family.** Split the runnable population three ways —
    `getting-started`, `platform`, `development` — and run each family's blocks in
    a scratch workspace. Record what actually happened in `evidence`, including
@@ -117,7 +131,10 @@ uv run python tools/check_doc_instructions.py --dump /tmp/doc-blocks.json
 ```
 
 `--dump` writes every block's full content to JSON so a reviewer can read them
-without opening 78 files. Work through one family at a time, in a scratch
+without opening 63 files. It is also the fastest way to search the whole
+instruction corpus for a name you are about to delete — see
+[The blind spot](#the-blind-spot-the-hash-pins-the-text-not-the-world). Work
+through one family at a time, in a scratch
 workspace, and record evidence per block. Budget roughly five minutes per
 runnable block including the fixes; the measured runtimes of the blocks
 themselves sum to about 320 seconds, so the cost is the reading and the
@@ -147,6 +164,75 @@ assertion is trusted green without having been seen to fail.
 uv run python -m pytest tests/test_doc_instructions.py -q
 ```
 
+### The blind spot: the hash pins the text, not the world
+
+**A verified block can rot without its hash ever moving.** The gate compares a
+block's `sha1` to its content. That catches an instruction someone *edited*. It
+cannot catch an instruction that stopped being true because something the block
+*refers to* — an extra, a CLI flag, a path, a command — was deleted somewhere
+else in the repository. The text is unchanged, so the hash matches, so the entry
+keeps whatever verdict it earned on the day it was executed. The environment
+moved; the pin did not.
+
+This is not hypothetical. It is recorded here because it happened:
+
+> `README.md#4` — the install block — carried
+> `uv sync --extra semantic   # RDF / graph database tooling`. Its entry was
+> executed on **2026-08-06** and its recorded evidence reads *"All six `uv sync
+> --extra X` lines -> exit 0, 0.99 s, so the commands are valid."* That was
+> true when it was written. **Phase 9 removed the `semantic` extra the next
+> day, 2026-08-07**, along with the dead RDF/XML exporter and `rdflib`.
+>
+> The block's content never changed, so its `sha1` still matched, so the entry
+> kept its `RUNNABLE-INDEPENDENT` / `FIXED-DOC` verdict — marked verified —
+> while the command it documents had been broken for five days. Nothing in the
+> ledger was false; the evidence was simply about a world that no longer
+> existed. It was found by a human reading the README against `pyproject.toml`,
+> not by the gate.
+>
+> Attribution matters: **the defect is Phase 9's**, which deleted an extra
+> without sweeping the documentation for references to it. The ledger did not
+> cause the rot and did not hide it — it just had no mechanism to notice it.
+>
+> **And there were two, which is the part worth remembering.** The `README.md#4`
+> fix and this note were written together; the identical block at
+> `docs/getting-started/installation.md#2` — same removed extra, same
+> `RUNNABLE-INDEPENDENT` / `FIXED-DOC` verdict, same exit 2 — was missed at that
+> moment and found later, before shipping, by comparing **every** `--extra X`
+> named anywhere in `docs/` and `README.md` against
+> `pyproject.toml`'s `optional-dependencies`. Fixing the instance you were shown
+> is not fixing the class. When a name is removed, sweep for the name; do not
+> patch the one occurrence someone happened to report.
+
+**Why the CI smoke subset does not close this either.** It executes 14 of 162
+runnable instructions. `README.md#4` is not among them, and widening the subset
+until it is would mean paying a full `uv sync` per extra in CI.
+
+**What to do about it.** Until a gate exists, this is a review obligation with a
+named trigger, not a background hope:
+
+- **When you delete an extra, a CLI command, a CLI flag, or a documented path,
+  grep the whole documentation corpus for it in the same change.**
+  The `--dump` mode of `tools/check_doc_instructions.py` writes every block's
+  full content to one JSON file precisely so this grep is one pass over one
+  file rather than 63 — see [Running the full sweep](#running-the-full-sweep)
+  for the invocation. Treat a hit as part of the deletion's scope, not as
+  follow-up work.
+- **Re-evidence, do not just re-hash.** If you then edit the block, its verdict
+  was evidence about a command that no longer exists. Run the corrected block
+  and record fresh `evidence`; refreshing `sha1` while keeping the old evidence
+  reproduces the same blind spot one layer down.
+- **Suspect the population, not the block.** One instruction found stale this
+  way means the sweep that produced its verdict predates a removal. Check the
+  other instructions in the same family, and the removal's own changelog entry.
+
+**What would actually close it** is a gate that resolves each block's referenced
+extras, subcommands and paths against the current `pyproject.toml`, CLI parsers
+and filesystem — a semantic check rather than a textual one. That is Milestone 2
+territory (R14/R15, "every documented instruction verified by execution") and is
+deliberately **not** attempted here: recording the limitation accurately is
+worth more than a partial gate that would imply the hole is covered.
+
 ## The CI smoke subset
 
 The gate above proves the ledger still *describes* the documentation. It never
@@ -172,8 +258,11 @@ Two deliberate choices:
   the commands that used to fail on a fresh checkout. Run them after six studies
   have produced outputs and the regression they guard could not reproduce.
 
-**What a green smoke does not prove.** It covers 14 of 162 runnable
-instructions. It cannot catch a document that gives the right commands in the
+**What a green smoke does not prove.** It covers 14 of 151 runnable
+instructions, and it cannot catch a documented instruction that rotted without
+its text changing — see
+[The blind spot](#the-blind-spot-the-hash-pins-the-text-not-the-world). It also
+cannot catch a document that gives the right commands in the
 wrong order — the dominant defect of the 2026-08-06 sweep, 8 of 13
 documentation fixes — because that needs a clean workspace per chain, which does
 not fit any CI budget. The full sweep stays an operator protocol.
