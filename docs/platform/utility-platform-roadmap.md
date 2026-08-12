@@ -239,7 +239,7 @@ it remains local Parquet/JSON.
 - query methods by feeder, transformer, bus, downstream zone, and asset type;
 - explicit operational states: `base`, `normal`, `current`, `planned`,
   `study_case`;
-- `NetworkSnapshot` export/import contract shared by all adapters;
+- `NetworkModel` export/import contract shared by all adapters;
 - adapter validation summaries exposed in a common format.
 
 **Update current artifacts:**

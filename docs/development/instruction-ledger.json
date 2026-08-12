@@ -4260,6 +4260,21 @@
       "sha1": "eae5602f701cc566fbed7cdc3523aa0d18828eb1",
       "verdict": "PASS-AS-WRITTEN"
     },
+    "docs/sdk/network-repository.md#0": {
+      "class": "ILLUSTRATIVE",
+      "auto": "ILLUSTRATIVE",
+      "family": "platform",
+      "file": "docs/sdk/network-repository.md",
+      "ordinal": 0,
+      "line": 64,
+      "language": "text",
+      "sha1": "17ff3cb43d93b7082b53daa6f6b27187ef965d4a",
+      "sequence": null,
+      "verdict": "DOCUMENTED",
+      "rationale": "fence language text is not executable as written",
+      "evidence": null,
+      "date": null
+    },
     "docs/sdk/overview.md#0": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",

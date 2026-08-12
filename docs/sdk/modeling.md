@@ -44,7 +44,7 @@ from "which swappable role does a network-control component play." Phase 10
 (Milestone 5, 2026-08-10) built that second separation *inside*
 `gridalyn.simulation`: physical power-flow backend
 (`gridalyn.simulation.backends`), surrogate (`gridalyn.simulation.surrogates`),
-observation (`gridalyn.simulation.observation`) and control policy
+observation (`gridalyn.twin.observation`) and control policy
 (`gridalyn.simulation.policies`) are each an explicit-ID registry, resolved by
 name rather than fused into one class, with the choice recorded in
 `provenance.powerflow_backend`. Before Phase 10, `VoltageControlEnvironment`

@@ -5,6 +5,15 @@ workflows, the dashboard, and semantic graph tooling. It is not a database
 service; it is a materialized workspace of Parquet and JSON artifacts that can
 later be loaded into DuckDB, FalkorDB, or another operational backend.
 
+!!! note "The name is aspirational — read this before quoting it"
+
+    Under Kritzinger's taxonomy this layer is a **digital model with provenance,
+    a declared schema, and a place for a clock**, not a digital shadow and not a
+    digital twin. Nothing automatically carries measurements from a physical
+    feeder into it; every observation is read off a *solved* network. See
+    [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
+    for the measurement and for the one thing that would move it up a class.
+
 The default runtime instance lives at:
 
 ```text
@@ -146,6 +155,16 @@ model = repo.load_model()
 integrity = repo.validate_integrity()
 ```
 
+`validate_integrity()` reports **three** states, not two: a required artifact
+that is **absent** is an error and fails validation; an artifact that exists but
+holds **no rows** is a warning and still validates; an intact base is checked
+against the declared column contract. A missing `metadata.json` is a separate,
+softer axis — it warns and records a degraded `provenance_status` rather than
+failing, and the repository takes `provenance="require" | "warn" | "ignore"` to
+change that. See
+[Network Repository](../sdk/network-repository.md#validation-has-three-states-not-two)
+for the full contract and the error text.
+
 The same repository is used by platform services such as dashboard catalog
 generation so that topology counts, feeder queries, transformer downstream
 queries, and validation metadata stay consistent across studies.
@@ -196,6 +215,103 @@ The registry also exposes `cim_parquet` through
 CIM-like Parquet source tables and emits the same canonical base snapshot as the
 synthetic pandapower path. It is a pragmatic interchange adapter, not a full CIM
 RDF/XML importer.
+
+### Model Authority Sets and Profiles
+
+The twin adopts CGMES **semantics** — who owns which artifact, and which
+artifact depends on which — without adopting CGMES **serialization**.
+
+A `ModelAuthoritySet` names the single authority responsible for a set of
+canonical artifacts. Two are declared, one per producer:
+
+| Authority set | Authority | Source standard | Artifacts |
+| --- | --- | --- | --- |
+| `gridalyn:mas:synthetic-pandapower` | `SyntheticPandapowerAdapter` | `pandapower` | all five |
+| `gridalyn:mas:cim-parquet` | `CimParquetAdapter` | `cim` | all five |
+
+**The partition of any one model is single-member, and the code says so.** Both
+producers emit all five canonical artifacts, neither is a proper subset of the
+other, and a base export selects exactly one of them — so the two sets are
+*alternatives*, not co-owners, and `authority_set_partition()` returns a
+one-tuple. The multi-member case the mechanism supports is therefore
+**untested against a real second owner**; that is recorded in-code as
+`AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER` and asserted by a test, so it cannot
+quietly drop out of the documentation.
+
+Geography is **not** a second authority. `gridalyn/twin/geoprocess/` constructs
+zero canonical artifacts; building footprints reach the model as an *input* to
+`PowerGridGraph.building_data`, inside the synthetic authority set rather than
+beside it. Earlier design notes describing the twin as "a synthetic base plus
+GeoJSON geography" are measurably wrong — do not repeat that framing.
+
+A `ModelProfile` carries a stable id, a version, its artifacts, and a
+`dependent_on` list. **`dependent_on` is derived, never authored**: it is
+computed at import from `ColumnSpec.references` in the declared schema, so it
+cannot be invented and cannot go stale. Five per-artifact profiles plus one
+aggregate are declared under the `gridalyn:digital-twin-base` namespace; the
+four artifacts that carry a bus reference depend on that namespace's
+`grid_buses` profile, and the `grid_buses` profile itself depends on nothing.
+
+`validate_authority_partition()` runs at the top of
+`CimParquetAdapter.load_snapshot()`, before any IO, so the declaration is a rule
+that gets checked rather than metadata nothing reads. It catches genuine drift:
+the canonical artifact list is single-sourced from `BASE_TABLE_FILENAMES`, so
+adding a sixth canonical table without giving it an owner turns that load red.
+
+**Read the scope of that check precisely.** `CimParquetAdapter.load_snapshot()`
+is its *only* call site. `SyntheticPandapowerAdapter` declares no
+`authority_sets()` method and never invokes the check — so on the path that
+actually produces the committed base, and that every workflow runs, the
+`gridalyn:mas:synthetic-pandapower` set is **declared but not enforced**. Wiring
+the synthetic producer to the same preflight is the outstanding work; until then
+do not describe the rule as running on every model load.
+
+#### Why there is no `rdflib`, and why adding it back would be a regression
+
+**Real `rdflib` imports under `gridalyn/` are zero, and a test pins that at
+zero by AST scan.** This is deliberate and load-bearing; a future contributor
+reaching for a graph library to "finish" CGMES support should read this first.
+
+- The repository *used* to ship an RDF/XML exporter. It was removed in Phase 9
+  because it had **no importers and no tests** — it was dead code, and `rdflib`
+  came off the dependency list with it.
+- What this layer needs from CGMES is its **vocabulary**: `FullModel` identity
+  fields, authority sets, profile dependencies. Those are expressible as frozen
+  dataclasses with JSON-native `as_dict()` over the surviving parquet adapter,
+  and in that form at least one of them is checked by running code (see the
+  scope note above). A serializer would add a dependency, a file format and a
+  second source of truth to produce an artifact that, on today's evidence,
+  nothing would read.
+- The pin is an **AST** scan, not a text scan, and the difference is tested in
+  both directions: an `import rdflib` hidden inside a never-executed function
+  body turns it red, while a doc comment that merely *names* the import stays
+  green. A text scan gets both of those backwards.
+
+If a consumer for CGMES RDF/XML ever appears, the honest move is to add the
+dependency *with* that consumer and delete this section — not to add the
+serializer first and hope a reader arrives.
+
+### Observed State
+
+`gridalyn.twin.observation` owns `NetworkObservation` and `observe_network`:
+one definition of what a solved network shows, in the same layer as the model
+it describes. `gridalyn.simulation.observation` still resolves — it re-binds the
+same objects and emits a `DeprecationWarning` — so no consumer had to change.
+
+An observation carries a keyword-only `as_of: datetime | None`, and it is
+**caller-supplied**, never inferred. A solved `pandapowerNet` holds one
+converged operating point with no record of which instant it represents; only
+the caller that chose the point knows. All **13** production
+`observe_network(...)` call sites pass `as_of=None` today, which is correct
+rather than a gap — a sensitivity perturbation, a
+named scenario and a Monte-Carlo draw index have no real instant to offer, and
+stamping one would fabricate evidence. `AS_OF_ABSENT_REASON` travels with the
+field to say exactly that.
+
+There is deliberately **no state-producer registry**. One real producer plus a
+placeholder is the speculative abstraction the platform's registries exist to
+avoid; the absence is asserted by a test rather than left to be mistaken for an
+oversight.
 
 ## Building Model Layer
 

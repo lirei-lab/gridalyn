@@ -228,7 +228,7 @@ registry — see the note below the table.
 | Surrogate | `gridalyn.simulation.surrogates.registry.SurrogateRegistry` | `network_impact_tabular_v1` (default), `network_impact_physics_lookup_v1` |
 | Control policy | `gridalyn.simulation.policies.registry.PolicyRegistry` | `sensitivity_dispatch`, `tabular_rl` |
 
-(Observation, `gridalyn.simulation.observation`, is a contract and a single
+(Observation, `gridalyn.twin.observation`, is a contract and a single
 pandapower-shaped builder function, `observe_network` — not a registry. It has
 one implementation because nothing in this repository yet needs a second one;
 adding a registry ahead of that need would be exactly the speculative

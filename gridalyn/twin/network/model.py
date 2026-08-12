@@ -101,7 +101,7 @@ class NetworkModel:
         """Report whether an on-disk ``metadata.json`` manifest backs this model.
 
         Returns:
-            ``True`` only when the model was loaded from a repository whose
+            bool: ``True`` only when the model was loaded from a repository whose
             metadata manifest was present and parseable. A model built in memory
             by a source adapter is ``False``: it carries ``source_adapter`` and
             ``source_standard``, but no manifest has been written for it yet.
