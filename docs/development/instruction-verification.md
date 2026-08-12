@@ -193,6 +193,16 @@ This is not hypothetical. It is recorded here because it happened:
 > Attribution matters: **the defect is Phase 9's**, which deleted an extra
 > without sweeping the documentation for references to it. The ledger did not
 > cause the rot and did not hide it — it just had no mechanism to notice it.
+>
+> **And there were two, which is the part worth remembering.** The `README.md#4`
+> fix and this note were written together; the identical block at
+> `docs/getting-started/installation.md#2` — same removed extra, same
+> `RUNNABLE-INDEPENDENT` / `FIXED-DOC` verdict, same exit 2 — was missed at that
+> moment and found later, before shipping, by comparing **every** `--extra X`
+> named anywhere in `docs/` and `README.md` against
+> `pyproject.toml`'s `optional-dependencies`. Fixing the instance you were shown
+> is not fixing the class. When a name is removed, sweep for the name; do not
+> patch the one occurrence someone happened to report.
 
 **Why the CI smoke subset does not close this either.** It executes 14 of 162
 runnable instructions. `README.md#4` is not among them, and widening the subset

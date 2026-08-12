@@ -1969,7 +1969,7 @@
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
-      "evidence": "ws/extras. All six lines -> exit 0, 1.16 s. Same defect as README.md#4 and measured the same way: `uv sync --extra geo` after `--extra dev` printed 'Uninstalled 121 packages in 465ms' and removed pytest; the prose 'Optional extras install heavier capability groups' reads as additive. FIX APPLIED: the paragraph now says uv sync replaces the installed set, quotes the 121-package measurement, notes --extra all excludes test/docs tooling, and gives `uv sync --extra dev --extra geo` inline. The fenced block itself is untouched (adding a block would have renumbered every later ordinal in the file and broken the ledger keys).",
+      "evidence": "Re-evidenced 2026-08-12 (pre-ship) after the block lost its `--extra semantic` line: that extra was removed by Phase 9 on 2026-08-07, so this RUNNABLE block instructed a command exiting 2 while the ledger carried it as verified. It is the SECOND instance of the same defect -- README.md#4 was fixed earlier in review cycle 1, and this one was missed at that time, two files away from the note written about the blind spot. Re-run per line with `uv sync --extra X --dry-run` (dry-run so verification does not mutate the venv): geo, sim, ops, dashboard, all -> exit 0 each. Negative control: `uv sync --extra semantic --dry-run` -> exit 2, so the check discriminates rather than passing vacuously. The standing blind spot this demonstrates -- the gate pins this block's sha1, not the validity of what it instructs -- is recorded in docs/development/instruction-verification.md.",
       "family": "getting-started",
       "file": "docs/getting-started/installation.md",
       "language": "bash",
@@ -1977,7 +1977,7 @@
       "ordinal": 2,
       "rationale": "",
       "sequence": null,
-      "sha1": "be230a75f9fc2c6f50a7633fcd63058a3dea2208",
+      "sha1": "747ca660f1c281ce7efbbf9f985a6f58aa0dd269",
       "verdict": "FIXED-DOC"
     },
     "docs/getting-started/installation.md#3": {
