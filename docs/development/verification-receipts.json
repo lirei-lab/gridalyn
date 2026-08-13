@@ -215,7 +215,7 @@
       "result": "35,041 NetworkObservation(provenance='measured') emitted, one per real instant, as_of spanning 2018-04-03T00:00:00+00:00 to 2019-04-03T00:00:00+00:00; ingest 237.7 s, total 239.6 s, peak RSS 7.6 GB on the operator machine. This proves MECHANICS AT SCALE on real measured timestamps and entities through the shipped path unchanged -- it does NOT prove real voltage data: datasets/hq carries no voltage channel, so the voltage VALUES were synthesized (numpy.random.default_rng(42)) and value-level correctness is proven separately by the CI-visible fixture tests in tests/test_measured_ingest.py. The stored axis is a naive uniform grid with no DST fold, read as UTC; this receipt makes NO DST claim. The entity-to-bus join is operator-declared demo configuration written by the proof script, never inferred.",
       "evidence": {
         "shipped_path": "gridalyn.twin.observation.ingest.read_measured_observations (one whole-frame call, no batching)",
-        "source_file": "/home/lirei-lenovo/lirei/syntgrid/datasets/hq/consumption.h5",
+        "source_file": "datasets/hq/consumption.h5",
         "n_instants": 35041,
         "n_entities": 1000,
         "n_tidy_rows": 35041000,
