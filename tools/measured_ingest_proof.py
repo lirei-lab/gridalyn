@@ -195,6 +195,7 @@ def _evidence(
     observations: tuple[Any, ...],
     tidy_rows: int,
     n_entities: int,
+    expected_instants: int,
     elapsed_ingest: float,
     elapsed_total: float,
     source: Path,
@@ -205,12 +206,14 @@ def _evidence(
         observations: The shipped path's output, one per instant.
         tidy_rows: Row count of the tidy frame fed in the single call.
         n_entities: Declared entity count.
+        expected_instants: Instant count of the real axis fed in; the shipped
+            path must emit exactly one observation per instant.
         elapsed_ingest: Seconds spent inside ``read_measured_observations``.
         elapsed_total: Seconds for the whole proof (read, build, ingest).
         source: The HDF5 file the real axis and entities came from.
 
     Returns:
-        The JSON-serializable evidence mapping.
+        dict[str, Any]: The JSON-serializable evidence mapping.
 
     Raises:
         RuntimeError: If the shipped path's output contradicts a claim the
@@ -222,6 +225,28 @@ def _evidence(
             "the shipped path returned zero observations for a non-empty "
             "frame; refusing to emit evidence"
         )
+    if len(observations) != expected_instants:
+        raise RuntimeError(
+            f"the shipped path emitted {len(observations)} observations, "
+            f"expected one per axis instant ({expected_instants}); refusing "
+            "to emit evidence"
+        )
+    previous = None
+    for index, observation in enumerate(observations):
+        current = observation.as_of
+        if current is None:
+            raise RuntimeError(
+                f"observation {index} carries no as_of; the shipped path is "
+                "not stamping from the datum"
+            )
+        if previous is not None and current <= previous:
+            raise RuntimeError(
+                f"observation {index}'s as_of ({current.isoformat()}) does "
+                "not strictly increase over its predecessor "
+                f"({previous.isoformat()}); the receipt claims ascending "
+                "as_of order"
+            )
+        previous = current
     sample = observations[len(observations) // 2]
     for name, observation in (("first", observations[0]), ("sampled", sample)):
         if observation.provenance != "measured":
@@ -324,6 +349,7 @@ def main(argv: list[str] | None = None) -> int:
         observations,
         tidy_rows=len(tidy),
         n_entities=measured.shape[1],
+        expected_instants=measured.shape[0],
         elapsed_ingest=elapsed_ingest,
         elapsed_total=time.perf_counter() - started,
         source=args.hq_dir / CONSUMPTION_FILE,

@@ -163,6 +163,67 @@ def test_mixed_offsets_with_one_naive_row_are_rejected() -> None:
         read_measured_observations(frame, join=JOIN)
 
 
+def test_nat_in_tz_aware_timestamp_column_is_a_located_error() -> None:
+    """A NaT inside a tz-aware datetime64 column is rejected, never dropped.
+
+    Pre-fix, NaT passed the dtype-level tz check (the column is tz-aware) and
+    the downstream ``groupby("as_of")`` then silently dropped its datum: a
+    2-row frame with one null timestamp came out as 1 observation. The
+    parquet-shaped column (``pd.to_datetime([..., None], utc=True)``) is
+    exactly how a parquet export with a null timestamp loads.
+    """
+    frame = _frame(
+        [
+            (T1, "meter_a", "voltage_pu", 0.97),
+            (T2, "meter_b", "voltage_pu", 0.98),
+        ]
+    )
+    frame["timestamp"] = pd.to_datetime([T1, None], utc=True)
+    assert frame["timestamp"].dt.tz is not None  # the shape under test
+
+    with pytest.raises(ValueError, match="missing.*timestamp"):
+        read_measured_observations(frame, join=JOIN)
+
+
+def test_a_null_timestamp_in_a_parquet_export_is_rejected_end_to_end(
+    tmp_path: Path,
+) -> None:
+    """A parquet file with one null timestamp fails loudly through the loader."""
+    frame = _frame(
+        [
+            (T1, "meter_a", "voltage_pu", 0.97),
+            (T2, "meter_b", "voltage_pu", 0.98),
+        ]
+    )
+    frame["timestamp"] = pd.to_datetime([T1, None], utc=True)
+    path = tmp_path / "measurements.parquet"
+    frame.to_parquet(path, index=False)
+
+    with pytest.raises(ValueError, match="missing.*timestamp"):
+        read_measured_observations(load_measurements(path), join=JOIN)
+
+
+@pytest.mark.parametrize(
+    "value", [None, pd.NaT, ""], ids=["none", "nat", "empty-string"]
+)
+def test_a_missing_timestamp_in_an_object_column_is_a_located_error(
+    value: object,
+) -> None:
+    """None, NaT, and '' are missing timestamps: a located ValueError.
+
+    Each raises a ValueError naming the missing value and its row position --
+    never an AttributeError (pre-fix, ``None`` parsed to ``None`` and
+    ``.tzinfo`` blew up unlocated), and never the "localize the export"
+    remedy, which is the wrong remedy for a value that is not there.
+    """
+    frame = _frame([(T1, "meter_a", "voltage_pu", 1.0)])
+    frame["timestamp"] = pd.Series([value], dtype=object)
+
+    with pytest.raises(ValueError, match="missing.*row 0") as excinfo:
+        read_measured_observations(frame, join=JOIN)
+    assert "localize" not in str(excinfo.value)
+
+
 def test_mixed_aware_offsets_normalize_to_utc_for_grouping() -> None:
     """Two spellings of one instant land in one observation, stamped UTC."""
     frame = _frame(
@@ -342,5 +403,12 @@ def test_contract_reductions_work_on_a_measured_observation() -> None:
 
 
 def test_the_supported_quantity_set_is_the_declared_v1_set() -> None:
-    """The quantity map is exactly voltage_pu -> bus_voltage_pu."""
+    """The quantity map is exactly voltage_pu -> bus_voltage_pu.
+
+    Pinned because the emission loop in ``read_measured_observations``
+    hardcodes the ``bus_voltage_pu`` field (and asserts the set stays
+    single-entry): widening SUPPORTED_QUANTITIES requires reworking the
+    emission site -- group by ``(as_of, quantity)`` and dispatch each group
+    through the mapping -- not just adding a key to the dict.
+    """
     assert SUPPORTED_QUANTITIES == {"voltage_pu": "bus_voltage_pu"}

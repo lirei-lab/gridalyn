@@ -28,8 +28,12 @@ prevent.
 **Why v1's quantity set is exactly ``{"voltage_pu"}``.** Every supported
 quantity is a declared mapping onto a :class:`NetworkObservation` field, and
 ``bus_voltage_pu`` is the contract's only measured-mappable field today.
-Widening the set later is additive; guessing a mapping now would repeat the
-join-inference failure mode this module exists to refuse.
+The emission is currently single-quantity: the loop in
+:func:`read_measured_observations` hardcodes the ``bus_voltage_pu`` field, so
+widening the set requires touching the emission site -- group by
+``(as_of, quantity)`` and dispatch each group through the mapping -- not just
+adding a key here. Guessing a mapping now would repeat the join-inference
+failure mode this module exists to refuse.
 
 **The mappings below are evidence, not tolerance** (the
 :mod:`gridalyn.twin.network.schema` posture): every declared column and
@@ -86,10 +90,19 @@ _SUPPORTED_SUFFIXES = (".csv", ".parquet")
 #: Required columns of an :meth:`EntityJoin.from_frame` join frame.
 _JOIN_COLUMNS = (ENTITY_COLUMN, "bus_id")
 
-#: The remediation every timestamp rejection carries.
+#: The remediation every naive-timestamp rejection carries.
 _NAIVE_REMEDIATION = (
     "localize the export or include a UTC offset in every timestamp -- as_of "
     "is stamped from the datum, never inferred"
+)
+
+#: The remediation every missing-timestamp rejection carries. Deliberately
+#: distinct from :data:`_NAIVE_REMEDIATION`: telling a user to localize a
+#: value that is not there would be the wrong remedy.
+_MISSING_REMEDIATION = (
+    "every datum must carry the instant it was measured at; drop or repair "
+    "the row(s) before ingest -- as_of is stamped from the datum, never "
+    "inferred"
 )
 
 
@@ -226,11 +239,11 @@ def read_measured_observations(
         measured voltages as float64, empty line arrays, and no loss total.
 
     Raises:
-        ValueError: On a missing required column, a naive or unparseable
-            timestamp, an unsupported quantity, an entity absent from the
-            join, a duplicate ``(timestamp, entity_id, quantity)`` datum, or
-            a non-numeric value. Every message locates the failure and names
-            the remedy.
+        ValueError: On a missing required column, a naive, missing
+            (NaT/null) or unparseable timestamp, an unsupported quantity, an
+            entity absent from the join, a duplicate
+            ``(timestamp, entity_id, quantity)`` datum, or a non-numeric
+            value. Every message locates the failure and names the remedy.
     """
     _require_columns(measurements)
     if len(measurements) == 0:
@@ -250,6 +263,16 @@ def read_measured_observations(
         }
     )
     observations = []
+    # LOUD COUPLING: the loop below hardcodes the bus_voltage_pu emission --
+    # the field the single SUPPORTED_QUANTITIES entry maps to. Widening the
+    # set requires grouping by (as_of, quantity) and dispatching each group
+    # through the mapping; this assertion fails here, at the emission site,
+    # the moment a second quantity is declared without that rework.
+    assert len(SUPPORTED_QUANTITIES) == 1, (
+        "the emission loop hardcodes bus_voltage_pu; widening "
+        "SUPPORTED_QUANTITIES requires grouping by (as_of, quantity) and "
+        "dispatching each group through the mapping"
+    )
     for instant, group in rows.groupby("as_of", sort=True):
         ordered = group.sort_values("entity", kind="stable")
         bus_ids = np.array(
@@ -341,6 +364,23 @@ def _require_columns(measurements: pd.DataFrame) -> None:
         )
 
 
+def _missing_timestamp_error(position: int, value: object) -> ValueError:
+    """Build the located error for a missing (NaT/null) timestamp value.
+
+    Args:
+        position: Row position of the missing entry.
+        value: The raw missing entry, rendered for the message.
+
+    Returns:
+        ValueError: The located, remediating error for the caller to raise.
+    """
+    return ValueError(
+        f"measurements column {TIMESTAMP_COLUMN!r} carries a missing "
+        f"(NaT/null) timestamp at row {position} ({_describe(value)}); "
+        f"{_MISSING_REMEDIATION}"
+    )
+
+
 def _scalar_tzinfo(value: object, position: int) -> tzinfo | None:
     """Return one raw timestamp value's ``tzinfo``, parsing scalars alone.
 
@@ -351,21 +391,32 @@ def _scalar_tzinfo(value: object, position: int) -> tzinfo | None:
     column can never find the naive row. A scalar parse has no mixed context
     and never coerces.
 
+    Missing values are their own bucket, distinct from naive: ``None`` and
+    ``NaT`` (checked before the datetime branch, because ``NaT`` *is* a
+    ``datetime`` instance whose ``tzinfo`` is ``None`` and would otherwise be
+    mislabeled naive), and anything pandas parses to ``NaT`` or ``None``
+    (an empty string, for instance). Each is a located error carrying the
+    missing-value remediation, never the "localize" remedy -- there is
+    nothing to localize.
+
     Args:
         value: One raw timestamp entry; a datetime is inspected directly,
             anything else is parsed as an ISO 8601 scalar.
-        position: Row position, used to locate a parse failure.
+        position: Row position, used to locate a failure.
 
     Returns:
-        The value's ``tzinfo`` (``None`` means naive).
+        tzinfo | None: The value's ``tzinfo`` (``None`` means naive).
 
     Raises:
-        ValueError: If the value cannot be parsed as a timestamp at all.
+        ValueError: If the value is a missing (NaT/null) timestamp, or
+            cannot be parsed as a timestamp at all.
     """
+    if value is None or value is pd.NaT:
+        raise _missing_timestamp_error(position, value)
     if isinstance(value, datetime):
         return value.tzinfo
     try:
-        return pd.to_datetime(value, format="ISO8601").tzinfo
+        parsed = pd.to_datetime(value, format="ISO8601")
     except (ValueError, TypeError):
         raise ValueError(
             f"measurements column {TIMESTAMP_COLUMN!r} carries an "
@@ -373,6 +424,9 @@ def _scalar_tzinfo(value: object, position: int) -> tzinfo | None:
             f"({type(value).__name__}); every value must be an ISO 8601 "
             "timestamp with a UTC offset"
         ) from None
+    if parsed is None or parsed is pd.NaT:
+        raise _missing_timestamp_error(position, value)
+    return parsed.tzinfo
 
 
 def _utc_timestamps(column: pd.Series) -> pd.Series:
@@ -394,8 +448,8 @@ def _utc_timestamps(column: pd.Series) -> pd.Series:
         UTC: the stamped ``as_of`` is the datum's instant expressed in UTC.
 
     Raises:
-        ValueError: If any value is naive (tz-unaware) or unparseable, with
-            the naive count and the remediation.
+        ValueError: If any value is naive (tz-unaware), missing (NaT/null)
+            or unparseable, with the count and the matching remediation.
     """
     if pd.api.types.is_datetime64_any_dtype(column):
         if column.dt.tz is None:
@@ -403,6 +457,16 @@ def _utc_timestamps(column: pd.Series) -> pd.Series:
                 f"measurements column {TIMESTAMP_COLUMN!r} carries "
                 f"{int(column.size)} naive (tz-unaware) timestamp(s); "
                 f"{_NAIVE_REMEDIATION}"
+            )
+        # NaT survives the tz-aware dtype check above, then the downstream
+        # groupby would silently drop its datum (groupby drops null keys by
+        # default); reject it here, at the classification site.
+        missing = int(column.isna().sum())
+        if missing:
+            raise ValueError(
+                f"measurements column {TIMESTAMP_COLUMN!r} carries "
+                f"{missing} missing (NaT/null) timestamp(s); "
+                f"{_MISSING_REMEDIATION}"
             )
         return pd.to_datetime(column, utc=True)
     naive_count = sum(

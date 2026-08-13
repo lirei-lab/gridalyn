@@ -379,6 +379,17 @@ ENTRY_POINT_CLASSES: tuple[str, ...] = (
     # return annotation, so the pool branch claims it first; this entry records
     # the API-root reason rather than deciding the branch.
     "ObservationProducerRegistry",
+    # Review-cycle-1 append: the repository users construct (via from_parquet
+    # or directly) to load and validate the canonical model -- the API root of
+    # the model-loading flow, per the twin facade's own docstring. Exposed by
+    # the candidate-exclusive pool fix: its only annotation naming it was its
+    # own from_parquet return, i.e. it was self-signing.
+    "NetworkModelRepository",
+    # Review-cycle-1 append, same pool fix: the semantic-graph repository is
+    # external-facing public API by recorded decision (Phase 9, finding G9 --
+    # kept for external consumers despite zero internal ones), i.e. an API
+    # root nothing in-repo signs by design.
+    "SemanticGraphRepository",
 )
 
 #: Exported exception types. Exceptions are raised, not signed -- they appear
@@ -427,8 +438,8 @@ def _annotation_strings(func: Any) -> list[str]:
     return parts
 
 
-def _referenced_name_pool(resolved: dict[str, Any]) -> str:
-    """Collect every annotation string reachable from the exported surface.
+def _referenced_name_pool(resolved: dict[str, Any], *, exclude: str) -> str:
+    """Collect the annotation strings reachable from the surface, minus one.
 
     Sources, per the membership criterion: annotations of every exported
     module-level function; annotations of every *public* method of every
@@ -436,14 +447,25 @@ def _referenced_name_pool(resolved: dict[str, Any]) -> str:
     ``staticmethod`` and ``property``); and the class-level field annotation
     strings of every exported class (which is where dataclass fields live).
 
+    The export named ``exclude`` contributes nothing: when the criterion
+    asks whether export N appears in a public signature, N's own method and
+    field annotations must not count -- a class trivially names itself
+    (``from_frame(cls, ...) -> EntityJoin``), so a pool that included the
+    candidate would let every class sign its own membership and the gate
+    would stop distinguishing anything.
+
     Args:
         resolved: Exported name to resolved object.
+        exclude: The candidate export whose own annotations are omitted.
 
     Returns:
-        The pooled annotation text, newline-joined for whole-word searching.
+        str: The pooled annotation text, newline-joined for whole-word
+            searching.
     """
     parts: list[str] = []
-    for obj in resolved.values():
+    for export_name, obj in resolved.items():
+        if export_name == exclude:
+            continue
         if inspect.isfunction(obj):
             parts.extend(_annotation_strings(obj))
             continue
@@ -483,9 +505,11 @@ def test_twin_facade_membership_criterion() -> None:
     by this file's discovery walk), an export passes when it is:
 
     1. a module-level function -- an entry point itself; or
-    2. named, as a whole word, in the referenced-name pool -- the raw
-       annotation strings of every exported function, every public method of
-       every exported class, and every exported class's field annotations; or
+    2. named, as a whole word, in its candidate-exclusive referenced-name
+       pool -- the raw annotation strings of every exported function, every
+       public method of every exported class, and every exported class's
+       field annotations, EXCLUDING the candidate's own annotations, so a
+       class cannot sign its own membership by naming itself; or
     3. a class listed in :data:`ENTRY_POINT_CLASSES` -- an API root users
        instantiate to start a flow, so nothing upstream can sign it; or
     4. an ``Exception`` subclass listed in :data:`EXCEPTION_EXPORTS` --
@@ -523,12 +547,14 @@ def test_twin_facade_membership_criterion() -> None:
         ), f"{name!r} is not an Exception subclass"
 
     # Steps 2-3: each export passes through exactly the four stated branches.
-    pool = _referenced_name_pool(resolved)
+    # The pool is rebuilt per candidate, excluding the candidate's own
+    # annotations, so no export signs its own membership.
     branch_hits = {"function": 0, "pool": 0, "entry_point": 0, "exception": 0}
     for name, obj in sorted(resolved.items()):
         if inspect.isfunction(obj):
             branch_hits["function"] += 1
             continue
+        pool = _referenced_name_pool(resolved, exclude=name)
         if re.search(rf"\b{re.escape(name)}\b", pool):
             branch_hits["pool"] += 1
             continue
