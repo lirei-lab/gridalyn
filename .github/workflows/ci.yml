@@ -381,3 +381,19 @@ jobs:
         # page that fell out of `nav` all fail here rather than on the published
         # site.
         run: mkdocs build --strict -f docs/mkdocs.yml
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check the mermaid diagrams compile
+        # `--strict` above cannot see this: superfences only emits
+        # `<pre class="mermaid">`, so a diagram is parsed in the reader's
+        # browser and a syntax error reaches the published page with every
+        # build-time check green. Measured 2026-08-13: 1 of 8 diagrams had been
+        # broken since it was written. `mermaid@11` is the floating major
+        # Material loads from its CDN -- keep the two in step.
+        run: |
+          npm install --no-save --no-audit --no-fund mermaid@11 jsdom
+          node tools/check_mermaid_diagrams.mjs

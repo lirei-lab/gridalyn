@@ -166,6 +166,9 @@ examples/cache/
 examples/generated/outputs/
 examples/generated/cache/
 dashboard/public
+# `tools/check_mermaid_diagrams.mjs` installs mermaid + jsdom here when run
+# locally (`dashboard/.gitignore` already covers the SPA's own tree).
+node_modules/
 cache/
 projects/*/outputs/
 # examples/outputs

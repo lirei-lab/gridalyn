@@ -143,6 +143,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/lirei-lab/gridalyn
 markdown_extensions:
+  # `!!! note` blocks render as literal text without this; the docs use them to
+  # carry the class statement on the twin surfaces.
+  - admonition
   - attr_list
   - md_in_html
   - pymdownx.emoji:

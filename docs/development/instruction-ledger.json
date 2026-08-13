@@ -4842,7 +4842,7 @@
       "ordinal": 0,
       "rationale": "fence language mermaid is not executable as written",
       "sequence": null,
-      "sha1": "4074c9cba8ec46f6ec89935b541f2a1ba65e7670",
+      "sha1": "4ad7cab687dd6aa7412e2d83a88be3284468698b",
       "verdict": "DOCUMENTED"
     },
     "docs/tutorials/synthetic-network-from-geojson.md#1": {
