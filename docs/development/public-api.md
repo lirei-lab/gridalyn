@@ -9,7 +9,7 @@ New code should use the native seven-module structure:
 | Module | Stable responsibility |
 | --- | --- |
 | `gridalyn.foundation` | Workspaces, artifact policy, reports, manifests, validation, and governance. |
-| `gridalyn.twin` | Network repositories, the canonical `NetworkModel` and its `ModelIdentity`, observed state (`NetworkObservation`, `observe_network`), topology, source adapters, IO helpers, and semantic graph. |
+| `gridalyn.twin` | Network repositories, the canonical `NetworkModel` and its `ModelIdentity`, observed state (`NetworkObservation` with a required `provenance`, `observe_network`, the measured-state ingest and the observation producer registry), model authority declarations (`ModelAuthoritySet`, `ModelProfile`), topology, source adapters, IO helpers, and semantic graph. |
 | `gridalyn.assets` | Building, EV, DER, thermal, load, and asset-model generation. |
 | `gridalyn.simulation` | Synthetic-network builders, power-flow builders, solver adapters, network impact, and validation analytics. |
 | `gridalyn.operations` | Providers, aggregators, offers, clearing, dispatch, settlement, constraints, and KPIs. |
@@ -93,8 +93,28 @@ knowing before you build on it:
 
 Observed state is published from the same module: `twin.NetworkObservation` and
 `twin.observe_network` describe what a *solved* network shows, with a
-keyword-only, caller-supplied `as_of`. `gridalyn.simulation.observation` still
+keyword-only, caller-supplied `as_of`. Every `NetworkObservation` now carries a
+required `provenance` field (`ObservationProvenance =
+Literal["simulated", "measured"]`) — `observe_network` stamps `"simulated"`
+unconditionally, and construction without a provenance is a `TypeError` (a
+documented Phase-12 breaking change). `gridalyn.simulation.observation` still
 resolves as a deprecated re-export.
+
+Phase 12 (2026-08-13) extended the same facade with the measured-state ingest
+path and the observation producer registry. New stable `gridalyn.twin` imports:
+
+| Symbol | Purpose |
+| --- | --- |
+| `ObservationProvenance` | `Literal["simulated", "measured"]` — the required discriminator every `NetworkObservation` carries, so a consumer holding only the object can tell a simulation result from a measurement. |
+| `EntityJoin` | User-supplied, declared `entity_id → bus_id` mapping for the measured ingest; the join is configuration, never inference, and an entity absent from it fails loudly. |
+| `read_measured_observations` | The measured producer: reads `(timestamp, entity_id, quantity, value)` rows against the declared measurement schema and emits one observation per instant with `provenance="measured"` and `as_of` stamped from the datum (naive timestamps are rejected, never localized). |
+| `load_measurements` | CSV/parquet loader for measurement frames handed to `read_measured_observations`; validation lives once, in the reader. |
+| `ObservationProducerRegistry` | Explicit-ID registry over observation producers; no `entry_points` discovery. |
+| `ObservationProducerDescriptor` | Frozen descriptor (`producer_id`, `provenance`, `summary`) carried by each registered producer. |
+| `default_observation_producer_registry` | Registry pre-loaded with the two shipped producers: `powerflow` (simulated, wraps `observe_network`) and `measured-ingest` (measured, wraps `read_measured_observations`). |
+| `UnknownObservationProducerError` | Raised on an unknown producer ID, listing the available IDs. |
+| `ModelAuthoritySet` | CGMES Model Authority Set declaration — which producer owns which canonical artifacts (parquet fields and rules; no RDF). |
+| `ModelProfile` | CGMES profile declaration over the parquet artifacts. |
 
 Adapter discovery uses the same module:
 

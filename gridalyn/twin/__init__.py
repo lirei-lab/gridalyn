@@ -6,7 +6,13 @@ merely what other in-repo modules happen to import from it. The layer owns four
 things and each is reachable here: the canonical model (:class:`NetworkModel`
 and its identity), the repository that loads and validates it, the source
 adapters that produce it, and — since the observation contract came down from
-``gridalyn.simulation`` — the observed state read back off a solved network.
+``gridalyn.simulation`` — the observed state. That observed-state surface has
+two producers, both reachable here: the simulated one reads state off a solved
+network (:func:`observe_network`), and the measured ingest reads tidy
+measurement rows against a user-declared :class:`EntityJoin`
+(:func:`read_measured_observations` / :func:`load_measurements`), each
+resolved by explicit ID through the observation producer registry
+(:func:`default_observation_producer_registry`).
 
 The criterion every entry below satisfies, derived from the entries that were
 already here: a name belongs on this facade when it is a public entry point of
@@ -16,6 +22,15 @@ the layer, or a type that appears in the signature of one. That is why
 this path — they are what :class:`NetworkModelRepository` hands back, and this
 facade is an advertised SDK surface rather than a record of internal imports.
 
+``ModelAuthoritySet`` and ``ModelProfile`` are exported because both source
+adapters' ``authority_sets()`` and ``profiles()`` return them — the criterion
+above, which they were already recorded as meeting. Like every other entry
+they resolve through a sub-facade: ``gridalyn.twin.adapters`` re-exports them
+from the implementation module ``gridalyn.twin.adapters.authority``, and this
+facade points at ``gridalyn.twin.adapters``, never at the implementation.
+(The module path moved from ``…adapters.cim`` to ``…adapters.authority`` in
+review cycle 1 of Phase 11 — see that module's docstring for why.)
+
 Names deliberately NOT re-exported here, each for a measured reason:
 
 * ``BASE_TABLE_SCHEMAS`` / ``table_schema`` (``gridalyn.twin.network.schema``)
@@ -23,15 +38,6 @@ Names deliberately NOT re-exported here, each for a measured reason:
   appears in no public signature and both of its production consumers live
   *inside* this layer, so promoting it would advertise an internal contract as
   SDK surface.
-* ``ModelAuthoritySet`` / ``ModelProfile`` — these *do* meet the criterion
-  (both source adapters' ``authority_sets()`` and ``.profiles()`` return them),
-  but every entry here resolves through a sub-facade, and reaching them would
-  mean either pointing at the implementation module
-  ``gridalyn.twin.adapters.authority`` or first re-exporting them from
-  ``gridalyn.twin.adapters``. Both are outside this change's scope; recorded
-  rather than done half-way. (The module path moved from ``…adapters.cim`` to
-  ``…adapters.authority`` in review cycle 1 of Phase 11 — see that module's
-  docstring for why.)
 * ``AS_OF_ABSENT_REASON`` / ``SCENARIO_TIME_ABSENT_REASON`` — documentation
   constants that travel with their fields, not API.
 """
@@ -45,7 +51,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "CimParquetAdapter": ("gridalyn.twin.adapters", "CimParquetAdapter"),
     "ConnectedEquipment": ("gridalyn.twin.network", "ConnectedEquipment"),
     "DownstreamAssets": ("gridalyn.twin.network", "DownstreamAssets"),
+    "EntityJoin": ("gridalyn.twin.observation", "EntityJoin"),
+    "ModelAuthoritySet": ("gridalyn.twin.adapters", "ModelAuthoritySet"),
     "ModelIdentity": ("gridalyn.twin.network", "ModelIdentity"),
+    "ModelProfile": ("gridalyn.twin.adapters", "ModelProfile"),
     "NetworkAdapterDescriptor": ("gridalyn.twin.adapters", "NetworkAdapterDescriptor"),
     "NetworkAdapterRegistry": ("gridalyn.twin.adapters", "NetworkAdapterRegistry"),
     "NetworkExportResult": ("gridalyn.twin.adapters", "NetworkExportResult"),
@@ -54,6 +63,18 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "NetworkModelRepository": ("gridalyn.twin.network", "NetworkModelRepository"),
     "NetworkObservation": ("gridalyn.twin.observation", "NetworkObservation"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters", "NetworkSourceAdapter"),
+    "ObservationProducerDescriptor": (
+        "gridalyn.twin.observation",
+        "ObservationProducerDescriptor",
+    ),
+    "ObservationProducerRegistry": (
+        "gridalyn.twin.observation",
+        "ObservationProducerRegistry",
+    ),
+    "ObservationProvenance": (
+        "gridalyn.twin.observation",
+        "ObservationProvenance",
+    ),
     "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
     "SyntheticPandapowerAdapter": (
         "gridalyn.twin.adapters",
@@ -62,6 +83,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "UnknownNetworkAdapterError": (
         "gridalyn.twin.adapters",
         "UnknownNetworkAdapterError",
+    ),
+    "UnknownObservationProducerError": (
+        "gridalyn.twin.observation",
+        "UnknownObservationProducerError",
     ),
     "build_network_adapter_validation_report": (
         "gridalyn.twin.adapters",
@@ -72,12 +97,21 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.adapters",
         "default_network_adapter_registry",
     ),
+    "default_observation_producer_registry": (
+        "gridalyn.twin.observation",
+        "default_observation_producer_registry",
+    ),
     "describe_network_source_adapter": (
         "gridalyn.twin.adapters",
         "describe_network_source_adapter",
     ),
+    "load_measurements": ("gridalyn.twin.observation", "load_measurements"),
     "north_america_profile": ("gridalyn.twin.semantic", "north_america_profile"),
     "observe_network": ("gridalyn.twin.observation", "observe_network"),
+    "read_measured_observations": (
+        "gridalyn.twin.observation",
+        "read_measured_observations",
+    ),
     "validate_semantic_graph": ("gridalyn.twin.semantic", "validate_semantic_graph"),
     "write_network_adapter_validation_report": (
         "gridalyn.twin.adapters",

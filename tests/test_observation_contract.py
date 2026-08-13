@@ -154,6 +154,7 @@ def test_violation_counts_exclude_buses_exactly_at_the_limits() -> None:
         bus_voltage_pu=np.array([0.95, 1.05, 0.9499999, 1.0500001]),
         line_loading_percent=np.array([]),
         total_line_loss_mw=0.0,
+        provenance="simulated",
     )
 
     assert exactly_at_limits.voltage_violation_counts(below_pu=0.95, above_pu=1.05) == (
@@ -253,6 +254,7 @@ def test_the_contract_does_not_require_a_pandapower_network() -> None:
         bus_voltage_pu=np.array([1.0, 0.94, 1.06]),
         line_loading_percent=np.array([10.0, 120.0]),
         total_line_loss_mw=0.25,
+        provenance="simulated",
     )
 
     assert surrogate.min_voltage_pu == 0.94
@@ -326,8 +328,9 @@ def _observe_calls(source: str) -> list[tuple[int, bool]]:
     question than the one asked.
 
     A ``**kwargs`` unpacking counts as timing the call. What it forwards is not
-    knowable statically, so treating it as absent would let the deferral end
-    without this gate noticing -- which is the single thing it exists to catch.
+    knowable statically, so treating it as absent would let a timed call site
+    appear without the gate below noticing -- which is the single thing it
+    exists to catch.
 
     Args:
         source: Python source of a module to scan.
@@ -361,29 +364,35 @@ def _observe_calls(source: str) -> list[tuple[int, bool]]:
 MEASURED_PRODUCTION_OBSERVE_CALLS = 13
 
 
-def test_no_production_call_site_supplies_an_instant() -> None:
-    """The ``as_of`` deferral is pinned, so its end is visible.
+def test_the_simulated_path_still_supplies_no_instant() -> None:
+    """The positive contract: ``observe_network`` call sites pass no ``as_of``.
 
-    Phase 11's other two deferrals are gated -- no producer registry by
-    ``test_no_state_producer_registry_was_built``, and ``scenario_time`` by its
-    own ``None``-only type. This one was not, so nothing held the claim that
-    all 13 production call sites pass no instant.
+    A solved network carries no clock -- one converged operating point with no
+    record of which instant it represents -- so every production
+    ``observe_network`` call site passes no instant, and ``None`` there is a
+    fact about the producer, not a gap (:data:`AS_OF_ABSENT_REASON`). The
+    measured path, which does not call ``observe_network`` at all, always
+    stamps one from the datum -- pinned by ``tests/test_measured_ingest.py``.
 
-    It is a **deferral marker, not a prohibition**. Going red is the correct
-    outcome the day a producer with a real instant appears: whoever plumbs one
-    is then handed :data:`AS_OF_ABSENT_REASON`, which is exactly the text they
-    need to have read before deciding the instant is real.
+    This replaces Phase 11's deferral marker
+    ``test_no_production_call_site_supplies_an_instant``, retired deliberately
+    by plan 12-04. That marker said "Going red is the correct outcome the day
+    a producer with a real instant appears" -- the day arrived in Phase 12,
+    via a producer that constructs observations *directly*
+    (``read_measured_observations`` never calls ``observe_network``), so the
+    scan stayed green and the marker's assertion became this positive
+    contract rather than a red gate.
 
-    One such instant already exists and is deliberately not plumbed:
+    The marker's own retirement condition is adjudicated here, not skipped.
+    It named one real instant deliberately not plumbed --
     ``coincident_peak_loads_mw`` (``gridalyn/assets/datagen/api.py``) computes
-    ``per_bus.sum(axis=1).idxmax()`` -- a real tz-aware ``Timestamp``, since the
-    generated profiles carry a ``DatetimeIndex`` -- uses it to select a row and
-    then returns ``dict[int, float]``, discarding it. Reproduced 2026-08-12 at
-    ``n_units=6, seed=42, day="cold", weather="synthetic"``:
-    ``Timestamp('2023-12-18 19:45:00-0500', tz='America/Toronto')``. The minute
-    moves with the generation parameters; the date and the fact that an instant
-    exists do not. Carrying it to a call site is Phase-12 scope, not an
-    oversight to be quietly fixed here.
+    a tz-aware ``idxmax()`` ``Timestamp`` and discards it -- and said
+    "Carrying it to a call site is Phase-12 scope". Phase 12 deliberately did
+    NOT plumb it: the 2026-08-13 user decision (STATE.md / MILESTONE-6)
+    REJECTED populating ``as_of`` from the synthetic generator, because it
+    would close R20 criterion 4 mechanically while leaving both producers
+    simulated. The deferral ended through the measured ingest instead, so the
+    synthetic instant stays discarded and the simulated path stays untimed.
     """
     timed: dict[str, list[int]] = {}
     total = 0
@@ -400,9 +409,10 @@ def test_no_production_call_site_supplies_an_instant() -> None:
         "may be looking for a name that no longer exists"
     )
     assert not timed, (
-        f"{sum(len(v) for v in timed.values())} production call site(s) now "
-        f"supply as_of: {timed}. This gate is the deferral marker, so read "
-        f"AS_OF_ABSENT_REASON before removing it -- {AS_OF_ABSENT_REASON}"
+        f"{sum(len(v) for v in timed.values())} production observe_network "
+        f"call site(s) supply as_of: {timed}. A solved network carries no "
+        "clock, so a simulated call site with an instant must show where the "
+        f"instant is real -- read AS_OF_ABSENT_REASON first: {AS_OF_ABSENT_REASON}"
     )
 
 
@@ -424,6 +434,53 @@ def test_the_as_of_scan_would_catch_a_supplied_instant() -> None:
     assert _observe_calls("observe_network(net, **options)") == [(1, True)]
     # Prose naming the keyword is not a call.
     assert _observe_calls("# observe_network(net, as_of=instant) is forbidden") == []
+
+
+# --------------------------------------------------------------------------
+# (f) provenance: required, stamped by the producer, carried by the filter
+# --------------------------------------------------------------------------
+# Red-first note: the required field makes red-first structural -- these tests
+# cannot even construct their subjects on the pre-provenance tree, where the
+# field does not exist, so they fail there by construction.
+
+
+def test_provenance_is_required() -> None:
+    """Constructing without provenance is a ``TypeError``, not a default.
+
+    A default would silently mislabel every external direct construction, so
+    the field is required deliberately: no producer can omit the answer.
+    """
+    with pytest.raises(TypeError):
+        NetworkObservation(  # type: ignore[call-arg]
+            converged=True,
+            bus_ids=np.empty(0, dtype=int),
+            bus_voltage_pu=np.empty(0, dtype=float),
+            line_loading_percent=np.empty(0, dtype=float),
+            total_line_loss_mw=None,
+        )
+
+
+def test_observe_network_stamps_simulated() -> None:
+    """``observe_network`` reads solver results, so it always stamps simulated."""
+    assert observe_network(_solved_ieee33()).provenance == "simulated"
+
+
+def test_drop_missing_carries_provenance() -> None:
+    """``drop_missing`` narrows the arrays; it does not re-source the state.
+
+    Built with ``provenance="measured"`` deliberately: this also proves the
+    type admits the measured literal before its producer ships.
+    """
+    measured = NetworkObservation(
+        converged=True,
+        bus_ids=np.array([0, 1, 2]),
+        bus_voltage_pu=np.array([1.0, np.nan, 0.97]),
+        line_loading_percent=np.empty(0, dtype=float),
+        total_line_loss_mw=None,
+        provenance="measured",
+    )
+
+    assert measured.drop_missing().provenance == "measured"
 
 
 # --------------------------------------------------------------------------

@@ -137,18 +137,23 @@ of simulation leftovers.
 **What class of thing it is — read this before quoting the section title.**
 The heading names the layer's *target*, not its measured class. Under the
 Kritzinger taxonomy — which separates the classes by *automated data flow*, not
-by fidelity — `gridalyn.twin` today is a **digital model with provenance, a
-declared schema, and a place for a clock**. It is not a digital shadow, which
-would need automated one-way flow from a physical counterpart, and not a digital
-twin, which would need both directions. Every `NetworkObservation` in the
-repository is read off a *solved* network — a simulation result, not a
-measurement — and every production `observe_network(...)` call site passes
-`as_of=None`, correctly, because none has a real instant to offer. The list
-below is what the layer **owns**; it is not a claim that any of it is fed from a
-physical feeder. See
+by fidelity — `gridalyn.twin` is a **canonical, identified, schema-declared
+digital model**, and the SDK ships the measured-state ingest path — automated
+one-way physical → digital flow. `gridalyn.twin.observation` carries two real
+producers of one contract, distinguished by the required
+`NetworkObservation.provenance` field: `powerflow` reads a *solved* network and
+stamps `"simulated"`, and `measured-ingest`
+(`read_measured_observations`) reads `(timestamp, entity_id, quantity, value)`
+rows against a declared schema and stamps `as_of` from the datum. A deployment
+becomes a digital *shadow* when a user feeds that path their own measured
+data. The SDK cannot ship measured data: both producers it exercises in CI
+remain simulated-or-fixture, and the measured path at scale is
+operator-receipted (protocol `measured-state-ingest`). The list below is what
+the layer **owns**; it is not a claim that any committed artifact is fed from
+a physical feeder. See
 [Network Model](../concepts/network-model.md#what-class-of-thing-this-is) for
-the measurement and for the single thing that would move it up a class.
-Bidirectional flow is a recorded **non-goal**, not an omission.
+the measurement behind that statement. Bidirectional flow — a digital *twin* —
+is a recorded **non-goal**, not an omission.
 
 **Owns:**
 

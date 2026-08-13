@@ -56,6 +56,7 @@ REQUIRED_PROTOCOLS: tuple[str, ...] = (
     "docs-instruction-sweep",
     "subprocess-coverage",
     "r7-twin-consumer-identity",
+    "measured-state-ingest",
 )
 
 #: Fields every receipt carries, whatever its status.

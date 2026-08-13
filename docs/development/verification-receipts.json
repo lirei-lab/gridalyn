@@ -74,7 +74,7 @@
           "name": "generate_annual_mc",
           "status": "skipped",
           "duration_s": null,
-          "reason": "heavy — requires operator full regen"
+          "reason": "heavy \u2014 requires operator full regen"
         },
         {
           "name": "compute_congestion_annual",
@@ -194,11 +194,11 @@
     },
     "r7-twin-consumer-identity": {
       "status": "recorded",
-      "command": "python tools/r7_twin_consumer_identity.py d6aa606e 6ed179c0 -- captures NetworkModelRepository.load_model(), .validate_integrity() and build_dashboard_catalog() over ONE base directory through each ref's own git worktree, hashes the result, and classifies the difference as identical / additive / regressed.",
-      "commit": "6ed179c08cd326c85579493dbb721ba1f67b1ea6",
-      "recorded_on": "2026-08-12",
-      "result": "ADDITIVE - R7 HOLDS. d6aa606e (pre-phase) sha256 b814f5be4e2d393ec7f0f717a4a96bcdf4c84236b72e1a7863db50bbc33a280b; 6ed179c0 (post-phase) sha256 f0e989a69c8e75ce92d2de7585995adf4be6e1cbbe6e764fab45ffd86d736a2f. 9 keys added (load_model.identity.{created,dependent_on,id,profile,scenario_time,version} plus load_model.{provenance_status,source_adapter,source_standard}), 0 keys removed, 0 pre-existing values changed. The five table content digests, the six counts and the whole validate_integrity summary are bit-for-bit equal on both sides.",
-      "evidence": "The digest covers, and only covers: load_model() counts (6 keys), source_adapter, source_standard, provenance_status, every ModelIdentity field, and a content sha256 of each of the five canonical tables (columns, dtypes, rows); validate_integrity() valid/errors/warnings/summary; and the whole build_dashboard_catalog() mapping minus created_at. created_at is stripped because build_dashboard_catalog derives it from datetime.now() -- a pre-existing non-determinism, disclosed in tools/r7_twin_consumer_identity.py rather than hidden. identity.created is NOT stripped: it is read from the base manifest, so it is constant for a fixed base and a code change that stopped propagating it is a real difference. Base fingerprint at the recorded run: metadata.json 7b4279cf8d9541b18f6cb005e9f096fbcb99bb4749da1c150499f683e8aacad0, grid_buses 045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e, grid_lines 5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260, grid_transformers 2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3, buildings 1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc, building_grid_connectivity bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac. Determinism control: the same ref captured twice in two independent worktrees yields the identical digest b814f5be. Vacuity control: each child reports the directory it imported gridalyn from and the parent asserts it lies inside that ref's worktree, so a capture that silently read the main checkout fails instead of reporting a perfect match against itself. Supersedes the unreproducible sha256 7dbcbb4c cited in 11-06-SUMMARY.md, whose harness was not preserved, and the reviewer's independent ee5a3e4b; those two disagree because they hashed different field sets, which is exactly why this receipt states its field set.",
+      "command": "python tools/r7_twin_consumer_identity.py 7e40a57a 46f2e737 -- captures NetworkModelRepository.load_model(), .validate_integrity() and build_dashboard_catalog() over ONE base directory through each ref's own git worktree, hashes the result, and classifies the difference as identical / additive / regressed.",
+      "commit": "46f2e737322a1b26552c61045ef5a48e4ab802fa",
+      "recorded_on": "2026-08-13",
+      "result": "IDENTICAL - R7 HOLDS. 7e40a57a (pre-Phase-12, the Phase-11 merge) sha256 f209cc7a1486e8258994edfc06f591114720be5da63eebdc6a26f3aa69ddc11c; 46f2e737 (Phase-12 close) sha256 f209cc7a1486e8258994edfc06f591114720be5da63eebdc6a26f3aa69ddc11c. 0 keys added, 0 keys removed, 0 pre-existing values changed. Identity holds THROUGH Phase 12's consumer changes: 12-02 repointed dashboard_catalog's model_version_id from the raw manifest read to model.identity.id, which is value-neutral over this base because the committed manifest's model_version_id equals identity.id -- the verdict measures that equality rather than assuming it. Re-recorded at phase close because 12-02 touched two watched prefixes (gridalyn/twin/network, gridalyn/projects/dashboard_catalog.py) and the previous receipt (recorded 2026-08-12 at 6ed179c0, verdict ADDITIVE d6aa606e->6ed179c0) had gone stale.",
+      "evidence": "The digest covers, and only covers: load_model() counts (6 keys), source_adapter, source_standard, provenance_status, every ModelIdentity field, and a content sha256 of each of the five canonical tables (columns, dtypes, rows); validate_integrity() valid/errors/warnings/summary; and the whole build_dashboard_catalog() mapping minus created_at. created_at is stripped because build_dashboard_catalog derives it from datetime.now() -- a pre-existing non-determinism, disclosed in tools/r7_twin_consumer_identity.py rather than hidden. identity.created is NOT stripped: it is read from the base manifest, so it is constant for a fixed base and a code change that stopped propagating it is a real difference. Base fingerprint at the recorded run: metadata.json 6e1b5d1eaee9dfe4f331f546d6097a5aba1aa738dcfb2e3011622c1c35a54e3e, grid_buses 045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e, grid_lines 5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260, grid_transformers 2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3, buildings 1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc, building_grid_connectivity bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac. Vacuity control: each child reports the directory it imported gridalyn from and the parent asserts it lies inside that ref's worktree (this run: /tmp/r7-7e40a57a-xjxypqfe/gridalyn and /tmp/r7-HEAD-z75e_mil/gridalyn), so a capture that silently read the main checkout fails instead of reporting a perfect match against itself. The determinism control (same ref captured twice yields the same digest) was established on the 2026-08-12 run; this run's cross-ref equality over two independent worktrees is consistent with it.",
       "watched": [
         "gridalyn/twin/network",
         "gridalyn/projects/dashboard_catalog.py",
@@ -206,6 +206,43 @@
         "tools/r7_twin_consumer_identity.py"
       ],
       "rationale": "CI cannot run this. The base parquets are gitignored, so a runner has no base to capture over, and regenerating one produces a different created_at and therefore a different digest -- the comparison would measure the regeneration rather than the code. The protocol also needs full git history and two working trees. It is cheap for an operator (~40 s) and is the check to re-run whenever anything under `watched` moves; the gate will report it STALE, which is the intended signal, not a failure."
+    },
+    "measured-state-ingest": {
+      "status": "recorded",
+      "command": ".venv/bin/python tools/measured_ingest_proof.py -- feeds datasets/hq's real measured time axis (35,041 15-min instants, 2018-04-03 to 2019-04-03) and real 1000-entity set through the SHIPPED gridalyn.twin.observation.ingest.read_measured_observations in ONE whole-frame call (35,041,000 tidy rows, no batching -- whole-frame processing is what keeps the shipped duplicate-detection semantics honest), with an operator-declared demo join (EntityJoin.from_mapping, hq_home_{col} -> bus_{col}).",
+      "commit": "6e7928504778dac9433ef464ec91101a733d3b47",
+      "recorded_on": "2026-08-13",
+      "result": "35,041 NetworkObservation(provenance='measured') emitted, one per real instant, as_of spanning 2018-04-03T00:00:00+00:00 to 2019-04-03T00:00:00+00:00; ingest 237.7 s, total 239.6 s, peak RSS 7.6 GB on the operator machine. This proves MECHANICS AT SCALE on real measured timestamps and entities through the shipped path unchanged -- it does NOT prove real voltage data: datasets/hq carries no voltage channel, so the voltage VALUES were synthesized (numpy.random.default_rng(42)) and value-level correctness is proven separately by the CI-visible fixture tests in tests/test_measured_ingest.py. The stored axis is a naive uniform grid with no DST fold, read as UTC; this receipt makes NO DST claim. The entity-to-bus join is operator-declared demo configuration written by the proof script, never inferred.",
+      "evidence": {
+        "shipped_path": "gridalyn.twin.observation.ingest.read_measured_observations (one whole-frame call, no batching)",
+        "source_file": "datasets/hq/consumption.h5",
+        "n_instants": 35041,
+        "n_entities": 1000,
+        "n_tidy_rows": 35041000,
+        "first_as_of_utc": "2018-04-03T00:00:00+00:00",
+        "last_as_of_utc": "2019-04-03T00:00:00+00:00",
+        "axis_reading_disclosure": "naive uniform grid read as UTC; no DST fold present in the data -- tz_localize('America/Toronto') raises AmbiguousTimeError and choosing offset policies would manufacture evidence, so the axis is localized with tz_localize('UTC') (lossless, policy-free) and no DST claim is made",
+        "synthesis_disclosure": "voltage VALUES are SYNTHESIZED (1.0 + small deterministic variation, numpy.random.default_rng(42)): datasets/hq carries per-home consumption/heating kW and weather, NO voltage channel, and NetworkObservation's measured-mappable field is bus_voltage_pu -- relabeling kW as voltage would fabricate data. This proof claims mechanics-at-scale on real measured timestamps and entities, never real voltage data.",
+        "join_disclosure": "the entity-to-bus join is operator-declared demo configuration written by this script (EntityJoin.from_mapping, hq_home_{col} -> bus_{col}); HQ's anonymous ordinal columns carry no key into the twin's bus namespace, so nothing is inferred",
+        "elapsed_seconds_ingest": 237.67,
+        "elapsed_seconds_total": 239.63,
+        "peak_rss_mb": 7604.0,
+        "sampled_observation": {
+          "index": 17520,
+          "as_of_utc": "2018-10-02T12:00:00+00:00",
+          "provenance": "measured",
+          "converged": true,
+          "n_bus_ids": 1000,
+          "first_bus_id": "bus_0",
+          "first_voltage_pu": 1.000944
+        }
+      },
+      "watched": [
+        "gridalyn/twin/observation/ingest.py",
+        "gridalyn/twin/observation/contract.py",
+        "tools/measured_ingest_proof.py"
+      ],
+      "rationale": "CI cannot run this: datasets/hq is gitignored operator-local data (consumption.h5 ~268 MB) that never ships, and the whole-frame year-at-scale run needs ~7.6 GB of RAM and ~3.5 minutes of wall clock. The at-scale proof of the measured path is therefore operator-verified and accounted for here (R20 criterion: an operator-verified proof case exists for the measured path); the shipped path's value-level behaviour stays CI-proven by tests/test_measured_ingest.py. Re-recorded at the review-cycle-1 fix commit: the first record pinned a commit that predated the proof script itself (born stale), and the cycle-1 fixes changed the shipped ingest path (missing-timestamp rejection), so the full run was re-executed against the fixed path and re-pinned where script and code coexist."
     }
   }
 }

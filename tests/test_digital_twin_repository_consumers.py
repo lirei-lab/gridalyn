@@ -16,7 +16,19 @@ from gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph im
 
 class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
     def _base_model(self):
+        class FakeIdentity:
+            id = "model:sha256:fake-identity"
+
         class FakeModel:
+            counts = {
+                "buses": 1,
+                "lines": 1,
+                "transformers": 1,
+                "buildings": 1,
+                "loads": 1,
+                "connectivity": 1,
+            }
+            identity = FakeIdentity()
             buses = pd.DataFrame(
                 [
                     {
@@ -32,7 +44,13 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
                 [{"line_id": "line:0", "from_bus_id": "bus:0", "to_bus_id": "bus:0"}]
             )
             transformers = pd.DataFrame(
-                [{"transformer_id": "transformer:0", "hv_bus_id": "bus:0", "lv_bus_id": "bus:0"}]
+                [
+                    {
+                        "transformer_id": "transformer:0",
+                        "hv_bus_id": "bus:0",
+                        "lv_bus_id": "bus:0",
+                    }
+                ]
             )
             buildings = pd.DataFrame(
                 [
@@ -65,6 +83,7 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
         class FakeReport:
             valid = True
             errors = ()
+            warnings = ()
 
         class FakeRepository:
             @classmethod
@@ -127,11 +146,16 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
             (timeseries_dir / "powerflow_smoke_summary.json").write_text(json.dumps({}))
             (timeseries_dir / "ev_load_summary.json").write_text(json.dumps({}))
 
-            with patch(
-                "gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph.NetworkModelRepository",
-                self._repository_class(),
-                create=True,
-            ), patch.object(pd, "read_parquet", side_effect=self._read_parquet_side_effect):
+            with (
+                patch(
+                    "gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph.NetworkModelRepository",
+                    self._repository_class(),
+                    create=True,
+                ),
+                patch.object(
+                    pd, "read_parquet", side_effect=self._read_parquet_side_effect
+                ),
+            ):
                 nodes, edges, manifest = generate_semantic_graph(
                     profile="north_america",
                     base_dir=root / "base",
@@ -145,7 +169,9 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
         self.assertIn("building:0", set(nodes["node_id"]))
         self.assertGreaterEqual(len(edges), 1)
 
-    def test_flexibility_provider_generation_uses_network_repository_for_connectivity(self):
+    def test_flexibility_provider_generation_uses_network_repository_for_connectivity(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             scenario_dir = root / "scenarios"
@@ -155,11 +181,16 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
             scenario_dir.mkdir(parents=True)
             scenario_model_dir.mkdir(parents=True)
 
-            with patch(
-                "gridalyn.projects.workflows.scripts.generate_digital_twin_flexibility_providers.NetworkModelRepository",
-                self._repository_class(),
-                create=True,
-            ), patch.object(pd, "read_parquet", side_effect=self._read_parquet_side_effect):
+            with (
+                patch(
+                    "gridalyn.projects.workflows.scripts.generate_digital_twin_flexibility_providers.NetworkModelRepository",
+                    self._repository_class(),
+                    create=True,
+                ),
+                patch.object(
+                    pd, "read_parquet", side_effect=self._read_parquet_side_effect
+                ),
+            ):
                 summary = generate_flexibility_provider_artifacts(
                     base_dir=root / "base",
                     scenario_dir=scenario_dir,
@@ -169,6 +200,31 @@ class DigitalTwinRepositoryConsumersTest(unittest.TestCase):
 
             self.assertEqual(summary["n_providers"], 2)
             self.assertTrue((out_dir / "provider_registry.parquet").exists())
+
+    def test_dashboard_catalog_model_version_id_comes_from_model_identity(self):
+        # The catalog's model_version_id must be sourced from the identity
+        # layer (model.identity.id), not read back out of the raw metadata
+        # dict: the fake repository points at a base with no metadata.json, so
+        # the raw read would yield None while the identity carries the id.
+        from gridalyn.projects.dashboard_catalog import build_dashboard_catalog
+
+        repository = self._repository_class().from_parquet(Path("nonexistent_base_dir"))
+        catalog = build_dashboard_catalog(
+            scenario_index={},
+            powerflow_summary={},
+            optional_extensions=None,
+            root=Path("."),
+            network_repository=repository,
+        )
+
+        self.assertEqual(
+            catalog["network_model"]["model_version_id"],
+            repository.load_model().identity.id,
+        )
+        self.assertEqual(
+            catalog["network_model"]["model_version_id"],
+            "model:sha256:fake-identity",
+        )
 
 
 if __name__ == "__main__":

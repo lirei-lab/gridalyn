@@ -31,6 +31,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.contract",
         "BUS_VOLTAGE_COLUMN",
     ),
+    "EntityJoin": (
+        "gridalyn.twin.observation.ingest",
+        "EntityJoin",
+    ),
     "LINE_LOADING_COLUMN": (
         "gridalyn.twin.observation.contract",
         "LINE_LOADING_COLUMN",
@@ -39,13 +43,49 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.contract",
         "LINE_LOSS_COLUMN",
     ),
+    "MEASUREMENT_COLUMNS": (
+        "gridalyn.twin.observation.ingest",
+        "MEASUREMENT_COLUMNS",
+    ),
     "NetworkObservation": (
         "gridalyn.twin.observation.contract",
         "NetworkObservation",
     ),
+    "ObservationProducerDescriptor": (
+        "gridalyn.twin.observation.registry",
+        "ObservationProducerDescriptor",
+    ),
+    "ObservationProducerRegistry": (
+        "gridalyn.twin.observation.registry",
+        "ObservationProducerRegistry",
+    ),
+    "ObservationProvenance": (
+        "gridalyn.twin.observation.contract",
+        "ObservationProvenance",
+    ),
+    "SUPPORTED_QUANTITIES": (
+        "gridalyn.twin.observation.ingest",
+        "SUPPORTED_QUANTITIES",
+    ),
+    "UnknownObservationProducerError": (
+        "gridalyn.twin.observation.registry",
+        "UnknownObservationProducerError",
+    ),
+    "default_observation_producer_registry": (
+        "gridalyn.twin.observation.registry",
+        "default_observation_producer_registry",
+    ),
+    "load_measurements": (
+        "gridalyn.twin.observation.ingest",
+        "load_measurements",
+    ),
     "observe_network": (
         "gridalyn.twin.observation.contract",
         "observe_network",
+    ),
+    "read_measured_observations": (
+        "gridalyn.twin.observation.ingest",
+        "read_measured_observations",
     ),
 }
 

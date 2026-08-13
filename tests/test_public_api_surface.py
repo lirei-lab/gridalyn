@@ -43,12 +43,16 @@ from __future__ import annotations
 
 import ast
 import importlib
+import inspect
 import json
+import re
 import subprocess
 import sys
+import typing
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -336,3 +340,251 @@ def test_public_facade_dir_has_no_duplicates_after_resolution(
         f"not concatenate them"
     )
     assert names == sorted(names), f"dir({module_name}) is not sorted"
+
+
+# ---------------------------------------------------------------------------
+# The gridalyn.twin facade-membership criterion, asserted mechanically.
+#
+# The twin facade's docstring states the criterion a name must meet to be
+# exported: "a public entry point of the layer, or a type that appears in the
+# signature of one". Until Phase 12 that criterion lived only in prose, so a
+# name could be added to the map without meeting it and nothing went red.
+# ``test_twin_facade_membership_criterion`` encodes it over the real
+# ``_LAZY_EXPORTS`` map.
+#
+# The naive encoding was measured VACUOUS and is deliberately not used: a
+# clause "the export is callable" admits everything including a ``Literal``
+# alias, and a clause "appears in another exported *module-level callable's*
+# signature" is false for 8 real exports (they are returned or accepted by
+# METHODS of exported classes, not by module-level functions), while
+# ``inspect.signature`` crashes with ``ValueError`` on exception types. The
+# encoding below therefore harvests raw annotation *strings* from exported
+# functions AND from public methods and field annotations of exported classes.
+# ---------------------------------------------------------------------------
+
+#: Exported classes that are API roots: users instantiate them to *start* a
+#: flow, so no exported signature can reference them -- they are the origin,
+#: not a value passed through one. EXTENSION-ONLY: later plans may APPEND a
+#: name here with a one-line reason (12-04 appends its registry names); never
+#: remove entries or weaken the mechanism.
+ENTRY_POINT_CLASSES: tuple[str, ...] = (
+    # Source adapter users construct to load a CIM parquet snapshot; it is the
+    # producer at the head of the model data flow, so nothing signs it.
+    "CimParquetAdapter",
+    # Source adapter users construct to export the synthetic committed base;
+    # same head-of-flow reasoning as CimParquetAdapter.
+    "SyntheticPandapowerAdapter",
+    # 12-04 append: users instantiate/hold the observation producer registry
+    # as an API root. It also appears in default_observation_producer_registry's
+    # return annotation, so the pool branch claims it first; this entry records
+    # the API-root reason rather than deciding the branch.
+    "ObservationProducerRegistry",
+    # Review-cycle-1 append: the repository users construct (via from_parquet
+    # or directly) to load and validate the canonical model -- the API root of
+    # the model-loading flow, per the twin facade's own docstring. Exposed by
+    # the candidate-exclusive pool fix: its only annotation naming it was its
+    # own from_parquet return, i.e. it was self-signing.
+    "NetworkModelRepository",
+    # Review-cycle-1 append, same pool fix: the semantic-graph repository is
+    # external-facing public API by recorded decision (Phase 9, finding G9 --
+    # kept for external consumers despite zero internal ones), i.e. an API
+    # root nothing in-repo signs by design.
+    "SemanticGraphRepository",
+)
+
+#: Exported exception types. Exceptions are raised, not signed -- they appear
+#: in ``Raises:`` docstring sections, never in annotations -- and
+#: ``inspect.signature`` raises ``ValueError`` on builtin exception types.
+#: EXTENSION-ONLY, same rule as :data:`ENTRY_POINT_CLASSES`.
+EXCEPTION_EXPORTS: tuple[str, ...] = (
+    "UnknownNetworkAdapterError",
+    # 12-04 append: raised by the observation producer registry on an unknown
+    # producer ID; exceptions are raised, not signed.
+    "UnknownObservationProducerError",
+)
+
+
+def _annotation_strings(func: Any) -> list[str]:
+    """Harvest a callable's annotations as raw source strings.
+
+    ``__annotations__`` is the primary source: under ``from __future__ import
+    annotations`` (repo-wide convention) it holds the annotation *source text*,
+    so a typing-alias name like ``ObservationProvenance`` survives verbatim --
+    ``typing.get_type_hints`` would resolve it to ``Literal[...]`` and lose the
+    name. ``inspect.signature`` is consulted as a secondary source and wrapped
+    in ``try/except (ValueError, TypeError)`` because it has no signature for
+    builtin types such as exception classes.
+
+    Args:
+        func: Callable to harvest.
+
+    Returns:
+        Every annotation rendered as a string, parameters and return alike.
+    """
+    parts = [
+        str(value) for value in (getattr(func, "__annotations__", None) or {}).values()
+    ]
+    try:
+        signature = inspect.signature(func)
+    except (ValueError, TypeError):
+        return parts
+    parts.extend(
+        str(parameter.annotation)
+        for parameter in signature.parameters.values()
+        if parameter.annotation is not inspect.Parameter.empty
+    )
+    if signature.return_annotation is not inspect.Signature.empty:
+        parts.append(str(signature.return_annotation))
+    return parts
+
+
+def _referenced_name_pool(resolved: dict[str, Any], *, exclude: str) -> str:
+    """Collect the annotation strings reachable from the surface, minus one.
+
+    Sources, per the membership criterion: annotations of every exported
+    module-level function; annotations of every *public* method of every
+    exported class (walking ``vars(cls)`` and unwrapping ``classmethod``,
+    ``staticmethod`` and ``property``); and the class-level field annotation
+    strings of every exported class (which is where dataclass fields live).
+
+    The export named ``exclude`` contributes nothing: when the criterion
+    asks whether export N appears in a public signature, N's own method and
+    field annotations must not count -- a class trivially names itself
+    (``from_frame(cls, ...) -> EntityJoin``), so a pool that included the
+    candidate would let every class sign its own membership and the gate
+    would stop distinguishing anything.
+
+    Args:
+        resolved: Exported name to resolved object.
+        exclude: The candidate export whose own annotations are omitted.
+
+    Returns:
+        str: The pooled annotation text, newline-joined for whole-word
+            searching.
+    """
+    parts: list[str] = []
+    for export_name, obj in resolved.items():
+        if export_name == exclude:
+            continue
+        if inspect.isfunction(obj):
+            parts.extend(_annotation_strings(obj))
+            continue
+        if not inspect.isclass(obj):
+            continue
+        parts.extend(
+            str(value)
+            for value in (getattr(obj, "__annotations__", None) or {}).values()
+        )
+        for attr_name, attribute in vars(obj).items():
+            if attr_name.startswith("_"):
+                continue
+            func = attribute
+            if isinstance(attribute, (classmethod, staticmethod)):
+                func = attribute.__func__
+            elif isinstance(attribute, property):
+                func = attribute.fget
+            if not inspect.isfunction(func):
+                continue
+            parts.extend(_annotation_strings(func))
+    return "\n".join(parts)
+
+
+def _is_typing_alias(obj: Any) -> bool:
+    """Return whether an export is a typing construct rather than a class."""
+    return (
+        typing.get_origin(obj) is not None or getattr(obj, "__module__", "") == "typing"
+    )
+
+
+def test_twin_facade_membership_criterion() -> None:
+    """Every ``gridalyn.twin`` export must meet the facade-membership criterion.
+
+    The criterion, from the facade docstring: a name belongs on the facade when
+    it is a public entry point of the layer, or a type that appears in the
+    signature of one. Encoded over the real ``_LAZY_EXPORTS`` map (AST-extracted
+    by this file's discovery walk), an export passes when it is:
+
+    1. a module-level function -- an entry point itself; or
+    2. named, as a whole word, in its candidate-exclusive referenced-name
+       pool -- the raw annotation strings of every exported function, every
+       public method of every exported class, and every exported class's
+       field annotations, EXCLUDING the candidate's own annotations, so a
+       class cannot sign its own membership by naming itself; or
+    3. a class listed in :data:`ENTRY_POINT_CLASSES` -- an API root users
+       instantiate to start a flow, so nothing upstream can sign it; or
+    4. an ``Exception`` subclass listed in :data:`EXCEPTION_EXPORTS` --
+       exceptions are raised, not signed.
+
+    :data:`ENTRY_POINT_CLASSES` and :data:`EXCEPTION_EXPORTS` are
+    EXTENSION-ONLY: later plans may append a name with a one-line reason (12-04
+    appends its registry names there), but must never remove entries or weaken
+    the mechanism. A new map entry matching none of the four branches fails
+    here and must either earn a signature reference or be appended to the
+    matching allowlist with its reason.
+    """
+    exports = LAZY_MODULES["gridalyn.twin"]
+    module = importlib.import_module("gridalyn.twin")
+    resolved = {name: getattr(module, name) for name in exports}
+
+    # Step 1: every export resolves and is a function, class or typing alias.
+    for name, obj in resolved.items():
+        assert (
+            inspect.isfunction(obj) or inspect.isclass(obj) or _is_typing_alias(obj)
+        ), (
+            f"gridalyn.twin.{name} is neither a function, a class nor a typing "
+            f"alias ({type(obj).__name__}); the facade exports entry points and "
+            "the types in their signatures, not arbitrary objects"
+        )
+
+    # The allowlists must describe the map they gate, or they rot silently.
+    for name in ENTRY_POINT_CLASSES:
+        assert name in resolved, f"ENTRY_POINT_CLASSES lists {name!r}, not exported"
+        assert inspect.isclass(resolved[name]), f"{name!r} is not a class"
+    for name in EXCEPTION_EXPORTS:
+        assert name in resolved, f"EXCEPTION_EXPORTS lists {name!r}, not exported"
+        assert inspect.isclass(resolved[name]) and issubclass(
+            resolved[name], Exception
+        ), f"{name!r} is not an Exception subclass"
+
+    # Steps 2-3: each export passes through exactly the four stated branches.
+    # The pool is rebuilt per candidate, excluding the candidate's own
+    # annotations, so no export signs its own membership.
+    branch_hits = {"function": 0, "pool": 0, "entry_point": 0, "exception": 0}
+    for name, obj in sorted(resolved.items()):
+        if inspect.isfunction(obj):
+            branch_hits["function"] += 1
+            continue
+        pool = _referenced_name_pool(resolved, exclude=name)
+        if re.search(rf"\b{re.escape(name)}\b", pool):
+            branch_hits["pool"] += 1
+            continue
+        if inspect.isclass(obj) and name in ENTRY_POINT_CLASSES:
+            branch_hits["entry_point"] += 1
+            continue
+        if (
+            inspect.isclass(obj)
+            and issubclass(obj, Exception)
+            and name in EXCEPTION_EXPORTS
+        ):
+            branch_hits["exception"] += 1
+            continue
+        pytest.fail(
+            f"gridalyn.twin.{name} meets no membership branch: it is not a "
+            "module-level function, no exported signature or field annotation "
+            "names it, and it is in neither ENTRY_POINT_CLASSES nor "
+            "EXCEPTION_EXPORTS. Either it belongs in a public signature, or "
+            "append it to the matching allowlist with a one-line reason."
+        )
+
+    # Non-vacuity: the map must exercise every branch, or a broken pool (for
+    # instance) would silently stop distinguishing anything.
+    assert all(count > 0 for count in branch_hits.values()), (
+        f"membership branches went unexercised: {branch_hits}; the pool or an "
+        "allowlist has stopped describing the real map"
+    )
+
+    # Step 4: the documented exclusions hold -- the declared column contract is
+    # an internal contract between the repository and its adapters, not SDK
+    # surface, and must never quietly appear in the map.
+    assert "BASE_TABLE_SCHEMAS" not in exports
+    assert "table_schema" not in exports

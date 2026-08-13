@@ -16,9 +16,13 @@ are separated by *automated data flow*, not by fidelity:
 | Digital **shadow** | Automated one-way flow, physical → digital. |
 | Digital **twin** | Automated flow in **both** directions. |
 
-Measured against that, `gridalyn.twin` is a **digital model with provenance, a
-declared schema, and a place for a clock**. It is not yet a shadow, and it is
-certainly not a twin. Specifically:
+Measured against that, `gridalyn.twin` is a **canonical, identified,
+schema-declared digital model** — and, since Phase 12 (2026-08-13), the SDK
+ships the **measured-state ingest path**: automated one-way physical → digital
+flow. A *deployment* becomes a digital shadow when a user feeds that path
+their own measured data. The layer itself, as shipped, is not a shadow
+unqualified — the SDK cannot ship measured data — and it is not a twin.
+Specifically:
 
 - It **has** durable identity (`ModelIdentity`, a content-addressed
   `model:sha256:…` version id; three of its six fields carry CGMES
@@ -26,53 +30,80 @@ certainly not a twin. Specifically:
   column contract that makes an absent artifact distinguishable from an intact
   one, model authority sets that say which producer owns which artifact, and an
   `as_of` field on observed state.
-- It **does not** have any automated path that carries measurements from a
-  physical feeder into the model. Every `NetworkObservation` in the repository
-  today is read off a *solved pandapower network* — a simulation result, not a
-  measurement — and all **13** production `observe_network(...)` call sites
-  correctly pass `as_of=None`, because none of them has a real instant to offer.
+- It **has** two real producers of the observation contract, distinguished by
+  the required `provenance` field and resolved by explicit ID through
+  `gridalyn.twin.observation.registry`: `powerflow` (wraps `observe_network`,
+  stamps `"simulated"` — it reads a *solved pandapower network*, and its call
+  sites correctly pass `as_of=None` because a solver result carries no real
+  instant) and `measured-ingest` (`read_measured_observations`, stamps
+  `"measured"` and `as_of` **from the datum**).
+- It **does not** carry measured data of its own. Both producers the SDK
+  itself exercises in CI remain simulated-or-fixture; the measured path at
+  scale is operator-receipted (protocol `measured-state-ingest`).
 
-### What would move it to the next class
+### The ingest path that makes a deployment a shadow
 
-Exactly one thing: an ingest path that stamps `as_of` from a real producer's own
-timestamp and joins its readings to the model's `building_id` / `bus_id`
-namespace. The seam is already cut — `as_of` is keyword-only and
-caller-supplied, and `AS_OF_ABSENT_REASON` travels with the field to say why it
-is empty. What is missing is the producer on the other side of that seam.
+Phase 11 identified exactly one missing thing: an ingest path that stamps
+`as_of` from a real producer's own timestamp and joins its readings to the
+model's declared bus namespace. Phase 12 built it, in
+`gridalyn.twin.observation.ingest`:
 
-**The producer will be the synthetic generator plus the weather system, not a
-measured dataset.** The generator already supplies both things the seam needs,
-by construction rather than by inference: a real tz-aware 15-minute
-`DatetimeIndex`, and a `unit_000…` → bus join that
-`gridalyn.assets.datagen` builds itself. It even computes a usable instant and
-throws it away — `coincident_peak_loads_mw` collapses the profile frame with
-`per_bus.loc[per_bus.sum(axis=1).idxmax()]`, and that `idxmax()` is a genuine
-`Timestamp` (measured `2023-12-18 20:00:00-05:00` on a 12-unit cold day)
-discarded on the next line. `as_of` for that snapshot does not need inventing;
-it needs *not discarding*.
+- **A declared measurement schema** — `(timestamp, entity_id, quantity,
+  value)` rows, following `twin/network/schema.py`'s declared-contract pattern
+  rather than inventing a second one. The v1 quantity set is `voltage_pu` →
+  `bus_voltage_pu`; an unknown quantity fails loudly naming the supported set.
+- **`as_of` stamped from the datum, never inferred.** Naive timestamps are
+  rejected, not localized — localizing would manufacture evidence, the exact
+  failure mode `AS_OF_ABSENT_REASON` exists to prevent.
+- **A user-supplied declared entity join** (`EntityJoin`, `entity_id →
+  bus_id`) — configuration, never inference. An entity absent from the join
+  fails loudly with a located, remediating error.
+- **Loaders** (`load_measurements`) for CSV and parquet; validation lives once,
+  in the reader.
+- **A producer registry** (`ObservationProducerRegistry`,
+  `default_observation_producer_registry()`) with the two producers above —
+  explicit IDs, no `entry_points`. Phase 11 correctly declined a registry for
+  a single implementation; Phase 12 did not decline one for two.
 
-**Why not `datasets/hq`.** The real Hydro-Québec 1000-home set was the original
-candidate and is **disqualified on distribution**, which is the decisive
-constraint: the directory is 544 MB, git-ignored, and outside `pyproject.toml`'s
-`include = ["gridalyn*"]`, so it cannot ship in the package. A producer whose
-only data source cannot be distributed is dead for everyone who installs
-Gridalyn from PyPI — it would be an SDK capability that exists in one working
-copy and nowhere else. A second problem, that the set's columns are anonymous
-ordinals `'0'`…`'999'` with no key joining a home to a building, made the branch
-*hard to build*; distribution makes it **wrong to build**, and would still
-disqualify it if the join key appeared tomorrow.
+The honest boundary: CI proves value-level correctness of the ingest on
+fixtures (`tests/test_measured_ingest.py`); the at-scale run over real
+measured timestamps and entities is operator-verified and recorded as the
+`measured-state-ingest` receipt in
+`docs/development/verification-receipts.json` — with its synthesis disclosure
+stated in the receipt itself (the reference dataset carries no voltage
+channel, so the proof's voltage *values* were synthesized; the claim is
+mechanics-at-scale on real measured timestamps and entities, never "real
+voltage data").
 
-HQ keeps the role it already has and is good at: an offline validation reference
-for the generators — the all-electric n=215 subset documented in
-`projects/ev_hosting_flex/CALIBRATION.md` — run by an operator, never a runtime
+**Why `datasets/hq` is not the shipped producer's data source.** The real
+Hydro-Québec 1000-home set is **disqualified on distribution**, which is the
+decisive constraint: the directory is 544 MB, git-ignored, and outside
+`pyproject.toml`'s `include = ["gridalyn*"]`, so it cannot ship in the
+package. A producer whose only data source cannot be distributed is dead for
+everyone who installs Gridalyn from PyPI. A second problem, that the set's
+columns are anonymous ordinals `'0'`…`'999'` with no key joining a home to a
+building, is answered for the shipped path by `EntityJoin` — the join is
+declared by the user, never invented. HQ keeps the role it already has and is
+good at: an offline validation reference for the generators — the all-electric
+n=215 subset documented in `projects/ev_hosting_flex/CALIBRATION.md` — plus
+the operator-side scale proof above, run by an operator, never a runtime
 dependency.
 
-The producer is therefore deliberately deferred, and no state-producer registry
-was built: one real producer plus a placeholder is the speculative abstraction
-the platform's registries exist to avoid.
+Bidirectional flow — writing control actions back to physical equipment —
+remains a recorded **non-goal**, not an omission.
 
-Bidirectional flow — writing control actions back to physical equipment — is a
-recorded **non-goal**, not an omission.
+### Provenance (breaking change, Phase 12)
+
+`NetworkObservation` now **requires** a `provenance` field —
+`ObservationProvenance = Literal["simulated", "measured"]` — so a consumer
+holding only the object can tell a simulation result from a measurement. There
+is deliberately no default: a default would silently mislabel every direct
+construction that predates the field. Any code constructing `NetworkObservation`
+directly must now pass one; construction without it is a `TypeError`.
+`observe_network` stamps `"simulated"` unconditionally, because it reads solver
+results, and `drop_missing` carries the value through unchanged. The precedent
+for shipping a required-field addition documented rather than slipped in is
+`NetworkExportResult.identity` (Phase 11).
 
 ## Core Objects
 
@@ -98,7 +129,10 @@ thermal loading, and downstream grouping.
   **deleted**, not aliased — both source adapters return `NetworkModel`, which
   absorbed `source_adapter`, `source_standard` and `write_parquet`.
 - Observed state lives in the same layer as the model it describes:
-  `gridalyn.twin.observation` owns `NetworkObservation` and `observe_network`.
+  `gridalyn.twin.observation` owns `NetworkObservation`, `observe_network`,
+  the measured-state ingest (`read_measured_observations`, `load_measurements`,
+  `EntityJoin`) and the producer registry
+  (`default_observation_producer_registry`).
   `gridalyn.simulation.observation` remains as a deprecated re-export that
   re-binds the same objects and emits a `DeprecationWarning`.
 - Static assets are materialized in `instances/default/digital_twin/base`.

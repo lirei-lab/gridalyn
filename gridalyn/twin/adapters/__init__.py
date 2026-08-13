@@ -9,6 +9,8 @@ _LAZY_EXPORTS = {
     "CimParquetAdapter": ("gridalyn.twin.adapters.cim", "CimParquetAdapter"),
     "FakeGeoJSONGenerator": ("gridalyn.twin.adapters.geojson", "FakeGeoJSONGenerator"),
     "GeoProcessor": ("gridalyn.twin.adapters.geojson", "GeoProcessor"),
+    "ModelAuthoritySet": ("gridalyn.twin.adapters.authority", "ModelAuthoritySet"),
+    "ModelProfile": ("gridalyn.twin.adapters.authority", "ModelProfile"),
     "NetworkAdapterDescriptor": (
         "gridalyn.twin.adapters.network",
         "NetworkAdapterDescriptor",

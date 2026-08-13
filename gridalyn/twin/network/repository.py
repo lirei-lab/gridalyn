@@ -265,6 +265,15 @@ class NetworkModelRepository:
             BUILDING_GRID_CONNECTIVITY: model.connectivity,
         }
         self._check_declared_artifacts(frames, errors=errors, warnings=warnings)
+        for artifact, schema in BASE_TABLE_SCHEMAS.items():
+            frame = frames[artifact]
+            if frame.empty:
+                continue
+            errors.extend(
+                self._check_declared_dtypes(
+                    schema, frame, self._artifact_path(artifact)
+                )
+            )
 
         buses = table_schema(GRID_BUSES)
         buildings = table_schema(BUILDINGS)
@@ -363,6 +372,57 @@ class NetworkModelRepository:
                     "export it through a source adapter that writes the contract "
                     "declared in gridalyn.twin.network.schema.BASE_TABLE_SCHEMAS"
                 )
+
+    @staticmethod
+    def _check_declared_dtypes(
+        schema: TableSchema,
+        frame: pd.DataFrame,
+        path: Path,
+    ) -> list[str]:
+        """Check ``frame``'s values against its columns' declared dtypes.
+
+        Exactly ONE declared column carries ``dtype="integer"`` today --
+        ``building_grid_connectivity``'s ``lv_cluster`` -- so this enforces the
+        declared contract with a single consumer, acknowledged. A value is an
+        integrity error when it is non-null but does not coerce with
+        ``pd.to_numeric(..., errors="coerce")``, or when it coerces to a
+        non-integral number: ``"integer"`` means integral, not merely
+        numeric-castable, so ``3.5`` is an offender too.
+
+        ``dtype="string"`` is unenforceable by design: identifiers are compared
+        with ``astype(str)`` on both sides, and ``astype(str)`` always succeeds,
+        so there is no value a string declaration could reject.
+
+        Args:
+            schema: Declared contract of the table being checked.
+            frame: Loaded, non-empty table. Empty frames are not checked --
+                "present but empty" is a separate outcome the caller reports.
+            path: On-disk path of ``frame``, used to locate the failure.
+
+        Returns:
+            One located, remediating error string per violated column.
+        """
+        errors: list[str] = []
+        for spec in schema.columns:
+            if spec.dtype != "integer":
+                continue
+            column = schema.resolve(frame, spec.role)
+            if column is None:
+                continue
+            values = frame[column]
+            coerced = pd.to_numeric(values, errors="coerce")
+            uncastable = values.notna() & coerced.isna()
+            non_integral = coerced.notna() & (coerced % 1 != 0)
+            offenders = int((uncastable | non_integral).sum())
+            if offenders:
+                errors.append(
+                    f"{path}: {schema.artifact} column {column!r} is declared "
+                    f"integer but {offenders} value(s) cannot be read as "
+                    "integers; rebuild the base with `gridalyn twin base`, or "
+                    "export it through a source adapter that writes the "
+                    "declared contract"
+                )
+        return errors
 
     def _absent_artifact_error(self, artifact: str, path: Path) -> str:
         """Compose the located, remediating error for an artifact that is not there."""
