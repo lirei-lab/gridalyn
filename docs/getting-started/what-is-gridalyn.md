@@ -6,7 +6,7 @@ research today while keeping the core close to the shape of a utility platform:
 model-centric, traceable, adapter-driven, and ready for operational
 applications.
 
-!!! note "One layer is called `gridalyn.twin`, and that name is aspirational"
+!!! note "`gridalyn.twin` names one layer, and that name is aspirational"
 
     Under the Kritzinger taxonomy — which separates the classes by *automated
     data flow*, not fidelity — this layer is a **canonical, identified,

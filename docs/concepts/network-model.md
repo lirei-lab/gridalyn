@@ -6,7 +6,8 @@ concepts rather than temporary simulation tables.
 
 ## What Class of Thing This Is
 
-The package is called `gridalyn.twin`, and that name is **aspirational**. Under
+`gridalyn.twin` names one layer of the package, and that name is
+**aspirational**. Under
 Kritzinger's taxonomy — the one the literature actually uses — the three classes
 are separated by *automated data flow*, not by fidelity:
 
