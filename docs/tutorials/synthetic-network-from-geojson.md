@@ -26,8 +26,8 @@ flowchart LR
     ms[Microsoft footprint partition] --> raw
     raw --> clip[Clip to study polygon]
     clip --> geojson[Building GeoJSON]
-    geojson --> graph[Gridalyn topology bundle]
-    graph --> pp[pandapower network]
+    geojson --> bundle[Gridalyn topology bundle]
+    bundle --> pp[pandapower network]
     pp --> twin[Digital twin base artifacts]
 ```
 
