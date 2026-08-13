@@ -46,4 +46,4 @@ network zone.
 and applications that consume the materialized graph directly; it has no
 in-repo application consumer today (recorded decision, Phase 9 finding G9).
 
-See [Semantic Model And Graph](../semantic-layer/semantic-graph.md).
+See [Semantic Model And Graph](../reference/semantic-graph.md).

@@ -27,7 +27,7 @@ need to understand the vocabulary before using commands or APIs.
 <h3>Model States</h3>
 <p>How generated data, validated data, operational states, and application-ready states are separated.</p>
 </a>
-<a class="landing-card" href="../../semantic-layer/semantic-graph/">
+<a class="landing-card" href="../../reference/semantic-graph/">
 <h3>Semantic Graph</h3>
 <p>North America-oriented ontology alignment for grid assets, buildings, DER, telemetry metadata, and flexibility operations.</p>
 </a>
@@ -40,7 +40,7 @@ need to understand the vocabulary before using commands or APIs.
 3. Read [Artifacts](data-and-artifact-model.md) before writing generated data.
 4. Read [Scenarios](scenarios.md) and [Model States](model-states.md) before
    building a new project.
-5. Read [Semantic Graph](../semantic-layer/semantic-graph.md) when artifacts
+5. Read [Semantic Graph](../reference/semantic-graph.md) when artifacts
    need ontology-aligned relationships or graph export.
 
 ## Rule Of Thumb

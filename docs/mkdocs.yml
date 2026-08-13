@@ -52,27 +52,29 @@ nav:
           - Scenarios: concepts/scenarios.md
           - Model States: concepts/model-states.md
           - Naming Conventions: concepts/naming-conventions.md
-          - Semantic Graph: semantic-layer/semantic-graph.md
       - Applications:
           - Applications And Interfaces: platform/applications-and-interfaces.md
           - Dashboard: platform/dashboard.md
-          - Reports: applications/reports.md
       - Roadmap: platform/utility-platform-roadmap.md
   - SDK:
-      - Python SDK Overview: sdk/overview.md
-      - SDK Public Contract: sdk/public-contract.md
-      - Operations Clearing Contract: sdk/CONTRACT.md
-      - Public Python API: development/public-api.md
-      - Network Repository: sdk/network-repository.md
-      - Adapters: sdk/adapters.md
-      - Modeling: sdk/modeling.md
-      - Data Generation: sdk/data-generation.md
-      - Solver And Model Adapters: sdk/solver-and-model-adapters.md
-      - Building Models: platform/building-models.md
-      - Simulation: sdk/simulation.md
-      - Reporting: sdk/reporting.md
-      - Semantic Graph: sdk/semantic-graph.md
-      - Market And Operations: sdk/market-operations.md
+      - Overview:
+          - Python SDK Overview: sdk/overview.md
+          - Stability Policy: sdk/public-contract.md
+      - Contracts:
+          - Clearing Contract: sdk/clearing-contract.md
+          - Public API Index: sdk/public-api.md
+      - Model And Data:
+          - Network Repository: sdk/network-repository.md
+          - Ingest Adapters: sdk/adapters.md
+          - Solver Adapters: sdk/solver-and-model-adapters.md
+          - Modeling: sdk/modeling.md
+          - Building Models: sdk/building-models.md
+          - Data Generation: sdk/data-generation.md
+      - Run And Report:
+          - Simulation: sdk/simulation.md
+          - Reporting: sdk/reporting.md
+          - Semantic Graph: sdk/semantic-graph.md
+          - Market And Operations: sdk/market-operations.md
   - Operations:
       - Utility Operations: platform/operations.md
       - Operational Functions: flexibility/overview.md
@@ -87,20 +89,17 @@ nav:
       - Project Problem Contract: projects/problem-contract.md
       - Project Template Guide: projects/template-guide.md
       - Project Workflows:
-          - Project Workflow Model: platform/projects-and-workflows.md
+          - Project Workflow Model: projects/projects-and-workflows.md
           - Workflow YAML: workflows/workflow-yaml-reference.md
           - Create A New Project: workflows/creating-new-workflow.md
-          - Project Regression: development/testing-and-validation.md
   - Reference:
       - Reference Overview: reference/overview.md
       - Python API Reference: reference/api.md
       - CLI Reference: reference/cli.md
-      - YAML Reference: workflows/workflow-yaml-reference.md
-      - Report Schemas: platform/reports.md
-      - Semantic Model And Graph: semantic-layer/semantic-graph.md
-      - FalkorDB Path: semantic-layer/falkordb.md
+      - Report Schemas: reference/reports.md
+      - Semantic Model And Graph: reference/semantic-graph.md
+      - FalkorDB Path: reference/falkordb.md
       - Artifact Policy: development/artifact-policy.md
-      - Testing And Validation: development/testing-and-validation.md
   - Development:
       - Development Overview: development/overview.md
       - Repository Layout: development/core-package-architecture.md
@@ -110,7 +109,7 @@ nav:
       - Testing And Validation: development/testing-and-validation.md
       - Operator Verification: development/verification.md
       - Instruction Verification: development/instruction-verification.md
-      - Release Readiness: platform/release-readiness.md
+      - Release Readiness: development/release-readiness.md
 theme:
   name: material
   logo: _static/logo.png

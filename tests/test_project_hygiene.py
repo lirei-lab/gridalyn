@@ -589,7 +589,10 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         mkdocs = (repo_root / "docs" / "mkdocs.yml").read_text(encoding="utf-8")
 
-        self.assertIn("Release Readiness: platform/release-readiness.md", mkdocs)
+        # docs/platform/release-readiness.md -> docs/development/release-readiness.md,
+        # 2026-08-13 information-architecture restructure (directory now
+        # matches the section it's filed under).
+        self.assertIn("Release Readiness: development/release-readiness.md", mkdocs)
         self.assertIn("Architecture Map: platform/capability-architecture.md", mkdocs)
         self.assertNotIn("Manuscripts:", mkdocs)
         self.assertNotIn("workflows/manuscripts.md", mkdocs)

@@ -99,3 +99,5 @@ headline, so the pins exist to make that hard to do quietly.
   [Workflow YAML Reference](../workflows/workflow-yaml-reference.md).
 - To connect project outputs to the dashboard, read
   [Applications And Interfaces](../platform/applications-and-interfaces.md).
+- To understand how a regression run decides pass/fail against a baseline,
+  read [Testing And Validation](../development/testing-and-validation.md).

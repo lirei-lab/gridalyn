@@ -138,7 +138,7 @@ They must include:
 - `summary`;
 - `validation`.
 
-Use [Reports](../platform/reports.md) for the full report contract.
+Use [Reports](../reference/reports.md) for the full report contract.
 
 ## Commands
 

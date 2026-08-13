@@ -12,23 +12,28 @@ folders.
 | Run it locally | [Installation](installation.md) | [Quickstart](quickstart.md) |
 | Reproduce demo projects | [Run Demo Projects](run-demo-projects.md) | [Reproducibility Checklist](reproducibility.md) |
 | Learn the model concepts | [Core Concepts](../concepts/overview.md) | [Network Model](../concepts/network-model.md) |
-| Build with Python | [Python SDK Overview](../sdk/overview.md) | [Public Python API](../development/public-api.md) |
+| Build with Python | [Python SDK Overview](../sdk/overview.md) | [Public Python API](../sdk/public-api.md) |
 | Design an operation | [Utility Operations](../platform/operations.md) | [Locational Clearing](../flexibility/clearing.md) |
 | Create a study | [Project Model](../projects/project-model.md) | [Project Problem Contract](../projects/problem-contract.md) |
-| Publish or release | [Testing And Validation](../development/testing-and-validation.md) | [Release Readiness](../platform/release-readiness.md) |
+| Publish or release | [Testing And Validation](../development/testing-and-validation.md) | [Release Readiness](../development/release-readiness.md) |
 
 ## Section Meaning
 
+This page indexes fast paths and roles, not every page — the nav sidebar does
+that. Every section below links to its own landing page, which lists every
+page filed under it; a lost reader is one hop from the map, two from any page
+on the site.
+
 | Section | What belongs there |
 | --- | --- |
-| Start | Step-by-step commands for installing, running, viewing, and reproducing. |
-| Platform | Product identity, architecture, digital twin core, application surfaces, roadmap. |
-| Platform | Durable vocabulary for network models, scenarios, states, artifacts, and semantic relationships. |
-| SDK | Python package surfaces and reusable development interfaces. |
-| Operations | Flexibility and utility operations: providers, clearing, dispatch, validation, KPIs. |
-| Projects | Executable project examples plus the project/workflow contract. |
-| Reference | Commands, schemas, semantic graph, artifact rules, and validation. |
-| Development | Repository structure, contribution workflow, tests, release checks, and AI-agent guidance. |
+| [Start](what-is-gridalyn.md) | Step-by-step commands for installing, running, viewing, and reproducing. |
+| [Platform](../platform/overview.md) | Product identity, architecture, digital twin core, application surfaces, roadmap. |
+| [Platform → Core Concepts](../concepts/overview.md) | Durable vocabulary for network models, scenarios, states, artifacts, and semantic relationships. |
+| [SDK](../sdk/overview.md) | Python package surfaces and reusable development interfaces. |
+| [Operations](../platform/operations.md) | Flexibility and utility operations: providers, clearing, dispatch, validation, KPIs. |
+| [Projects](../projects/overview.md) | Executable project examples plus the project/workflow contract. |
+| [Reference](../reference/overview.md) | Commands, schemas, semantic graph, artifact rules, and validation. |
+| [Development](../development/overview.md) | Repository structure, contribution workflow, tests, release checks, and AI-agent guidance. |
 
 ## Source Of Truth
 

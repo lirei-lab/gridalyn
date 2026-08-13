@@ -721,7 +721,9 @@ class InstructionLedgerTests(unittest.TestCase):
         self.assertEqual([f"blocks/{block_key}"], _unjustified_documented(ledger))
 
         ledger = copy.deepcopy(self.result.ledger)
-        sequence_key = "docs/development/public-api.md#seq1"
+        # docs/development/public-api.md -> docs/sdk/public-api.md, 2026-08-13
+        # information-architecture restructure.
+        sequence_key = "docs/sdk/public-api.md#seq1"
         self.assertEqual(
             checker.DOCUMENTED, ledger["sequences"][sequence_key]["verdict"]
         )
@@ -735,9 +737,13 @@ class InstructionLedgerTests(unittest.TestCase):
         :meth:`test_no_corpus_document_is_left_unowned`: that one asserts the
         prefix table covers the corpus, this one asserts the consequence that
         actually matters -- no document carrying commands escapes execution.
-        ``docs/index.md`` and ``docs/semantic-layer/semantic-graph.md`` were
-        the two real cases; both are claimed by the platform family and were
-        executed there. A genuinely new unowned command document fails here.
+        ``docs/index.md`` and (before the 2026-08-13 restructure moved it to
+        ``docs/reference/semantic-graph.md``, where the ``getting-started``
+        family's own prefix now claims it without a ruling)
+        ``docs/semantic-layer/semantic-graph.md`` were the two real cases that
+        needed one; both were claimed by the platform family via a literal
+        ``FAMILY_PREFIXES`` entry and executed there. A genuinely new unowned
+        command document fails here.
         """
         ownerless = _ownerless_command_documents(_REPO_ROOT, self.result.ledger)
         self.assertEqual(

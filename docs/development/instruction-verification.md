@@ -290,30 +290,44 @@ uv run gridalyn project regression projects/ev_hosting_flex
 Re-running that, and re-evidencing the 14 blocks against it, is the standing
 follow-up.
 
-### Three documents are owned by ruling, not by prefix
+### One document is owned by ruling, not by prefix
 
-The family split is by directory prefix, and four documents fall outside every
-prefix. The `platform` family was ruled their owner and executed what there was
-to execute; the ledger's `verification_owners` records the ruling:
+**Corrected 2026-08-13**, in the same pass that moved the two files this
+section used to name. The family split is by directory prefix
+(`FAMILY_PREFIXES` in `tools/check_doc_instructions.py`), and `family` is a
+**derived** field: the harness recomputes it from that table on every run and
+reports any ledger entry that disagrees, so nothing can carry a ruling the
+prefix table does not itself encode. The previous revision of this section
+said the ruling "lives in the ledger's `verification_owners`" — that field
+exists in the ledger schema but has always been empty; the actual mechanism
+was, and is, three literal entries added to the `platform` tuple in
+`FAMILY_PREFIXES` directly.
 
-| Document | Verified by |
-| --- | --- |
-| `docs/index.md` | platform |
-| `docs/semantic-layer/falkordb.md` | platform |
-| `docs/semantic-layer/semantic-graph.md` | platform |
+Before the docs restructure, three documents fell outside every natural
+prefix and needed one of those literal entries: `docs/index.md`,
+`docs/semantic-layer/falkordb.md`, and `docs/semantic-layer/semantic-graph.md`
+(a fourth, `docs/applications/reports.md`, carried no fenced block, so it
+needed no owner for the gate's rule to hold, but was named in the ruling
+anyway — ownership is about who runs a document's instructions *when* it
+gains them, not only when it already has some).
 
-Only two of those three actually carry commands: `docs/index.md` and
-`semantic-graph.md`, whose 3 runnable blocks the platform family ran.
-`falkordb.md` carries four illustrative cypher blocks plus one illustrative
-python snippet (added 2026-08-07) and nothing to execute, and the fourth
-unowned document, `docs/applications/reports.md`, carries no fenced block at
-all — so neither needs an owner for the gate's rule to hold.
+The restructure moved the semantic-graph and falkordb pages to
+`docs/reference/`, which already owns a natural prefix under the
+`getting-started` family, and merged the reports page's one section into
+`docs/reference/reports.md` (same reasoning). Both ruled entries are now
+dead code and were removed from `FAMILY_PREFIXES`. Only `docs/index.md`
+remains — a single file at the docs root with no directory prefix to match,
+which is why it is the one entry that cannot fold away by a move.
 
-This lives in the ledger rather than in each entry's `family` field on purpose.
-`family` is a **derived** field: the harness recomputes it from `FAMILY_PREFIXES`
-and reports any entry that disagrees, so it cannot carry an ownership ruling the
-prefix table does not encode. Folding these three into `FAMILY_PREFIXES` is the
-cleaner long-term fix and would let the override map be deleted.
+| Document | Verified by | Why it needs the ruling |
+| --- | --- | --- |
+| `docs/index.md` | platform | No directory prefix; a root file needs a literal exception either way. |
+
+Its one runnable block is part of the 3 the platform family ran alongside
+what was then `semantic-graph.md`'s 2 (both now verified under the
+`getting-started` family instead, unchanged in substance — the family label
+is bookkeeping for who re-verifies a block, not a claim about when it was
+first run).
 
 ## Open findings
 

@@ -10,9 +10,9 @@ artifact rule, or validation behavior.
 | --- | --- |
 | [CLI Reference](cli.md) | Canonical `gridalyn` commands and command groups. |
 | [YAML Reference](../workflows/workflow-yaml-reference.md) | Project and workflow YAML conventions. |
-| [Report Schemas](../platform/reports.md) | Canonical JSON report structure and metadata. |
-| [Semantic Model And Graph](../semantic-layer/semantic-graph.md) | Node/edge schema, ontology profile, and graph artifacts. |
-| [FalkorDB Path](../semantic-layer/falkordb.md) | Migration path from Parquet graph artifacts to graph database backends. |
+| [Report Schemas](reports.md) | Canonical JSON report structure and metadata. |
+| [Semantic Model And Graph](semantic-graph.md) | Node/edge schema, ontology profile, and graph artifacts. |
+| [FalkorDB Path](falkordb.md) | Migration path from Parquet graph artifacts to graph database backends. |
 | [Artifact Policy](../development/artifact-policy.md) | What can be committed, generated, ignored, or published. |
 | [Testing And Validation](../development/testing-and-validation.md) | Project verification ladder and repository checks. |
 

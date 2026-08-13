@@ -117,4 +117,4 @@ uv run gridalyn project status projects/ev_hosting_flex --check-artifacts
 | Public module boundary | selected lint/import-boundary checks plus `tests/test_project_hygiene.py` |
 
 The release checklist combines these checks in
-[Release Readiness](../platform/release-readiness.md).
+[Release Readiness](release-readiness.md).

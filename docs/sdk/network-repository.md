@@ -89,4 +89,4 @@ manifest generation impossible.
 | downstream zone | Support locational clearing and targeted validation. |
 
 See [Network Model](../concepts/network-model.md) and
-[Public Python API](../development/public-api.md).
+[Public Python API](public-api.md).

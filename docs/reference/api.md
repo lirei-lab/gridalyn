@@ -92,4 +92,4 @@ layer rather than repeated here.
   `_LAZY_EXPORTS` map is internal and carries no stability promise.
 - **Command-line usage.** See the [CLI Reference](cli.md).
 - **YAML contracts.** See the [YAML Reference](../workflows/workflow-yaml-reference.md)
-  and [Report Schemas](../platform/reports.md).
+  and [Report Schemas](reports.md).
