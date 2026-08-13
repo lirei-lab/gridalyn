@@ -1,8 +1,12 @@
 """Gate for the operator-run verification receipts.
 
-Three protocols in this repository are real, expensive and impossible to run
-on a hosted runner -- the multi-hour flagship regeneration, the full
-documented-instruction sweep, and the subprocess-coverage measurement. Before
+Some protocols in this repository are real, expensive and impossible to run
+on a hosted runner -- the multi-hour flagship regeneration and its
+shape-covering subset, the full documented-instruction sweep, the
+subprocess-coverage measurement, the R7 twin-consumer identity capture over
+the gitignored base, and the at-scale measured-ingest proof over the
+gitignored HQ dataset (``REQUIRED_PROTOCOLS`` in
+``tools/verification_receipt.py`` is the authoritative list). Before
 ``docs/development/verification-receipts.json`` existed they were tracked in
 prose: a sentence claiming an operator had run something, with nothing tying
 the claim to a tree.

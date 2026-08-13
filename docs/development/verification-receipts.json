@@ -206,6 +206,43 @@
         "tools/r7_twin_consumer_identity.py"
       ],
       "rationale": "CI cannot run this. The base parquets are gitignored, so a runner has no base to capture over, and regenerating one produces a different created_at and therefore a different digest -- the comparison would measure the regeneration rather than the code. The protocol also needs full git history and two working trees. It is cheap for an operator (~40 s) and is the check to re-run whenever anything under `watched` moves; the gate will report it STALE, which is the intended signal, not a failure."
+    },
+    "measured-state-ingest": {
+      "status": "recorded",
+      "command": ".venv/bin/python tools/measured_ingest_proof.py -- feeds datasets/hq's real measured time axis (35,041 15-min instants, 2018-04-03 to 2019-04-03) and real 1000-entity set through the SHIPPED gridalyn.twin.observation.ingest.read_measured_observations in ONE whole-frame call (35,041,000 tidy rows, no batching -- whole-frame processing is what keeps the shipped duplicate-detection semantics honest), with an operator-declared demo join (EntityJoin.from_mapping, hq_home_{col} -> bus_{col}).",
+      "commit": "f4dcbb93677ee5c4ae40f4c36bc535f41fbc5610",
+      "recorded_on": "2026-08-13",
+      "result": "35,041 NetworkObservation(provenance='measured') emitted, one per real instant, as_of spanning 2018-04-03T00:00:00+00:00 to 2019-04-03T00:00:00+00:00; ingest 213.5 s, total 215.6 s, peak RSS 7.6 GB on the operator machine. This proves MECHANICS AT SCALE on real measured timestamps and entities through the shipped path unchanged -- it does NOT prove real voltage data: datasets/hq carries no voltage channel, so the voltage VALUES were synthesized (numpy.random.default_rng(42)) and value-level correctness is proven separately by the CI-visible fixture tests in tests/test_measured_ingest.py. The stored axis is a naive uniform grid with no DST fold, read as UTC; this receipt makes NO DST claim. The entity-to-bus join is operator-declared demo configuration written by the proof script, never inferred.",
+      "evidence": {
+        "shipped_path": "gridalyn.twin.observation.ingest.read_measured_observations (one whole-frame call, no batching)",
+        "source_file": "datasets/hq/consumption.h5",
+        "n_instants": 35041,
+        "n_entities": 1000,
+        "n_tidy_rows": 35041000,
+        "first_as_of_utc": "2018-04-03T00:00:00+00:00",
+        "last_as_of_utc": "2019-04-03T00:00:00+00:00",
+        "axis_reading_disclosure": "naive uniform grid read as UTC; no DST fold present in the data -- tz_localize('America/Toronto') raises AmbiguousTimeError and choosing offset policies would manufacture evidence, so the axis is localized with tz_localize('UTC') (lossless, policy-free) and no DST claim is made",
+        "synthesis_disclosure": "voltage VALUES are SYNTHESIZED (1.0 + small deterministic variation, numpy.random.default_rng(42)): datasets/hq carries per-home consumption/heating kW and weather, NO voltage channel, and NetworkObservation's measured-mappable field is bus_voltage_pu -- relabeling kW as voltage would fabricate data. This proof claims mechanics-at-scale on real measured timestamps and entities, never real voltage data.",
+        "join_disclosure": "the entity-to-bus join is operator-declared demo configuration written by this script (EntityJoin.from_mapping, hq_home_{col} -> bus_{col}); HQ's anonymous ordinal columns carry no key into the twin's bus namespace, so nothing is inferred",
+        "elapsed_seconds_ingest": 213.52,
+        "elapsed_seconds_total": 215.59,
+        "peak_rss_mb": 7603.7,
+        "sampled_observation": {
+          "index": 17520,
+          "as_of_utc": "2018-10-02T12:00:00+00:00",
+          "provenance": "measured",
+          "converged": true,
+          "n_bus_ids": 1000,
+          "first_bus_id": "bus_0",
+          "first_voltage_pu": 1.000944
+        }
+      },
+      "watched": [
+        "gridalyn/twin/observation/ingest.py",
+        "gridalyn/twin/observation/contract.py",
+        "tools/measured_ingest_proof.py"
+      ],
+      "rationale": "CI cannot run this: datasets/hq is gitignored operator-local data (consumption.h5 ~268 MB) that never ships, and the whole-frame year-at-scale run needs ~7.6 GB of RAM and ~3.5 minutes of wall clock. The at-scale proof of the measured path is therefore operator-verified and accounted for here (R20 criterion: an operator-verified proof case exists for the measured path); the shipped path's value-level behaviour stays CI-proven by tests/test_measured_ingest.py."
     }
   }
 }
