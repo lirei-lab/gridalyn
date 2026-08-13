@@ -7,12 +7,20 @@ later be loaded into DuckDB, FalkorDB, or another operational backend.
 
 !!! note "The name is aspirational — read this before quoting it"
 
-    Under Kritzinger's taxonomy this layer is a **digital model with provenance,
-    a declared schema, and a place for a clock**, not a digital shadow and not a
-    digital twin. Nothing automatically carries measurements from a physical
-    feeder into it; every observation is read off a *solved* network. See
+    Under Kritzinger's taxonomy this layer is a **canonical, identified,
+    schema-declared digital model**, and the SDK ships the measured-state
+    ingest path — automated one-way physical → digital flow through
+    `gridalyn.twin.observation.ingest`, with two producers (`powerflow`,
+    simulated; `measured-ingest`, measured) distinguished by a required
+    `provenance` field and `as_of` stamped from the datum on the measured
+    path. A deployment becomes a digital *shadow* when a user feeds that path
+    their own measured data. The SDK cannot ship measured data: both
+    producers it exercises in CI remain simulated-or-fixture, and the
+    measured path at scale is operator-receipted (protocol
+    `measured-state-ingest`). It is not a digital twin — bidirectional flow
+    is a recorded non-goal. See
     [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
-    for the measurement and for the one thing that would move it up a class.
+    for the measurement behind that statement.
 
 The default runtime instance lives at:
 

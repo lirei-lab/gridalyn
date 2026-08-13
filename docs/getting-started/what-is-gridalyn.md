@@ -9,13 +9,16 @@ applications.
 !!! note "The package is called `gridalyn.twin`, and that name is aspirational"
 
     Under the Kritzinger taxonomy — which separates the classes by *automated
-    data flow*, not fidelity — this layer is a **digital model with provenance,
-    a declared schema, and a place for a clock**. It is not a digital shadow and
-    not a digital twin: nothing automatically carries measurements from a
-    physical feeder into it, and every observation is read off a *solved*
-    network. See
+    data flow*, not fidelity — this layer is a **canonical, identified,
+    schema-declared digital model**, and the SDK ships the measured-state
+    ingest path (`gridalyn.twin.observation.ingest`): automated one-way
+    physical → digital flow. A deployment becomes a digital *shadow* when a
+    user feeds that path their own measured data. The SDK itself cannot ship
+    measured data, so both producers it exercises in CI remain
+    simulated-or-fixture; the measured path at scale is operator-receipted
+    (protocol `measured-state-ingest`). See
     [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
-    for the measurement and for the one thing that would move it up a class.
+    for the measurement behind that statement.
 
 ## What It Does
 

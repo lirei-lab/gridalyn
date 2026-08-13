@@ -17,11 +17,15 @@ Gridalyn v0.1 is a **utility network-model platform seed**:
 - dashboard-ready catalog and reports;
 - import/export adapter contracts ready for richer utility data sources.
 
-**What v0.1 does not claim.** `gridalyn.twin` is a digital **model** with
-provenance, a declared schema and a place for a clock — under the Kritzinger
-taxonomy it is neither a digital shadow (which needs automated one-way flow from
-a physical counterpart) nor a digital twin (which needs both directions). No
-automated path carries measurements from a physical feeder into it. Treat
+**What v0.1 does not claim.** `gridalyn.twin` is a **canonical, identified,
+schema-declared digital model**, and the SDK ships the measured-state ingest
+path — automated one-way physical → digital flow — so under the Kritzinger
+taxonomy a deployment becomes a digital *shadow* when a user feeds that path
+their own measured data. v0.1 does not claim the layer *is* a shadow out of
+the box: the SDK cannot ship measured data, both producers it exercises in CI
+remain simulated-or-fixture, and the measured path at scale is
+operator-receipted (protocol `measured-state-ingest`). It is not a digital
+twin (which needs both directions — a recorded non-goal). Treat
 "digital twin" in the package and directory names as a target, and see
 [Network Model](../concepts/network-model.md#what-class-of-thing-this-is) for
 the measurement behind that statement.

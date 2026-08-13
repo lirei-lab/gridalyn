@@ -66,7 +66,7 @@ repository folders.
       <div>
         <span class="platform-step__eyebrow">Core</span>
         <strong>Network Model</strong>
-        <p>Identified network model, assets, scenarios, model states, and semantic graph. A digital <em>model</em> with provenance — not a shadow, not a twin.</p>
+        <p>Identified network model, assets, scenarios, model states, and semantic graph. A digital <em>model</em> with provenance, shipping the measured-state ingest path — a deployment becomes a digital <em>shadow</em> when fed real measured data.</p>
       </div>
     </div>
     <div class="platform-arrow">
