@@ -126,10 +126,14 @@ consumes the generated catalogs and reports.
 **On the name `twin`.** It is aspirational, and the docs say so rather than
 letting readers assume otherwise. Under the Kritzinger taxonomy — which
 separates the classes by *automated data flow*, not fidelity — `gridalyn.twin`
-is a **digital model with provenance, a declared schema, and a place for a
-clock**: not a digital shadow, and not a digital twin. Nothing automatically
-carries measurements from a physical feeder into it; every observation is read
-off a *solved* network. What would move it up a class is written down in
+is a **canonical, identified, schema-declared digital model**, and the SDK
+ships the measured-state ingest path (`gridalyn.twin.observation.ingest`):
+automated one-way physical → digital flow. A *deployment* becomes a digital
+shadow when a user feeds that path their own measured data — the SDK cannot
+ship measured data, so both producers it exercises in CI remain
+simulated-or-fixture, and the measured path at scale is operator-receipted
+(protocol `measured-state-ingest`). It is not a digital twin: bidirectional
+flow is a recorded non-goal. The measurement behind that statement is in
 [Network Model](https://lirei.ca/gridalyn/concepts/network-model/#what-class-of-thing-this-is).
 
 ## Install
