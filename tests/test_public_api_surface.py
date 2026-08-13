@@ -374,13 +374,23 @@ ENTRY_POINT_CLASSES: tuple[str, ...] = (
     # Source adapter users construct to export the synthetic committed base;
     # same head-of-flow reasoning as CimParquetAdapter.
     "SyntheticPandapowerAdapter",
+    # 12-04 append: users instantiate/hold the observation producer registry
+    # as an API root. It also appears in default_observation_producer_registry's
+    # return annotation, so the pool branch claims it first; this entry records
+    # the API-root reason rather than deciding the branch.
+    "ObservationProducerRegistry",
 )
 
 #: Exported exception types. Exceptions are raised, not signed -- they appear
 #: in ``Raises:`` docstring sections, never in annotations -- and
 #: ``inspect.signature`` raises ``ValueError`` on builtin exception types.
 #: EXTENSION-ONLY, same rule as :data:`ENTRY_POINT_CLASSES`.
-EXCEPTION_EXPORTS: tuple[str, ...] = ("UnknownNetworkAdapterError",)
+EXCEPTION_EXPORTS: tuple[str, ...] = (
+    "UnknownNetworkAdapterError",
+    # 12-04 append: raised by the observation producer registry on an unknown
+    # producer ID; exceptions are raised, not signed.
+    "UnknownObservationProducerError",
+)
 
 
 def _annotation_strings(func: Any) -> list[str]:

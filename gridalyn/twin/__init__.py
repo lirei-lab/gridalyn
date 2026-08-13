@@ -6,7 +6,13 @@ merely what other in-repo modules happen to import from it. The layer owns four
 things and each is reachable here: the canonical model (:class:`NetworkModel`
 and its identity), the repository that loads and validates it, the source
 adapters that produce it, and — since the observation contract came down from
-``gridalyn.simulation`` — the observed state read back off a solved network.
+``gridalyn.simulation`` — the observed state. That observed-state surface has
+two producers, both reachable here: the simulated one reads state off a solved
+network (:func:`observe_network`), and the measured ingest reads tidy
+measurement rows against a user-declared :class:`EntityJoin`
+(:func:`read_measured_observations` / :func:`load_measurements`), each
+resolved by explicit ID through the observation producer registry
+(:func:`default_observation_producer_registry`).
 
 The criterion every entry below satisfies, derived from the entries that were
 already here: a name belongs on this facade when it is a public entry point of
@@ -45,6 +51,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "CimParquetAdapter": ("gridalyn.twin.adapters", "CimParquetAdapter"),
     "ConnectedEquipment": ("gridalyn.twin.network", "ConnectedEquipment"),
     "DownstreamAssets": ("gridalyn.twin.network", "DownstreamAssets"),
+    "EntityJoin": ("gridalyn.twin.observation", "EntityJoin"),
     "ModelAuthoritySet": ("gridalyn.twin.adapters", "ModelAuthoritySet"),
     "ModelIdentity": ("gridalyn.twin.network", "ModelIdentity"),
     "ModelProfile": ("gridalyn.twin.adapters", "ModelProfile"),
@@ -56,6 +63,18 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "NetworkModelRepository": ("gridalyn.twin.network", "NetworkModelRepository"),
     "NetworkObservation": ("gridalyn.twin.observation", "NetworkObservation"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters", "NetworkSourceAdapter"),
+    "ObservationProducerDescriptor": (
+        "gridalyn.twin.observation",
+        "ObservationProducerDescriptor",
+    ),
+    "ObservationProducerRegistry": (
+        "gridalyn.twin.observation",
+        "ObservationProducerRegistry",
+    ),
+    "ObservationProvenance": (
+        "gridalyn.twin.observation",
+        "ObservationProvenance",
+    ),
     "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
     "SyntheticPandapowerAdapter": (
         "gridalyn.twin.adapters",
@@ -64,6 +83,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "UnknownNetworkAdapterError": (
         "gridalyn.twin.adapters",
         "UnknownNetworkAdapterError",
+    ),
+    "UnknownObservationProducerError": (
+        "gridalyn.twin.observation",
+        "UnknownObservationProducerError",
     ),
     "build_network_adapter_validation_report": (
         "gridalyn.twin.adapters",
@@ -74,12 +97,21 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.adapters",
         "default_network_adapter_registry",
     ),
+    "default_observation_producer_registry": (
+        "gridalyn.twin.observation",
+        "default_observation_producer_registry",
+    ),
     "describe_network_source_adapter": (
         "gridalyn.twin.adapters",
         "describe_network_source_adapter",
     ),
+    "load_measurements": ("gridalyn.twin.observation", "load_measurements"),
     "north_america_profile": ("gridalyn.twin.semantic", "north_america_profile"),
     "observe_network": ("gridalyn.twin.observation", "observe_network"),
+    "read_measured_observations": (
+        "gridalyn.twin.observation",
+        "read_measured_observations",
+    ),
     "validate_semantic_graph": ("gridalyn.twin.semantic", "validate_semantic_graph"),
     "write_network_adapter_validation_report": (
         "gridalyn.twin.adapters",

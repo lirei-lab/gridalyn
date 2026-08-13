@@ -32,8 +32,13 @@ match forever regardless of the code.
 once pytest has imported ``pandapower`` for another test in the same session --
 the reasoning ``tests/test_import_hygiene.py`` documents.
 
-**No state-producer registry exists, and that is deliberate.** See
-:data:`MEASURED_PRODUCER_DEFERRAL`.
+**No state-producer registry existed through Phase 11, and that was
+deliberate.** Phase 12 ended the deferral once a second real producer existed:
+the measured ingest (``gridalyn.twin.observation.ingest``) landed in plan
+12-03 and the registry (``gridalyn.twin.observation.registry``) in plan 12-04,
+gated by ``tests/test_observation_producer_registry.py``.
+:data:`MEASURED_PRODUCER_DEFERRAL` keeps the original reasoning as a
+superseded record.
 """
 
 from __future__ import annotations
@@ -91,7 +96,9 @@ REPOINTED_CONSUMERS = (
     "gridalyn.simulation.simulators.powerflow.scenarios",
 )
 
-#: Why no measured-state producer and no producer registry were built.
+#: Why no measured-state producer and no producer registry were built in
+#: Phase 11 -- kept as a **superseded record**: Phase 12 ended both halves of
+#: the deferral, and the resolution is appended below the history.
 #:
 #: The Phase-11 design called for two state producers -- simulated and measured
 #: -- with provenance distinguishing them. Planning measured the only measured
@@ -102,19 +109,32 @@ REPOINTED_CONSUMERS = (
 #: to a building would be *inventing* the join rather than measuring it. The
 #: user reopened that scope rather than substitute a producer.
 #:
-#: A registry was therefore **not** built. One real producer plus a placeholder
-#: is precisely the speculative abstraction plan 10-03 declined for this same
-#: contract -- it shipped one builder, ``observe_network``, and no registry --
-#: and the >=2-consumer promotion rule is not triggered here either: relocating
-#: an existing contract whose five call sites migrated in Phase 10 creates no
-#: new boundary. This constant exists so a later reader inherits the finding
-#: instead of reading the absence as an oversight.
+#: A registry was therefore **not** built then. One real producer plus a
+#: placeholder is precisely the speculative abstraction plan 10-03 declined for
+#: this same contract -- it shipped one builder, ``observe_network``, and no
+#: registry -- and the >=2-consumer promotion rule was not triggered either:
+#: relocating an existing contract whose five call sites migrated in Phase 10
+#: created no new boundary.
+#:
+#: **Resolution (Phase 12).** The measured ingest
+#: (``gridalyn.twin.observation.ingest``, plan 12-03) is the second real
+#: producer: it answers the join-invention concern with a user-supplied
+#: declared ``EntityJoin`` rather than an invented binding, and stamps
+#: ``as_of`` from the datum. With two real producers the registry followed
+#: (``gridalyn.twin.observation.registry``, plan 12-04); see
+#: ``tests/test_observation_producer_registry.py``. This constant remains so a
+#: later reader inherits the finding as history rather than re-deriving it.
 MEASURED_PRODUCER_DEFERRAL = (
+    "SUPERSEDED by Phase 12 -- historical record of the Phase-11 deferral: "
     "measured state producer deferred: datasets/hq carries 1000 anonymous "
     "ordinal columns '0'..'999' with no key joining to building_id/bus_id, so "
     "the join would be invented rather than measured; no producer registry "
     "was built, because one producer plus a placeholder is the speculative "
-    "abstraction 10-03 declined for this contract"
+    "abstraction 10-03 declined for this contract. RESOLVED: the measured "
+    "ingest (gridalyn.twin.observation.ingest) is the second real producer, "
+    "with the join user-declared via EntityJoin, and the producer registry "
+    "(gridalyn.twin.observation.registry) registers both -- see "
+    "tests/test_observation_producer_registry.py"
 )
 
 

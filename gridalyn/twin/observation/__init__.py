@@ -51,6 +51,14 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.contract",
         "NetworkObservation",
     ),
+    "ObservationProducerDescriptor": (
+        "gridalyn.twin.observation.registry",
+        "ObservationProducerDescriptor",
+    ),
+    "ObservationProducerRegistry": (
+        "gridalyn.twin.observation.registry",
+        "ObservationProducerRegistry",
+    ),
     "ObservationProvenance": (
         "gridalyn.twin.observation.contract",
         "ObservationProvenance",
@@ -58,6 +66,14 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "SUPPORTED_QUANTITIES": (
         "gridalyn.twin.observation.ingest",
         "SUPPORTED_QUANTITIES",
+    ),
+    "UnknownObservationProducerError": (
+        "gridalyn.twin.observation.registry",
+        "UnknownObservationProducerError",
+    ),
+    "default_observation_producer_registry": (
+        "gridalyn.twin.observation.registry",
+        "default_observation_producer_registry",
     ),
     "load_measurements": (
         "gridalyn.twin.observation.ingest",
