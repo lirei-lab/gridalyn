@@ -154,6 +154,7 @@ def test_violation_counts_exclude_buses_exactly_at_the_limits() -> None:
         bus_voltage_pu=np.array([0.95, 1.05, 0.9499999, 1.0500001]),
         line_loading_percent=np.array([]),
         total_line_loss_mw=0.0,
+        provenance="simulated",
     )
 
     assert exactly_at_limits.voltage_violation_counts(below_pu=0.95, above_pu=1.05) == (
@@ -253,6 +254,7 @@ def test_the_contract_does_not_require_a_pandapower_network() -> None:
         bus_voltage_pu=np.array([1.0, 0.94, 1.06]),
         line_loading_percent=np.array([10.0, 120.0]),
         total_line_loss_mw=0.25,
+        provenance="simulated",
     )
 
     assert surrogate.min_voltage_pu == 0.94
@@ -424,6 +426,53 @@ def test_the_as_of_scan_would_catch_a_supplied_instant() -> None:
     assert _observe_calls("observe_network(net, **options)") == [(1, True)]
     # Prose naming the keyword is not a call.
     assert _observe_calls("# observe_network(net, as_of=instant) is forbidden") == []
+
+
+# --------------------------------------------------------------------------
+# (f) provenance: required, stamped by the producer, carried by the filter
+# --------------------------------------------------------------------------
+# Red-first note: the required field makes red-first structural -- these tests
+# cannot even construct their subjects on the pre-provenance tree, where the
+# field does not exist, so they fail there by construction.
+
+
+def test_provenance_is_required() -> None:
+    """Constructing without provenance is a ``TypeError``, not a default.
+
+    A default would silently mislabel every external direct construction, so
+    the field is required deliberately: no producer can omit the answer.
+    """
+    with pytest.raises(TypeError):
+        NetworkObservation(  # type: ignore[call-arg]
+            converged=True,
+            bus_ids=np.empty(0, dtype=int),
+            bus_voltage_pu=np.empty(0, dtype=float),
+            line_loading_percent=np.empty(0, dtype=float),
+            total_line_loss_mw=None,
+        )
+
+
+def test_observe_network_stamps_simulated() -> None:
+    """``observe_network`` reads solver results, so it always stamps simulated."""
+    assert observe_network(_solved_ieee33()).provenance == "simulated"
+
+
+def test_drop_missing_carries_provenance() -> None:
+    """``drop_missing`` narrows the arrays; it does not re-source the state.
+
+    Built with ``provenance="measured"`` deliberately: this also proves the
+    type admits the measured literal before its producer ships.
+    """
+    measured = NetworkObservation(
+        converged=True,
+        bus_ids=np.array([0, 1, 2]),
+        bus_voltage_pu=np.array([1.0, np.nan, 0.97]),
+        line_loading_percent=np.empty(0, dtype=float),
+        total_line_loss_mw=None,
+        provenance="measured",
+    )
+
+    assert measured.drop_missing().provenance == "measured"
 
 
 # --------------------------------------------------------------------------

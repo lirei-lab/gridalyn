@@ -43,6 +43,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.contract",
         "NetworkObservation",
     ),
+    "ObservationProvenance": (
+        "gridalyn.twin.observation.contract",
+        "ObservationProvenance",
+    ),
     "observe_network": (
         "gridalyn.twin.observation.contract",
         "observe_network",

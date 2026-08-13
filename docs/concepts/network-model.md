@@ -74,6 +74,19 @@ the platform's registries exist to avoid.
 Bidirectional flow — writing control actions back to physical equipment — is a
 recorded **non-goal**, not an omission.
 
+### Provenance (breaking change, Phase 12)
+
+`NetworkObservation` now **requires** a `provenance` field —
+`ObservationProvenance = Literal["simulated", "measured"]` — so a consumer
+holding only the object can tell a simulation result from a measurement. There
+is deliberately no default: a default would silently mislabel every direct
+construction that predates the field. Any code constructing `NetworkObservation`
+directly must now pass one; construction without it is a `TypeError`.
+`observe_network` stamps `"simulated"` unconditionally, because it reads solver
+results, and `drop_missing` carries the value through unchanged. The precedent
+for shipping a required-field addition documented rather than slipped in is
+`NetworkExportResult.identity` (Phase 11).
+
 ## Core Objects
 
 | Concept | Meaning |

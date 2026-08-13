@@ -32,6 +32,7 @@ def _observation(bus_ids, voltages) -> NetworkObservation:
         bus_voltage_pu=np.asarray(voltages, dtype=float),
         line_loading_percent=np.empty(0, dtype=float),
         total_line_loss_mw=None,
+        provenance="simulated",
     )
 
 
