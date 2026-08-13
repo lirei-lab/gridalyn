@@ -191,6 +191,26 @@ def _peak_rss_mb() -> float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
 
 
+def _repo_relative(path: Path) -> str:
+    """Render a path relative to the repository root, for a tracked receipt.
+
+    An absolute path in a receipt records the operator's directory layout rather
+    than the evidence, and the public-surface hygiene gate rejects one that
+    happens to name a removed project. Paths outside the repository keep their
+    absolute form, because a relative rendering of them would be misleading.
+
+    Args:
+        path: Path to render.
+
+    Returns:
+        The repository-relative path, or ``str(path)`` when it lies outside.
+    """
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _evidence(
     observations: tuple[Any, ...],
     tidy_rows: int,
@@ -265,7 +285,10 @@ def _evidence(
             "gridalyn.twin.observation.ingest.read_measured_observations "
             "(one whole-frame call, no batching)"
         ),
-        "source_file": str(source),
+        # Relative to the repository root: an absolute path leaks the
+        # developer's directory layout into a tracked receipt, and the
+        # public-surface hygiene gate rejects one that names a removed project.
+        "source_file": _repo_relative(source),
         "n_instants": len(observations),
         "n_entities": n_entities,
         "n_tidy_rows": tidy_rows,

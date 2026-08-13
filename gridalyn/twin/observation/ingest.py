@@ -80,8 +80,10 @@ MEASUREMENT_COLUMNS = (
 VOLTAGE_QUANTITY = "voltage_pu"
 
 #: Declared mapping from a measured quantity name to the
-#: :class:`NetworkObservation` field it feeds. Widening this is additive;
-#: an unknown quantity fails loudly naming this set.
+#: :class:`NetworkObservation` field it feeds. An unknown quantity fails loudly
+#: naming this set. Widening it is **not** additive: the emission loop asserts
+#: the set holds exactly one entry, because a second quantity needs an emission
+#: path of its own before it can reach an observation.
 SUPPORTED_QUANTITIES: dict[str, str] = {VOLTAGE_QUANTITY: "bus_voltage_pu"}
 
 #: Suffix-to-reader support of :func:`load_measurements`.
