@@ -78,13 +78,17 @@ re-exporting shim that emits :class:`DeprecationWarning` and yields *this*
 module's objects, not copies of them.
 
 **The clock.** :attr:`NetworkObservation.as_of` is the instant the observed
-state belongs to. It is supplied by the caller and defaults to ``None``,
-because the only producer that ships today reads a solved ``pandapowerNet``,
-and that object carries no clock: it holds one converged operating point with
-no record of which instant it represents. Inferring a timestamp -- from the
-wall clock, or from the model's ``created`` -- would manufacture evidence, the
-same failure mode ``ModelIdentity.scenario_time`` avoids by staying ``None``.
-See :data:`AS_OF_ABSENT_REASON`.
+state belongs to. Two producers ship. :func:`observe_network` reads a solved
+``pandapowerNet``, and that object carries no clock -- it holds one converged
+operating point with no record of which instant it represents -- so there
+``as_of`` defaults to ``None`` and stays ``None`` unless the caller that chose
+the operating point supplies a real instant. The measured ingest
+(:mod:`gridalyn.twin.observation.ingest`) reads exported measurement rows,
+where every datum carries its own timestamp, and stamps ``as_of`` from the
+datum. Inferring a timestamp -- from the wall clock, or from the model's
+``created`` -- would manufacture evidence, the same failure mode
+``ModelIdentity.scenario_time`` avoids by staying ``None``. See
+:data:`AS_OF_ABSENT_REASON`.
 
 **The provenance.** :attr:`NetworkObservation.provenance` is where the values
 came from -- :data:`ObservationProvenance`, ``"simulated"`` or ``"measured"``.
@@ -103,16 +107,17 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
-#: Why an observation may carry no :attr:`NetworkObservation.as_of`. Held as a
-#: constant so the reason travels with the value rather than living only in a
-#: docstring, matching :data:`gridalyn.twin.network.model.
-#: SCENARIO_TIME_ABSENT_REASON`.
+#: Why a *simulated* observation may carry no
+#: :attr:`NetworkObservation.as_of`. Held as a constant so the reason travels
+#: with the value rather than living only in a docstring, matching
+#: :data:`gridalyn.twin.network.model.SCENARIO_TIME_ABSENT_REASON`.
 AS_OF_ABSENT_REASON = (
     "the producer reported no observation instant; a solved network holds one "
     "operating point with no record of which instant it represents, and "
     "substituting the wall clock or the model's creation time would fabricate "
     "a timestamp that reads as evidence -- pass as_of= when a real instant is "
-    "known"
+    "known; the measured ingest path always supplies one, stamped from the "
+    "datum"
 )
 
 #: Result-table column holding per-bus voltage magnitude in per-unit.

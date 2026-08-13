@@ -404,25 +404,7 @@ def test_importing_the_repointed_consumers_emits_no_deprecation() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_no_state_producer_registry_was_built() -> None:
-    """``twin/observation`` ships a contract and no registry, deliberately.
-
-    The absence is the decision, so it is asserted rather than left to be
-    rediscovered. The reason travels with it in
-    :data:`MEASURED_PRODUCER_DEFERRAL`.
-    """
-    package = REPO_ROOT / "gridalyn/twin/observation"
-    modules = sorted(path.name for path in package.glob("*.py"))
-
-    assert modules == ["__init__.py", "contract.py"], modules
-
-    declared = {
-        node.name
-        for path in package.glob("*.py")
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
-        if isinstance(node, (ast.ClassDef, ast.FunctionDef))
-    }
-    assert not [name for name in declared if "egistry" in name], declared
-
-    assert "datasets/hq" in MEASURED_PRODUCER_DEFERRAL
-    assert "no producer registry" in MEASURED_PRODUCER_DEFERRAL
+# test_no_state_producer_registry_was_built retired deliberately by plan 12-03:
+# creating ingest.py IS the second producer whose absence it pinned. Superseded
+# by tests/test_measured_ingest.py (12-03) and
+# tests/test_observation_producer_registry.py (12-04).
