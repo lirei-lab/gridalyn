@@ -304,6 +304,67 @@ class AbsentEmptyIntactTest(unittest.TestCase):
         self.assertIn("present columns: building_id, load_id", joined)
 
 
+class DeclaredDtypeEnforcementTest(unittest.TestCase):
+    """``ColumnSpec.dtype="integer"`` is enforced by ``validate_integrity``.
+
+    Milestone-6 leftover: the dtype field was declared but had zero enforcement
+    reads, so a connectivity table carrying strings under ``lv_cluster`` --
+    the single integer-declared column -- validated as intact.
+    """
+
+    def _report_for_lv_cluster(self, values):
+        """Validate an otherwise-intact base whose ``lv_cluster`` holds ``values``."""
+        connectivity = pd.DataFrame(
+            [
+                {
+                    "building_id": "building:0",
+                    "load_id": "load:0",
+                    "load_bus_id": "bus:load_0",
+                    "lv_feeder_bus_id": "bus:lv_0",
+                    "lv_cluster": value,
+                    "lv_transformer_id": "transformer:0",
+                }
+                for value in values
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            _write_base_model(base, connectivity=connectivity)
+            repo = NetworkModelRepository.from_parquet(base, provenance="ignore")
+            return repo.validate_integrity()
+
+    def test_integer_declared_column_with_uncastable_values_is_an_integrity_error(
+        self,
+    ):
+        report = self._report_for_lv_cluster(["a", "b"])
+
+        self.assertFalse(
+            report.valid,
+            "an integer-declared column full of uncastable strings must not "
+            "validate as an intact base",
+        )
+        joined = "\n".join(report.errors)
+        self.assertIn("building_grid_connectivity.parquet", joined)
+        self.assertIn("'lv_cluster'", joined)
+        self.assertIn("2 value(s)", joined)
+
+    def test_integer_declared_column_with_non_integral_values_is_an_integrity_error(
+        self,
+    ):
+        # "integer" means integral, not merely numeric-castable: 1.5 coerces
+        # cleanly with pd.to_numeric but is not an integer label.
+        report = self._report_for_lv_cluster([1.5, 2.0])
+
+        self.assertFalse(
+            report.valid,
+            "a numeric but non-integral lv_cluster must not validate",
+        )
+        joined = "\n".join(report.errors)
+        self.assertIn("building_grid_connectivity.parquet", joined)
+        self.assertIn("'lv_cluster'", joined)
+        self.assertIn("1 value(s)", joined)
+
+
 class QueryVocabularyTest(unittest.TestCase):
     def test_constraint_id_is_gone_as_a_live_identifier(self):
         identifiers = _repository_identifiers()

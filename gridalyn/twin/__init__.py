@@ -16,6 +16,15 @@ the layer, or a type that appears in the signature of one. That is why
 this path — they are what :class:`NetworkModelRepository` hands back, and this
 facade is an advertised SDK surface rather than a record of internal imports.
 
+``ModelAuthoritySet`` and ``ModelProfile`` are exported because both source
+adapters' ``authority_sets()`` and ``profiles()`` return them — the criterion
+above, which they were already recorded as meeting. Like every other entry
+they resolve through a sub-facade: ``gridalyn.twin.adapters`` re-exports them
+from the implementation module ``gridalyn.twin.adapters.authority``, and this
+facade points at ``gridalyn.twin.adapters``, never at the implementation.
+(The module path moved from ``…adapters.cim`` to ``…adapters.authority`` in
+review cycle 1 of Phase 11 — see that module's docstring for why.)
+
 Names deliberately NOT re-exported here, each for a measured reason:
 
 * ``BASE_TABLE_SCHEMAS`` / ``table_schema`` (``gridalyn.twin.network.schema``)
@@ -23,15 +32,6 @@ Names deliberately NOT re-exported here, each for a measured reason:
   appears in no public signature and both of its production consumers live
   *inside* this layer, so promoting it would advertise an internal contract as
   SDK surface.
-* ``ModelAuthoritySet`` / ``ModelProfile`` — these *do* meet the criterion
-  (both source adapters' ``authority_sets()`` and ``.profiles()`` return them),
-  but every entry here resolves through a sub-facade, and reaching them would
-  mean either pointing at the implementation module
-  ``gridalyn.twin.adapters.authority`` or first re-exporting them from
-  ``gridalyn.twin.adapters``. Both are outside this change's scope; recorded
-  rather than done half-way. (The module path moved from ``…adapters.cim`` to
-  ``…adapters.authority`` in review cycle 1 of Phase 11 — see that module's
-  docstring for why.)
 * ``AS_OF_ABSENT_REASON`` / ``SCENARIO_TIME_ABSENT_REASON`` — documentation
   constants that travel with their fields, not API.
 """
@@ -45,7 +45,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "CimParquetAdapter": ("gridalyn.twin.adapters", "CimParquetAdapter"),
     "ConnectedEquipment": ("gridalyn.twin.network", "ConnectedEquipment"),
     "DownstreamAssets": ("gridalyn.twin.network", "DownstreamAssets"),
+    "ModelAuthoritySet": ("gridalyn.twin.adapters", "ModelAuthoritySet"),
     "ModelIdentity": ("gridalyn.twin.network", "ModelIdentity"),
+    "ModelProfile": ("gridalyn.twin.adapters", "ModelProfile"),
     "NetworkAdapterDescriptor": ("gridalyn.twin.adapters", "NetworkAdapterDescriptor"),
     "NetworkAdapterRegistry": ("gridalyn.twin.adapters", "NetworkAdapterRegistry"),
     "NetworkExportResult": ("gridalyn.twin.adapters", "NetworkExportResult"),

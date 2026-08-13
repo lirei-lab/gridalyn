@@ -117,9 +117,12 @@ def build_dashboard_catalog(
         integrity = network_repository.validate_integrity()
         metadata = _load_network_metadata(network_repository.base_dir)
         network_counts = model.counts
+        identity = model.identity
         network_model = {
             "counts": network_counts,
-            "model_version_id": metadata.get("model_version_id"),
+            # Sourced from the identity layer (Phase 12); None when the model
+            # carries no manifest, matching what the raw-metadata read rendered.
+            "model_version_id": identity.id if identity is not None else None,
             "model_version": metadata.get("model_version", {}),
             "validation": {
                 "valid": integrity.valid,
