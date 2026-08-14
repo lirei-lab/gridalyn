@@ -220,6 +220,13 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     the live state of the repository until the study stages were routed through
     ``ProjectScript.powerflow_backend``.
 
+    ``by_stage`` closes the last version of that hole. A study is not obliged
+    to solve everything one way: ``ev_hosting_flex`` runs its full-network
+    voltage path on lightsim2grid and everything else on pandapower native, so
+    a single scalar here named an engine one of its stages did not use. Where a
+    stage declares an override, this records it beside the default rather than
+    flattening the two into one claim.
+
     Backends resolve by explicit ID only: there is no ``entry_points``
     discovery, so this list is exactly what the repository registers.
 
@@ -228,14 +235,18 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     never solves, and never draws from any RNG.
 
     Args:
-        project: The loaded study, read for its declared backend ID.
+        project: The loaded study, read for its declared backend IDs.
 
     Returns:
-        The declared backend's descriptor fields, where the declaration came
-        from, the registered IDs, and an availability flag per backend.
+        The default backend's descriptor fields, any per-stage overrides with
+        their own descriptors, where the declaration came from, the registered
+        IDs, and an availability flag per backend.
     """
     from gridalyn.foundation.platform.capabilities import missing_capability_modules
-    from gridalyn.projects.model_inputs import load_powerflow_backend_id
+    from gridalyn.projects.model_inputs import (
+        load_powerflow_backend_by_stage,
+        load_powerflow_backend_id,
+    )
     from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
 
     registry = default_powerflow_backend_registry()
@@ -250,6 +261,11 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     }
     backend_id = load_powerflow_backend_id(project)
     provenance = registry.get_descriptor(backend_id).as_dict()
+    overrides = load_powerflow_backend_by_stage(project)
+    provenance["by_stage"] = {
+        stage_id: registry.get_descriptor(stage_backend_id).as_dict()
+        for stage_id, stage_backend_id in sorted(overrides.items())
+    }
     provenance["declared_source"] = (
         "spec.simulation.powerflowBackend"
         if _declares_powerflow_backend(project)

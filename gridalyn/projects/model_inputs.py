@@ -487,18 +487,89 @@ def load_simulation_seed(project_or_path: ProjectRef, stream: str) -> int:
     return value
 
 
-def load_powerflow_backend_id(project_or_path: ProjectRef) -> str:
+def load_powerflow_backend_by_stage(project_or_path: ProjectRef) -> dict[str, str]:
+    """Load the per-stage backend overrides a study declares.
+
+    A study whose stages solve with different engines cannot be described by a
+    single scalar. ``ev_hosting_flex`` is the motivating case: its full-network
+    voltage path runs on lightsim2grid while every other solve runs on
+    pandapower native, so recording one ID named an engine some stage did not
+    use -- the failure ``provenance.powerflow_backend`` exists to prevent.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+
+    Returns:
+        Stage ID to backend ID, empty when the study declares no overrides.
+
+    Raises:
+        ValueError: If the mapping is malformed, names an unregistered backend,
+            or keys a stage the workflow does not define. The stage check
+            matters most: a renamed stage would otherwise leave a stale
+            override that silently stops applying while still being recorded.
+    """
+    project = _project(project_or_path)
+    declared = _simulation(project).get("powerflowBackendByStage")
+    if declared is None:
+        return {}
+    if not isinstance(declared, Mapping) or not declared:
+        raise ValueError(
+            f"{project.path}: spec.simulation.powerflowBackendByStage must be a "
+            f"non-empty mapping of stage ID to backend ID, found "
+            f"{type(declared).__name__}"
+        )
+    registered = _registered_backend_ids()
+    stage_ids = {stage.id for stage in project.workflow.stages}
+    overrides: dict[str, str] = {}
+    for stage_id, backend_id in declared.items():
+        if not isinstance(backend_id, str) or not backend_id.strip():
+            raise ValueError(
+                f"{project.path}: spec.simulation.powerflowBackendByStage"
+                f".{stage_id} must be a non-empty string, found "
+                f"{type(backend_id).__name__}"
+            )
+        if stage_id not in stage_ids:
+            raise ValueError(
+                f"{project.path}: spec.simulation.powerflowBackendByStage keys "
+                f"stage {stage_id!r}, which the workflow does not define "
+                f"(defined stages: {', '.join(sorted(stage_ids))})"
+            )
+        resolved = backend_id.strip()
+        if resolved not in registered:
+            raise ValueError(
+                f"{project.path}: spec.simulation.powerflowBackendByStage"
+                f".{stage_id} names an unregistered backend {resolved!r} "
+                f"(registered: {', '.join(sorted(registered))})"
+            )
+        overrides[str(stage_id)] = resolved
+    return overrides
+
+
+def _registered_backend_ids() -> list[str]:
+    from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
+
+    return [
+        descriptor.backend_id
+        for descriptor in default_powerflow_backend_registry().list_descriptors()
+    ]
+
+
+def load_powerflow_backend_id(
+    project_or_path: ProjectRef, stage_id: str | None = None
+) -> str:
     """Load the power-flow backend ID a study declares in ``spec.simulation``.
 
     Every stage that solves power flow through ``pandapower.runpp`` resolves
     through this ID rather than calling the solver itself (the one exemption is
     ``runpp_3ph``, which the backend contract does not model), so that what a
-    run solved with is what
-    ``provenance.powerflow_backend.backend_id`` records. A study that declares
-    nothing gets the registry default, which needs no optional extra.
+    run solved with is what ``provenance.powerflow_backend`` records. A study
+    that declares nothing gets the registry default, which needs no optional
+    extra.
 
     Args:
         project_or_path: Loaded project, project directory, or ``project.yaml``.
+        stage_id: Workflow stage being resolved for. When given, a matching
+            ``powerflowBackendByStage`` override wins over the study default.
 
     Returns:
         The declared backend ID, or ``DEFAULT_POWERFLOW_BACKEND_ID`` when the
@@ -510,9 +581,12 @@ def load_powerflow_backend_id(project_or_path: ProjectRef) -> str:
             register. The message lists the registered IDs.
     """
     from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
-    from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
 
     project = _project(project_or_path)
+    if stage_id is not None:
+        override = load_powerflow_backend_by_stage(project).get(stage_id)
+        if override is not None:
+            return override
     declared = _simulation(project).get("powerflowBackend")
     if declared is None:
         return DEFAULT_POWERFLOW_BACKEND_ID
@@ -522,10 +596,7 @@ def load_powerflow_backend_id(project_or_path: ProjectRef) -> str:
             f"non-empty string, found {type(declared).__name__}"
         )
     backend_id = declared.strip()
-    registered = [
-        descriptor.backend_id
-        for descriptor in default_powerflow_backend_registry().list_descriptors()
-    ]
+    registered = _registered_backend_ids()
     if backend_id not in registered:
         raise ValueError(
             f"{project.path}: spec.simulation.powerflowBackend names an "
@@ -541,6 +612,7 @@ __all__ = [
     "load_generated_load_multipliers",
     "load_generated_load_profiles",
     "load_numeric_profile_array",
+    "load_powerflow_backend_by_stage",
     "load_powerflow_backend_id",
     "load_simulation_seed",
     "load_prosumer_assets",

@@ -11,6 +11,15 @@ spec:
     # Declared RNG base: config.SEED; per-realization draws are SEED + r and
     # named offsets (OOS_SEED_OFFSET, ADV_SEED_OFFSET, DHW_SEED_SALT) derive from it.
     seed: 42
+    # This study genuinely solves with two engines, so it declares both rather
+    # than flattening them into one claim. Every solve routes through
+    # _powerflow.native_backend()/lightsim_backend(); the split is verified
+    # against the real call graph by tests/test_study_powerflow_routing.py, so
+    # a stage that changes engine without changing this map fails the suite.
+    powerflowBackend: pandapower_native
+    powerflowBackendByStage:
+      # network_min_voltage() -- the only lightsim2grid consumer in the study.
+      analyze_voltage_risk_network: lightsim2grid
   pathBase: repo
   problem:
     type: ev_hosting_capacity_flexibility
