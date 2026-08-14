@@ -144,7 +144,7 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             p_kw = per_load_base[:, hour] + float(pen) * ev_perhome_day[hour]
             net.load["p_mw"] = p_kw / 1000.0
             net.load["q_mvar"] = net.load["p_mw"] * q_factor
-            native_backend().solve(net, numba=True)
+            native_backend().solve(net)
             served_h = float(net.res_load["p_mw"].sum())
             served_e += served_h
             peak_mw = max(peak_mw, served_h)

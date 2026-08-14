@@ -31,11 +31,11 @@ from projects.ev_hosting_flex.scripts.config import (
 N_DESIGN_HOURS = 24
 """Hourly step count of the per-day validation profiles."""
 
-_BACKENDS: dict[str, Any] = {}
+_BACKENDS: dict[tuple[str, tuple[tuple[str, Any], ...]], Any] = {}
 
 
-def _backend(backend_id: str) -> Any:
-    """Resolve a power-flow backend once and reuse it.
+def _backend(backend_id: str, **settings: Any) -> Any:
+    """Resolve a power-flow backend once, with its settings, and reuse it.
 
     Every solve in this module goes through here rather than calling
     ``pandapower.runpp`` directly, so the engine that produced a voltage is
@@ -45,20 +45,26 @@ def _backend(backend_id: str) -> Any:
 
     Args:
         backend_id: A registered backend ID.
+        **settings: Solver keywords baked into the instance rather than passed
+            per solve, so they appear in ``descriptor.settings``. Per-call
+            keywords never reach the manifest; resolution-time ones do.
 
     Returns:
-        The resolved backend, constructed on first use.
+        The resolved backend, constructed on first use. The cache is keyed by
+        ID and settings together, so two differently-configured instances of
+        one engine cannot collide.
 
     Raises:
         MissingCapabilityError: If the backend needs an extra this install
             lacks. Raised at resolution rather than swallowed, so a missing
             solver stops the run instead of silently changing its numbers.
     """
-    if backend_id not in _BACKENDS:
+    key = (backend_id, tuple(sorted(settings.items())))
+    if key not in _BACKENDS:
         from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
-        _BACKENDS[backend_id] = resolve_powerflow_backend(backend_id)
-    return _BACKENDS[backend_id]
+        _BACKENDS[key] = resolve_powerflow_backend(backend_id, **settings)
+    return _BACKENDS[key]
 
 
 def native_backend() -> Any:
@@ -66,12 +72,15 @@ def native_backend() -> Any:
 
     Returns:
         The backend whose declared settings are ``algorithm="nr",
-        init="auto"`` -- pandapower's own defaults, so routing a former
-        ``pp.runpp(net, numba=True)`` through it changes no solved value.
+        init="auto"`` -- pandapower's own defaults -- plus ``numba=True``.
+        ``numba`` is bound HERE rather than passed to each ``solve`` so it
+        reaches ``descriptor.settings`` and therefore the run manifest; a
+        per-call keyword is recorded nowhere. The resulting call is identical
+        to the former ``pp.runpp(net, numba=True)``.
     """
     from gridalyn.simulation.backends.contract import PANDAPOWER_NATIVE_BACKEND_ID
 
-    return _backend(PANDAPOWER_NATIVE_BACKEND_ID)
+    return _backend(PANDAPOWER_NATIVE_BACKEND_ID, numba=True)
 
 
 def lightsim_backend() -> Any:
@@ -410,7 +419,7 @@ def feeder_min_voltage(
     subnet.ext_grid["vm_pu"] = float(slack_vm_pu)
     subnet.load["p_mw"] = p_kw / 1000.0
     subnet.load["q_mvar"] = subnet.load["p_mw"] * q_factor
-    native_backend().solve(subnet, numba=True)
+    native_backend().solve(subnet)
     lv_buses = subnet.bus.index[subnet.bus["vn_kv"] < 1.0]
     return float(subnet.res_bus.loc[lv_buses, "vm_pu"].min())
 
@@ -472,7 +481,7 @@ def network_min_voltage(
         # settings={"lightsim2grid": True} -> pp.runpp(net, lightsim2grid=True)
         lightsim_backend().solve(net)
     else:
-        native_backend().solve(net, numba=True)
+        native_backend().solve(net)
     lv_buses = net.bus.index[net.bus["vn_kv"] < 1.0]
     return float(net.res_bus.loc[lv_buses, "vm_pu"].min())
 
@@ -521,7 +530,7 @@ def run_design_day_powerflow(
     for hour in range(N_DESIGN_HOURS):
         net.load["p_mw"] = p_kw[:, hour] / 1000.0
         net.load["q_mvar"] = net.load["p_mw"] * q_factor
-        backend.solve(net, numba=True)
+        backend.solve(net)
         frames["bus_voltage"].append(
             pd.DataFrame(
                 {
@@ -688,7 +697,7 @@ def run_feeder_mc(
                 subnet.ext_grid["vm_pu"] = float(mv_vm[hour])
                 subnet.load["p_mw"] = per_home_mw[hour]
                 subnet.load["q_mvar"] = per_home_mw[hour] * q_factor
-                backend.solve(subnet, numba=True)
+                backend.solve(subnet)
                 records.append(
                     {
                         "variant": variant,

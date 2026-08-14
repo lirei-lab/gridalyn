@@ -44,9 +44,21 @@ class PowerFlowBackendDescriptor:
         name: Human-readable engine description for reports and manifests.
         capability: Optional-capability name this backend needs (a key of
             ``OPTIONAL_CAPABILITY_MODULES``), or ``None`` when it needs none.
-        settings: Solver keywords the backend applies before any caller
-            override. Recorded in provenance, so a manifest states what was
-            actually asked of the solver.
+        settings: Solver keywords this backend applies before any caller
+            override.
+
+            Read this as the backend's DECLARED settings, not as a full record
+            of each solve. ``solve(net, **kwargs)`` merges per-call keywords
+            over these, and those never reach the manifest: a site passing
+            ``numba=True`` or ``max_iteration=100`` is recorded as the
+            descriptor alone. The gap is narrow -- per-call keywords tune how
+            the declared engine runs, not which engine ran, and the engine is
+            what distinguished two otherwise-identical runs -- but the field
+            does not state what was asked of the solver, only what the backend
+            asked before the caller spoke. A site wanting its keywords recorded
+            resolves the backend WITH them
+            (``resolve_powerflow_backend(id, numba=True)``) so they land in the
+            instance descriptor, rather than passing them per solve.
     """
 
     backend_id: str

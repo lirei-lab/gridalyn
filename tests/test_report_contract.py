@@ -3,7 +3,7 @@
 The SDK's cross-cutting rule is that every artifact-producing run emits a
 governed platform report via ``write_report`` — never hand-written report JSON.
 Enforcing that mechanically is not as simple as banning ``json.dump``: the repo
-writes 69 JSON artifacts directly plus 17 through in-repo JSON helpers, and the
+writes 69 JSON artifacts directly plus 18 through in-repo JSON helpers, and the
 overwhelming majority are legitimately *not* platform reports (catalogs,
 manifests, scorecards, run-lineage records, cache metadata, GeoJSON, study data
 payloads). Each has its own shape and its own contract.
@@ -415,6 +415,9 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "gridalyn/projects/regression.py::"
         "run_project_regression::write_regression_report#0",
         "gridalyn/projects/runner.py::run_project::_write_manifest#0",
+        # The same run manifest, written on the provenance-assembly failure
+        # path so a malformed declaration still leaves a trace on disk.
+        "gridalyn/projects/runner.py::_attach_provenance::_write_manifest#0",
         "gridalyn/projects/workflows/digital_twin/build.py::"
         "run_digital_twin_build::write_build_manifest#0",
         "gridalyn/projects/workflows/digital_twin/build.py::"
@@ -959,13 +962,16 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            17,
+            18,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
             "perturbation sampler, network-impact verification report, "
             "provider-selection shadow report and physics-surrogate trainer), "
-            "leaving 17. A different number "
+            "leaving 17. 2026-08-14 added one back: the run manifest is now "
+            "also written from runner._attach_provenance, so a malformed "
+            "spec.simulation declaration leaves a manifest rather than only a "
+            "traceback. That makes 18. A different number "
             "means the tree moved; reconcile before adjusting this number.",
         )
 

@@ -338,7 +338,7 @@ FeatureCollection; the module emits its governed report at `:25`).
 | | `reports.py::write_manifest:181` | NOT-A-REPORT | A report *index*: `manifest_id`, not `report_id`. |
 | `interfaces/reporting/schemas.py::write_json` | `interfaces/reporting/digital_twin.py:127` | NOT-A-REPORT | `digital_twin_report_manifest.json` — indexes three governed reports; it is not one. |
 | `projects/regression.py::write_regression_report` | `regression.py:138` | NOT-A-REPORT | See §3.6. |
-| `projects/runner.py::_write_manifest` | `runner.py:330` | NOT-A-REPORT | Workflow run manifest. |
+| `projects/runner.py::_write_manifest` | `runner.py` (`run_project`, `_attach_provenance`) | NOT-A-REPORT | Workflow run manifest, written from two sites: the normal close, and the provenance-assembly failure path added 2026-08-14 so a malformed `spec.simulation` declaration still leaves a manifest to read. |
 | `.../digital_twin/build.py::write_build_manifest` | `build.py:173`, `:180` | NOT-A-REPORT | Build manifest, written twice (dry-run and real). |
 | `gridalyn/projects/dashboard_catalog.py::write_dashboard_catalog` (relocated — §9) | `generate_digital_twin_dashboard_catalog.py:83` | NOT-A-REPORT | Catalog. |
 | `operations/settlement.py::write_flexibility_clearing_scorecard` | `generate_flexibility_clearing_scorecard.py:71` | NOT-A-REPORT | Scorecard. |

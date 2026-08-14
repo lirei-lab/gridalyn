@@ -314,6 +314,47 @@ def _build_provenance(
     }
 
 
+def _attach_provenance(
+    manifest: dict[str, Any],
+    project: StudyProject,
+    planned: list[WorkflowStage],
+    output_path: Path,
+    *,
+    echo: bool,
+) -> None:
+    """Build the provenance block, leaving a manifest behind if it cannot be.
+
+    A malformed declaration -- a typo'd backend ID, a stage-keyed override
+    naming a stage the workflow no longer defines -- raises while provenance is
+    assembled, before any stage runs. Recording that failure keeps the
+    repository's own convention that a failure leaves a durable trace: without
+    it the run aborted with a traceback, no manifest on disk, and none of the
+    "Inspect the run manifest" guidance the stage-failure path prints.
+
+    Args:
+        manifest: The open manifest, mutated in place.
+        project: The loaded study.
+        planned: The topologically ordered stages.
+        output_path: Where the manifest is written if provenance fails.
+        echo: Whether to print the re-run hint to stderr.
+
+    Raises:
+        Exception: Whatever provenance assembly raised, re-raised unchanged
+            after the manifest is written. The caller sees the original error;
+            the operator also gets a file to read.
+    """
+    try:
+        manifest["provenance"] = _build_provenance(project, planned)
+    except Exception as exc:
+        manifest["status"] = "failed"
+        manifest["ended_at"] = _utc_now()
+        manifest["provenance_error"] = repr(exc)
+        _write_manifest(output_path, manifest)
+        if echo:
+            _echo(f"Inspect the run manifest: {output_path}")
+        raise
+
+
 def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -496,7 +537,7 @@ def run_project(
         Path(manifest_path) if manifest_path else default_manifest_path(project)
     )
     planned = select_stages(project, stages) if stages else plan_stages(project)
-    manifest["provenance"] = _build_provenance(project, planned)
+    _attach_provenance(manifest, project, planned, output_path, echo=echo)
     if stages:
         manifest["stage_filter"] = sorted({stage.id for stage in planned})
     total = len(planned)

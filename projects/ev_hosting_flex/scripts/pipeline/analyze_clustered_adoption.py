@@ -140,7 +140,7 @@ def _solve_worst_trafo(
             p_kw[k] = base_h + ev_h
         net.load["p_mw"] = p_kw / 1000.0
         net.load["q_mvar"] = net.load["p_mw"] * q_factor
-        native_backend().solve(net, numba=True)
+        native_backend().solve(net)
         load_pct = net.res_trafo["loading_percent"][lv_trafos].to_numpy(dtype=DTYPE)
         worst = max(worst, float(load_pct.max()))
         over_seen |= load_pct >= 100.0
