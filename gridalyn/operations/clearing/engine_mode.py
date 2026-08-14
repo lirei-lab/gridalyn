@@ -8,8 +8,7 @@ deleted — deleting it would re-baseline every committed number, D-01):
   (from ``market/dso_dispatch.py``);
 * ``MarketSimulationEngine`` — time-domain two-stage simulation loop (from
   ``market/engine.py``);
-* the residential aggregator physical models ``FlexResource`` /
-  ``BlockFlexPortfolio`` / ``BuildingAggregator`` and the
+* the residential aggregator physical model ``BuildingAggregator`` and the
   ``generate_residential_portfolios`` factory (from ``market/aggregator.py``;
   DOM-04 relocation of generation to ``assets/datagen`` stays DEFERRED — it
   crosses the operations->assets boundary);
@@ -40,110 +39,23 @@ import pandas as pd
 from scipy.stats import norm
 
 from gridalyn.assets.datagen.grid.network import MVNetwork
-from gridalyn.assets.modeling.thermal import (
-    ThermalForecast,
-    thermal_forecast_metadata,
-)
+from gridalyn.assets.modeling.thermal import ThermalForecast, thermal_forecast_metadata
 from gridalyn.assets.modeling.transformers import TransformerThermalModel
 from gridalyn.operations.constraints import NetworkConstraintModel
 from gridalyn.operations.settlement import calculate_period_settlement
-
 
 # ---------------------------------------------------------------------------
 # Residential aggregator physical models (from market/aggregator.py)
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class FlexResource:
-    """Defines one type of flexible load in a residential block."""
-
-    name: str  # e.g., "ev_charger", "water_heater"
-    n_units: int  # number of enrolled units in this block
-    p_unit_kw: float  # rated power per unit
-    coincidence: float  # average fraction actively drawing power at any time (0-1)
-    reliability: float  # probability of successful response when curtailed (0-1)
-    max_duration_h: float  # max continuous curtailment duration before constraint
-    is_binary: bool  # True = on/off only, False = continuous modulation
-    marginal_cost: float = 0.50  # Voluntary cost ($/(kW*h)) to accept a limitation
-
-    @property
-    def total_rated_kw(self) -> float:
-        """Return total rated capacity across all enrolled units."""
-        return self.n_units * self.p_unit_kw
-
-    @property
-    def available_kw(self) -> float:
-        """Expected available curtailment capacity."""
-        return self.total_rated_kw * self.coincidence
-
-
-@dataclass
-class BlockFlexPortfolio:
-    """Block-level aggregator managing multiple FlexResources."""
-
-    block_id: int
-    resources: list[FlexResource]
-
-    @property
-    def soft_capacity_kw(self) -> float:
-        """Expected available soft CLS capacity across the portfolio."""
-        return sum(r.available_kw for r in self.resources)
-
-    def generate_limitation_offers(self) -> dict[str, dict]:
-        """Generate voluntary capacity limitation offers.
-
-        Instead of guessing prices, the building submits its desired load
-        (p_req), its absolute minimum survival load (p_min), and its
-        capacity-duration cost of limitation.
-        """
-        offers = {}
-        for res in self.resources:
-            p_req = res.available_kw
-            if p_req <= 0:
-                continue
-
-            # For EVs, they can technically be curtailed to 0.
-            # Submitting a heterogeneous cost adds merit-order depth.
-            offers[res.name] = {
-                "p_ref_kw": p_req,
-                "p_cap_kw": 0.0,
-                "delta_p_kw": p_req,
-                "cumulative_delta_p_kw": p_req,
-                "c_limit_per_kw_h": res.marginal_cost,
-            }
-        return offers
-
-    def simulate_delivery(
-        self,
-        rng: np.random.Generator,
-        allocations: dict[str, float],
-        actual_load_kw: float | None = None,
-    ) -> dict[str, float]:
-        """Simulate real-time stochastic delivery for each resource.
-
-        Returns delivered kW per resource.
-        """
-        delivered = {}
-        for res in self.resources:
-            assigned = allocations.get(res.name, 0.0)
-            if assigned <= 0:
-                delivered[res.name] = 0.0
-                continue
-
-            if actual_load_kw is not None:
-                # True physical mapping: we can't curtail more than what is
-                # actually plugged in! We cap structural delivery strictly at
-                # the physical parquet bound.
-                delivered[res.name] = min(assigned, actual_load_kw * res.reliability)
-            else:
-                # Fallback to noise roll if no physical trace is provided
-                success_rate = rng.beta(
-                    a=res.reliability * 20, b=(1 - res.reliability) * 20
-                )
-                delivered[res.name] = assigned * success_rate
-
-        return delivered
+# ``FlexResource`` and ``BlockFlexPortfolio`` were removed here: neither had a
+# single reference in ``gridalyn/``, ``tests/`` or ``projects/``, and
+# ``BlockFlexPortfolio.simulate_delivery`` did not accept the ``t`` /
+# ``firm_peak_t`` keywords that ``DSODispatcher.dispatch`` passes
+# unconditionally -- so a portfolio of that type would have raised ``TypeError``
+# rather than clearing. ``BuildingAggregator`` below is the only portfolio type
+# the engine has ever run.
 
 
 @dataclass
@@ -317,9 +229,7 @@ class BuildingAggregator:
     # during recovery (p_heating_max = p_baseline x HEATING_OVERSIZE).
     HEATING_OVERSIZE: float = 1.30
 
-    def update_state(
-        self, curtailed_kw: float, dt_man_h: float, p_req: float
-    ) -> float:
+    def update_state(self, curtailed_kw: float, dt_man_h: float, p_req: float) -> float:
         """Update the thermal state of the building following dispatch.
 
         Uses a proportional controller (P-control) to model HVAC recovery: the
@@ -537,9 +447,7 @@ class DSODispatcher:
                 mask = original_congested_mask[b_start:b_end]
 
                 if np.any(mask):
-                    max_idx = b_start + int(
-                        np.argmax(p_worst_kw[b_start:b_end] * mask)
-                    )
+                    max_idx = b_start + int(np.argmax(p_worst_kw[b_start:b_end] * mask))
                 else:
                     max_idx = b_start
 
@@ -586,7 +494,7 @@ class DSODispatcher:
 
     def auction_clear_capacity(
         self,
-        portfolios: list,  # list of BlockFlexPortfolio
+        portfolios: list,  # list of BuildingAggregator
         d_required_kw: float,
         t_idx: int = 0,
         clearing_period_h: float = 0.25,
@@ -667,14 +575,10 @@ class DSODispatcher:
             if tier_volume <= needed:
                 # Clear entire tier sequentially
                 for offer in tier_offers:
-                    allocations[offer["block_id"]][offer["res_name"]] = offer[
-                        "volume"
-                    ]
+                    allocations[offer["block_id"]][offer["res_name"]] = offer["volume"]
                     contract_refs[offer["block_id"]] = offer["p_ref_kw"]
                     accepted_kw = sum(allocations[offer["block_id"]].values())
-                    contract_caps[offer["block_id"]] = (
-                        offer["p_ref_kw"] - accepted_kw
-                    )
+                    contract_caps[offer["block_id"]] = offer["p_ref_kw"] - accepted_kw
                 cleared_volume += tier_volume
             else:
                 # Pro-Rata marginal clearing to ensure equitable distribution
@@ -684,9 +588,7 @@ class DSODispatcher:
                     allocations[offer["block_id"]][offer["res_name"]] = allocated_vol
                     contract_refs[offer["block_id"]] = offer["p_ref_kw"]
                     accepted_kw = sum(allocations[offer["block_id"]].values())
-                    contract_caps[offer["block_id"]] = (
-                        offer["p_ref_kw"] - accepted_kw
-                    )
+                    contract_caps[offer["block_id"]] = offer["p_ref_kw"] - accepted_kw
                 cleared_volume += needed
                 break
 
@@ -749,13 +651,15 @@ class DSODispatcher:
             # Structurally retrieve optimal cleared allocations
             bids = optimal_curtailments[port.block_id]
 
-            # Identify the correct native trace reference based on type
-            if hasattr(port, "get_capacity_bounds"):
-                expected_native_load = port.get_capacity_bounds(t_idx)[0]
-            elif hasattr(port, "p_req_kw"):
-                expected_native_load = port.p_req_kw
-            else:
-                expected_native_load = sum(r.available_kw for r in port.resources)
+            # ``portfolios`` is produced solely by
+            # ``generate_residential_portfolios``, which returns
+            # ``list[BuildingAggregator]``, so the native trace is always read
+            # through ``get_capacity_bounds``. The former ``hasattr`` chain also
+            # covered ``p_req_kw`` (defined nowhere) and ``resources`` (defined
+            # only on the removed ``BlockFlexPortfolio``); both were unreachable,
+            # and the second branch masked the fact that only this first one
+            # survived the ``simulate_delivery(..., t=...)`` call below.
+            expected_native_load = port.get_capacity_bounds(t_idx)[0]
 
             # Simulate True Physical Delivery. Rather than fake stochastic dice
             # rolls, we pass the true physical trace for the aggregated baseline
@@ -998,9 +902,7 @@ class MarketSimulationEngine:
                     )
                     if active_contract is not None:
                         _, max_def, _ = active_contract
-                        res_targets_raw[t] = min(
-                            max_def, check["congestion_relief_kw"]
-                        )
+                        res_targets_raw[t] = min(max_def, check["congestion_relief_kw"])
                     else:
                         res_targets_raw[t] = check["congestion_relief_kw"]
             else:
@@ -1074,18 +976,17 @@ class MarketSimulationEngine:
                     break
 
             if in_window and active_contract is not None:
+                # Both contract shapes cap dispatch the same way, so this is one
+                # branch rather than two. Scheduled Profile RESERVES capacity up
+                # to ``max_def`` while the Capacity Option merely permits it, but
+                # in each case the DSO dispatches only the real-time physical
+                # deficit, so buildings are released as soon as congestion
+                # resolves rather than at contract expiry. The two arms here were
+                # byte-identical and are collapsed; ``is_profiled`` still
+                # separates the two designs where they genuinely differ, at the
+                # re-auction cadence below and in the settlement rule.
                 _, max_def, _ = active_contract
-                if is_profiled:
-                    # Scheduled Profile: The contract RESERVES capacity up to
-                    # max_def, but the DSO dispatches only the real-time physical
-                    # deficit. Buildings are released as soon as congestion
-                    # resolves, enabling immediate thermal rebound rather than
-                    # waiting for contract expiry.
-                    target_deficit = min(max_def, rt_deficit)
-                else:
-                    # Capacity Option: DSO only dispatches what is physically
-                    # needed up to the contract limit
-                    target_deficit = min(max_def, rt_deficit)
+                target_deficit = min(max_def, rt_deficit)
             else:
                 target_deficit = rt_deficit
 
@@ -1171,9 +1072,7 @@ class MarketSimulationEngine:
                 # circular false-positive breaches
                 actual_unmanaged_load = security_load_kw[t]
                 true_physical_load = actual_unmanaged_load - offer["soft_cls_kw"]
-                actual_physical_shortfall = max(
-                    0.0, true_physical_load - s_limit_kw
-                )
+                actual_physical_shortfall = max(0.0, true_physical_load - s_limit_kw)
 
                 if actual_physical_shortfall > 0:
                     ev_avail = (
@@ -1278,9 +1177,7 @@ class MarketSimulationEngine:
                 if hasattr(port, "accumulated_deficit_kwh"):
                     res_deficits[port.block_id][t] = port.accumulated_deficit_kwh
                 if hasattr(port, "calculate_period_cost"):
-                    res_marginal_costs[port.block_id][t] = port.calculate_period_cost(
-                        t
-                    )
+                    res_marginal_costs[port.block_id][t] = port.calculate_period_cost(t)
 
             res_rebound_kw[t] = actual_rebound_tot
 

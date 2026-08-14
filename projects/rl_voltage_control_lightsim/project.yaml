@@ -5,6 +5,13 @@ metadata:
   version: 0.1.0
   description: Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.
 spec:
+  simulation:
+    # Two independent RNG streams, both wired to the code that reads them.
+    # A scalar 'seed' here would have named one of the two and read as
+    # reproducible while the learned policy came from the other.
+    seeds:
+      loadGeneration: 11   # spec.inputs.loadGeneration.seed
+      policy: 7            # TabularVoltageControlConfig.random_seed, read in train_rl_agent.py
   pathBase: project
   problem:
     type: learning_voltage_control
@@ -146,6 +153,12 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/rl_feeder_report.json
+      - outputs/reports/rl_voltage_control_report.json
+      - outputs/operations/q_table.csv
+      - outputs/operations/learned_policy.csv
     requiredReports:
       - outputs/reports/rl_feeder_report.json
       - outputs/reports/rl_voltage_control_report.json

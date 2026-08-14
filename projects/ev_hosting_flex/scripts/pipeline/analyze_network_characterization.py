@@ -46,9 +46,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
-)
+from projects.ev_hosting_flex.scripts._powerflow import native_backend  # noqa: E402
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
     HEADROOM_PENETRATION_GRID,
@@ -57,6 +55,9 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ROUND_DECIMALS,
     SLACK_VM_PU,
     SUBSTATION_DYNAMIC_RATING_K,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+    size_network_to_load,
 )
 
 
@@ -89,8 +90,6 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
-    import pandapower as pp
-
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
@@ -145,13 +144,11 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             p_kw = per_load_base[:, hour] + float(pen) * ev_perhome_day[hour]
             net.load["p_mw"] = p_kw / 1000.0
             net.load["q_mvar"] = net.load["p_mw"] * q_factor
-            pp.runpp(net, numba=True)
+            native_backend().solve(net, numba=True)
             served_h = float(net.res_load["p_mw"].sum())
             served_e += served_h
             peak_mw = max(peak_mw, served_h)
-            loss_e += float(
-                net.res_line["pl_mw"].sum() + net.res_trafo["pl_mw"].sum()
-            )
+            loss_e += float(net.res_line["pl_mw"].sum() + net.res_trafo["pl_mw"].sum())
             sub_pk = max(
                 sub_pk, float(net.res_trafo["loading_percent"][sub_trafos].max())
             )
@@ -238,21 +235,21 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             "n_transformers": int(len(lv_trafos)),
             "n_overloaded_at_0ev": n_at_0,
             "n_never_bind_in_grid": n_never,
-            "crossing_penetration_p05": round(
-                float(np.percentile(finite, 5)), ROUND_DECIMALS
-            )
-            if finite.size
-            else None,
-            "crossing_penetration_p50": round(
-                float(np.percentile(finite, 50)), ROUND_DECIMALS
-            )
-            if finite.size
-            else None,
-            "crossing_penetration_p95": round(
-                float(np.percentile(finite, 95)), ROUND_DECIMALS
-            )
-            if finite.size
-            else None,
+            "crossing_penetration_p05": (
+                round(float(np.percentile(finite, 5)), ROUND_DECIMALS)
+                if finite.size
+                else None
+            ),
+            "crossing_penetration_p50": (
+                round(float(np.percentile(finite, 50)), ROUND_DECIMALS)
+                if finite.size
+                else None
+            ),
+            "crossing_penetration_p95": (
+                round(float(np.percentile(finite, 95)), ROUND_DECIMALS)
+                if finite.size
+                else None
+            ),
         },
         "n_lv_lines_upsized": int(sizing["n_lv_lines_upsized"]),
         "design_day": design_day,
@@ -263,7 +260,12 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     fig_paths = _figures(
-        pens, loss_pct, served_peak_mw, sub_cfg, headroom_static, home_counts,
+        pens,
+        loss_pct,
+        served_peak_mw,
+        sub_cfg,
+        headroom_static,
+        home_counts,
         PROJECT_OUTPUTS_DIR / "figures",
     )
 
@@ -312,11 +314,17 @@ def _figures(
 
     ax2.plot(pens, served_peak_mw, "o-", color="C1", label="area peak load")
     ax2.axhline(
-        float(sub_cfg["firm_capacity_normal_mw"]), color="k", ls="--", lw=1,
+        float(sub_cfg["firm_capacity_normal_mw"]),
+        color="k",
+        ls="--",
+        lw=1,
         label="N-1 firm (normal)",
     )
     ax2.axhline(
-        float(sub_cfg["firm_capacity_emergency_mw"]), color="C3", ls=":", lw=1.5,
+        float(sub_cfg["firm_capacity_emergency_mw"]),
+        color="C3",
+        ls=":",
+        lw=1.5,
         label="N-1 firm (emergency)",
     )
     ax2.set_xlabel("EV/home")
@@ -352,9 +360,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_characterization(
-        script.cache_dir, PROJECT_OUTPUTS_DIR / "data"
-    )
+    derived = derive_characterization(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
     warnings = [
         "LOW WINTER DIVERSITY: inter-cluster diversity at design cold is ~0 "
         "(verified factor 0.997) — all-electric heating is weather-driven and "

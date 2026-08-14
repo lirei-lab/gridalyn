@@ -46,6 +46,14 @@ metadata:
   version: 0.1.0
 spec:
   pathBase: project
+  simulation:
+    # The RNG base this study draws from, recorded in provenance.seeds.
+    # Scaffolded rather than left out: a project without it records
+    # "base": null in every run manifest, which is the state the shipped
+    # studies were repaired out of on 2026-08-14. If your stages grow a
+    # second independent stream, replace this with a `seeds:` mapping and
+    # read each one through ProjectScript.simulation_seed.
+    seed: 7
   problem:
     type: grid_study
     dataset: project_inputs
@@ -233,6 +241,14 @@ metadata:
   version: 0.1.0
 spec:
   pathBase: project
+  simulation:
+    # The RNG base this study draws from, recorded in provenance.seeds.
+    # Scaffolded rather than left out: a project without it records
+    # "base": null in every run manifest, which is the state the shipped
+    # studies were repaired out of on 2026-08-14. If your stages grow a
+    # second independent stream, replace this with a `seeds:` mapping and
+    # read each one through ProjectScript.simulation_seed.
+    seed: 7
   problem:
     type: grid_study
     dataset: ieee_33_bus_benchmark

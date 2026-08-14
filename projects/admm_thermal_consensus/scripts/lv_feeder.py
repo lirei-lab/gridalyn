@@ -41,10 +41,16 @@ def build_lv_feeder():
     pp.create_ext_grid(net, mv, vm_pu=1.0, name="grid")
     lv = pp.create_bus(net, vn_kv=C.LV_KV, name="LV_busbar")
     pp.create_transformer_from_parameters(
-        net, hv_bus=mv, lv_bus=lv,
+        net,
+        hv_bus=mv,
+        lv_bus=lv,
         sn_mva=C.TRANSFORMER_KVA / 1000.0,
-        vn_hv_kv=C.MV_KV, vn_lv_kv=C.LV_KV,
-        vkr_percent=1.0, vk_percent=4.0, pfe_kw=0.6, i0_percent=0.2,
+        vn_hv_kv=C.MV_KV,
+        vn_lv_kv=C.LV_KV,
+        vkr_percent=1.0,
+        vk_percent=4.0,
+        pfe_kw=0.6,
+        i0_percent=0.2,
         name="MV/LV distribution transformer",
     )
     # several parallel radial feeders leave the LV busbar (a real 400 kVA unit
@@ -56,9 +62,15 @@ def build_lv_feeder():
         for _ in range(C.BUSES_PER_FEEDER):
             b = pp.create_bus(net, vn_kv=C.LV_KV, name=f"LV_f{f}_{len(chain)}")
             pp.create_line_from_parameters(
-                net, from_bus=chain[-1], to_bus=b, length_km=C.LV_SECTION_KM,
-                r_ohm_per_km=C.LV_R_OHM_KM, x_ohm_per_km=C.LV_X_OHM_KM,
-                c_nf_per_km=0.0, max_i_ka=C.LV_MAX_I_KA, name=f"LV_seg_{seg}",
+                net,
+                from_bus=chain[-1],
+                to_bus=b,
+                length_km=C.LV_SECTION_KM,
+                r_ohm_per_km=C.LV_R_OHM_KM,
+                x_ohm_per_km=C.LV_X_OHM_KM,
+                c_nf_per_km=0.0,
+                max_i_ka=C.LV_MAX_I_KA,
+                name=f"LV_seg_{seg}",
             )
             chain.append(b)
             load_buses.append(b)
@@ -80,10 +92,17 @@ def inject_total(net, load_buses, total_kw: float) -> None:
 
 
 def solve_metrics(net) -> tuple[float, float]:
-    """Run AC power flow; return ``(min_lv_voltage_pu, max_transformer_loading_pct)``."""
-    import pandapower as pp
+    """Run AC power flow; return ``(min_lv_voltage_pu, max_transformer_loading_pct)``.
 
-    pp.runpp(net, algorithm="nr", init="auto")
+    Solves through the registered pandapower-native backend rather than calling
+    ``runpp`` here, so the engine reaches ``provenance.powerflow_backend``. That
+    backend's declared settings are ``algorithm="nr", init="auto"`` -- exactly
+    the keywords this site used to pass -- so no solved value moves.
+    """
+    from gridalyn.simulation.backends.contract import PANDAPOWER_NATIVE_BACKEND_ID
+    from gridalyn.simulation.backends.registry import resolve_powerflow_backend
+
+    resolve_powerflow_backend(PANDAPOWER_NATIVE_BACKEND_ID).solve(net)
     lv_mask = net.bus.vn_kv < 1.0
     vmin = float(net.res_bus.vm_pu[lv_mask].min())
     loading = float(net.res_trafo.loading_percent.max())

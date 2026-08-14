@@ -8,6 +8,9 @@ metadata:
     heating homes with ML imputation of communication-failed agents, validated
     on the IEEE-33 feeder with pandapower.
 spec:
+  simulation:
+    # Declared RNG base: config.SEED.
+    seed: 42
   pathBase: repo
   problem:
     type: distributed_consensus_demand_coordination

@@ -83,6 +83,112 @@ class TestRunProvenance(unittest.TestCase):
             self.assertIn("seeds", provenance)
             self.assertIsInstance(provenance["seeds"], dict)
 
+    def test_seeds_block_states_whether_a_base_was_declared(self) -> None:
+        # The seeds block used to be a per-stage {stage_id: seed + index} map.
+        # No study seeds that way, so the map asserted a derivation the stages
+        # do not perform. It now records the declared base and says whether it
+        # was declared -- absent provenance being strictly better than false
+        # provenance.
+        with tempfile.TemporaryDirectory() as tmp:
+            seeds = _run_manifest(tmp)["provenance"]["seeds"]
+            self.assertIn("base", seeds)
+            self.assertIn("declared", seeds)
+            self.assertIsInstance(seeds["declared"], bool)
+            self.assertIsInstance(seeds["stage_count"], int)
+            if seeds["declared"]:
+                self.assertIsInstance(seeds["base"], int)
+            else:
+                self.assertIsNone(seeds["base"])
+
+
+class TestShippedStudiesDeclareSeeds(unittest.TestCase):
+    """Every shipped study must declare the RNG base it actually uses.
+
+    This pins a repaired defect rather than a preference. ``_resolve_seeds``
+    documented ``spec.simulation.seed`` as its primary path, but the study
+    schema set ``spec.additionalProperties: false`` without listing
+    ``simulation``, so declaring the key failed validation and every study fell
+    to the fallback. All eight manifests on disk recorded
+    ``{"base": null}`` -- a reproducibility repository whose governed artifacts
+    recorded no seed at all. Without this test, deleting one line of schema
+    silently restores that state.
+    """
+
+    def test_every_study_declares_a_seed_the_runner_can_record(self) -> None:
+        from gridalyn.projects.loader import load_project
+        from gridalyn.projects.runner import _resolve_seeds, plan_stages
+
+        repo_root = Path(__file__).resolve().parents[1]
+        project_files = sorted((repo_root / "projects").glob("*/project.yaml"))
+        self.assertTrue(project_files, "no shipped studies found")
+        undeclared = []
+        for path in project_files:
+            project = load_project(path)
+            seeds = _resolve_seeds(project, plan_stages(project))
+            scalar = isinstance(seeds["base"], int)
+            streams = isinstance(seeds["streams"], dict) and all(
+                isinstance(value, int) for value in seeds["streams"].values()
+            )
+            if not seeds["declared"] or not (scalar or streams):
+                undeclared.append(path.parent.name)
+        self.assertEqual(
+            undeclared,
+            [],
+            "these studies record no RNG seed in provenance; add "
+            "spec.simulation.seed (one stream) or spec.simulation.seeds (several) "
+            f"naming what the stage scripts actually draw from: {undeclared}",
+        )
+
+    def test_declared_streams_are_the_ones_the_scripts_read(self) -> None:
+        # F1/F2 of the branch review: the first pass declared a scalar seed for
+        # all eight studies from `spec.inputs.loadGeneration.seed`, and two of
+        # them draw from a SECOND stream as well -- the Q-learning exploration
+        # RNG and the building-footprint RNG. Both scalars were false
+        # provenance: they read as reproducible while the artifact that matters
+        # came from an undeclared literal. Those two studies now declare named
+        # streams AND their scripts read them through
+        # ProjectScript.simulation_seed, so declaration and draw cannot diverge.
+        # This test pins the wiring, which is the part a reader depends on.
+        from gridalyn.projects.model_inputs import load_simulation_seed
+
+        repo_root = Path(__file__).resolve().parents[1]
+        wired = {
+            "rl_voltage_control_lightsim": (
+                ("loadGeneration", "policy"),
+                "scripts/train_rl_agent.py",
+            ),
+            "synthetic_geojson_feeder": (
+                ("loadGeneration", "footprints"),
+                "scripts/generate_building_footprints.py",
+            ),
+        }
+        for study, (streams, consumer) in wired.items():
+            project_file = repo_root / "projects" / study / "project.yaml"
+            source = (repo_root / "projects" / study / consumer).read_text()
+            for stream in streams:
+                with self.subTest(study=study, stream=stream):
+                    self.assertIsInstance(
+                        load_simulation_seed(project_file, stream), int
+                    )
+            # The non-loadGeneration stream must be read by the script, not
+            # merely declared beside it.
+            self.assertIn(
+                'simulation_seed("' + streams[1] + '")',
+                source,
+                f"{study}/{consumer} declares the {streams[1]!r} stream but "
+                "does not read it; a declared seed the code ignores is worse "
+                "than no declaration",
+            )
+
+    def test_declared_seed_survives_schema_validation(self) -> None:
+        from gridalyn.projects.validation import validate_project_file
+
+        repo_root = Path(__file__).resolve().parents[1]
+        for path in sorted((repo_root / "projects").glob("*/project.yaml")):
+            with self.subTest(study=path.parent.name):
+                report = validate_project_file(path)
+                self.assertTrue(report.valid, report.errors)
+
     def test_powerflow_backend_block_present(self) -> None:
         # Phase 10, plan 10-01. Before this key existed, a run solved through
         # lightsim2grid and a run solved through pandapower's own

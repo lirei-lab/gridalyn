@@ -6,6 +6,13 @@ metadata:
   description: Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.
 spec:
   pathBase: project
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 5
+    # Declared, not inherited: the timeseries stage resolves this ID through
+    # script.powerflow_backend() rather than calling runpp itself, so what the
+    # manifest records is what the stage solved with.
+    powerflowBackend: pandapower_native
   problem:
     type: benchmark_powerflow_scenarios
     dataset: ieee_33_bus_benchmark
@@ -82,6 +89,11 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/ieee33_powerflow_report.json
+      - outputs/reports/ieee33_scenario_comparison_report.json
+      - outputs/data/scenario_results.csv
     requiredReports:
       - outputs/reports/ieee33_powerflow_report.json
       - outputs/reports/ieee33_scenario_comparison_report.json

@@ -1,12 +1,26 @@
-"""Objective-level verification for Gridalyn demo projects."""
+"""Objective-level verification for Gridalyn study projects.
+
+The mechanism lives here; the checks themselves live beside each study. A study
+declares ``spec.validation.senseChecker`` and ``spec.validation.objectiveArtifacts``
+in its ``project.yaml``, and this module discovers both. Authors write against
+:mod:`gridalyn.projects.sense_check_api`.
+
+That split is a repair. Until 2026-08-14 this module held the six shipped
+studies' checkers -- 424 lines, 53% of the file -- plus two dicts keyed by
+project name that had to stay in sync by hand. It meant the library knew that
+IEEE-33 has 37 branches, and that adding a study to ``projects/`` required
+editing ``gridalyn/``: the consumer could not be extended without modifying its
+own dependency.
+"""
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import math
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 import pandas as pd
 
@@ -35,17 +49,15 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
     checks: CheckList = []
     _common_artifact_checks(project, checks)
     declared_checks = _declarative_sense_checks(project, checks)
-    checker = _PROJECT_CHECKERS.get(project.name)
-    if checker is None and declared_checks == 0:
-        _record(
-            checks,
-            "project_has_registered_sense_checks",
-            False,
-            "error",
-            project.name,
-            f"one of {sorted(_PROJECT_CHECKERS)}",
-        )
-    elif checker is not None and (missing := _missing_objective_artifacts(project)):
+    checker = _load_project_checker(project)
+    # These are two independent facts about a run and are recorded
+    # independently. The previous if/elif chain reported whichever it reached
+    # first, so a project that both declared nothing AND was missing its
+    # artifacts disclosed only one of the two -- and, because the lookup was
+    # keyed by project name, artifacts declared by a study with no code checker
+    # were never checked at all.
+    missing = _missing_objective_artifacts(project)
+    if missing:
         _record(
             checks,
             "missing_objective_artifact",
@@ -55,7 +67,23 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
             "all objective artifacts exist",
             "Run the project workflow before objective-level sense checks.",
         )
-    elif checker is not None:
+    if checker is None and declared_checks == 0:
+        _record(
+            checks,
+            "project_has_registered_sense_checks",
+            False,
+            "error",
+            project.name,
+            "spec.validation.senseChecker or spec.validation.senseChecks",
+            "A study must declare either a sense-check module "
+            "(spec.validation.senseChecker: <path>.py:<function>) or "
+            "declarative rules (spec.validation.senseChecks); a project "
+            "cannot pass sense checks vacuously.",
+        )
+    elif checker is not None and not missing:
+        # The checker reads those artifacts, so running it with any of them
+        # absent would replace a located 'missing_objective_artifact' with a
+        # FileNotFoundError traceback.
         checker(project, checks)
 
     error_failures = [
@@ -315,497 +343,105 @@ def _evaluate_declarative_rule(observed: Any, rule: dict[str, Any]) -> tuple[boo
     )
 
 
+def _validation_spec(project: StudyProject) -> Mapping[str, Any]:
+    spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
+    validation = spec.get("validation", {}) if isinstance(spec, dict) else {}
+    return validation if isinstance(validation, Mapping) else {}
+
+
+def _objective_artifacts(project: StudyProject) -> tuple[str, ...]:
+    """Return the artifacts a study declares its objective must produce.
+
+    Args:
+        project: The loaded study.
+
+    Returns:
+        The declared project-relative paths, empty when the study declares
+        none. This replaces a module-level dict keyed by project name, which
+        had to be kept in sync by hand with a second dict of checkers: a study
+        added to one and forgotten in the other silently checked nothing.
+
+    Raises:
+        ValueError: If ``spec.validation.objectiveArtifacts`` is present but is
+            not a list of strings.
+    """
+    declared = _validation_spec(project).get("objectiveArtifacts", [])
+    if not isinstance(declared, list) or not all(
+        isinstance(item, str) for item in declared
+    ):
+        raise ValueError(
+            f"{project.path}: spec.validation.objectiveArtifacts must be a list "
+            f"of project-relative path strings, found {type(declared).__name__}"
+        )
+    return tuple(declared)
+
+
 def _missing_objective_artifacts(project: StudyProject) -> list[str]:
     return [
         relative
-        for relative in _PROJECT_OBJECTIVE_ARTIFACTS.get(project.name, ())
+        for relative in _objective_artifacts(project)
         if not (project.root / relative).exists()
     ]
 
 
-def _check_minimal(project: StudyProject, checks: CheckList) -> None:
-    report = _summary(project, "outputs/reports/minimal_grid_report.json")
-    buses = _csv(project, "outputs/data/buses.csv")
-    lines = _csv(project, "outputs/data/lines.csv")
-    loads = _csv(project, "outputs/data/loads.csv")
-    _check(
-        checks,
-        "minimal_intent_is_explicit",
-        report.get("project_intent") == "minimal_grid_hello_world",
-        report.get("project_intent"),
-        "minimal_grid_hello_world",
-    )
-    _check(
-        checks,
-        "minimal_bus_count",
-        report.get("bus_count") == 5 and len(buses) == 5,
-        {"report": report.get("bus_count"), "csv": len(buses)},
-        5,
-    )
-    _check(
-        checks,
-        "minimal_line_count",
-        report.get("line_count") == 4 and len(lines) == 4,
-        {"report": report.get("line_count"), "csv": len(lines)},
-        4,
-    )
-    _check(
-        checks,
-        "minimal_load_count",
-        report.get("load_count") == 4 and len(loads) == 4,
-        {"report": report.get("load_count"), "csv": len(loads)},
-        4,
-    )
-    _check(
-        checks,
-        "minimal_powerflow_converges",
-        report.get("powerflow_converged") is True,
-        report.get("powerflow_converged"),
-        True,
-    )
-    _check(
-        checks,
-        "minimal_voltage_is_near_nominal",
-        _between(report.get("min_voltage_pu"), 0.98, 1.02),
-        report.get("min_voltage_pu"),
-        "0.98 <= min_voltage_pu <= 1.02",
-    )
-    _check(
-        checks,
-        "minimal_not_overloaded",
-        float(report.get("max_line_loading_pct", 999)) < 20.0,
-        report.get("max_line_loading_pct"),
-        "< 20%",
-    )
-    _check(
-        checks,
-        "minimal_has_positive_load",
-        float(report.get("total_load_mw", 0)) > 0,
-        report.get("total_load_mw"),
-        "> 0 MW",
-    )
+def _load_project_checker(
+    project: StudyProject,
+) -> Callable[[StudyProject, CheckList], None] | None:
+    """Load the sense checker a study declares, if it declares one.
 
+    The library holds no table of study names. A study points at its own
+    checker with ``spec.validation.senseChecker: <path>.py:<function>``,
+    resolved relative to the project root, so adding a study requires no edit
+    here. That direction matters: ``gridalyn`` is the library and ``projects``
+    is its consumer, and a name table here made the library depend on facts
+    about consumers it should not know.
 
-def _check_ieee33(project: StudyProject, checks: CheckList) -> None:
-    base = _summary(project, "outputs/reports/ieee33_powerflow_report.json")
-    scenario = _summary(
-        project, "outputs/reports/ieee33_scenario_comparison_report.json"
-    )
-    results = _csv(project, "outputs/data/scenario_results.csv").set_index(
-        "scenario_id"
-    )
-    expected_ids = {
-        "baseline",
-        "load_growth_20",
-        "pv_midday",
-        "ev_evening_peak",
-        "pv_plus_ev",
-    }
-    _check(
-        checks,
-        "ieee33_bus_count",
-        base.get("bus_count") == 33,
-        base.get("bus_count"),
-        33,
-    )
-    _check(
-        checks,
-        "ieee33_line_count",
-        base.get("line_count") == 37,
-        base.get("line_count"),
-        "37 pandapower case33bw branches",
-    )
-    _check(
-        checks,
-        "ieee33_single_slack",
-        base.get("slack_count") == 1,
-        base.get("slack_count"),
-        1,
-    )
-    _check(
-        checks,
-        "ieee33_baseline_converges",
-        base.get("converged") is True,
-        base.get("converged"),
-        True,
-    )
-    _check(
-        checks,
-        "ieee33_has_expected_scenarios",
-        set(scenario.get("scenario_ids", [])) == expected_ids,
-        scenario.get("scenario_ids"),
-        sorted(expected_ids),
-    )
-    _check(
-        checks,
-        "ieee33_scenario_count",
-        scenario.get("scenario_count") == 5,
-        scenario.get("scenario_count"),
-        5,
-    )
-    _check(
-        checks,
-        "ieee33_load_growth_worsens_voltage",
-        results.loc["load_growth_20", "min_voltage_pu"]
-        <= results.loc["baseline", "min_voltage_pu"],
-        float(results.loc["load_growth_20", "min_voltage_pu"]),
-        "<= baseline",
-    )
-    _check(
-        checks,
-        "ieee33_ev_peak_increases_net_demand",
-        results.loc["ev_evening_peak", "net_demand_mw"]
-        > results.loc["baseline", "net_demand_mw"],
-        float(results.loc["ev_evening_peak", "net_demand_mw"]),
-        "> baseline",
-    )
-    _check(
-        checks,
-        "ieee33_pv_reduces_net_demand",
-        results.loc["pv_midday", "net_demand_mw"]
-        < results.loc["baseline", "net_demand_mw"],
-        float(results.loc["pv_midday", "net_demand_mw"]),
-        "< baseline",
-    )
-    _check(
-        checks,
-        "ieee33_voltage_range_plausible",
-        _between(scenario.get("min_voltage_pu"), 0.85, 1.08),
-        scenario.get("min_voltage_pu"),
-        "0.85 <= min_voltage_pu <= 1.08",
-    )
+    Args:
+        project: The loaded study.
 
+    Returns:
+        The declared callable, or ``None`` when the study declares no checker.
 
-def _check_synthetic_geojson(project: StudyProject, checks: CheckList) -> None:
-    footprint = _summary(project, "outputs/reports/building_footprints_report.json")
-    report = _summary(project, "outputs/reports/synthetic_geojson_feeder_report.json")
-    validation = _read_json(
-        project, "outputs/reports/synthetic_network_validation_report.json"
+    Raises:
+        ValueError: If the reference is malformed, the module cannot be
+            imported, or the named attribute is missing or not callable. Every
+            message names the project file, the declared reference and the fix.
+    """
+    reference = _validation_spec(project).get("senseChecker")
+    if reference is None:
+        return None
+    if not isinstance(reference, str) or ":" not in reference:
+        raise ValueError(
+            f"{project.path}: spec.validation.senseChecker must be "
+            f"'<project-relative-module>.py:<function>', found {reference!r}"
+        )
+    relative, _, attribute = reference.rpartition(":")
+    module_path = project.root / relative
+    if not module_path.is_file():
+        raise ValueError(
+            f"{project.path}: spec.validation.senseChecker points at "
+            f"{module_path}, which does not exist; create it or correct "
+            f"the declared path {relative!r}"
+        )
+    spec = importlib.util.spec_from_file_location(
+        f"_gridalyn_sense_checks_{project.name}", module_path
     )
-    buses = _csv(project, "outputs/data/buses.csv")
-    lines = _csv(project, "outputs/data/lines.csv")
-    loads = _csv(project, "outputs/data/loads.csv")
-    _check(
-        checks,
-        "geojson_building_count",
-        footprint.get("building_count") == 9 and report.get("building_count") == 9,
-        {
-            "input": footprint.get("building_count"),
-            "network": report.get("building_count"),
-        },
-        9,
-    )
-    _check(
-        checks,
-        "geojson_loads_match_buildings",
-        report.get("pandapower_load_count")
-        == report.get("building_count")
-        == len(loads),
-        {"report_loads": report.get("pandapower_load_count"), "csv_loads": len(loads)},
-        "one load per building",
-    )
-    _check(
-        checks,
-        "geojson_network_has_transformers",
-        int(report.get("pandapower_transformer_count", 0)) >= 1,
-        report.get("pandapower_transformer_count"),
-        ">= 1",
-    )
-    _check(
-        checks,
-        "geojson_powerflow_converges",
-        report.get("powerflow_converged") is True,
-        report.get("powerflow_converged"),
-        True,
-    )
-    _check(
-        checks,
-        "geojson_validation_report_valid",
-        validation.get("valid") is True,
-        validation.get("valid"),
-        True,
-    )
-    _check(
-        checks,
-        "geojson_no_isolated_nodes",
-        validation.get("topology", {}).get("isolated_nodes_total") == 0,
-        validation.get("topology", {}).get("isolated_nodes_total"),
-        0,
-    )
-    _check(
-        checks,
-        "geojson_voltage_plausible",
-        _between(report.get("min_voltage_pu"), 0.90, 1.05),
-        report.get("min_voltage_pu"),
-        "0.90 <= min_voltage_pu <= 1.05",
-    )
-    _check(
-        checks,
-        "geojson_tables_non_empty",
-        not buses.empty and not lines.empty and not loads.empty,
-        {"buses": len(buses), "lines": len(lines), "loads": len(loads)},
-        "non-empty tables",
-    )
-
-
-def _check_prosumer(project: StudyProject, checks: CheckList) -> None:
-    feeder = _summary(project, "outputs/reports/synthetic_feeder_report.json")
-    market = _summary(project, "outputs/reports/prosumer_realtime_market_report.json")
-    dispatch = _csv(project, "outputs/operations/battery_dispatch.csv")
-    prosumers = _csv(project, "outputs/data/prosumers.csv")
-    _check(
-        checks,
-        "prosumer_feeder_converges",
-        feeder.get("converged") is True,
-        feeder.get("converged"),
-        True,
-    )
-    _check(
-        checks,
-        "prosumer_count_positive",
-        int(market.get("prosumer_count", 0)) > 0
-        and len(prosumers) == int(market.get("prosumer_count", 0)),
-        {"report": market.get("prosumer_count"), "csv": len(prosumers)},
-        "> 0 and consistent",
-    )
-    horizon = int(market.get("forecast_horizon_intervals", 0))
-    intervals = int(market.get("interval_count", 0))
-    _check(
-        checks,
-        "prosumer_horizon_tiles_intervals",
-        horizon > 0 and intervals % horizon == 0,
-        {"horizon": horizon, "intervals": intervals},
-        "rolling horizon divides interval count",
-    )
-    _check(
-        checks,
-        "prosumer_cleared_not_above_required",
-        float(market.get("total_cleared_mwh", 0))
-        <= float(market.get("total_required_mwh", 0)) + 1e-9,
-        market.get("total_cleared_mwh"),
-        "<= total_required_mwh",
-    )
-    _check(
-        checks,
-        "prosumer_peak_import_not_increased",
-        float(market.get("peak_import_after_mw", 999))
-        <= float(market.get("peak_import_before_mw", 0)) + 1e-9,
-        market.get("peak_import_after_mw"),
-        "<= before",
-    )
-    _check(
-        checks,
-        "prosumer_voltage_after_safe",
-        float(market.get("min_voltage_after_pu", 0)) >= 0.95,
-        market.get("min_voltage_after_pu"),
-        ">= 0.95",
-    )
-    _check(
-        checks,
-        "prosumer_line_loading_after_safe",
-        float(market.get("max_line_loading_after_percent", 999)) < 100.0,
-        market.get("max_line_loading_after_percent"),
-        "< 100%",
-    )
-    _check(
-        checks,
-        "prosumer_dispatch_non_negative",
-        (dispatch["dispatch_mwh"] >= -1e-9).all(),
-        float(dispatch["dispatch_mwh"].min()),
-        ">= 0",
-    )
-
-
-def _check_der(project: StudyProject, checks: CheckList) -> None:
-    feeder = _summary(project, "outputs/reports/der_feeder_report.json")
-    opt = _summary(project, "outputs/reports/der_voltage_optimization_report.json")
-    dispatch = _csv(project, "outputs/operations/der_dispatch.csv")
-    _check(
-        checks,
-        "der_feeder_converges",
-        feeder.get("converged") is True,
-        feeder.get("converged"),
-        True,
-    )
-    _check(
-        checks,
-        "der_solver_optimal",
-        opt.get("solver_status") in {"optimal", "optimal_inaccurate"},
-        opt.get("solver_status"),
-        "optimal or optimal_inaccurate",
-    )
-    available = float(opt.get("total_pv_available_mw", 0))
-    accounted = float(opt.get("total_pv_dispatch_mw", 0)) + float(
-        opt.get("total_pv_curtailment_mw", 0)
-    )
-    _check(
-        checks,
-        "der_energy_accounting_balances",
-        abs(accounted - available) <= 1e-5,
-        {"available": available, "dispatch_plus_curtailment": accounted},
-        "dispatch + curtailment ~= available",
-    )
-    _check(
-        checks,
-        "der_max_voltage_reduced",
-        float(opt.get("verified_max_voltage_after_pu", 9))
-        <= float(opt.get("verified_max_voltage_before_pu", 0)) + 1e-9,
-        opt.get("verified_max_voltage_after_pu"),
-        "<= before",
-    )
-    _check(
-        checks,
-        "der_voltage_upper_limit_met",
-        float(opt.get("verified_max_voltage_after_pu", 9)) <= 1.05 + 1e-6,
-        opt.get("verified_max_voltage_after_pu"),
-        "<= 1.05",
-    )
-    _check(
-        checks,
-        "der_voltage_lower_limit_met",
-        float(opt.get("verified_min_voltage_after_pu", 0)) >= 0.95 - 1e-6,
-        opt.get("verified_min_voltage_after_pu"),
-        ">= 0.95",
-    )
-    _check(
-        checks,
-        "der_dispatch_within_availability",
-        (dispatch["pv_dispatch_mw"] <= dispatch["pv_available_mw"] + 1e-6).all()
-        and (dispatch["pv_dispatch_mw"] >= -1e-6).all(),
-        "dispatch bounds",
-        "0 <= dispatch <= available",
-    )
-
-
-def _check_rl(project: StudyProject, checks: CheckList) -> None:
-    feeder = _summary(project, "outputs/reports/rl_feeder_report.json")
-    report = _summary(project, "outputs/reports/rl_voltage_control_report.json")
-    q_table = _csv(project, "outputs/operations/q_table.csv")
-    policy = _csv(project, "outputs/operations/learned_policy.csv")
-    _check(
-        checks,
-        "rl_engine_is_lightsim2grid",
-        feeder.get("simulation_engine") == "lightsim2grid"
-        and report.get("simulation_engine") == "lightsim2grid",
-        {
-            "feeder": feeder.get("simulation_engine"),
-            "control": report.get("simulation_engine"),
-        },
-        "lightsim2grid",
-    )
-    _check(
-        checks,
-        "rl_algorithm_is_q_learning",
-        report.get("algorithm") == "tabular_q_learning_voltage_control",
-        report.get("algorithm"),
-        "tabular_q_learning_voltage_control",
-    )
-    _check(
-        checks,
-        "rl_training_has_enough_episodes",
-        int(report.get("episode_count", 0)) >= 50,
-        report.get("episode_count"),
-        ">= 50",
-    )
-    _check(
-        checks,
-        "rl_evaluation_is_day_profile",
-        report.get("evaluation_step_count") == 24,
-        report.get("evaluation_step_count"),
-        24,
-    )
-    _check(
-        checks,
-        "rl_reward_improves",
-        float(report.get("total_reward_last_episode", -1e9))
-        > float(report.get("total_reward_first_episode", 1e9)),
-        {
-            "first": report.get("total_reward_first_episode"),
-            "last": report.get("total_reward_last_episode"),
-        },
-        "last > first",
-    )
-    _check(
-        checks,
-        "rl_control_reduces_violations",
-        int(report.get("voltage_violation_count_controlled", 999))
-        <= int(report.get("voltage_violation_count_uncontrolled", 0)),
-        report.get("voltage_violation_count_controlled"),
-        "<= uncontrolled",
-    )
-    _check(
-        checks,
-        "rl_control_reduces_voltage_deviation",
-        float(report.get("controlled_voltage_deviation_sum", 999))
-        < float(report.get("uncontrolled_voltage_deviation_sum", 0)),
-        report.get("controlled_voltage_deviation_sum"),
-        "< uncontrolled",
-    )
-    _check(
-        checks,
-        "rl_action_space_has_charge_neutral_discharge",
-        set(round(float(v), 2) for v in q_table["action_mw"].unique()).issuperset(
-            {-0.12, 0.0, 0.12}
-        ),
-        sorted(q_table["action_mw"].unique()),
-        "charge, neutral, discharge",
-    )
-    _check(
-        checks,
-        "rl_policy_tables_non_empty",
-        not q_table.empty and not policy.empty,
-        {"q_table": len(q_table), "policy": len(policy)},
-        "non-empty",
-    )
-
-
-_PROJECT_CHECKERS: dict[str, Callable[[StudyProject, CheckList], None]] = {
-    "minimal_grid_project": _check_minimal,
-    "ieee_33_bus_demo": _check_ieee33,
-    "synthetic_geojson_feeder": _check_synthetic_geojson,
-    "prosumer_battery_market": _check_prosumer,
-    "der_voltage_optimization": _check_der,
-    "rl_voltage_control_lightsim": _check_rl,
-}
-
-_PROJECT_OBJECTIVE_ARTIFACTS: dict[str, tuple[str, ...]] = {
-    "minimal_grid_project": (
-        "outputs/reports/minimal_grid_report.json",
-        "outputs/data/buses.csv",
-        "outputs/data/lines.csv",
-        "outputs/data/loads.csv",
-    ),
-    "ieee_33_bus_demo": (
-        "outputs/reports/ieee33_powerflow_report.json",
-        "outputs/reports/ieee33_scenario_comparison_report.json",
-        "outputs/data/scenario_results.csv",
-    ),
-    "synthetic_geojson_feeder": (
-        "outputs/reports/building_footprints_report.json",
-        "outputs/reports/synthetic_geojson_feeder_report.json",
-        "outputs/reports/synthetic_network_validation_report.json",
-        "outputs/data/buses.csv",
-        "outputs/data/lines.csv",
-        "outputs/data/loads.csv",
-    ),
-    "prosumer_battery_market": (
-        "outputs/reports/synthetic_feeder_report.json",
-        "outputs/reports/prosumer_realtime_market_report.json",
-        "outputs/operations/battery_dispatch.csv",
-        "outputs/data/prosumers.csv",
-    ),
-    "der_voltage_optimization": (
-        "outputs/reports/der_feeder_report.json",
-        "outputs/reports/der_voltage_optimization_report.json",
-        "outputs/operations/der_dispatch.csv",
-    ),
-    "rl_voltage_control_lightsim": (
-        "outputs/reports/rl_feeder_report.json",
-        "outputs/reports/rl_voltage_control_report.json",
-        "outputs/operations/q_table.csv",
-        "outputs/operations/learned_policy.csv",
-    ),
-}
+    if spec is None or spec.loader is None:
+        raise ValueError(
+            f"{project.path}: spec.validation.senseChecker could not load "
+            f"{module_path} as a Python module"
+        )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    checker = getattr(module, attribute, None)
+    if not callable(checker):
+        available = ", ".join(sorted(n for n in vars(module) if not n.startswith("_")))
+        raise ValueError(
+            f"{project.path}: spec.validation.senseChecker names "
+            f"{attribute!r} in {relative}, which is not callable "
+            f"(module defines: {available or 'nothing public'})"
+        )
+    return checker
 
 
 __all__ = ["project_sense_check"]

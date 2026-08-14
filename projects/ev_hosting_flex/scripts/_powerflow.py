@@ -31,6 +31,60 @@ from projects.ev_hosting_flex.scripts.config import (
 N_DESIGN_HOURS = 24
 """Hourly step count of the per-day validation profiles."""
 
+_BACKENDS: dict[str, Any] = {}
+
+
+def _backend(backend_id: str) -> Any:
+    """Resolve a power-flow backend once and reuse it.
+
+    Every solve in this module goes through here rather than calling
+    ``pandapower.runpp`` directly, so the engine that produced a voltage is
+    recorded rather than assumed. Backends are cached because
+    :func:`run_feeder_mc` resolves inside a Monte-Carlo loop, and constructing
+    one per draw would dominate the solve it wraps.
+
+    Args:
+        backend_id: A registered backend ID.
+
+    Returns:
+        The resolved backend, constructed on first use.
+
+    Raises:
+        MissingCapabilityError: If the backend needs an extra this install
+            lacks. Raised at resolution rather than swallowed, so a missing
+            solver stops the run instead of silently changing its numbers.
+    """
+    if backend_id not in _BACKENDS:
+        from gridalyn.simulation.backends.registry import resolve_powerflow_backend
+
+        _BACKENDS[backend_id] = resolve_powerflow_backend(backend_id)
+    return _BACKENDS[backend_id]
+
+
+def native_backend() -> Any:
+    """Return the pandapower-native backend used by the numba solve sites.
+
+    Returns:
+        The backend whose declared settings are ``algorithm="nr",
+        init="auto"`` -- pandapower's own defaults, so routing a former
+        ``pp.runpp(net, numba=True)`` through it changes no solved value.
+    """
+    from gridalyn.simulation.backends.contract import PANDAPOWER_NATIVE_BACKEND_ID
+
+    return _backend(PANDAPOWER_NATIVE_BACKEND_ID)
+
+
+def lightsim_backend() -> Any:
+    """Return the lightsim2grid backend used by the full-network solve.
+
+    Returns:
+        The backend whose declared settings are ``lightsim2grid=True``, which
+        is exactly what the former direct call passed.
+    """
+    from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
+
+    return _backend(LIGHTSIM2GRID_BACKEND_ID)
+
 
 def standard_kva_for_load(
     design_load_kw: float,
@@ -114,7 +168,9 @@ def annual_performance_metrics(
         "hours_over_90": int(np.count_nonzero(load > 0.90 * rating)),
         "hours_over_100": int(np.count_nonzero(load > rating)),
         "min_headroom_kw": rating - peak,
-        "growth_margin_pct": (rating / peak - 1.0) * 100.0 if peak > 0 else float("inf"),
+        "growth_margin_pct": (
+            (rating / peak - 1.0) * 100.0 if peak > 0 else float("inf")
+        ),
     }
 
 
@@ -140,8 +196,13 @@ def congestion_stats(peaks_kw: np.ndarray, rating_kw: float) -> dict[str, float]
     """
     p = np.asarray(peaks_kw, dtype=float) / float(rating_kw) * 100.0
     if p.size == 0:
-        return {"p_cong": 0.0, "peak_p50": 0.0, "peak_p95": 0.0,
-                "peak_p99": 0.0, "peak_max": 0.0}
+        return {
+            "p_cong": 0.0,
+            "peak_p50": 0.0,
+            "peak_p95": 0.0,
+            "peak_p99": 0.0,
+            "peak_max": 0.0,
+        }
     return {
         "p_cong": float(np.count_nonzero(p > 100.0)) / p.size,
         "peak_p50": float(np.percentile(p, 50)),
@@ -326,7 +387,10 @@ def flex_deferral_curves(
 
 
 def feeder_min_voltage(
-    subnet: Any, p_kw_by_load: np.ndarray, *, slack_vm_pu: float,
+    subnet: Any,
+    p_kw_by_load: np.ndarray,
+    *,
+    slack_vm_pu: float,
     power_factor: float = POWER_FACTOR,
 ) -> float:
     """Solve one balanced AC snapshot and return the minimum LV bus voltage (pu).
@@ -341,14 +405,12 @@ def feeder_min_voltage(
         The minimum voltage (pu) over the LV buses (``vn_kv < 1.0``) — the MV /
         slack bus is excluded.
     """
-    import pandapower as pp
-
     p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
     q_factor = float(np.tan(np.arccos(float(power_factor))))
     subnet.ext_grid["vm_pu"] = float(slack_vm_pu)
     subnet.load["p_mw"] = p_kw / 1000.0
     subnet.load["q_mvar"] = subnet.load["p_mw"] * q_factor
-    pp.runpp(subnet, numba=True)
+    native_backend().solve(subnet, numba=True)
     lv_buses = subnet.bus.index[subnet.bus["vn_kv"] < 1.0]
     return float(subnet.res_bus.loc[lv_buses, "vm_pu"].min())
 
@@ -372,31 +434,45 @@ def network_min_voltage(
             Reuse the SAME object across calls so the lightsim backend stays warm.
         p_kw_by_load: ``(n_load,)`` per-load active power (kW) in ``net.load`` row
             order.
-        use_lightsim: Solve with lightsim2grid when available (warm ~45 ms); on
-            any failure or when ``False``, fall back to the numba solver.
+        use_lightsim: Solve through the lightsim2grid backend (warm ~45 ms).
+            When ``False``, solve through the pandapower-native backend. There
+            is no longer a fallback between the two: see below.
         slack_vm_pu: substation LTC setpoint.
         power_factor: constant lagging PF for the Q injection.
 
     Returns:
         The minimum voltage (pu) over the LV buses (``vn_kv < 1.0``) — the MV /
         slack bus is excluded.
-    """
-    import pandapower as pp
 
+    Raises:
+        MissingCapabilityError: If ``use_lightsim`` is set and the ``sim`` extra
+            is absent.
+        LoadflowNotConverged: If the solve does not converge.
+
+    Both replace a bare ``except Exception`` that fell back to the numba solver
+    in silence, and the second is the one that changes behaviour. The two
+    engines are different linear algebra and do not agree bit-for-bit, so on a
+    ``sim``-free install the fallback silently changed every solved voltage
+    while leaving the governed artifacts identical -- a degraded run was
+    indistinguishable from a clean one.
+
+    The convergence case is a deliberate trade, not an oversight: a
+    non-converging draw in the adoption sweep used to be retried on numba and
+    reported as a number, so a network the model could not solve entered the
+    results as if it had. It now stops the stage. If a future sweep needs to
+    tolerate non-convergence, it must record the retry per draw rather than
+    absorb it here.
+    """
     p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
     q_factor = float(np.tan(np.arccos(float(power_factor))))
     net.ext_grid["vm_pu"] = float(slack_vm_pu)
     net.load["p_mw"] = p_kw / 1000.0
     net.load["q_mvar"] = net.load["p_mw"] * q_factor
-    solved = False
     if use_lightsim:
-        try:
-            pp.runpp(net, lightsim2grid=True)
-            solved = True
-        except Exception:  # noqa: BLE001 — any lightsim failure -> numba fallback
-            solved = False
-    if not solved:
-        pp.runpp(net, numba=True)
+        # settings={"lightsim2grid": True} -> pp.runpp(net, lightsim2grid=True)
+        lightsim_backend().solve(net)
+    else:
+        native_backend().solve(net, numba=True)
     lv_buses = net.bus.index[net.bus["vn_kv"] < 1.0]
     return float(net.res_bus.loc[lv_buses, "vm_pu"].min())
 
@@ -424,7 +500,7 @@ def run_design_day_powerflow(
     Raises:
         ValueError: If the profile shape does not match the net's load table.
     """
-    import pandapower as pp
+    backend = native_backend()
 
     p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
     if p_kw.shape != (len(net.load), N_DESIGN_HOURS):
@@ -445,7 +521,7 @@ def run_design_day_powerflow(
     for hour in range(N_DESIGN_HOURS):
         net.load["p_mw"] = p_kw[:, hour] / 1000.0
         net.load["q_mvar"] = net.load["p_mw"] * q_factor
-        pp.runpp(net, numba=True)
+        backend.solve(net, numba=True)
         frames["bus_voltage"].append(
             pd.DataFrame(
                 {
@@ -585,7 +661,7 @@ def run_feeder_mc(
         line in the feeder subtree — the line-overload channel) and
         ``min_home_vm_pu`` (the voltage-drop channel).
     """
-    import pandapower as pp
+    backend = native_backend()
 
     mv_vm = np.asarray(mv_vm_pu_hourly, dtype=DTYPE)
     if mv_vm.shape != (N_DESIGN_HOURS,):
@@ -612,7 +688,7 @@ def run_feeder_mc(
                 subnet.ext_grid["vm_pu"] = float(mv_vm[hour])
                 subnet.load["p_mw"] = per_home_mw[hour]
                 subnet.load["q_mvar"] = per_home_mw[hour] * q_factor
-                pp.runpp(subnet, numba=True)
+                backend.solve(subnet, numba=True)
                 records.append(
                     {
                         "variant": variant,
@@ -686,19 +762,29 @@ def to_three_phase_mv(
         fb, tb = int(net.line.at[li, "from_bus"]), int(net.line.at[li, "to_bus"])
         if fb in keep_set and tb in keep_set:
             pp.create_line_from_parameters(
-                mv, from_bus=fb, to_bus=tb,
+                mv,
+                from_bus=fb,
+                to_bus=tb,
                 length_km=float(net.line.at[li, "length_km"]),
                 r_ohm_per_km=float(net.line.at[li, "r_ohm_per_km"]),
                 x_ohm_per_km=float(net.line.at[li, "x_ohm_per_km"]),
-                c_nf_per_km=0.0, max_i_ka=float(net.line.at[li, "max_i_ka"]),
+                c_nf_per_km=0.0,
+                max_i_ka=float(net.line.at[li, "max_i_ka"]),
             )
     for t in net.trafo[net.trafo["vn_lv_kv"] >= 1.0].index:
         tr = net.trafo.loc[t]
         pp.create_transformer_from_parameters(
-            mv, hv_bus=int(tr.hv_bus), lv_bus=int(tr.lv_bus), sn_mva=float(tr.sn_mva),
-            vn_hv_kv=float(tr.vn_hv_kv), vn_lv_kv=float(tr.vn_lv_kv),
-            vk_percent=float(tr.vk_percent), vkr_percent=float(tr.vkr_percent),
-            pfe_kw=float(tr.pfe_kw), i0_percent=float(tr.i0_percent), shift_degree=0,
+            mv,
+            hv_bus=int(tr.hv_bus),
+            lv_bus=int(tr.lv_bus),
+            sn_mva=float(tr.sn_mva),
+            vn_hv_kv=float(tr.vn_hv_kv),
+            vn_lv_kv=float(tr.vn_lv_kv),
+            vk_percent=float(tr.vk_percent),
+            vkr_percent=float(tr.vkr_percent),
+            pfe_kw=float(tr.pfe_kw),
+            i0_percent=float(tr.i0_percent),
+            shift_degree=0,
         )
     _add_3ph_params_mini(mv, r0_mult=r0_mult, x0_mult=x0_mult)
     pole_to_mv = {

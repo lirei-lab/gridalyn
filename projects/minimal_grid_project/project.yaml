@@ -5,6 +5,9 @@ metadata:
   version: 0.1.0
   description: Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.
 spec:
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 7
   pathBase: project
   problem:
     type: powerflow_validation
@@ -75,6 +78,12 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/minimal_grid_report.json
+      - outputs/data/buses.csv
+      - outputs/data/lines.csv
+      - outputs/data/loads.csv
     requiredReports:
       - outputs/reports/minimal_grid_report.json
     requiredFigures:

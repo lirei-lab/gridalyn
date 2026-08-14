@@ -11,9 +11,14 @@ from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator, validate_geojso
 def main() -> int:
     script = project_script()
     output_path = script.data_dir / "building_footprints.geojson"
+    # Read rather than hardcoded. Footprint generation is a second, independent
+    # RNG stream from the one that generates the loads, and it seeds the GLOBAL
+    # `random` module -- so the literal that used to sit here governed both this
+    # artifact and anything else in the subprocess drawing from `random`, while
+    # appearing in no governed artifact.
     generator = FakeGeoJSONGenerator(
         grid_size=3,
-        seed=27,
+        seed=script.simulation_seed("footprints"),
         rectangular=True,
         min_size_variance=0.95,
         max_size_variance=1.05,
@@ -31,7 +36,11 @@ def main() -> int:
             "building_count": len(payload["features"]),
             "source_crs": payload.get("crs", {}).get("properties", {}).get("name"),
         },
-        validation={"valid": not validation_errors, "errors": validation_errors, "warnings": []},
+        validation={
+            "valid": not validation_errors,
+            "errors": validation_errors,
+            "warnings": [],
+        },
     )
     return 0
 

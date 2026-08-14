@@ -5,6 +5,9 @@ metadata:
   version: 0.1.0
   description: Small synthetic feeder with distributed prosumers, batteries, and a real-time local market.
 spec:
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 23
   pathBase: project
   problem:
     type: local_market_dispatch
@@ -165,6 +168,12 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/synthetic_feeder_report.json
+      - outputs/reports/prosumer_realtime_market_report.json
+      - outputs/operations/battery_dispatch.csv
+      - outputs/data/prosumers.csv
     requiredReports:
       - outputs/reports/synthetic_feeder_report.json
       - outputs/reports/prosumer_realtime_market_report.json

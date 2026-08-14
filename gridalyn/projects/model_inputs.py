@@ -9,14 +9,16 @@ import numpy as np
 
 from gridalyn.assets.modeling.der_dispatch import DERDispatchAsset
 from gridalyn.assets.modeling.energy_assets import BatteryAsset, ProsumerAsset, PVAsset
-from gridalyn.assets.modeling.feeders import RadialFeederSpec, validate_radial_feeder_spec
+from gridalyn.assets.modeling.feeders import (
+    RadialFeederSpec,
+    validate_radial_feeder_spec,
+)
 from gridalyn.assets.modeling.voltage_control import (
     VoltageControlDERSpec,
     validate_voltage_control_der,
 )
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.models import StudyProject
-
 
 ProjectRef = StudyProject | Path | str
 
@@ -157,7 +159,9 @@ def load_der_dispatch_assets(
     return tuple(assets)
 
 
-def _battery_from_mapping(mapping: Mapping[str, Any], context: str = "") -> BatteryAsset:
+def _battery_from_mapping(
+    mapping: Mapping[str, Any], context: str = ""
+) -> BatteryAsset:
     return BatteryAsset(
         asset_id=str(_required(mapping, "id", context)),
         power_mw=float(_required(mapping, "powerMw", context)),
@@ -198,7 +202,9 @@ def load_prosumer_assets(
                 bus_id=int(_required(item, "busId", item_context)),
                 pv=PVAsset(
                     asset_id=str(_required(pv, "id", f"{item_context}.pv")),
-                    capacity_mw=float(_required(pv, "capacityMw", f"{item_context}.pv")),
+                    capacity_mw=float(
+                        _required(pv, "capacityMw", f"{item_context}.pv")
+                    ),
                 ),
                 battery=_battery_from_mapping(battery, f"{item_context}.battery"),
                 offer_price_usd_per_mwh=float(
@@ -377,7 +383,9 @@ def load_generated_load_multipliers(
     return aggregate_load_multipliers(
         profiles,
         intervals=int(_required(multipliers, "intervals", multiplier_context)),
-        interval_minutes=int(interval_minutes) if interval_minutes is not None else None,
+        interval_minutes=(
+            int(interval_minutes) if interval_minutes is not None else None
+        ),
         peak_multiplier=float(
             _required(multipliers, "peakMultiplier", multiplier_context)
         ),
@@ -424,12 +432,117 @@ def load_numeric_profile_array(
     return np.array([float(value) for value in values], dtype=float)
 
 
+def _simulation(project: StudyProject) -> Mapping[str, Any]:
+    spec = project.raw.get("spec", {})
+    simulation = spec.get("simulation", {}) if isinstance(spec, Mapping) else {}
+    if not isinstance(simulation, Mapping):
+        raise ValueError(
+            f"{project.path}: spec.simulation must be a mapping, "
+            f"found {type(simulation).__name__}"
+        )
+    return simulation
+
+
+def load_simulation_seed(project_or_path: ProjectRef, stream: str) -> int:
+    """Load one named RNG stream from ``spec.simulation.seeds``.
+
+    A stage that owns an RNG stream reads its seed through here instead of
+    hardcoding one, so the value in the manifest is the value the stage used.
+    Declaring a seed a stage never reads is worse than declaring none: the
+    manifest then looks reproducible while the run is governed by a literal
+    buried in a script.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+        stream: Name of the declared stream, e.g. ``"policy"``.
+
+    Returns:
+        The declared integer seed.
+
+    Raises:
+        ValueError: If ``spec.simulation.seeds`` is missing, is not a mapping of
+            integers, or does not declare ``stream``. The message lists the
+            streams the study does declare.
+    """
+    project = _project(project_or_path)
+    streams = _simulation(project).get("seeds")
+    if not isinstance(streams, Mapping) or not streams:
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds must declare the named RNG "
+            f"streams this study draws from, including {stream!r}; found "
+            f"{type(streams).__name__}"
+        )
+    if stream not in streams:
+        available = ", ".join(sorted(str(key) for key in streams))
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds does not declare "
+            f"{stream!r} (declared streams: {available})"
+        )
+    value = streams[stream]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds.{stream} must be an "
+            f"integer, found {type(value).__name__}"
+        )
+    return value
+
+
+def load_powerflow_backend_id(project_or_path: ProjectRef) -> str:
+    """Load the power-flow backend ID a study declares in ``spec.simulation``.
+
+    Every stage that solves power flow through ``pandapower.runpp`` resolves
+    through this ID rather than calling the solver itself (the one exemption is
+    ``runpp_3ph``, which the backend contract does not model), so that what a
+    run solved with is what
+    ``provenance.powerflow_backend.backend_id`` records. A study that declares
+    nothing gets the registry default, which needs no optional extra.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+
+    Returns:
+        The declared backend ID, or ``DEFAULT_POWERFLOW_BACKEND_ID`` when the
+        study declares none.
+
+    Raises:
+        ValueError: If ``spec.simulation.powerflowBackend`` is present but is
+            not a non-empty string, or names a backend the repository does not
+            register. The message lists the registered IDs.
+    """
+    from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
+    from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
+
+    project = _project(project_or_path)
+    declared = _simulation(project).get("powerflowBackend")
+    if declared is None:
+        return DEFAULT_POWERFLOW_BACKEND_ID
+    if not isinstance(declared, str) or not declared.strip():
+        raise ValueError(
+            f"{project.path}: spec.simulation.powerflowBackend must be a "
+            f"non-empty string, found {type(declared).__name__}"
+        )
+    backend_id = declared.strip()
+    registered = [
+        descriptor.backend_id
+        for descriptor in default_powerflow_backend_registry().list_descriptors()
+    ]
+    if backend_id not in registered:
+        raise ValueError(
+            f"{project.path}: spec.simulation.powerflowBackend names an "
+            f"unregistered backend {backend_id!r} "
+            f"(registered: {', '.join(sorted(registered))})"
+        )
+    return backend_id
+
+
 __all__ = [
     "load_der_dispatch_assets",
     "load_generated_bus_loads_mw",
     "load_generated_load_multipliers",
     "load_generated_load_profiles",
     "load_numeric_profile_array",
+    "load_powerflow_backend_id",
+    "load_simulation_seed",
     "load_prosumer_assets",
     "load_radial_feeder_spec",
     "load_standard_powerflow_scenarios",

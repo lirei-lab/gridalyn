@@ -5,6 +5,9 @@ metadata:
   version: 0.1.0
   description: Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification.
 spec:
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 31
   pathBase: project
   problem:
     type: der_voltage_optimization
@@ -126,6 +129,11 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/der_feeder_report.json
+      - outputs/reports/der_voltage_optimization_report.json
+      - outputs/operations/der_dispatch.csv
     requiredReports:
       - outputs/reports/der_feeder_report.json
       - outputs/reports/der_voltage_optimization_report.json
