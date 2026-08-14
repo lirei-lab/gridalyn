@@ -270,11 +270,17 @@ def read_measured_observations(
     # set requires grouping by (as_of, quantity) and dispatching each group
     # through the mapping; this assertion fails here, at the emission site,
     # the moment a second quantity is declared without that rework.
-    assert len(SUPPORTED_QUANTITIES) == 1, (
-        "the emission loop hardcodes bus_voltage_pu; widening "
-        "SUPPORTED_QUANTITIES requires grouping by (as_of, quantity) and "
-        "dispatching each group through the mapping"
-    )
+    # Raised rather than asserted: ``python -O`` strips assertions, and under
+    # optimization a stripped guard would emit silently wrong observations
+    # instead of failing -- the one outcome this coupling exists to prevent.
+    if len(SUPPORTED_QUANTITIES) != 1:
+        raise NotImplementedError(
+            "the emission loop hardcodes bus_voltage_pu, but SUPPORTED_QUANTITIES "
+            f"now declares {len(SUPPORTED_QUANTITIES)} quantities "
+            f"({', '.join(sorted(SUPPORTED_QUANTITIES))}); widening the set "
+            "requires grouping by (as_of, quantity) and dispatching each group "
+            "through the mapping before this loop can run"
+        )
     for instant, group in rows.groupby("as_of", sort=True):
         ordered = group.sort_values("entity", kind="stable")
         bus_ids = np.array(

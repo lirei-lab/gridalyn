@@ -24,6 +24,20 @@ def _usable_start_path(start: Path | str) -> Path:
     return path.parent
 
 
+def _has_git_metadata(start: Path) -> bool:
+    """Report whether ``start`` or any parent holds a ``.git`` entry.
+
+    Args:
+        start: Directory the workspace walk begins from.
+
+    Returns:
+        True when a checkout is plausibly in scope, so shelling out to ``git``
+        is worth the process spawn. A worktree or submodule records ``.git`` as
+        a file rather than a directory, so both are accepted.
+    """
+    return any((candidate / ".git").exists() for candidate in (start, *start.parents))
+
+
 def find_workspace_root(start: Path | str = ".") -> Path:
     """Discover a Gridalyn workspace from a nested path.
 
@@ -33,20 +47,25 @@ def find_workspace_root(start: Path | str = ".") -> Path:
     """
 
     start_path = _usable_start_path(start)
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            cwd=start_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode == 0:
-            candidate = Path(result.stdout.strip()).resolve()
-            if _looks_like_workspace(candidate):
-                return candidate
-    except OSError:
-        pass
+    # Only spawn git when a checkout is actually in scope. Path resolution in
+    # this layer should not fork a process for an installed wheel or a container
+    # with no repository, and ``artifacts.py`` already guards its own git call
+    # the same way.
+    if _has_git_metadata(start_path):
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=start_path,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                candidate = Path(result.stdout.strip()).resolve()
+                if _looks_like_workspace(candidate):
+                    return candidate
+        except OSError:
+            pass
 
     for candidate in (start_path, *start_path.parents):
         if _looks_like_workspace(candidate):

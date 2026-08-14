@@ -27,6 +27,15 @@
           "enum": ["project", "repo"],
           "default": "project"
         },
+        "simulation": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Runner-reachable simulation settings. 'seed' (or its 'seed_base' alias) is the base from which gridalyn.projects.runner._resolve_seeds derives the per-stage {stage_id: seed + index} map recorded in provenance.seeds. Omitting it makes the runner fall back to the single-'base' form, which records null.",
+          "properties": {
+            "seed": { "type": "integer" },
+            "seed_base": { "type": "integer" }
+          }
+        },
         "problem": {
           "type": "object",
           "additionalProperties": false,

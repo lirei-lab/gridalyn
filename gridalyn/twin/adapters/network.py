@@ -287,13 +287,44 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def describe_network_source_adapter(
-    adapter: NetworkSourceAdapter,
+    adapter: NetworkSourceAdapter | type,
 ) -> NetworkAdapterDescriptor:
-    """Describe an adapter using the platform network source contract."""
-    adapter_name = getattr(adapter, "source_adapter", adapter.__class__.__name__)
+    """Describe an adapter using the platform network source contract.
+
+    Accepts either an adapter instance or the adapter class itself, because
+    :meth:`~gridalyn.twin.adapters.registry.NetworkAdapterRegistry.register`
+    describes a factory before anything is constructed.
+
+    Args:
+        adapter: Adapter instance or adapter class declaring the identity
+            attributes of the network source contract.
+
+    Returns:
+        The adapter's stable identity and capability metadata.
+
+    Raises:
+        ValueError: If the adapter declares neither ``adapter_id`` nor
+            ``source_adapter``, so no stable ID can be derived.
+    """
+    # Resolve the fallback name for a class and an instance alike. Reading
+    # ``adapter.__class__.__name__`` off a class yields the metaclass name --
+    # literally ``"type"`` -- which used to register every under-declared
+    # adapter under the ID ``'type'`` without raising.
+    default_name = (
+        adapter.__name__ if isinstance(adapter, type) else adapter.__class__.__name__
+    )
+    adapter_name = getattr(adapter, "source_adapter", default_name)
+    declared_id = getattr(adapter, "adapter_id", None)
+    if declared_id is None and not hasattr(adapter, "source_adapter"):
+        raise ValueError(
+            f"{default_name} declares neither 'adapter_id' nor 'source_adapter', "
+            "so it has no stable registry ID -- declare 'adapter_id' on the "
+            "adapter (as SyntheticPandapowerAdapter and CimParquetAdapter do), "
+            "or pass descriptor= explicitly to NetworkAdapterRegistry.register"
+        )
     source_standard = getattr(adapter, "source_standard", "unknown")
     return NetworkAdapterDescriptor(
-        adapter_id=getattr(adapter, "adapter_id", _adapter_id_from_name(adapter_name)),
+        adapter_id=declared_id or _adapter_id_from_name(adapter_name),
         adapter_name=adapter_name,
         source_standard=source_standard,
         source_format=getattr(adapter, "source_format", source_standard),
