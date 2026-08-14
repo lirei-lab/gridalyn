@@ -17,11 +17,19 @@ from gridalyn.foundation.platform.governance import build_study_run
 from gridalyn.foundation.platform.reports import file_reference
 from gridalyn.projects.models import StudyProject, WorkflowStage
 
-# SINGLE canonical source for the clearing-engine name recorded in run
-# provenance (REPRO-04). Clearing runs on the two-stage ``engine_mode``
-# (MarketSimulationEngine) path. This is the only source-literal occurrence of
-# the token; the provenance test imports THIS constant (never a duplicated
-# literal).
+# SINGLE canonical source for the clearing-engine name a study may declare.
+# This is the only source-literal occurrence of the token; the provenance test
+# imports THIS constant (never a duplicated literal).
+#
+# It is no longer written unconditionally. Until 2026-08-14 every manifest
+# recorded ``clearing_engine: "engine_mode"`` -- including minimal_grid_project,
+# a two-stage power-flow demo that clears nothing. Measured: no study workflow
+# stage executes ``engine_mode`` at all, and the one study that does clear
+# (ev_hosting_flex) reaches ``clearing.selection``. So the field named an engine
+# no run had used, in all eight manifests. A study now declares
+# ``spec.simulation.clearingEngine`` when it clears, and provenance records
+# ``null`` when it does not -- absent provenance over false provenance, the same
+# rule applied to the seed base and the power-flow backend.
 CLEARING_ENGINE_NAME = "engine_mode"
 
 # The canonical baseline-authoring clearing-mode set, derived from the real
@@ -303,14 +311,43 @@ def _build_provenance(
     return {
         "python_version": sys.version.split()[0],
         "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
-        "clearing_engine": {
-            "name": CLEARING_ENGINE_NAME,
-            "version": _clearing_stack_versions(),
-        },
+        "clearing_engine": _clearing_engine_provenance(project),
         "seeds": _resolve_seeds(project, planned),
         "macro_model": _macro_model_provenance(),
         "powerflow_backend": _powerflow_backend_provenance(project),
         "input_hashes": _input_hashes(project),
+    }
+
+
+def _clearing_engine_provenance(project: StudyProject) -> dict[str, Any]:
+    """Which clearing surface this study declares, if it clears at all.
+
+    Args:
+        project: The loaded study, read for ``spec.simulation.clearingEngine``.
+
+    Returns:
+        ``name`` (the declared mode, or ``None``), ``declared`` and the numeric
+        stack versions. The versions are recorded either way: they describe the
+        environment the run happened in, which is worth having even when no
+        clearing took place.
+
+    Raises:
+        ValueError: If the declared value is not one of the real clearing
+            modes. The message lists them, so a typo cannot become a mode name
+            no module implements.
+    """
+    spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
+    simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
+    declared = simulation.get("clearingEngine")
+    if declared is not None and declared not in _CLEARING_MODES:
+        raise ValueError(
+            f"{project.path}: spec.simulation.clearingEngine must be one of "
+            f"{', '.join(sorted(_CLEARING_MODES))}, found {declared!r}"
+        )
+    return {
+        "name": declared,
+        "declared": declared is not None,
+        "version": _clearing_stack_versions(),
     }
 
 

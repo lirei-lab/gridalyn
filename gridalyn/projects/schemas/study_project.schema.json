@@ -51,6 +51,11 @@
               "minLength": 1,
               "description": "The backend ID this study's solving stages resolve through by default, via ProjectScript.powerflow_backend(). Recorded as provenance.powerflow_backend.backend_id, with provenance.powerflow_backend.declared_source stating whether it was declared here or inherited from the registry default."
             },
+            "clearingEngine": {
+              "type": "string",
+              "enum": ["engine_mode", "selection"],
+              "description": "The clearing surface this study's stages actually use, when it clears at all. Omit it for a study that does no flexibility clearing: provenance then records null rather than naming an engine no stage ran. Recorded as provenance.clearing_engine.name."
+            },
             "powerflowBackendByStage": {
               "type": "object",
               "description": "Per-stage overrides of powerflowBackend, for a study whose stages genuinely solve with different engines. A single scalar cannot describe such a study, and recording one names an engine some stage did not use. Keys are workflow stage IDs; each must exist in the workflow. Recorded as provenance.powerflow_backend.by_stage.",

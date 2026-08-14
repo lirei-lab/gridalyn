@@ -63,12 +63,35 @@ class TestRunProvenance(unittest.TestCase):
             )
 
     def test_clearing_engine_name_is_single_canonical_constant(self) -> None:
+        # The constant must stay a real clearing mode, never a drifted literal.
+        self.assertIn(CLEARING_ENGINE_NAME, {"engine_mode", "selection"})
+
+    def test_clearing_engine_is_null_for_a_study_that_does_not_clear(self) -> None:
+        # This assertion used to read `engine["name"] == CLEARING_ENGINE_NAME`,
+        # because the runner wrote the constant unconditionally. Measured on
+        # 2026-08-14: no study workflow stage executes engine_mode, and the one
+        # study that clears reaches clearing.selection -- so all eight manifests
+        # named an engine no run had used. A scaffolded project clears nothing
+        # and must say so.
         with tempfile.TemporaryDirectory() as tmp:
-            provenance = _run_manifest(tmp)["provenance"]
-            engine = provenance["clearing_engine"]
-            self.assertEqual(engine["name"], CLEARING_ENGINE_NAME)
-            # The constant must be a real clearing mode, never a drifted literal.
-            self.assertIn(CLEARING_ENGINE_NAME, {"engine_mode", "selection"})
+            engine = _run_manifest(tmp)["provenance"]["clearing_engine"]
+            self.assertIsNone(engine["name"])
+            self.assertFalse(engine["declared"])
+
+    def test_only_a_clearing_study_declares_an_engine(self) -> None:
+        from gridalyn.projects.loader import load_project
+        from gridalyn.projects.runner import _clearing_engine_provenance
+
+        repo_root = Path(__file__).resolve().parents[1]
+        declared = {}
+        for path in sorted((repo_root / "projects").glob("*/project.yaml")):
+            record = _clearing_engine_provenance(load_project(path))
+            if record["declared"]:
+                declared[path.parent.name] = record["name"]
+        # ev_hosting_flex is the only shipped study that reaches a clearing
+        # surface, and it reaches `selection`. If this changes, the study that
+        # started clearing must declare it rather than inherit a literal.
+        self.assertEqual(declared, {"ev_hosting_flex": "selection"})
 
     def test_clearing_engine_version_is_numeric_stack_mapping(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

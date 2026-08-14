@@ -16,6 +16,10 @@ spec:
     # _powerflow.native_backend()/lightsim_backend(); the split is verified
     # against the real call graph by tests/test_study_powerflow_routing.py, so
     # a stage that changes engine without changing this map fails the suite.
+    # The clearing surface this study actually reaches: analyze_locational_contracts
+    # imports gridalyn.operations.clearing.selection. It does NOT run engine_mode,
+    # which every manifest used to claim unconditionally.
+    clearingEngine: selection
     powerflowBackend: pandapower_native
     powerflowBackendByStage:
       # network_min_voltage() -- the only lightsim2grid consumer in the study.
