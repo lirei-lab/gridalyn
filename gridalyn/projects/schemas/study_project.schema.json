@@ -30,11 +30,27 @@
         "simulation": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Runner-reachable simulation settings. 'seed' (or its 'seed_base' alias) is the base from which gridalyn.projects.runner._resolve_seeds derives the per-stage {stage_id: seed + index} map recorded in provenance.seeds. Omitting it makes the runner fall back to the single-'base' form, which records null. 'powerflowBackend' names the backend ID every solving stage must resolve through, and is recorded verbatim in provenance.powerflow_backend.declared.",
+          "description": "Runner-reachable simulation settings, recorded verbatim in the run manifest's provenance block.",
           "properties": {
-            "seed": { "type": "integer" },
-            "seed_base": { "type": "integer" },
-            "powerflowBackend": { "type": "string", "minLength": 1 }
+            "seed": {
+              "type": "integer",
+              "description": "The single RNG base this study's stages draw from. Use it only when there genuinely is one; a study with several independent streams declares 'seeds' instead, because a scalar that names one of several streams is provenance a reader cannot reproduce from. Recorded as provenance.seeds.base."
+            },
+            "seed_base": {
+              "type": "integer",
+              "description": "Alias of 'seed', read when 'seed' is absent."
+            },
+            "seeds": {
+              "type": "object",
+              "description": "Named independent RNG streams, for studies that have more than one. Each name must be wired to the code that consumes it -- a declared value the stage script does not actually read is worse than no declaration, because it looks reproducible. Recorded as provenance.seeds.streams.",
+              "minProperties": 1,
+              "additionalProperties": { "type": "integer" }
+            },
+            "powerflowBackend": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The backend ID every solving stage of this study resolves through, via ProjectScript.powerflow_backend(). Recorded as provenance.powerflow_backend.backend_id, with provenance.powerflow_backend.declared_source stating whether it was declared here or inherited from the registry default."
+            }
           }
         },
         "problem": {
@@ -137,6 +153,17 @@
             "requiredFigures": {
               "type": "array",
               "items": { "type": "string", "minLength": 1 }
+            },
+            "senseChecker": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[^:]+\\.py:[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Project-relative '<module>.py:<function>' reference to this study's own objective sense checks. The library discovers the checker here instead of holding a table of study names, so adding a study needs no library edit. Authors write against gridalyn.projects.sense_check_api."
+            },
+            "objectiveArtifacts": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Project-relative paths this study's objective must produce. Checked for existence before the sense checker runs, so a checker reports a located 'missing_objective_artifact' rather than dying on FileNotFoundError."
             },
             "senseChecks": {
               "type": "array",

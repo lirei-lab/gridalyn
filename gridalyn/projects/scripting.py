@@ -194,6 +194,18 @@ class ProjectScript:
     ) -> np.ndarray:
         return model_inputs.load_generated_load_multipliers(self.project, input_key)
 
+    def simulation_seed(self, stream: str) -> int:
+        """Return one named RNG seed this study declares in ``spec.simulation``.
+
+        Args:
+            stream: Name of the declared stream, e.g. ``"policy"``.
+
+        Returns:
+            The declared integer seed, so the value the manifest records is the
+            value this stage actually draws from.
+        """
+        return model_inputs.load_simulation_seed(self.project, stream)
+
     def powerflow_backend_id(self) -> str:
         """Return the backend ID this study declares in ``spec.simulation``."""
         return model_inputs.load_powerflow_backend_id(self.project)
@@ -202,7 +214,7 @@ class ProjectScript:
         """Resolve the power-flow backend this study declares.
 
         A solving stage calls this instead of ``pandapower.runpp`` so that the
-        engine it uses is the one ``provenance.powerflow_backend.declared``
+        engine it uses is the one ``provenance.powerflow_backend.backend_id``
         records. Resolution is strict by design: naming an unavailable backend
         raises ``MissingCapabilityError`` at this call rather than degrading to
         a different solver, because a silent downgrade changes solved values

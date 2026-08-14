@@ -125,15 +125,60 @@ class TestShippedStudiesDeclareSeeds(unittest.TestCase):
         for path in project_files:
             project = load_project(path)
             seeds = _resolve_seeds(project, plan_stages(project))
-            if not seeds["declared"] or not isinstance(seeds["base"], int):
+            scalar = isinstance(seeds["base"], int)
+            streams = isinstance(seeds["streams"], dict) and all(
+                isinstance(value, int) for value in seeds["streams"].values()
+            )
+            if not seeds["declared"] or not (scalar or streams):
                 undeclared.append(path.parent.name)
         self.assertEqual(
             undeclared,
             [],
-            "these studies record no RNG base in provenance; add "
-            "spec.simulation.seed naming the base the stage scripts actually "
-            f"use: {', '.join(undeclared)}",
+            "these studies record no RNG seed in provenance; add "
+            "spec.simulation.seed (one stream) or spec.simulation.seeds (several) "
+            f"naming what the stage scripts actually draw from: {undeclared}",
         )
+
+    def test_declared_streams_are_the_ones_the_scripts_read(self) -> None:
+        # F1/F2 of the branch review: the first pass declared a scalar seed for
+        # all eight studies from `spec.inputs.loadGeneration.seed`, and two of
+        # them draw from a SECOND stream as well -- the Q-learning exploration
+        # RNG and the building-footprint RNG. Both scalars were false
+        # provenance: they read as reproducible while the artifact that matters
+        # came from an undeclared literal. Those two studies now declare named
+        # streams AND their scripts read them through
+        # ProjectScript.simulation_seed, so declaration and draw cannot diverge.
+        # This test pins the wiring, which is the part a reader depends on.
+        from gridalyn.projects.model_inputs import load_simulation_seed
+
+        repo_root = Path(__file__).resolve().parents[1]
+        wired = {
+            "rl_voltage_control_lightsim": (
+                ("loadGeneration", "policy"),
+                "scripts/train_rl_agent.py",
+            ),
+            "synthetic_geojson_feeder": (
+                ("loadGeneration", "footprints"),
+                "scripts/generate_building_footprints.py",
+            ),
+        }
+        for study, (streams, consumer) in wired.items():
+            project_file = repo_root / "projects" / study / "project.yaml"
+            source = (repo_root / "projects" / study / consumer).read_text()
+            for stream in streams:
+                with self.subTest(study=study, stream=stream):
+                    self.assertIsInstance(
+                        load_simulation_seed(project_file, stream), int
+                    )
+            # The non-loadGeneration stream must be read by the script, not
+            # merely declared beside it.
+            self.assertIn(
+                'simulation_seed("' + streams[1] + '")',
+                source,
+                f"{study}/{consumer} declares the {streams[1]!r} stream but "
+                "does not read it; a declared seed the code ignores is worse "
+                "than no declaration",
+            )
 
     def test_declared_seed_survives_schema_validation(self) -> None:
         from gridalyn.projects.validation import validate_project_file

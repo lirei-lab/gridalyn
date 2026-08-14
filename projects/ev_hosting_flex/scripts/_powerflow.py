@@ -446,12 +446,22 @@ def network_min_voltage(
 
     Raises:
         MissingCapabilityError: If ``use_lightsim`` is set and the ``sim`` extra
-            is absent. This replaces a bare ``except Exception`` that fell back
-            to the numba solver in silence. The two engines are different linear
-            algebra and do not agree bit-for-bit, so the fallback changed solved
-            voltages while leaving every governed artifact identical -- a
-            degraded run was indistinguishable from a clean one. Failing here is
-            the point.
+            is absent.
+        LoadflowNotConverged: If the solve does not converge.
+
+    Both replace a bare ``except Exception`` that fell back to the numba solver
+    in silence, and the second is the one that changes behaviour. The two
+    engines are different linear algebra and do not agree bit-for-bit, so on a
+    ``sim``-free install the fallback silently changed every solved voltage
+    while leaving the governed artifacts identical -- a degraded run was
+    indistinguishable from a clean one.
+
+    The convergence case is a deliberate trade, not an oversight: a
+    non-converging draw in the adoption sweep used to be retried on numba and
+    reported as a number, so a network the model could not solve entered the
+    results as if it had. It now stops the stage. If a future sweep needs to
+    tolerate non-convergence, it must record the retry per draw rather than
+    absorb it here.
     """
     p_kw = np.asarray(p_kw_by_load, dtype=DTYPE)
     q_factor = float(np.tan(np.arccos(float(power_factor))))

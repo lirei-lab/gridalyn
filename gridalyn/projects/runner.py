@@ -124,28 +124,39 @@ def _resolve_seeds(
     so a study that declared the key failed validation, and all eight manifests
     on disk recorded ``{"base": null}``.
 
+    A study with more than one independent stream declares ``seeds`` instead of
+    ``seed``, and both are recorded. That distinction was learned the hard way:
+    the first pass declared a scalar for all eight studies, and two of them were
+    wrong. ``rl_voltage_control_lightsim`` draws its load profiles from one seed
+    and its Q-learning exploration from another; ``synthetic_geojson_feeder``
+    seeds its building footprints separately from its loads. Naming one of two
+    streams reads as reproducible and is not.
+
     Args:
         project: The loaded study, read for ``spec.simulation.seed`` (or its
-            ``seed_base`` alias).
+            ``seed_base`` alias) and ``spec.simulation.seeds``.
         planned: The topologically ordered stages. Accepted so the recorded
-            payload can state how many stages the base covers, never to derive
-            a per-stage seed from the ordering.
+            payload can state how many stages the declaration covers, never to
+            derive a per-stage seed from the ordering.
 
     Returns:
-        ``base`` (the declared integer, or ``None``), ``declared`` (whether the
-        study named one) and ``stage_count``. A stage that needs a distinct
-        stream derives it from ``base`` itself and records that in its own
-        report; the runner does not guess on its behalf.
+        ``base`` (the declared scalar, or ``None``), ``streams`` (the declared
+        named streams, or ``None``), ``declared`` (whether the study named
+        either) and ``stage_count``. The runner records what the study declares
+        and never guesses on its behalf.
     """
     spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
     simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
     seed_base = simulation.get("seed")
     if seed_base is None:
         seed_base = simulation.get("seed_base")
-    declared = isinstance(seed_base, int)
+    streams = simulation.get("seeds")
+    has_streams = isinstance(streams, dict) and bool(streams)
+    has_base = isinstance(seed_base, int)
     return {
-        "base": seed_base if declared else None,
-        "declared": declared,
+        "base": seed_base if has_base else None,
+        "streams": dict(streams) if has_streams else None,
+        "declared": has_base or has_streams,
         "stage_count": len(planned),
     }
 
@@ -225,7 +236,6 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     """
     from gridalyn.foundation.platform.capabilities import missing_capability_modules
     from gridalyn.projects.model_inputs import load_powerflow_backend_id
-    from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
     from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
 
     registry = default_powerflow_backend_registry()
@@ -242,8 +252,7 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     provenance = registry.get_descriptor(backend_id).as_dict()
     provenance["declared_source"] = (
         "spec.simulation.powerflowBackend"
-        if backend_id != DEFAULT_POWERFLOW_BACKEND_ID
-        or _declares_powerflow_backend(project)
+        if _declares_powerflow_backend(project)
         else "registry default (study declares none)"
     )
     provenance["registered"] = [descriptor.backend_id for descriptor in descriptors]

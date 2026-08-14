@@ -443,12 +443,58 @@ def _simulation(project: StudyProject) -> Mapping[str, Any]:
     return simulation
 
 
+def load_simulation_seed(project_or_path: ProjectRef, stream: str) -> int:
+    """Load one named RNG stream from ``spec.simulation.seeds``.
+
+    A stage that owns an RNG stream reads its seed through here instead of
+    hardcoding one, so the value in the manifest is the value the stage used.
+    Declaring a seed a stage never reads is worse than declaring none: the
+    manifest then looks reproducible while the run is governed by a literal
+    buried in a script.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+        stream: Name of the declared stream, e.g. ``"policy"``.
+
+    Returns:
+        The declared integer seed.
+
+    Raises:
+        ValueError: If ``spec.simulation.seeds`` is missing, is not a mapping of
+            integers, or does not declare ``stream``. The message lists the
+            streams the study does declare.
+    """
+    project = _project(project_or_path)
+    streams = _simulation(project).get("seeds")
+    if not isinstance(streams, Mapping) or not streams:
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds must declare the named RNG "
+            f"streams this study draws from, including {stream!r}; found "
+            f"{type(streams).__name__}"
+        )
+    if stream not in streams:
+        available = ", ".join(sorted(str(key) for key in streams))
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds does not declare "
+            f"{stream!r} (declared streams: {available})"
+        )
+    value = streams[stream]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(
+            f"{project.path}: spec.simulation.seeds.{stream} must be an "
+            f"integer, found {type(value).__name__}"
+        )
+    return value
+
+
 def load_powerflow_backend_id(project_or_path: ProjectRef) -> str:
     """Load the power-flow backend ID a study declares in ``spec.simulation``.
 
-    Every stage that solves power flow must resolve through this ID rather than
-    calling ``pandapower.runpp`` itself, so that what a run solved with is what
-    ``provenance.powerflow_backend.declared`` records. A study that declares
+    Every stage that solves power flow through ``pandapower.runpp`` resolves
+    through this ID rather than calling the solver itself (the one exemption is
+    ``runpp_3ph``, which the backend contract does not model), so that what a
+    run solved with is what
+    ``provenance.powerflow_backend.backend_id`` records. A study that declares
     nothing gets the registry default, which needs no optional extra.
 
     Args:
@@ -496,6 +542,7 @@ __all__ = [
     "load_generated_load_profiles",
     "load_numeric_profile_array",
     "load_powerflow_backend_id",
+    "load_simulation_seed",
     "load_prosumer_assets",
     "load_radial_feeder_spec",
     "load_standard_powerflow_scenarios",
