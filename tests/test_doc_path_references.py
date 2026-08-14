@@ -147,6 +147,24 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "the retirement record names the package that was DELETED on "
     "2026-08-06; being absent is the claim",
     (
+        "docs/development/instruction-verification.md",
+        "docs/semantic-layer/falkordb.md",
+    ): "the ruling record names where this page lived before the 2026-08-13 "
+    "restructure moved it to docs/reference/falkordb.md; being absent under "
+    "the old path is the claim",
+    (
+        "docs/development/instruction-verification.md",
+        "docs/semantic-layer/semantic-graph.md",
+    ): "the ruling record names where this page lived before the 2026-08-13 "
+    "restructure moved it to docs/reference/semantic-graph.md; being absent "
+    "under the old path is the claim",
+    (
+        "docs/development/instruction-verification.md",
+        "docs/applications/reports.md",
+    ): "the ruling record names the page whose one section the 2026-08-13 "
+    "restructure merged into docs/reference/reports.md; being absent under "
+    "the old path is the claim",
+    (
         "docs/development/report-contract-audit.md",
         ".../flexibility/locational_verification.py",
     ): "retired 2026-08-06 (audit section 11); the audit row records what the "

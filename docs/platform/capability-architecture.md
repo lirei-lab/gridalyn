@@ -73,6 +73,6 @@ reusable contract.
 | Need | Read |
 | --- | --- |
 | Detailed responsibility boundaries | [Platform Layer Model](platform-layer-model.md) |
-| Public Python surfaces | [Public Python API](../development/public-api.md) |
+| Public Python surfaces | [Public Python API](../sdk/public-api.md) |
 | Project contracts and workflows | [Project Model](../projects/project-model.md) |
-| Release posture and exclusions | [Release Readiness](release-readiness.md) |
+| Release posture and exclusions | [Release Readiness](../development/release-readiness.md) |

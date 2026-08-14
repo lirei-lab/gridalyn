@@ -126,5 +126,5 @@ For a smaller project-only change, start with:
 uv run gridalyn project verify projects/<project>
 ```
 
-The release checklist in [Release Readiness](../platform/release-readiness.md)
+The release checklist in [Release Readiness](release-readiness.md)
 combines these checks with dashboard validation.

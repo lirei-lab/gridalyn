@@ -40,4 +40,4 @@ uv run python -m gridalyn.interfaces.reporting.digital_twin
 - Large regenerated artifacts should not be committed unless the artifact policy
   explicitly allows them.
 
-See [Reports](../platform/reports.md) and [Artifact Policy](../development/artifact-policy.md).
+See [Reports](../reference/reports.md) and [Artifact Policy](../development/artifact-policy.md).

@@ -47,4 +47,4 @@ Project scripts still own figure content, captions, and study-specific visual
 choices. The SDK owns repeated artifact, time-axis, and report-summary
 mechanics.
 
-See [Reports And Manifests](../platform/reports.md).
+See [Reports And Manifests](../reference/reports.md).

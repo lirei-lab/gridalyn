@@ -125,9 +125,9 @@ When adding a new subsystem, update at least one of:
 - `getting-started/reproducibility.md` if verification commands change;
 - `platform/architecture.md` for system-level placement;
 - `platform/digital-twin.md` for canonical data layout;
-- `platform/projects-and-workflows.md` for project contract behavior;
-- `platform/reports.md` for report contract changes;
-- `semantic-layer/semantic-graph.md` for ontology or graph changes;
+- `projects/projects-and-workflows.md` for project contract behavior;
+- `reference/reports.md` for report contract changes;
+- `reference/semantic-graph.md` for ontology or graph changes;
 - `platform/dashboard.md` for visualization and catalog changes.
 - `development/artifact-policy.md` for Git, data, and generated-output policy.
 

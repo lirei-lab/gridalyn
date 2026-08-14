@@ -660,28 +660,28 @@
       "sha1": "cedd2afdc884409a3799029eb6717137b09a8944",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#0": {
+    "docs/sdk/public-api.md#0": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/development/public-api.md#seq0",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/public-api.md#seq0",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 24,
       "ordinal": 0,
       "rationale": "",
-      "sequence": "docs/development/public-api.md#seq0",
+      "sequence": "docs/sdk/public-api.md#seq0",
       "sha1": "4a238aa98948758a9b00eda7432a7f8a5fea2c61",
       "verdict": null
     },
-    "docs/development/public-api.md#1": {
+    "docs/sdk/public-api.md#1": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "Executed verbatim. exit 0. from_parquet->NetworkModel; get_downstream('transformer:25')->DownstreamAssets; get_connected_equipment('bus:17')->ConnectedEquipment; validate_integrity()->NetworkIntegrityReport. (A first attempt failed only inside my own reporting harness calling len() on DownstreamAssets - harness defect, not doc defect; re-ran clean.)",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 57,
       "ordinal": 1,
@@ -690,13 +690,13 @@
       "sha1": "3828f58a62ff183612c2f25cd8d025de4e3b3de6",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#2": {
+    "docs/sdk/public-api.md#2": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "PATH SUBSTITUTION: adapter.export(out_dir=...) redirected from the documented TRACKED 'instances/default/digital_twin/base' to a scratch dir. Rest verbatim. exit 0, 4.87s. list_descriptors()->['cim_parquet','synthetic_pandapower'] (matches the doc's adapter-ID table); export->NetworkExportResult writing grid_buses/grid_lines/grid_transformers/buildings/building_grid_connectivity.parquet + metadata.json + network_adapter_validation_report.json.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 90,
       "ordinal": 2,
@@ -705,28 +705,28 @@
       "sha1": "d5831c2898fbd244516c8a0c60cc48bf10107282",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#3": {
+    "docs/sdk/public-api.md#3": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/development/public-api.md#seq0",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/public-api.md#seq0",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 119,
       "ordinal": 3,
       "rationale": "",
-      "sequence": "docs/development/public-api.md#seq0",
+      "sequence": "docs/sdk/public-api.md#seq0",
       "sha1": "f0605f04215005fb2d6fac3b86a7964dd219515e",
       "verdict": null
     },
-    "docs/development/public-api.md#4": {
+    "docs/sdk/public-api.md#4": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": "2026-08-06",
       "evidence": "ILLUSTRATIVE: a schema/table/sample-output/API-shape excerpt, not a command contract; nothing to execute. Carried at the wave-1 classification.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 154,
       "ordinal": 4,
@@ -735,13 +735,13 @@
       "sha1": "236850ef249bb146b5321b89a8634728932283ab",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#5": {
+    "docs/sdk/public-api.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": "2026-08-06",
       "evidence": "ILLUSTRATIVE: a schema/table/sample-output/API-shape excerpt, not a command contract; nothing to execute. Carried at the wave-1 classification.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 172,
       "ordinal": 5,
@@ -750,13 +750,13 @@
       "sha1": "6d7a11733d4810d9a03e2a7187f296003868f4c8",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#6": {
+    "docs/sdk/public-api.md#6": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "Executed verbatim. exit 0. ProsumerRealtimeMarketConfig and run_prosumer_realtime_market both import from gridalyn.operations.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 191,
       "ordinal": 6,
@@ -765,13 +765,13 @@
       "sha1": "00b63b2fa572b5edf4236253e9ba6d7f7a7b5fb2",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#7": {
+    "docs/sdk/public-api.md#7": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "Executed verbatim. exit 0. TransformerThermalModel constructed; build_thermal_forecast(336, resolution_minutes=5, ...)->ThermalForecast; thermal_forecast_metadata-> keys incl. ambient_max_c/ambient_mean_c/ambient_min_c/dynamic_limit_max_mw/dynamic_limit_mean_mw. TMY served from local cache.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 204,
       "ordinal": 7,
@@ -780,13 +780,13 @@
       "sha1": "db4b0f43da3c5104149834601125da8811f0df6d",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#8": {
+    "docs/sdk/public-api.md#8": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": "2026-08-06",
       "evidence": "ILLUSTRATIVE: a schema/table/sample-output/API-shape excerpt, not a command contract; nothing to execute. Carried at the wave-1 classification.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 227,
       "ordinal": 8,
@@ -795,13 +795,13 @@
       "sha1": "da787845e91a7190214d94e8ba5d9fb49293fa04",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#9": {
+    "docs/sdk/public-api.md#9": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ENV-DEPENDENT",
       "date": "2026-08-06",
       "evidence": "ENV-DEPENDENT (network). Probe: https://pypi.org/simple/ -> HTTP 200, so network was reachable. Executed verbatim, exit 0, 1.2s: download_tmy() resolved from the local datagen cache ('Loading TMY from cache (tmy_trois_rivieres.pkl)'), select_cold_day -> 1990-01-19 (daily mean -22.5 C), GridLoadFacade.generate_loads('parametric', ...) -> heat (96,100) and background (96,100) arrays. Positional-arg form confirmed working.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 240,
       "ordinal": 9,
@@ -810,13 +810,13 @@
       "sha1": "2e4db80ac063237d0ba22f06097af51755b65802",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#10": {
+    "docs/sdk/public-api.md#10": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "LONG-RUNNING",
       "date": "2026-08-06",
       "evidence": "LONG-RUNNING. Long-running operations/clearing example; the operations clearing path was exercised instead via developer-workflow.md#8 (`market locational-clearing`, exit 0, 7 unique providers, shortfall 0.0).",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 262,
       "ordinal": 10,
@@ -825,13 +825,13 @@
       "sha1": "622272a51316a56c3ab1b92bff8aa56f7fa61492",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#11": {
+    "docs/sdk/public-api.md#11": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": "2026-08-06",
       "evidence": "ILLUSTRATIVE: a schema/table/sample-output/API-shape excerpt, not a command contract; nothing to execute. Carried at the wave-1 classification.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 277,
       "ordinal": 11,
@@ -840,28 +840,28 @@
       "sha1": "bff3d8a9d66539672fc9745857e372ed40a218bd",
       "verdict": "DOCUMENTED"
     },
-    "docs/development/public-api.md#12": {
+    "docs/sdk/public-api.md#12": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/development/public-api.md#seq1",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/public-api.md#seq1",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "bash",
       "line": 298,
       "ordinal": 12,
       "rationale": "",
-      "sequence": "docs/development/public-api.md#seq1",
+      "sequence": "docs/sdk/public-api.md#seq1",
       "sha1": "c6da797fa3cc2b0ecdaa4c29064a1126d7203369",
       "verdict": null
     },
-    "docs/development/public-api.md#13": {
+    "docs/sdk/public-api.md#13": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "Executed verbatim. exit 0. SemanticGraphRepository.from_parquet over instances/default/digital_twin/semantic; providers_for_constraint('transformer:64', scenario_id='S4') -> 22 providers; trace_building_to_constraint('building:123', scenario_id='S4') -> dict.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 306,
       "ordinal": 13,
@@ -870,13 +870,13 @@
       "sha1": "f08f74d6c96d4c6c26e1b109dfc1776c520048d3",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/development/public-api.md#14": {
+    "docs/sdk/public-api.md#14": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": "2026-08-06",
       "evidence": "ILLUSTRATIVE: a schema/table/sample-output/API-shape excerpt, not a command contract; nothing to execute. Carried at the wave-1 classification.",
-      "family": "development",
-      "file": "docs/development/public-api.md",
+      "family": "platform",
+      "file": "docs/sdk/public-api.md",
       "language": "python",
       "line": 325,
       "ordinal": 14,
@@ -2820,13 +2820,13 @@
       "sha1": "3870d316b264c92a50a13c11da61f6531e3571d4",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/building-models.md#0": {
+    "docs/sdk/building-models.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "text",
       "line": 28,
       "ordinal": 0,
@@ -2835,43 +2835,43 @@
       "sha1": "0758ca93d5d9b7d6b0f448513adda82822f86af2",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/building-models.md#1": {
+    "docs/sdk/building-models.md#1": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/building-models.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq0",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "bash",
       "line": 54,
       "ordinal": 1,
       "rationale": "",
-      "sequence": "docs/platform/building-models.md#seq0",
+      "sequence": "docs/sdk/building-models.md#seq0",
       "sha1": "53c4a32eb4c1e155fa93e1e69f2884ba0c1ed4e2",
       "verdict": null
     },
-    "docs/platform/building-models.md#2": {
+    "docs/sdk/building-models.md#2": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/building-models.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq0",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "bash",
       "line": 60,
       "ordinal": 2,
       "rationale": "",
-      "sequence": "docs/platform/building-models.md#seq0",
+      "sequence": "docs/sdk/building-models.md#seq0",
       "sha1": "35d9323018862edc09c3d72ce98fd9f25328b279",
       "verdict": null
     },
-    "docs/platform/building-models.md#3": {
+    "docs/sdk/building-models.md#3": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "`uv run gridalyn twin build --skip-heavy` in WS. Exit 0, 34.06s, step_count 12, all steps ok; semantic validation valid=True errors=0 warnings=0; catalog scenario_count 5. Note this succeeds only because the WS twin cache had been seeded -- see the digital-twin.md#seq0 precondition finding.",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "bash",
       "line": 66,
       "ordinal": 3,
@@ -2880,43 +2880,43 @@
       "sha1": "ffbb8bf34225f298935ce731fec965acef7c4680",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/platform/building-models.md#4": {
+    "docs/sdk/building-models.md#4": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/building-models.md#seq1",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq1",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "python",
       "line": 72,
       "ordinal": 4,
       "rationale": "precondition: `instances/default/digital_twin/base` must have been built",
-      "sequence": "docs/platform/building-models.md#seq1",
+      "sequence": "docs/sdk/building-models.md#seq1",
       "sha1": "4078a90e5f9a1bd8a29303b918270f7a1b12c11d",
       "verdict": null
     },
-    "docs/platform/building-models.md#5": {
+    "docs/sdk/building-models.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/building-models.md#seq1",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq1",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "python",
       "line": 92,
       "ordinal": 5,
       "rationale": "",
-      "sequence": "docs/platform/building-models.md#seq1",
+      "sequence": "docs/sdk/building-models.md#seq1",
       "sha1": "fc344b8b37f7ffb3c015ff5d44dd8395f562328e",
       "verdict": null
     },
-    "docs/platform/building-models.md#6": {
+    "docs/sdk/building-models.md#6": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "build_thermal_forecast(336, resolution_minutes=5, ...) + thermal_forecast_metadata. Exit 0 in WS. Larger horizon variant of data-generation.md#4 and behaves identically.",
       "family": "platform",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "language": "python",
       "line": 116,
       "ordinal": 6,
@@ -3435,13 +3435,13 @@
       "sha1": "c7c5aa45181a5227910eec32d3f1d09bcce05661",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/projects-and-workflows.md#0": {
+    "docs/projects/projects-and-workflows.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "text",
       "line": 35,
       "ordinal": 0,
@@ -3450,13 +3450,13 @@
       "sha1": "a1b55209575f2859a7d4c71ef936c59a71048dbd",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/projects-and-workflows.md#1": {
+    "docs/projects/projects-and-workflows.md#1": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "yaml",
       "line": 62,
       "ordinal": 1,
@@ -3465,13 +3465,13 @@
       "sha1": "6364c71dde6cce3f3d04d06892c022ad159ff1f1",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/projects-and-workflows.md#2": {
+    "docs/projects/projects-and-workflows.md#2": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "yaml",
       "line": 87,
       "ordinal": 2,
@@ -3480,103 +3480,103 @@
       "sha1": "5063dbb7479dd7237539f07c015d695b6aec2a75",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/projects-and-workflows.md#3": {
+    "docs/projects/projects-and-workflows.md#3": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "bash",
       "line": 113,
       "ordinal": 3,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "57e8e28fe38e5e51126bfb4408fb2593d0282321",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#4": {
+    "docs/projects/projects-and-workflows.md#4": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "bash",
       "line": 119,
       "ordinal": 4,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "2707349b647b332e5721eaca987c803827416258",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#5": {
+    "docs/projects/projects-and-workflows.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "bash",
       "line": 125,
       "ordinal": 5,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "4a650b8cb0af0a80764f1f1cef6fec4de138d736",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#6": {
+    "docs/projects/projects-and-workflows.md#6": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "bash",
       "line": 131,
       "ordinal": 6,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "76c40fcc0cad1702de548a19b4ea1d2b631a7e8b",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#7": {
+    "docs/projects/projects-and-workflows.md#7": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "bash",
       "line": 137,
       "ordinal": 7,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "07f615e533f2e13e07fad1be30bbcc9b33d18dd4",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#8": {
+    "docs/projects/projects-and-workflows.md#8": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/projects-and-workflows.md#seq0",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/projects/projects-and-workflows.md#seq0",
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "python",
       "line": 148,
       "ordinal": 8,
       "rationale": "",
-      "sequence": "docs/platform/projects-and-workflows.md#seq0",
+      "sequence": "docs/projects/projects-and-workflows.md#seq0",
       "sha1": "0612fe6bf84389e0904e5b453a9e9b3c0275b038",
       "verdict": null
     },
-    "docs/platform/projects-and-workflows.md#9": {
+    "docs/projects/projects-and-workflows.md#9": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "language": "text",
       "line": 177,
       "ordinal": 9,
@@ -3585,13 +3585,13 @@
       "sha1": "7213279554234abe7a2947e1e94ef5420c10ea55",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/release-readiness.md#0": {
+    "docs/development/release-readiness.md#0": {
       "auto": "ENV-DEPENDENT",
       "class": "ENV-DEPENDENT",
       "date": "2026-08-06",
       "evidence": "ENV-DEPENDENT 7-command checklist; every member probed, one fails. (1) `pytest -q`: exit 0, '1068 passed, 1 xfailed in 569.48s' - MY OWN instrumented run this session, not a cited one. (2) mkdocs build --strict: exit 0, 6.24s. (3) platform check-artifacts --summary-only: exit 0, valid true. (4) `gridalyn project verify-all`: EXIT 1, valid false - the two research studies fail project_has_registered_sense_checks (see testing-and-validation.md#8). (5) `project regression projects/ev_hosting_flex`: exit 0, valid true, valid_count 81. (6) `node --test dashboard/src/*.test.js`: exit 0, 'tests 18 / pass 18 / fail 0' in 90.5ms. (7) `(cd dashboard && npm run build)`: exit 0. Verdicted DOCUMENTED rather than PASS because member (4) exits non-zero, making the block as a whole non-green; the cause is the sense-check registration gap, already filed.",
-      "family": "platform",
-      "file": "docs/platform/release-readiness.md",
+      "family": "development",
+      "file": "docs/development/release-readiness.md",
       "language": "bash",
       "line": 61,
       "ordinal": 0,
@@ -3600,13 +3600,13 @@
       "sha1": "b0c2f9f47c518f754a74ebcd10206d6c0b00fe6b",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#0": {
+    "docs/reference/reports.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "text",
       "line": 29,
       "ordinal": 0,
@@ -3615,13 +3615,13 @@
       "sha1": "b922dea0443d9b6b91688ce23f83c6396f2dddfd",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#1": {
+    "docs/reference/reports.md#1": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "text",
       "line": 49,
       "ordinal": 1,
@@ -3630,13 +3630,13 @@
       "sha1": "9d47cd17b5cad2468a439bea89baaf51cd17994d",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#2": {
+    "docs/reference/reports.md#2": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "python",
       "line": 65,
       "ordinal": 2,
@@ -3645,13 +3645,13 @@
       "sha1": "46b3ef519d22ec9b9cccfd1ce585f86d1989ebdb",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#3": {
+    "docs/reference/reports.md#3": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "json",
       "line": 84,
       "ordinal": 3,
@@ -3660,13 +3660,13 @@
       "sha1": "7e40330a305450a49b7cecfd7478319167c2e613",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#4": {
+    "docs/reference/reports.md#4": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "python",
       "line": 110,
       "ordinal": 4,
@@ -3675,13 +3675,13 @@
       "sha1": "ef4acd999a5383808b0a0d14e5042e4ec24b7773",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#5": {
+    "docs/reference/reports.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "bash",
       "line": 128,
       "ordinal": 5,
@@ -3690,13 +3690,13 @@
       "sha1": "57b33734f977a72b8f9f85e4a2f9ff7eeff47473",
       "verdict": "DOCUMENTED"
     },
-    "docs/platform/reports.md#6": {
+    "docs/reference/reports.md#6": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
       "evidence": "`uv run python -m gridalyn.interfaces.reporting.digital_twin` in WS. Exit 0, 0.10s, 'Built digital-twin canonical reports: 3 reports'. No repo dirt (WS-isolated); the same command run in-repo as generate-reports-and-figures.md#2 produced the timestamp-only churn recorded under dirt.",
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "bash",
       "line": 135,
       "ordinal": 6,
@@ -3705,13 +3705,13 @@
       "sha1": "270f65966c0269413f73ac9e723d897e6d933963",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/platform/reports.md#7": {
+    "docs/reference/reports.md#7": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/platform/reports.md",
+      "family": "getting-started",
+      "file": "docs/reference/reports.md",
       "language": "bash",
       "line": 141,
       "ordinal": 7,
@@ -4080,13 +4080,13 @@
       "sha1": "25c35b34ad43118fd45ce082dc4c255073231f8d",
       "verdict": "PASS-AS-WRITTEN"
     },
-    "docs/sdk/CONTRACT.md#0": {
+    "docs/sdk/clearing-contract.md#0": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
-      "file": "docs/sdk/CONTRACT.md",
+      "file": "docs/sdk/clearing-contract.md",
       "language": "python",
       "line": 45,
       "ordinal": 0,
@@ -4485,11 +4485,11 @@
       "sha1": "0cc8cbea75636fc945d99bf1d94cc84f38566c92",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/falkordb.md#0": {
+    "docs/reference/falkordb.md#0": {
       "class": "ILLUSTRATIVE",
       "auto": "ILLUSTRATIVE",
-      "family": "platform",
-      "file": "docs/semantic-layer/falkordb.md",
+      "family": "getting-started",
+      "file": "docs/reference/falkordb.md",
       "ordinal": 0,
       "line": 18,
       "language": "python",
@@ -4500,11 +4500,11 @@
       "evidence": null,
       "date": null
     },
-    "docs/semantic-layer/falkordb.md#1": {
+    "docs/reference/falkordb.md#1": {
       "class": "ILLUSTRATIVE",
       "auto": "ILLUSTRATIVE",
-      "family": "platform",
-      "file": "docs/semantic-layer/falkordb.md",
+      "family": "getting-started",
+      "file": "docs/reference/falkordb.md",
       "ordinal": 1,
       "line": 48,
       "language": "cypher",
@@ -4515,11 +4515,11 @@
       "evidence": null,
       "date": null
     },
-    "docs/semantic-layer/falkordb.md#2": {
+    "docs/reference/falkordb.md#2": {
       "class": "ILLUSTRATIVE",
       "auto": "ILLUSTRATIVE",
-      "family": "platform",
-      "file": "docs/semantic-layer/falkordb.md",
+      "family": "getting-started",
+      "file": "docs/reference/falkordb.md",
       "ordinal": 2,
       "line": 62,
       "language": "cypher",
@@ -4530,11 +4530,11 @@
       "evidence": null,
       "date": null
     },
-    "docs/semantic-layer/falkordb.md#3": {
+    "docs/reference/falkordb.md#3": {
       "class": "ILLUSTRATIVE",
       "auto": "ILLUSTRATIVE",
-      "family": "platform",
-      "file": "docs/semantic-layer/falkordb.md",
+      "family": "getting-started",
+      "file": "docs/reference/falkordb.md",
       "ordinal": 3,
       "line": 76,
       "language": "cypher",
@@ -4545,11 +4545,11 @@
       "evidence": null,
       "date": null
     },
-    "docs/semantic-layer/falkordb.md#4": {
+    "docs/reference/falkordb.md#4": {
       "class": "ILLUSTRATIVE",
       "auto": "ILLUSTRATIVE",
-      "family": "platform",
-      "file": "docs/semantic-layer/falkordb.md",
+      "family": "getting-started",
+      "file": "docs/reference/falkordb.md",
       "ordinal": 4,
       "line": 91,
       "language": "cypher",
@@ -4560,13 +4560,13 @@
       "evidence": null,
       "date": null
     },
-    "docs/semantic-layer/semantic-graph.md#0": {
+    "docs/reference/semantic-graph.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 12,
       "ordinal": 0,
@@ -4575,13 +4575,13 @@
       "sha1": "03c40cb927ec07d409ef2d46dfed25ace0daac54",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/semantic-graph.md#1": {
+    "docs/reference/semantic-graph.md#1": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 38,
       "ordinal": 1,
@@ -4590,13 +4590,13 @@
       "sha1": "652cc53b4aefcc9829c3e5114ae64cfcf5c24b3b",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/semantic-graph.md#2": {
+    "docs/reference/semantic-graph.md#2": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 47,
       "ordinal": 2,
@@ -4605,13 +4605,13 @@
       "sha1": "d58ad82f126e460d4eceba6cf67776397070763b",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/semantic-graph.md#3": {
+    "docs/reference/semantic-graph.md#3": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 62,
       "ordinal": 3,
@@ -4620,13 +4620,13 @@
       "sha1": "8ef71e21e114f125faa9b9b5198cf3e0321a31d5",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/semantic-graph.md#4": {
+    "docs/reference/semantic-graph.md#4": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 77,
       "ordinal": 4,
@@ -4635,43 +4635,43 @@
       "sha1": "86c81b1e6f1dcb0d3e4bb74bbe1991313715f0b8",
       "verdict": "DOCUMENTED"
     },
-    "docs/semantic-layer/semantic-graph.md#5": {
+    "docs/reference/semantic-graph.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/semantic-layer/semantic-graph.md#seq0",
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/reference/semantic-graph.md#seq0",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "bash",
       "line": 168,
       "ordinal": 5,
       "rationale": "",
-      "sequence": "docs/semantic-layer/semantic-graph.md#seq0",
+      "sequence": "docs/reference/semantic-graph.md#seq0",
       "sha1": "6b92ddaca99cff825557f94ee183a5f9a187f96e",
       "verdict": null
     },
-    "docs/semantic-layer/semantic-graph.md#6": {
+    "docs/reference/semantic-graph.md#6": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/semantic-layer/semantic-graph.md#seq0",
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/reference/semantic-graph.md#seq0",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "bash",
       "line": 180,
       "ordinal": 6,
       "rationale": "",
-      "sequence": "docs/semantic-layer/semantic-graph.md#seq0",
+      "sequence": "docs/reference/semantic-graph.md#seq0",
       "sha1": "601f831c889a827ae82d3e40327c56a3041a1a43",
       "verdict": null
     },
-    "docs/semantic-layer/semantic-graph.md#7": {
+    "docs/reference/semantic-graph.md#7": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
-      "family": "platform",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "family": "getting-started",
+      "file": "docs/reference/semantic-graph.md",
       "language": "text",
       "line": 199,
       "ordinal": 7,
@@ -5183,7 +5183,7 @@
       "blocks": [
         "README.md#6",
         "docs/development/instruction-verification.md#3",
-        "docs/development/public-api.md#10",
+        "docs/sdk/public-api.md#10",
         "docs/development/testing-and-validation.md#3",
         "docs/development/testing-and-validation.md#4",
         "docs/development/testing-and-validation.md#9",
@@ -5230,10 +5230,10 @@
       "verdict": "PASS-AS-WRITTEN",
       "workspace": "block 6 builds `instances/default/digital_twin/semantic`; block 7 validates what block 6 wrote"
     },
-    "docs/development/public-api.md#seq0": {
+    "docs/sdk/public-api.md#seq0": {
       "date": "2026-08-06",
       "evidence": "PATH SUBSTITUTION: 'projects/my_case' -> scratch workspace. Both blocks executed in one process, exit 0. Block 0: init_project->CreatedProject, load_project, plan_project->2 stages, project_status(check_artifacts=True)->dict, project_verify->dict. Block 3: foundation.write_report(...) with ReportMetadata + file_reference + summary + validation wrote sample_report.json without error - note file_reference tolerated the doc's non-existent results.parquet path rather than raising.",
-      "file": "docs/development/public-api.md",
+      "file": "docs/sdk/public-api.md",
       "members": [
         0,
         3
@@ -5242,10 +5242,10 @@
       "verdict": "PASS-AS-WRITTEN",
       "workspace": "block 0 creates `projects/my_case` via `init_project`; block 3 writes a governed report into that project's `outputs/reports/`"
     },
-    "docs/development/public-api.md#seq1": {
+    "docs/sdk/public-api.md#seq1": {
       "date": "2026-08-06",
       "evidence": "NOT EXECUTED AS WRITTEN - default-path writer into tracked artifacts. The block runs `gridalyn semantic build --profile north_america` with NO --out-dir, so it writes the 3 TRACKED files under instances/default/digital_twin/semantic/ (graph_manifest.json, profile_north_america.json, validation_report.json) in a worktree shared with two sibling agents. The identical subcommand pair was executed with explicit dirs under developer-workflow.md#seq1 (build exit 0, 74286 nodes/147065 edges; validate exit 0, valid=True errors=0 warnings=0), so the command contract is verified; only the default-path resolution is unexercised. Also verified that `gridalyn semantic --help` shows no options because the CLI forwards extra args via parse_known_args to gridalyn.projects.workflows.scripts.* - the doc's flags are valid despite not appearing in --help.",
-      "file": "docs/development/public-api.md",
+      "file": "docs/sdk/public-api.md",
       "members": [
         12
       ],
@@ -5335,10 +5335,10 @@
       "verdict": "FIXED-DOC",
       "workspace": "the canonical demo walk-through over `projects/minimal_grid_project`: validate -> plan -> run -> re-run one stage -> status -> verify -> verify-all -> regression. Blocks 4, 5, 6 and 7 read artifacts block 2 produced"
     },
-    "docs/platform/building-models.md#seq0": {
+    "docs/sdk/building-models.md#seq0": {
       "date": "2026-08-06",
       "evidence": "Members [1,2] in order in WS. `twin building-models` exit 0 0.86s: building_models 3235, thermal_zones 3235, device_registry 6470, end_use_loads 9705, archetypes 3, evse_devices 0. `twin scenario-models` exit 0 3.48s: scenarios 5, scenario_devices 12935. Chain holds -- block 2 consumes the models block 1 wrote.",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "members": [
         1,
         2
@@ -5347,10 +5347,10 @@
       "verdict": "PASS-AS-WRITTEN",
       "workspace": "block 1 writes `instances/default/digital_twin/models/`; block 2 synthesizes the scenario device tables from those models"
     },
-    "docs/platform/building-models.md#seq1": {
+    "docs/sdk/building-models.md#seq1": {
       "date": "2026-08-06",
       "evidence": "Members [4,5] concatenated and run as one script in WS (block 5 is undefined without block 4's `buildings`/`connectivity`). Exit 0. manifest keys [artifacts, counts, created_at, environment, inputs, manifest_path]; tables [building_models, device_registry, end_use_loads, thermal_zones]; scenario_tables {scenario_device_registry: 12935 rows, scenario_summary: 5 rows}. The 12935/5 counts equal what the CLI path (seq0) produced, so the Python API and CLI agree.",
-      "file": "docs/platform/building-models.md",
+      "file": "docs/sdk/building-models.md",
       "members": [
         4,
         5
@@ -5382,10 +5382,10 @@
       "verdict": "FIXED-DOC",
       "workspace": "the whole twin pipeline over `instances/default/digital_twin/`: build -> network-impact build -> repository read -> building/scenario models -> dashboard catalog -> market providers/surrogate/clearing/verification/perturbation/physics-surrogate/catalog -> semantic build and validate -> canonical reporting. Block 4 re-runs the build with an extra flag rather than adding a new stage"
     },
-    "docs/platform/projects-and-workflows.md#seq0": {
+    "docs/projects/projects-and-workflows.md#seq0": {
       "date": "2026-08-06",
       "evidence": "All 6 members in order in WS2 (isolated `projects/` tree -- this doc is one of the seven that init `projects/my_case`). Members 3-7 all exit 0: init created project.yaml+workflow.yaml; validate --check-artifacts valid:true (the default template declares no requiredReports, so unlike minimal_grid_project this passes pre-run); plan lists prepare_inputs + validate_outputs; run 2/2 stages; status valid:true, stage_count 2, reports ready:true. MEMBER 8 FAILED exit 1: FileExistsError: target project directory is not empty: projects/my_case, raised at gridalyn/projects/api.py:307. The Python API block re-uses the SAME path the CLI block 3 created, so the document cannot be executed top-to-bottom. Proof it is the chain and not the API: after `rm -rf projects/my_case` the identical block exits 0 ('created: projects/my_case | project: my_case | stages: [prepare_inputs, validate_outputs]'). Fixed in prose -- the Python API section is now labelled the programmatic equivalent of the CLI section rather than a continuation, and states that init_project refuses a non-empty directory.",
-      "file": "docs/platform/projects-and-workflows.md",
+      "file": "docs/projects/projects-and-workflows.md",
       "members": [
         3,
         4,
@@ -5434,10 +5434,10 @@
       "verdict": "PASS-AS-WRITTEN",
       "workspace": "block 0 binds `profiles`; block 1 reshapes that same frame and is undefined without it"
     },
-    "docs/semantic-layer/semantic-graph.md#seq0": {
+    "docs/reference/semantic-graph.md#seq0": {
       "date": "2026-08-06",
       "evidence": "CLAIMED UNASSIGNED. Members [5,6] in order in WS. (5) `semantic build --profile north_america` with all five explicit dirs: exit 0 2.97s, 'Generated semantic graph north_america with 74569 nodes and 147348 edges'. (6) `semantic validate --semantic-dir instances/default/digital_twin/semantic` -- note this member omits the --scenario-dir that digital-twin.md#17 passes: exit 0 5.81s, 'Semantic validation valid=True errors=0 warnings=0'. Block 6 validates exactly what block 5 wrote, so the chain holds, and the scenario-dir argument is genuinely optional.",
-      "file": "docs/semantic-layer/semantic-graph.md",
+      "file": "docs/reference/semantic-graph.md",
       "members": [
         5,
         6

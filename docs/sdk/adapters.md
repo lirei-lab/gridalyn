@@ -1,7 +1,9 @@
-# Adapters
+# Ingest Adapters
 
 Adapters translate external or generated sources into Gridalyn model contracts.
-Synthetic generation is one adapter path, not the platform itself.
+Synthetic generation is one adapter path, not the platform itself. This page
+covers *ingestion* — how a network model gets built. For how a built model
+gets *solved*, see [Solver Adapters](solver-and-model-adapters.md).
 
 ## Adapter Types
 

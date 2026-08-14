@@ -72,7 +72,7 @@ separate the roles *within* that one home. Both claims are true after Phase 10,
 and they are about different axes: the first table is package boundaries, this
 one is role boundaries.
 
-See [Building Models](../platform/building-models.md).
+See [Building Models](building-models.md).
 
 For stochastic load profiles, weather windows, packaged ARX weights, and
 aggregate MV-network stress-test assumptions, see

@@ -234,16 +234,17 @@ FAMILY_PREFIXES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "docs/sdk/",
             "docs/concepts/",
             # Assigned to this family by orchestrator ruling during Phase 7:
-            # the original three-family split left these unowned, and their
+            # the original three-family split left it unowned, and its
             # runnable blocks were executed under the platform family. Keeping
-            # them out would leave real instructions verified by nobody.
-            # ``applications/`` carries no fenced block today, but ownership is
-            # about who runs a document's instructions WHEN it gains them --
-            # claiming it now is what lets the gate assert that the split
-            # covers the whole corpus rather than all-but-a-pinned-remainder.
+            # it out would leave real instructions verified by nobody. The two
+            # sibling ruled entries this comment used to name --
+            # ``docs/semantic-layer/`` and ``docs/applications/`` -- are gone:
+            # the docs restructure (2026-08-13) moved their two files under
+            # ``docs/reference/``, which already owns a natural prefix in the
+            # ``getting-started`` family above, so the ruling those two paths
+            # needed no longer applies to anything. ``docs/index.md`` still
+            # has no natural prefix and keeps the ruling alone.
             "docs/index.md",
-            "docs/semantic-layer/",
-            "docs/applications/",
         ),
     ),
     ("development", ("docs/development/",)),

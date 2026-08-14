@@ -120,7 +120,7 @@ domain logic, then continue with
 | Build a new study | [Project Template Guide](../projects/template-guide.md) |
 | Understand operational workflows | [Utility Operations](../platform/operations.md) |
 | Compare executable examples | [Run Demo Projects](run-demo-projects.md) |
-| Publish or review generated outputs | [Reports](../applications/reports.md) |
+| Publish or review generated outputs | [Reports](../reference/reports.md) |
 
 ## What Not To Do First
 

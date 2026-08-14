@@ -241,5 +241,5 @@ project workflow stage.
 ## Next Reading
 
 - [Run Demo Projects](run-demo-projects.md)
-- [Projects and Workflows](../platform/projects-and-workflows.md)
+- [Projects and Workflows](../projects/projects-and-workflows.md)
 - [Artifact Policy](../development/artifact-policy.md)
