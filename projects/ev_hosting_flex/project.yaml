@@ -7,6 +7,10 @@ metadata:
     EV hosting capacity and flexibility across a 540-transformer distribution
     fleet, with the transformer rating convention as a declared axis.
 spec:
+  simulation:
+    # Declared RNG base: config.SEED; per-realization draws are SEED + r and
+    # named offsets (OOS_SEED_OFFSET, ADV_SEED_OFFSET, DHW_SEED_SALT) derive from it.
+    seed: 42
   pathBase: repo
   problem:
     type: ev_hosting_capacity_flexibility

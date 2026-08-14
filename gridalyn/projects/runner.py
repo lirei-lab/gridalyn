@@ -105,25 +105,49 @@ def _clearing_stack_versions() -> dict[str, str | None]:
 def _resolve_seeds(
     project: StudyProject, planned: list[WorkflowStage]
 ) -> dict[str, Any]:
-    """Resolve the per-stage RNG seed map the runner can see (REPRO-04).
+    """Record the RNG seed base the study declares (REPRO-04).
 
-    PRIMARY PATH: when the study declares a simulation seed in its YAML
-    (``spec.simulation.seed`` / ``seed_base``), record the resolved per-stage
-    ``{stage_id: seed + index}`` map derived from that base and the planned
-    stage order. The per-realization ``SEED + r`` draws live inside individual
-    stage scripts and are genuinely unreachable from this generic runner, so the
-    single-``"base"``-key form is the documented LAST-RESORT fallback used only
-    when no per-stage map can be built.
+    Records the declared base and says whether it was declared -- nothing more.
+    That restraint is the point, and it is a correction: this function used to
+    derive a per-stage ``{stage_id: seed + index}`` map from the base and the
+    planned stage order. No study seeds that way. ``ev_hosting_flex`` uses a
+    single ``SEED = 42`` with named offsets (``OOS_SEED_OFFSET``,
+    ``ADV_SEED_OFFSET``, ``DHW_SEED_SALT``), and the per-realization ``SEED + r``
+    draws live inside the stage scripts, which run as separate subprocesses and
+    are genuinely unreachable from this generic runner. A map keyed by stage ID
+    would therefore have asserted a derivation the stages do not perform --
+    provenance that is false rather than absent, which is strictly worse in a
+    repository whose baselines are the product.
+
+    The map was also unreachable in practice until 2026-08-14: the study schema
+    declared ``spec.additionalProperties: false`` without listing ``simulation``,
+    so a study that declared the key failed validation, and all eight manifests
+    on disk recorded ``{"base": null}``.
+
+    Args:
+        project: The loaded study, read for ``spec.simulation.seed`` (or its
+            ``seed_base`` alias).
+        planned: The topologically ordered stages. Accepted so the recorded
+            payload can state how many stages the base covers, never to derive
+            a per-stage seed from the ordering.
+
+    Returns:
+        ``base`` (the declared integer, or ``None``), ``declared`` (whether the
+        study named one) and ``stage_count``. A stage that needs a distinct
+        stream derives it from ``base`` itself and records that in its own
+        report; the runner does not guess on its behalf.
     """
     spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
     simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
     seed_base = simulation.get("seed")
     if seed_base is None:
         seed_base = simulation.get("seed_base")
-    if not isinstance(seed_base, int):
-        # Last-resort fallback: no declared, runner-reachable seed.
-        return {"base": seed_base if isinstance(seed_base, int) else None}
-    return {stage.id: seed_base + index for index, stage in enumerate(planned)}
+    declared = isinstance(seed_base, int)
+    return {
+        "base": seed_base if declared else None,
+        "declared": declared,
+        "stage_count": len(planned),
+    }
 
 
 def _input_hashes(project: StudyProject) -> dict[str, dict[str, Any]]:

@@ -7,6 +7,8 @@ metadata:
 spec:
   pathBase: project
   simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 5
     # Declared, not inherited: the timeseries stage resolves this ID through
     # script.powerflow_backend() rather than calling runpp itself, so what the
     # manifest records is what the stage solved with.

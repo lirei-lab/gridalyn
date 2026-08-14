@@ -83,6 +83,67 @@ class TestRunProvenance(unittest.TestCase):
             self.assertIn("seeds", provenance)
             self.assertIsInstance(provenance["seeds"], dict)
 
+    def test_seeds_block_states_whether_a_base_was_declared(self) -> None:
+        # The seeds block used to be a per-stage {stage_id: seed + index} map.
+        # No study seeds that way, so the map asserted a derivation the stages
+        # do not perform. It now records the declared base and says whether it
+        # was declared -- absent provenance being strictly better than false
+        # provenance.
+        with tempfile.TemporaryDirectory() as tmp:
+            seeds = _run_manifest(tmp)["provenance"]["seeds"]
+            self.assertIn("base", seeds)
+            self.assertIn("declared", seeds)
+            self.assertIsInstance(seeds["declared"], bool)
+            self.assertIsInstance(seeds["stage_count"], int)
+            if seeds["declared"]:
+                self.assertIsInstance(seeds["base"], int)
+            else:
+                self.assertIsNone(seeds["base"])
+
+
+class TestShippedStudiesDeclareSeeds(unittest.TestCase):
+    """Every shipped study must declare the RNG base it actually uses.
+
+    This pins a repaired defect rather than a preference. ``_resolve_seeds``
+    documented ``spec.simulation.seed`` as its primary path, but the study
+    schema set ``spec.additionalProperties: false`` without listing
+    ``simulation``, so declaring the key failed validation and every study fell
+    to the fallback. All eight manifests on disk recorded
+    ``{"base": null}`` -- a reproducibility repository whose governed artifacts
+    recorded no seed at all. Without this test, deleting one line of schema
+    silently restores that state.
+    """
+
+    def test_every_study_declares_a_seed_the_runner_can_record(self) -> None:
+        from gridalyn.projects.loader import load_project
+        from gridalyn.projects.runner import _resolve_seeds, plan_stages
+
+        repo_root = Path(__file__).resolve().parents[1]
+        project_files = sorted((repo_root / "projects").glob("*/project.yaml"))
+        self.assertTrue(project_files, "no shipped studies found")
+        undeclared = []
+        for path in project_files:
+            project = load_project(path)
+            seeds = _resolve_seeds(project, plan_stages(project))
+            if not seeds["declared"] or not isinstance(seeds["base"], int):
+                undeclared.append(path.parent.name)
+        self.assertEqual(
+            undeclared,
+            [],
+            "these studies record no RNG base in provenance; add "
+            "spec.simulation.seed naming the base the stage scripts actually "
+            f"use: {', '.join(undeclared)}",
+        )
+
+    def test_declared_seed_survives_schema_validation(self) -> None:
+        from gridalyn.projects.validation import validate_project_file
+
+        repo_root = Path(__file__).resolve().parents[1]
+        for path in sorted((repo_root / "projects").glob("*/project.yaml")):
+            with self.subTest(study=path.parent.name):
+                report = validate_project_file(path)
+                self.assertTrue(report.valid, report.errors)
+
     def test_powerflow_backend_block_present(self) -> None:
         # Phase 10, plan 10-01. Before this key existed, a run solved through
         # lightsim2grid and a run solved through pandapower's own

@@ -5,6 +5,9 @@ metadata:
   version: 0.1.0
   description: Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.
 spec:
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 17
   pathBase: project
   problem:
     type: synthetic_network_generation

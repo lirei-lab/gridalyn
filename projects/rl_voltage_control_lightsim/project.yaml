@@ -5,6 +5,9 @@ metadata:
   version: 0.1.0
   description: Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.
 spec:
+  simulation:
+    # Declared RNG base: matches spec.inputs.loadGeneration.seed, the only RNG this study draws from.
+    seed: 11
   pathBase: project
   problem:
     type: learning_voltage_control
