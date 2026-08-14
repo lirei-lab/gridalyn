@@ -49,12 +49,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     apply_local_curtailment,
     draw_clustered_adoption,
     gini,
-)
-from projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization import (  # noqa: E402
-    _interp_crossing,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
+    native_backend,
 )
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     CLUSTER_DISPERSION_GRID,
@@ -67,6 +62,12 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ROUND_DECIMALS,
     SEED,
     SLACK_VM_PU,
+)
+from projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization import (  # noqa: E402
+    _interp_crossing,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+    size_network_to_load,
 )
 
 
@@ -96,8 +97,6 @@ def _solve_worst_trafo(
         Dict with worst_loading (float %), n_over_static (int),
         curtailed_kwh (float, total shed), curtailed_by_trafo (T,) kWh.
     """
-    import pandapower as pp
-
     pf = float(POWER_FACTOR)
     q_factor = float(np.tan(np.arccos(pf)))
     net.ext_grid["vm_pu"] = float(SLACK_VM_PU)
@@ -141,7 +140,7 @@ def _solve_worst_trafo(
             p_kw[k] = base_h + ev_h
         net.load["p_mw"] = p_kw / 1000.0
         net.load["q_mvar"] = net.load["p_mw"] * q_factor
-        pp.runpp(net, numba=True)
+        native_backend().solve(net, numba=True)
         load_pct = net.res_trafo["loading_percent"][lv_trafos].to_numpy(dtype=DTYPE)
         worst = max(worst, float(load_pct.max()))
         over_seen |= load_pct >= 100.0
@@ -401,9 +400,7 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "penalty_ratio": penalty_ratio,
         "worst_loading_uniform": penalty["worst_loading_uniform"],
         "worst_loading_clustered": penalty["worst_loading_clustered"],
-        "worst_loading_managed_clustered": recovery[
-            "worst_loading_managed_clustered"
-        ],
+        "worst_loading_managed_clustered": recovery["worst_loading_managed_clustered"],
         "curtailed_energy_percent": recovery["curtailed_energy_percent"],
         "burden_gini": recovery["burden_gini"],
         "gini_at_max_dispersion": d_hi["gini_at_mean_rate"],

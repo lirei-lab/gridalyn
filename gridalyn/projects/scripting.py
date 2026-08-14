@@ -26,7 +26,10 @@ import numpy as np
 from gridalyn.projects import model_inputs
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.models import StudyProject
-from gridalyn.projects.outputs import ProjectWorkspacePreparation, prepare_project_workspace
+from gridalyn.projects.outputs import (
+    ProjectWorkspacePreparation,
+    prepare_project_workspace,
+)
 
 
 def find_project_root(start: Path | str | None = None) -> Path:
@@ -138,7 +141,9 @@ class ProjectScript:
         """
         from gridalyn.foundation.platform.reports import write_report
 
-        report_path = Path(path) if path is not None else self.reports_dir / f"{report_id}.json"
+        report_path = (
+            Path(path) if path is not None else self.reports_dir / f"{report_id}.json"
+        )
         return write_report(
             report_path,
             metadata=self.report_metadata(report_id),
@@ -164,7 +169,9 @@ class ProjectScript:
     def load_der_dispatch_assets(self, input_key: str = "derAssets") -> tuple[Any, ...]:
         return model_inputs.load_der_dispatch_assets(self.project, input_key)
 
-    def load_prosumer_assets(self, input_key: str = "prosumerAssets") -> tuple[Any, ...]:
+    def load_prosumer_assets(
+        self, input_key: str = "prosumerAssets"
+    ) -> tuple[Any, ...]:
         return model_inputs.load_prosumer_assets(self.project, input_key)
 
     def load_voltage_control_der_spec(
@@ -172,7 +179,9 @@ class ProjectScript:
         input_key: str = "voltageControlDer",
         feeder: Any | None = None,
     ) -> Any:
-        return model_inputs.load_voltage_control_der_spec(self.project, input_key, feeder=feeder)
+        return model_inputs.load_voltage_control_der_spec(
+            self.project, input_key, feeder=feeder
+        )
 
     def load_numeric_profile_array(self, input_key: str) -> np.ndarray:
         return model_inputs.load_numeric_profile_array(self.project, input_key)
@@ -184,6 +193,32 @@ class ProjectScript:
         self, input_key: str = "loadGeneration"
     ) -> np.ndarray:
         return model_inputs.load_generated_load_multipliers(self.project, input_key)
+
+    def powerflow_backend_id(self) -> str:
+        """Return the backend ID this study declares in ``spec.simulation``."""
+        return model_inputs.load_powerflow_backend_id(self.project)
+
+    def powerflow_backend(self, **settings: Any) -> Any:
+        """Resolve the power-flow backend this study declares.
+
+        A solving stage calls this instead of ``pandapower.runpp`` so that the
+        engine it uses is the one ``provenance.powerflow_backend.declared``
+        records. Resolution is strict by design: naming an unavailable backend
+        raises ``MissingCapabilityError`` at this call rather than degrading to
+        a different solver, because a silent downgrade changes solved values
+        while leaving every governed artifact unchanged.
+
+        Args:
+            **settings: Solver keywords overriding the backend's declared
+                settings for this instance.
+
+        Returns:
+            A ``PowerFlowBackend`` whose ``solve(net, **kwargs)`` is the single
+            place this stage may solve.
+        """
+        from gridalyn.simulation.backends.registry import resolve_powerflow_backend
+
+        return resolve_powerflow_backend(self.powerflow_backend_id(), **settings)
 
 
 def project_script(

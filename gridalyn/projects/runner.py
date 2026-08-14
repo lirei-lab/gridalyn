@@ -168,15 +168,22 @@ def _macro_model_provenance() -> dict[str, Any]:
     }
 
 
-def _powerflow_backend_provenance() -> dict[str, Any]:
-    """Which power-flow backend a stage of this run would solve through.
+def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
+    """Which power-flow backend the stages of this run solve through.
 
     Before the backend contract existed, eleven call sites solved power flow
     with three different effective configurations and none of them reached the
     manifest -- so a run solved through lightsim2grid and a run solved through
     pandapower's own Newton-Raphson were indistinguishable in every governed
-    artifact. This records the default backend, its settings, and which of the
-    registered backends the environment can actually serve.
+    artifact.
+
+    This records the backend the study DECLARES in
+    ``spec.simulation.powerflowBackend``, not merely the registry default, and
+    ``declared_source`` says which of the two the value came from. The
+    distinction matters: recording the default while a stage solved with
+    something else is the failure this function exists to prevent, and it was
+    the live state of the repository until the study stages were routed through
+    ``ProjectScript.powerflow_backend``.
 
     Backends resolve by explicit ID only: there is no ``entry_points``
     discovery, so this list is exactly what the repository registers.
@@ -185,11 +192,15 @@ def _powerflow_backend_provenance() -> dict[str, Any]:
     descriptors and checks importability, and never constructs a backend,
     never solves, and never draws from any RNG.
 
+    Args:
+        project: The loaded study, read for its declared backend ID.
+
     Returns:
-        The default backend's descriptor fields, the registered IDs, and an
-        availability flag per backend.
+        The declared backend's descriptor fields, where the declaration came
+        from, the registered IDs, and an availability flag per backend.
     """
     from gridalyn.foundation.platform.capabilities import missing_capability_modules
+    from gridalyn.projects.model_inputs import load_powerflow_backend_id
     from gridalyn.simulation.backends.contract import DEFAULT_POWERFLOW_BACKEND_ID
     from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
 
@@ -203,10 +214,33 @@ def _powerflow_backend_provenance() -> dict[str, Any]:
         )
         for descriptor in descriptors
     }
-    provenance = registry.get_descriptor(DEFAULT_POWERFLOW_BACKEND_ID).as_dict()
+    backend_id = load_powerflow_backend_id(project)
+    provenance = registry.get_descriptor(backend_id).as_dict()
+    provenance["declared_source"] = (
+        "spec.simulation.powerflowBackend"
+        if backend_id != DEFAULT_POWERFLOW_BACKEND_ID
+        or _declares_powerflow_backend(project)
+        else "registry default (study declares none)"
+    )
     provenance["registered"] = [descriptor.backend_id for descriptor in descriptors]
     provenance["available"] = available
     return provenance
+
+
+def _declares_powerflow_backend(project: StudyProject) -> bool:
+    """Report whether the study declares a backend rather than inheriting one.
+
+    Args:
+        project: The loaded study.
+
+    Returns:
+        True when ``spec.simulation.powerflowBackend`` is present, so a study
+        that names the default explicitly is distinguishable in provenance from
+        one that names nothing.
+    """
+    spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
+    simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
+    return isinstance(simulation, dict) and "powerflowBackend" in simulation
 
 
 def _build_provenance(
@@ -226,7 +260,7 @@ def _build_provenance(
         },
         "seeds": _resolve_seeds(project, planned),
         "macro_model": _macro_model_provenance(),
-        "powerflow_backend": _powerflow_backend_provenance(),
+        "powerflow_backend": _powerflow_backend_provenance(project),
         "input_hashes": _input_hashes(project),
     }
 

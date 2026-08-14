@@ -30,10 +30,11 @@
         "simulation": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Runner-reachable simulation settings. 'seed' (or its 'seed_base' alias) is the base from which gridalyn.projects.runner._resolve_seeds derives the per-stage {stage_id: seed + index} map recorded in provenance.seeds. Omitting it makes the runner fall back to the single-'base' form, which records null.",
+          "description": "Runner-reachable simulation settings. 'seed' (or its 'seed_base' alias) is the base from which gridalyn.projects.runner._resolve_seeds derives the per-stage {stage_id: seed + index} map recorded in provenance.seeds. Omitting it makes the runner fall back to the single-'base' form, which records null. 'powerflowBackend' names the backend ID every solving stage must resolve through, and is recorded verbatim in provenance.powerflow_backend.declared.",
           "properties": {
             "seed": { "type": "integer" },
-            "seed_base": { "type": "integer" }
+            "seed_base": { "type": "integer" },
+            "powerflowBackend": { "type": "string", "minLength": 1 }
           }
         },
         "problem": {

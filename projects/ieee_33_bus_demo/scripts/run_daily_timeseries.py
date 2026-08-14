@@ -42,7 +42,12 @@ def _write_envelope_figure(script: ProjectScript, results: pd.DataFrame) -> str:
 def main() -> int:
     script = project_script()
     require_capabilities("sim", context="the IEEE 33-bus daily time-series power flow")
-    import pandapower as pp
+
+    # The backend the study declares in spec.simulation.powerflowBackend, so the
+    # engine this stage solves with is the one the run manifest records. Its
+    # declared settings are algorithm="nr", init="auto" -- the keywords this
+    # site used to pass inline -- so no solved value moves.
+    backend = script.powerflow_backend()
 
     net = build_ieee33_benchmark_feeder()
     base_p = net.load["p_mw"].copy()
@@ -63,7 +68,7 @@ def main() -> int:
             ratio = float(base_q[load_idx]) / float(base_p[load_idx])
             net.load.at[load_idx, "p_mw"] = p_new
             net.load.at[load_idx, "q_mvar"] = p_new * ratio
-        pp.runpp(net, algorithm="nr", init="auto", max_iteration=100)
+        backend.solve(net, max_iteration=100)
         rows.append(
             {
                 "hour": hour,
@@ -86,7 +91,10 @@ def main() -> int:
     script.write_report(
         "ieee33_daily_timeseries_report",
         inputs=[
-            {"name": IEEE_33_BUS_BENCHMARK.source_name, "type": "gridalyn_benchmark_feeder"},
+            {
+                "name": IEEE_33_BUS_BENCHMARK.source_name,
+                "type": "gridalyn_benchmark_feeder",
+            },
             {
                 "name": "loadGeneration",
                 "type": "generated_load_profile",
@@ -104,12 +112,18 @@ def main() -> int:
             "peak_hour": peak_hour,
             "min_voltage_pu": float(results["min_voltage_pu"].min()),
             "max_voltage_pu": float(results["max_voltage_pu"].max()),
-            "max_line_loading_percent": float(results["max_line_loading_percent"].max()),
+            "max_line_loading_percent": float(
+                results["max_line_loading_percent"].max()
+            ),
             "daily_energy_mwh": float(results["total_load_mw"].sum()),
         },
         validation={
             "valid": converged_hours == len(results),
-            "errors": [] if converged_hours == len(results) else ["one or more hourly power flows did not converge"],
+            "errors": (
+                []
+                if converged_hours == len(results)
+                else ["one or more hourly power flows did not converge"]
+            ),
             "warnings": [],
         },
     )

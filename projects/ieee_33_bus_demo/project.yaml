@@ -6,6 +6,11 @@ metadata:
   description: Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.
 spec:
   pathBase: project
+  simulation:
+    # Declared, not inherited: the timeseries stage resolves this ID through
+    # script.powerflow_backend() rather than calling runpp itself, so what the
+    # manifest records is what the stage solved with.
+    powerflowBackend: pandapower_native
   problem:
     type: benchmark_powerflow_scenarios
     dataset: ieee_33_bus_benchmark
