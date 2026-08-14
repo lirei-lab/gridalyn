@@ -168,6 +168,12 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/synthetic_feeder_report.json
+      - outputs/reports/prosumer_realtime_market_report.json
+      - outputs/operations/battery_dispatch.csv
+      - outputs/data/prosumers.csv
     requiredReports:
       - outputs/reports/synthetic_feeder_report.json
       - outputs/reports/prosumer_realtime_market_report.json

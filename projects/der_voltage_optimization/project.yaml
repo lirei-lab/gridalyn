@@ -129,6 +129,11 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/der_feeder_report.json
+      - outputs/reports/der_voltage_optimization_report.json
+      - outputs/operations/der_dispatch.csv
     requiredReports:
       - outputs/reports/der_feeder_report.json
       - outputs/reports/der_voltage_optimization_report.json

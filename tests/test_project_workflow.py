@@ -1,21 +1,16 @@
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
-import json
 from pathlib import Path
 
-from projects.ev_hosting_flex.scripts.pipeline.prepare_topology_cache import (
-    prepare_topology_cache,
-)
-
 from gridalyn.foundation import ReportMetadata, validate_workspace, write_report
+from gridalyn.projects import init_project
+from gridalyn.projects import load_project as public_load_project
 from gridalyn.projects import (
-    init_project,
-    load_project as public_load_project,
     plan_project,
     prepare_project_workspace,
-    project_regression,
     project_status,
     project_verify,
     run_workflow,
@@ -25,6 +20,9 @@ from gridalyn.projects.loader import load_project
 from gridalyn.projects.outputs import DEFAULT_OUTPUT_DIRECTORIES
 from gridalyn.projects.runner import plan_stages, run_project
 from gridalyn.projects.validation import validate_project_file
+from projects.ev_hosting_flex.scripts.pipeline.prepare_topology_cache import (
+    prepare_topology_cache,
+)
 
 
 class ProjectWorkflowSchemaTest(unittest.TestCase):
@@ -370,14 +368,16 @@ spec:
             self.assertIn("outputs/cache", payload["created_directories"])
             self.assertTrue((root / "outputs" / "reports").is_dir())
 
-    def test_repo_path_base_resolves_from_source_archive_without_git_metadata(self) -> None:
+    def test_repo_path_base_resolves_from_source_archive_without_git_metadata(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
             project_root = workspace / "projects" / "archive_case"
             project_root.mkdir(parents=True)
             (workspace / "gridalyn").mkdir()
             (workspace / "pyproject.toml").write_text(
-                "[project]\nname = \"gridalyn\"\n",
+                '[project]\nname = "gridalyn"\n',
                 encoding="utf-8",
             )
             (project_root / "workflow.yaml").write_text(
@@ -525,6 +525,9 @@ spec:
       - outputs/reports/minimal_grid_report.json
     requiredFigures:
       - outputs/figures/minimal_voltage_profile.png
+    objectiveArtifacts:
+      - outputs/reports/minimal_grid_report.json
+      - outputs/data/buses.csv
 """.strip(),
                 encoding="utf-8",
             )
@@ -533,6 +536,12 @@ spec:
 
             self.assertFalse(report["valid"])
             self.assertFalse(report["sense_check"]["valid"])
+            # Declared, not inferred from metadata.name. This fixture used to
+            # reach the objective-artifact path only because the library held a
+            # dict keyed by project name and this YAML happened to claim the
+            # name "minimal_grid_project" -- a hand-written fixture inheriting
+            # the real study's expected artifacts. Studies now declare their
+            # own, so the fixture declares its own.
             self.assertIn("missing_objective_artifact", report["sense_check"]["errors"])
 
 
@@ -648,7 +657,9 @@ spec:
             self.assertEqual(executed, ["build", "validate"])
             self.assertTrue(manifest["dry_run"])
             self.assertEqual(manifest["project"]["name"], "sample_project")
-            self.assertTrue(manifest["study_run"]["run_id"].startswith("run:sample_project:"))
+            self.assertTrue(
+                manifest["study_run"]["run_id"].startswith("run:sample_project:")
+            )
             self.assertEqual(manifest["study_run"]["project_id"], "sample_project")
             self.assertEqual(manifest["study_run"]["project_version"], "0.1.0")
             self.assertEqual(manifest["study_run"]["workflow_id"], "sample_workflow")
@@ -771,7 +782,9 @@ class ProjectApiTest(unittest.TestCase):
             self.assertEqual(executed, ["prepare_workspace", "write_summary_report"])
             self.assertTrue((target / "scripts" / "write_summary_report.py").exists())
             self.assertTrue((target / "outputs" / "operations").is_dir())
-            self.assertTrue((target / "outputs" / "reports" / "project_summary.json").exists())
+            self.assertTrue(
+                (target / "outputs" / "reports" / "project_summary.json").exists()
+            )
             self.assertTrue(status["valid"], status)
             self.assertTrue(status["reports"]["ready"], status["reports"])
 

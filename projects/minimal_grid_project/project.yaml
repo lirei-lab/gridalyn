@@ -78,6 +78,12 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/minimal_grid_report.json
+      - outputs/data/buses.csv
+      - outputs/data/lines.csv
+      - outputs/data/loads.csv
     requiredReports:
       - outputs/reports/minimal_grid_report.json
     requiredFigures:

@@ -89,6 +89,11 @@ spec:
   workflow:
     file: workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/ieee33_powerflow_report.json
+      - outputs/reports/ieee33_scenario_comparison_report.json
+      - outputs/data/scenario_results.csv
     requiredReports:
       - outputs/reports/ieee33_powerflow_report.json
       - outputs/reports/ieee33_scenario_comparison_report.json
