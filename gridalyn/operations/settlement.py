@@ -7,7 +7,7 @@ This module unifies three formerly separate sources behind the frozen
   (``calculate_period_settlement`` / :class:`AggregatorSettlementReceipt`),
   moved verbatim from ``gridalyn.operations.market.settlement`` — this is the
   **baseline source** (§4): the two-stage engine path
-  (:mod:`gridalyn.operations.clearing.engine_mode`) calls it to populate the
+  (retired ``engine_mode``, tag ``archive/engine-mode-clearing``) called it to populate the
   committed ``market_settlement_cost`` / ``market_penalties`` baseline fields;
 * the operational KPI report (``build_operational_kpi_report``), moved from
   ``gridalyn.operations.flexibility.kpis``;
@@ -196,10 +196,14 @@ def _nunique(frame: pd.DataFrame, column: str) -> int:
     return int(frame[column].dropna().nunique())
 
 
-def _top1_share(frame: pd.DataFrame, group_column: str, value_column: str) -> float | None:
+def _top1_share(
+    frame: pd.DataFrame, group_column: str, value_column: str
+) -> float | None:
     if frame.empty or group_column not in frame or value_column not in frame:
         return None
-    grouped = frame.groupby(group_column)[value_column].sum().sort_values(ascending=False)
+    grouped = (
+        frame.groupby(group_column)[value_column].sum().sort_values(ascending=False)
+    )
     total = float(grouped.sum())
     if total <= 1e-12:
         return None
@@ -233,7 +237,9 @@ def _constraint_summary(
                 "required_mwh": _mwh(event_group, "required_kw", dt_h),
                 "delivered_mwh": _mwh(event_group, "selected_relief_kw", dt_h),
                 "shortfall_mwh": _mwh(event_group, "shortfall_kw", dt_h),
-                "max_severity_pctpt": float(group["severity_pctpt"].astype(float).max()),
+                "max_severity_pctpt": float(
+                    group["severity_pctpt"].astype(float).max()
+                ),
             }
         )
     return rows
@@ -305,7 +311,11 @@ def _policy_record(
     comparison = _comparison(report, case_id)
     delivered = _num(dispatch.get("total_delivered_mwh"))
     shortfall = _num(dispatch.get("total_shortfall_mwh"))
-    target = None if delivered is None and shortfall is None else (delivered or 0.0) + (shortfall or 0.0)
+    target = (
+        None
+        if delivered is None and shortfall is None
+        else (delivered or 0.0) + (shortfall or 0.0)
+    )
     trafo_reduction = _num(comparison.get("trafo_max_loading_reduction_pctpt"))
     line_reduction = _num(comparison.get("line_max_loading_reduction_pctpt"))
 
@@ -327,7 +337,9 @@ def _policy_record(
         "trafo_max_loading_percent": _num(case.get("trafo_max_loading_percent")),
         "n_line_overloads": _int(case.get("n_line_overloads")),
         "n_trafo_overloads": _int(case.get("n_trafo_overloads")),
-        "ext_grid_peak_reduction_mw": _num(comparison.get("ext_grid_peak_reduction_mw")),
+        "ext_grid_peak_reduction_mw": _num(
+            comparison.get("ext_grid_peak_reduction_mw")
+        ),
         "v_min_improvement_pu": _num(comparison.get("v_min_improvement_pu")),
         "line_max_loading_reduction_pctpt": line_reduction,
         "trafo_max_loading_reduction_pctpt": trafo_reduction,
@@ -339,26 +351,44 @@ def _policy_record(
     }
 
 
-def _comparison_vs_aggregate(policy: dict[str, Any], aggregate: dict[str, Any] | None) -> dict[str, float | int | None]:
+def _comparison_vs_aggregate(
+    policy: dict[str, Any], aggregate: dict[str, Any] | None
+) -> dict[str, float | int | None]:
     if not aggregate:
         return {}
     return {
-        "delivered_delta_mwh": None
-        if policy["total_delivered_mwh"] is None or aggregate["total_delivered_mwh"] is None
-        else policy["total_delivered_mwh"] - aggregate["total_delivered_mwh"],
-        "shortfall_delta_mwh": None
-        if policy["total_shortfall_mwh"] is None or aggregate["total_shortfall_mwh"] is None
-        else policy["total_shortfall_mwh"] - aggregate["total_shortfall_mwh"],
-        "trafo_relief_delta_pctpt": None
-        if policy["trafo_max_loading_reduction_pctpt"] is None
-        or aggregate["trafo_max_loading_reduction_pctpt"] is None
-        else policy["trafo_max_loading_reduction_pctpt"] - aggregate["trafo_max_loading_reduction_pctpt"],
-        "overload_reduction_delta_count": None
-        if policy["overload_reduction_count"] is None or aggregate["overload_reduction_count"] is None
-        else policy["overload_reduction_count"] - aggregate["overload_reduction_count"],
-        "v_min_improvement_delta_pu": None
-        if policy["v_min_improvement_pu"] is None or aggregate["v_min_improvement_pu"] is None
-        else policy["v_min_improvement_pu"] - aggregate["v_min_improvement_pu"],
+        "delivered_delta_mwh": (
+            None
+            if policy["total_delivered_mwh"] is None
+            or aggregate["total_delivered_mwh"] is None
+            else policy["total_delivered_mwh"] - aggregate["total_delivered_mwh"]
+        ),
+        "shortfall_delta_mwh": (
+            None
+            if policy["total_shortfall_mwh"] is None
+            or aggregate["total_shortfall_mwh"] is None
+            else policy["total_shortfall_mwh"] - aggregate["total_shortfall_mwh"]
+        ),
+        "trafo_relief_delta_pctpt": (
+            None
+            if policy["trafo_max_loading_reduction_pctpt"] is None
+            or aggregate["trafo_max_loading_reduction_pctpt"] is None
+            else policy["trafo_max_loading_reduction_pctpt"]
+            - aggregate["trafo_max_loading_reduction_pctpt"]
+        ),
+        "overload_reduction_delta_count": (
+            None
+            if policy["overload_reduction_count"] is None
+            or aggregate["overload_reduction_count"] is None
+            else policy["overload_reduction_count"]
+            - aggregate["overload_reduction_count"]
+        ),
+        "v_min_improvement_delta_pu": (
+            None
+            if policy["v_min_improvement_pu"] is None
+            or aggregate["v_min_improvement_pu"] is None
+            else policy["v_min_improvement_pu"] - aggregate["v_min_improvement_pu"]
+        ),
     }
 
 
@@ -391,7 +421,11 @@ def build_flexibility_clearing_scorecard(
     locational_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a scenario scorecard from pandapower-validated policy reports."""
-    scenario_id = str(topology_report.get("scenario_id") or physics_report.get("scenario_id")) if physics_report else str(topology_report.get("scenario_id"))
+    scenario_id = (
+        str(topology_report.get("scenario_id") or physics_report.get("scenario_id"))
+        if physics_report
+        else str(topology_report.get("scenario_id"))
+    )
     policies = [
         _policy_record(
             report=topology_report,
@@ -418,7 +452,9 @@ def build_flexibility_clearing_scorecard(
                 source_report="topology_verification",
             )
         )
-    if locational_report and "locational_clearing" in locational_report.get("cases", {}):
+    if locational_report and "locational_clearing" in locational_report.get(
+        "cases", {}
+    ):
         policies.append(
             _policy_record(
                 report=locational_report,
@@ -459,7 +495,9 @@ def build_flexibility_clearing_scorecard(
             )
         )
 
-    aggregate = next((policy for policy in policies if policy["policy_id"] == "aggregate_cls"), None)
+    aggregate = next(
+        (policy for policy in policies if policy["policy_id"] == "aggregate_cls"), None
+    )
     for policy in policies:
         policy["comparison_vs_aggregate"] = _comparison_vs_aggregate(policy, aggregate)
 
@@ -472,10 +510,14 @@ def build_flexibility_clearing_scorecard(
             "delivery_ratio",
             tie_breaker="total_delivered_mwh",
         ),
-        "best_transformer_relief_policy_id": _best_policy(policies, "trafo_max_loading_reduction_pctpt"),
+        "best_transformer_relief_policy_id": _best_policy(
+            policies, "trafo_max_loading_reduction_pctpt"
+        ),
         "best_overload_policy_id": _best_policy(policies, "overload_reduction_count"),
         "best_voltage_policy_id": _best_policy(policies, "v_min_improvement_pu"),
-        "best_local_efficiency_policy_id": _best_policy(policies, "trafo_relief_pctpt_per_mwh"),
+        "best_local_efficiency_policy_id": _best_policy(
+            policies, "trafo_relief_pctpt_per_mwh"
+        ),
     }
     if market_report:
         summary["market_report_id"] = market_report.get("report_id")
@@ -485,7 +527,12 @@ def build_flexibility_clearing_scorecard(
         "report_id": "flexibility_clearing_scorecard",
         "schema_version": "1.0",
         "scenario_id": scenario_id,
-        "constraint_ids": topology_report.get("constraint_ids") or physics_report.get("constraint_ids") if physics_report else topology_report.get("constraint_ids", []),
+        "constraint_ids": (
+            topology_report.get("constraint_ids")
+            or physics_report.get("constraint_ids")
+            if physics_report
+            else topology_report.get("constraint_ids", [])
+        ),
         "baseline_policy_id": "aggregate_cls",
         "validation_authority": "pandapower_ac_powerflow",
         "summary": summary,

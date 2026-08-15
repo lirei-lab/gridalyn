@@ -83,23 +83,27 @@ contract must not treat them as part of this surface:
 
 ## Staged-pipeline API
 
-Alongside the frozen single entry point, `gridalyn.operations` also exposes a
-small set of **staged-pipeline** building blocks. These are the additive,
-canonical public surface that the `ev_hosting_flex` proving-ground study composes
-to run its multi-stage day-ahead / capacity-allocation / Stage-2 replay pipeline.
-They are reachable the same way as the frozen surface — directly via
-`from gridalyn.operations import ...` (the lazy `__getattr__` facade) — and are
-blessed, citable public symbols. The bundled
+Alongside the frozen single entry point, `gridalyn.operations` exposes a small
+set of **staged-pipeline** building blocks, reachable the same way — directly
+via `from gridalyn.operations import ...` (the lazy `__getattr__` facade).
 `run_flexibility_clearing_operation` remains the **frozen** single entry point;
-these staged symbols are an additive convenience tier for studies that need the
-individual stages, not a replacement for it.
+these are an additive convenience tier, not a replacement.
+
+!!! warning "Corrected 2026-08-15"
+
+    This page previously described the staged tier as "the additive, canonical
+    public surface that the `ev_hosting_flex` proving-ground study composes",
+    and called the symbols "blessed, citable". That justification was false:
+    `ev_hosting_flex` reaches `clearing.selection`, and neither `selection` nor
+    `artifacts` reached `engine_mode` through any import path. Four of the
+    symbols listed here — `build_congestion_forecast`,
+    `prepare_cls_market_replay_context`, `summarize_stage2_realizations` and
+    `run_cls_capacity_allocation` — were **retired with their modules** on
+    2026-08-15 as orphans of the `flexibility_cls` retirement. Archived at tag
+    `archive/engine-mode-clearing`. The table below lists what remains.
 
 | Symbol | Kind | Stage role |
 | --- | --- | --- |
-| `build_congestion_forecast` | function | Build the day-ahead congestion forecast input |
-| `prepare_cls_market_replay_context` | function | Prepare the Stage-2 market replay context |
-| `summarize_stage2_realizations` | function | Summarize out-of-sample Stage-2 realizations |
-| `run_cls_capacity_allocation` | function | Run the CLS capacity-allocation clearing |
 | `validate_cls_output_consistency` | function | Validate cross-stage CLS output consistency |
 | `materialize_flexibility_operation_artifacts` | function | Materialize governed operation artifacts |
 

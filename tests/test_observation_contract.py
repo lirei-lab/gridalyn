@@ -564,22 +564,10 @@ def test_the_ast_scan_would_catch_a_reintroduced_reduction() -> None:
     assert _direct_result_reductions("# net.res_bus.vm_pu.min() was removed") == []
 
 
-def test_replay_is_not_an_observation_consumer() -> None:
-    """``operations/replay.py`` reads nothing from a solved network.
-
-    It is forecast-driven, so pulling it onto this contract would be inventing
-    a consumer -- the promotion rule that justifies the boundary requires the
-    consumers to be measured.
-    """
-    source = (REPO_ROOT / "gridalyn/operations/replay.py").read_text(encoding="utf-8")
-    names = {
-        node.attr
-        for node in ast.walk(ast.parse(source))
-        if isinstance(node, ast.Attribute)
-    }
-
-    assert not names & {"res_bus", "res_line", "vm_pu", "loading_percent"}
-    assert _direct_result_reductions(source) == []
+# ``test_replay_is_not_an_observation_consumer`` was removed 2026-08-15 with the
+# module it guarded. It asserted that ``operations/replay.py`` read nothing from
+# a solved network -- evidence that this contract had not invented a consumer.
+# Deleting the module answers the question it was asking.
 
 
 # --------------------------------------------------------------------------

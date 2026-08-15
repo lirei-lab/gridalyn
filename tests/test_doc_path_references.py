@@ -120,6 +120,21 @@ _MAX_UNCLASSIFIED = 30
 # plan deliberately did not fix.
 _ALLOWLIST: dict[tuple[str, str], str] = {
     (
+        "docs/sdk/clearing-contract.md",
+        "archive/engine-mode-clearing",
+    ): "a git tag, not a path: the retired engine_mode/replay clearing "
+    "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
+    (
+        "docs/flexibility/clearing.md",
+        "archive/engine-mode-clearing",
+    ): "a git tag, not a path: the retired engine_mode/replay clearing "
+    "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
+    (
+        "docs/platform/operations.md",
+        "archive/engine-mode-clearing",
+    ): "a git tag, not a path: the retired engine_mode/replay clearing "
+    "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
+    (
         "docs/development/report-contract-audit.md",
         "out_dir/locational_clearing_summary.json",
     ): "`out_dir` is the caller-supplied output-directory argument, not a tracked "

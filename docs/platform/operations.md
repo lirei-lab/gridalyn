@@ -123,12 +123,15 @@ points -- `materialize_flexibility_operation_artifacts` and the locational
 clearing chain in `gridalyn.operations.clearing` -- and should be read as
 orchestration wrappers, not as the definition of the operations layer.
 
-The CLS primitives `build_congestion_forecast`, `run_cls_capacity_allocation`,
-`prepare_cls_market_replay_context`, `validate_cls_output_consistency` and
-`validate_transformer_peak_scenarios` are part of the SDK surface but are
-currently exercised only by `tests/test_flexibility_platform_extraction.py`.
-They were extracted from a study that has since been retired, and no surviving
-project calls them.
+This page called it a year early and was right: it recorded on 2026-08-04 that
+the CLS primitives extracted from `flexibility_cls` were exercised only by
+their own extraction test, and that "no surviving project calls them". Acted on 2026-08-15 — `build_congestion_forecast`,
+`run_cls_capacity_allocation`, `prepare_cls_market_replay_context` and
+`summarize_stage2_realizations` were retired with the `engine_mode` and
+`replay` modules behind them, archived at tag `archive/engine-mode-clearing`.
+`validate_cls_output_consistency` and `validate_transformer_peak_scenarios`
+remain: they live in `operations/verification.py`, which was not part of that
+lineage.
 
 ## What To Read Next
 

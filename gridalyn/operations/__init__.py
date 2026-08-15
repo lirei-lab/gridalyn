@@ -169,23 +169,12 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.verification",
         "write_locational_verification_outputs",
     ),
-    # --- Staged-pipeline API (D-01: study-facing staged building blocks) ---
-    "build_congestion_forecast": (
-        "gridalyn.operations.replay",
-        "build_congestion_forecast",
-    ),
-    "prepare_cls_market_replay_context": (
-        "gridalyn.operations.replay",
-        "prepare_cls_market_replay_context",
-    ),
-    "summarize_stage2_realizations": (
-        "gridalyn.operations.replay",
-        "summarize_stage2_realizations",
-    ),
-    "run_cls_capacity_allocation": (
-        "gridalyn.operations.clearing.engine_mode",
-        "run_cls_capacity_allocation",
-    ),
+    # The staged-pipeline API (``build_congestion_forecast``,
+    # ``prepare_cls_market_replay_context``, ``summarize_stage2_realizations``,
+    # ``run_cls_capacity_allocation``) was retired 2026-08-15 with the
+    # ``engine_mode``/``replay`` modules it fronted -- orphaned by the
+    # ``flexibility_cls`` retirement, with no surviving stage executing it.
+    # Archived at tag ``archive/engine-mode-clearing``.
     "validate_cls_output_consistency": (
         "gridalyn.operations.verification",
         "validate_cls_output_consistency",

@@ -3,9 +3,8 @@
 The run manifest must additively record an interpreter/clearing-engine/seed/
 input-hash provenance block without breaking the frozen report contract
 (``REQUIRED_REPORT_FIELDS`` / ``validate_report``). The clearing-engine name is
-asserted against the SINGLE canonical ``runner.CLEARING_ENGINE_NAME`` constant
-(imported here, never re-stated as a literal) so the write site and the test can
-never silently diverge.
+recorded only when a study declares one, and the declarable set is derived from
+the clearing modules the package actually ships.
 """
 
 from __future__ import annotations
@@ -18,7 +17,6 @@ from pathlib import Path
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS, validate_report
 from gridalyn.projects import init_project, run_workflow
-from gridalyn.projects.runner import CLEARING_ENGINE_NAME
 from gridalyn.simulation.backends.contract import (
     DEFAULT_POWERFLOW_BACKEND_ID,
     LIGHTSIM2GRID_BACKEND_ID,
@@ -62,9 +60,17 @@ class TestRunProvenance(unittest.TestCase):
                 os.environ.get("PYTHONHASHSEED"),
             )
 
-    def test_clearing_engine_name_is_single_canonical_constant(self) -> None:
-        # The constant must stay a real clearing mode, never a drifted literal.
-        self.assertIn(CLEARING_ENGINE_NAME, {"engine_mode", "selection"})
+    def test_declarable_modes_are_derived_from_the_shipped_modules(self) -> None:
+        # This used to assert a hardcoded CLEARING_ENGINE_NAME against a
+        # hardcoded set, which would still have accepted "engine_mode" after
+        # that module was retired on 2026-08-15. The set is now read from the
+        # package, so a retired mode leaves it without anyone editing a literal.
+        from gridalyn.projects.runner import _clearing_modes
+
+        modes = _clearing_modes()
+        self.assertIn("selection", modes)
+        self.assertNotIn("engine_mode", modes)
+        self.assertNotIn("allocation", modes)
 
     def test_clearing_engine_is_null_for_a_study_that_does_not_clear(self) -> None:
         # This assertion used to read `engine["name"] == CLEARING_ENGINE_NAME`,

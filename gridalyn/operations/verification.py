@@ -18,7 +18,8 @@ This module unifies the formerly separate verification helpers behind the frozen
 The 95% envelope (Stage 02, ``ev_summary_results.json``) and the per-realization
 out-of-sample ``E_omega`` distribution (Stage 03,
 ``stage2_realization_summary.json``) are two NEVER-interchangeable metric groups;
-the per-realization ``E_omega`` replay lives in :mod:`gridalyn.operations.replay`.
+the per-realization ``E_omega`` replay lived in ``operations/replay.py``, retired
+2026-08-15 (tag ``archive/engine-mode-clearing``).
 The locational allocation-vs-selection split is structurally resolved by the
 :mod:`gridalyn.operations.clearing` package (``allocation`` vs ``selection``).
 """

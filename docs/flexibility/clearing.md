@@ -79,9 +79,12 @@ projects do not need to reimplement market-study logic in local scripts:
 
 | Function | Module | Purpose |
 | --- | --- | --- |
-| `build_congestion_forecast` | `gridalyn.operations` | Convert stochastic baseline and EV traces into thermal requirements, exceedance probabilities, and temporal bounds. |
-| `run_cls_capacity_allocation` | `gridalyn.operations` | Run an EV-adoption sweep through the Soft/Hard CLS market engine and return summary metrics plus dispatch time series. |
 | `materialize_flexibility_operation_artifacts` | `gridalyn.operations` | Promote clearing events and selections into constraints, offers, dispatch, settlement, KPI reports, operation runs, and dashboard catalogs. |
+
+`build_congestion_forecast` and `run_cls_capacity_allocation` were retired on
+2026-08-15 with the `engine_mode` / `replay` modules behind them — orphaned by
+the `flexibility_cls` retirement, with no surviving stage executing them.
+Archived at tag `archive/engine-mode-clearing`.
 
 Project scripts should call these functions with project-specific paths,
 scenario lists, and parameter values. Reusable product logic belongs in the SDK.

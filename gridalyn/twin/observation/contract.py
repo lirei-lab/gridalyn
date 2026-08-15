@@ -61,9 +61,11 @@ result. ``powerflow/runner.py`` computes those from
 :attr:`NetworkObservation.line_loading_percent` at its own call site rather
 than growing this contract on one consumer.
 
-``operations/replay.py`` is *not* a consumer: it reads nothing from a solved
-network (measured: zero ``res_bus`` / ``res_line`` / ``vm_pu`` matches) and is
-forecast-driven.
+``operations/replay.py`` was *not* a consumer -- it read nothing from a solved
+network and was forecast-driven, so pulling it onto this contract would have
+been inventing a consumer. The module was retired 2026-08-15 (tag
+``archive/engine-mode-clearing``); the reasoning is kept because the promotion
+rule it illustrates still governs this contract.
 
 Reduction semantics match pandas, because that is what the migrated sites had:
 every reduction skips ``NaN``, an empty reduction is ``nan`` for min/max and

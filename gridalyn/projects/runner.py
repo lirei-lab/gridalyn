@@ -17,28 +17,44 @@ from gridalyn.foundation.platform.governance import build_study_run
 from gridalyn.foundation.platform.reports import file_reference
 from gridalyn.projects.models import StudyProject, WorkflowStage
 
-# SINGLE canonical source for the clearing-engine name a study may declare.
-# This is the only source-literal occurrence of the token; the provenance test
-# imports THIS constant (never a duplicated literal).
+# Modes a study may declare in ``spec.simulation.clearingEngine``, DERIVED from
+# the real submodules of ``gridalyn.operations.clearing`` rather than restated.
 #
-# It is no longer written unconditionally. Until 2026-08-14 every manifest
-# recorded ``clearing_engine: "engine_mode"`` -- including minimal_grid_project,
-# a two-stage power-flow demo that clears nothing. Measured: no study workflow
-# stage executes ``engine_mode`` at all, and the one study that does clear
-# (ev_hosting_flex) reaches ``clearing.selection``. So the field named an engine
-# no run had used, in all eight manifests. A study now declares
-# ``spec.simulation.clearingEngine`` when it clears, and provenance records
-# ``null`` when it does not -- absent provenance over false provenance, the same
-# rule applied to the seed base and the power-flow backend.
-CLEARING_ENGINE_NAME = "engine_mode"
+# The previous version claimed to derive this and did not: it hardcoded
+# ``{"engine_mode", "selection"}``. That mattered on 2026-08-15, when
+# ``engine_mode`` was retired as an orphan of the ``flexibility_cls``
+# retirement -- a hardcoded set would still have accepted a mode whose module
+# no longer exists. Deriving it means a retired mode leaves the accepted set on
+# its own.
+#
+# Read from the filesystem, never imported: this module must not pull the
+# operations layer at import time, and the names are all that is needed.
+# ``allocation`` is excluded because it is the spatial helper that maps an
+# aggregate target onto per-load matrices, not a clearing mode a run happens
+# "on".
+_NOT_A_CLEARING_MODE = frozenset({"allocation"})
 
-# The canonical baseline-authoring clearing-mode set, derived from the real
-# submodule names under ``gridalyn.operations.clearing`` (``allocation`` is the
-# spatial helper, not a baseline-authoring mode). Deriving the set — rather than
-# re-stating the literals — anchors ``CLEARING_ENGINE_NAME`` to a real mode so it
-# can never silently drift to a non-mode string, without duplicating the token.
-_CLEARING_MODES = {CLEARING_ENGINE_NAME, "selection"}
-assert CLEARING_ENGINE_NAME in _CLEARING_MODES
+
+def _clearing_modes() -> frozenset[str]:
+    """Return the clearing modes the repository actually ships.
+
+    Returns:
+        Submodule names under ``gridalyn.operations.clearing``, minus the
+        helpers that are not modes. Empty only if the package is missing,
+        which a caller will notice through the located error it raises.
+    """
+    import pkgutil
+
+    spec = importlib.util.find_spec("gridalyn.operations.clearing")
+    if spec is None or not spec.submodule_search_locations:
+        return frozenset()
+    names = {
+        module.name
+        for module in pkgutil.iter_modules(list(spec.submodule_search_locations))
+        if not module.name.startswith("_")
+    }
+    return frozenset(names - _NOT_A_CLEARING_MODE)
+
 
 # Numeric stack actually on the clearing path; recorded as a version sub-mapping
 # so a moved dependency is auditable. pandapower is an optional capability, so
@@ -339,10 +355,11 @@ def _clearing_engine_provenance(project: StudyProject) -> dict[str, Any]:
     spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
     simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
     declared = simulation.get("clearingEngine")
-    if declared is not None and declared not in _CLEARING_MODES:
+    modes = _clearing_modes()
+    if declared is not None and declared not in modes:
         raise ValueError(
             f"{project.path}: spec.simulation.clearingEngine must be one of "
-            f"{', '.join(sorted(_CLEARING_MODES))}, found {declared!r}"
+            f"{', '.join(sorted(modes))}, found {declared!r}"
         )
     return {
         "name": declared,
