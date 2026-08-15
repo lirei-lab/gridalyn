@@ -40,6 +40,7 @@ nav:
       - Platform Overview: platform/overview.md
       - Platform, SDK, And Projects: platform/platform-sdk-projects.md
       - Artifact Lifecycle: platform/artifact-lifecycle.md
+      - Extension Framework: platform/extensions.md
       - Architecture:
           - Architecture Map: platform/capability-architecture.md
           - Platform Layer Model: platform/platform-layer-model.md
