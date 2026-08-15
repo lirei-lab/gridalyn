@@ -72,6 +72,14 @@ _LAZY_EXPORTS = {
         "gridalyn.foundation.platform.extensions",
         "register_extension",
     ),
+    "SUPPORTED_CONTRACT_VERSIONS": (
+        "gridalyn.foundation.platform.extensions",
+        "SUPPORTED_CONTRACT_VERSIONS",
+    ),
+    "UnsupportedContractVersionError": (
+        "gridalyn.foundation.platform.extensions",
+        "UnsupportedContractVersionError",
+    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)

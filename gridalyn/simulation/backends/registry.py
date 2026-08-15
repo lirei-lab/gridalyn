@@ -17,6 +17,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from gridalyn.foundation.platform.extensions import (
+    SUPPORTED_CONTRACT_VERSIONS,
+    UnsupportedContractVersionError,
+)
 from gridalyn.simulation.backends.contract import (
     DEFAULT_POWERFLOW_BACKEND_ID,
     PowerFlowBackend,
@@ -67,6 +71,14 @@ class PowerFlowBackendRegistry:
         """
         backend_descriptor = descriptor or describe_powerflow_backend(factory)
         backend_id = backend_descriptor.backend_id
+        if backend_descriptor.contract_version not in SUPPORTED_CONTRACT_VERSIONS:
+            supported = ", ".join(sorted(SUPPORTED_CONTRACT_VERSIONS))
+            raise UnsupportedContractVersionError(
+                f"power-flow backend {backend_id!r} declares contract version "
+                f"{backend_descriptor.contract_version!r}, but this engine "
+                f"supports only: {supported}; upgrade or pin the extension to "
+                "a supported contract version"
+            )
         if backend_id in self._registrations and not replace:
             raise ValueError(
                 f"power-flow backend already registered: {backend_id} "
@@ -130,19 +142,44 @@ class PowerFlowBackendRegistry:
             ) from exc
 
 
-def default_powerflow_backend_registry() -> PowerFlowBackendRegistry:
-    """Build the default registry of power-flow backends.
+_DEFAULT_POWERFLOW_BACKEND_REGISTRY: PowerFlowBackendRegistry | None = None
 
-    Returns:
-        A registry holding exactly the backends this repository ships, in
-        registration order: the pandapower-native default and lightsim2grid.
-        Registration constructs nothing, so building the registry needs
-        neither ``pandapower`` nor ``lightsim2grid``.
+
+def default_powerflow_backend_registry() -> PowerFlowBackendRegistry:
+    """Return the shared default registry of power-flow backends.
+
+    The registry is built once and cached: external backends registered via
+    :func:`register_powerflow_backend_extension` must stay resolvable through
+    the default resolution path, which requires one persistent instance.
+    Building it registers the shipped backends and constructs nothing, so it
+    needs neither ``pandapower`` nor ``lightsim2grid``.
     """
-    registry = PowerFlowBackendRegistry()
-    registry.register(PandapowerNativeBackend)
-    registry.register(LightSim2GridBackend)
-    return registry
+    global _DEFAULT_POWERFLOW_BACKEND_REGISTRY
+    if _DEFAULT_POWERFLOW_BACKEND_REGISTRY is None:
+        registry = PowerFlowBackendRegistry()
+        registry.register(PandapowerNativeBackend)
+        registry.register(LightSim2GridBackend)
+        _DEFAULT_POWERFLOW_BACKEND_REGISTRY = registry
+    return _DEFAULT_POWERFLOW_BACKEND_REGISTRY
+
+
+def register_powerflow_backend_extension(
+    factory: Callable[..., PowerFlowBackend],
+    *,
+    descriptor: PowerFlowBackendDescriptor,
+    replace: bool = False,
+    registry: PowerFlowBackendRegistry | None = None,
+) -> None:
+    """Register an external power-flow backend (host API).
+
+    A third-party backend conforms to the :class:`PowerFlowBackend` contract,
+    carries a :class:`PowerFlowBackendDescriptor` with a supported
+    ``contract_version``, and registers it here — no edit to gridalyn's
+    codebase required. Defaults to the shared default registry.
+    """
+    (registry or default_powerflow_backend_registry()).register(
+        factory, descriptor=descriptor, replace=replace
+    )
 
 
 def resolve_powerflow_backend(
@@ -188,6 +225,7 @@ __all__ = [
     "PowerFlowBackendRegistry",
     "UnknownPowerFlowBackendError",
     "default_powerflow_backend_registry",
+    "register_powerflow_backend_extension",
     "resolve_powerflow_backend",
     "solve_power_flow",
 ]

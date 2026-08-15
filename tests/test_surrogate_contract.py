@@ -392,7 +392,10 @@ class UnboundedRegistrationIsRefusedTest(unittest.TestCase):
         self.assertEqual(UNMEASURED, registered.status)
 
     def test_duplicate_registration_needs_replace(self) -> None:
-        registry = default_surrogate_registry()
+        # Phase 14: mechanics tests build their own registry instead of
+        # mutating the shared cached default.
+        registry = SurrogateRegistry()
+        registry.register(NetworkImpactTabularSurrogate)
         with self.assertRaises(ValueError) as caught:
             registry.register(NetworkImpactTabularSurrogate)
         self.assertIn("replace=True", str(caught.exception))
@@ -420,21 +423,12 @@ class UnknownIdIsLocatedTest(unittest.TestCase):
         with self.assertRaises(UnknownSurrogateError):
             default_surrogate_registry().get_descriptor("gnn_v2")
 
-    def test_default_registry_is_fresh_per_call(self) -> None:
-        first = default_surrogate_registry()
-        first.register(
-            _UnboundedSurrogate,
-            descriptor=SurrogateDescriptor(
-                surrogate_id="leak_probe",
-                name="probe",
-                physical_model="pandapower",
-                error_bound=TABULAR_SURROGATE_ERROR_BOUND,
-            ),
-        )
-        second_ids = [
-            d.surrogate_id for d in default_surrogate_registry().list_descriptors()
-        ]
-        self.assertNotIn("leak_probe", second_ids)
+    def test_default_registry_is_a_shared_cached_singleton(self) -> None:
+        # Phase 14 design correction: the default registry was "fresh per
+        # call"; it is now built once and cached, so a surrogate registered
+        # through the host API stays resolvable through the default path.
+        # Two calls must yield one registry.
+        self.assertIs(default_surrogate_registry(), default_surrogate_registry())
 
 
 class ImportHygieneTest(unittest.TestCase):

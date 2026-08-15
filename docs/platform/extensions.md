@@ -7,9 +7,10 @@ extension that participates in a run is declared, versioned and recorded in
 provenance.
 
 This page documents the foundation (Milestone 8). The generic engine lives in
-`gridalyn/foundation/platform/extensions.py`; per-role registries (power-flow
-backend, surrogate, policy, observation producer, network adapter) open to
-external registration in later phases.
+`gridalyn/foundation/platform/extensions.py`; the five per-role registries
+(power-flow backend, surrogate, policy, observation producer, network adapter)
+are open to external registration, each through a public
+`register_<role>_extension` host API.
 
 ## What an extension is
 
@@ -47,14 +48,46 @@ errors.
 to a role contract, builds an `ExtensionDescriptor`, and registers it — no edit
 to the gridalyn codebase required.
 
+## Per-role host surface
+
+Each shipped role has a registry, a role-specific descriptor, and a public
+`register_<role>_extension` convenience that mirrors `register_extension` and
+routes into the role's **default registry** (a cached singleton, so a
+registration made through the host API stays resolvable through the default
+path). Every role descriptor carries `contract_version` and every registry
+rejects an unsupported version at registration with a located
+`UnsupportedContractVersionError` naming the supported versions — there is no
+silent fallback, so an extension that participates is declared, versioned and
+never silent.
+
+| Role | Registry | Descriptor | Host registration API | `contract_version` |
+|------|----------|------------|------------------------|--------------------|
+| Power-flow backend | `PowerFlowBackendRegistry` | `PowerFlowBackendDescriptor` | `register_powerflow_backend_extension` | `"1"` |
+| Surrogate | `SurrogateRegistry` | `SurrogateDescriptor` | `register_surrogate_extension` | `"1"` |
+| Voltage-control policy | `PolicyRegistry` | `PolicyDescriptor` | `register_policy_extension` | `"1"` |
+| Observation producer | `ObservationProducerRegistry` | `ObservationProducerDescriptor` | `register_observation_producer_extension` | `"1"` |
+| Network adapter | `NetworkAdapterRegistry` | `NetworkAdapterDescriptor` | `register_network_adapter_extension` | `"1"` |
+
+The observation-producer convenience takes the producer callable itself rather
+than a factory — producers are functions with nothing to instantiate. Each
+convenience accepts an optional `registry=` argument to target a specific
+registry instance (defaults to the role's shared default registry); all five
+conveniences are exported from the layer facades (`gridalyn.simulation` for
+backend/surrogate/policy, `gridalyn.twin` for producer/adapter).
+
+The role descriptors that embed in run manifests expose `as_dict()` with a
+JSON-native shape that includes `contract_version`; the twin descriptors
+(producer, adapter) are metadata-only and have no `as_dict()`.
+
 ## Provenance
 
-`extension_provenance()` returns a JSON-native snapshot of the registered
-extensions (id, role, name, version, contract version, source, entry-point
-group, module hash), sorted by `extension_id`. A later phase embeds it in the
-run manifest as `provenance.extensions`, and role-level provenance records
-which extension served each role. A plugin may be discoverable, but it is never
-silent.
+`extension_provenance()` returns a JSON-native snapshot of the extensions in
+the generic engine's `DEFAULT_REGISTRY` (id, role, name, version, contract
+version, source, entry-point group, module hash), sorted by `extension_id`.
+The five per-role host registrations surface through role-level provenance
+instead — backends today via `provenance.powerflow_backend`; the rest when the
+later `provenance.extensions` phase lands. A plugin may be discoverable, but it
+is never silent.
 
 ## Compatibility
 

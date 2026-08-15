@@ -144,6 +144,22 @@ class _UnregisteredBackend:
         raise AssertionError("must never be reached")
 
 
+class _RegisteredProbeBackend:
+    """A contract-satisfying backend used to populate a fresh registry."""
+
+    DESCRIPTOR = PowerFlowBackendDescriptor(
+        backend_id="probe_registered_backend",
+        name="a backend that is registered",
+    )
+
+    @property
+    def descriptor(self) -> PowerFlowBackendDescriptor:
+        return self.DESCRIPTOR
+
+    def solve(self, net: Any, **kwargs: Any) -> None:
+        raise AssertionError("must never be reached")
+
+
 class RegisteredBackendsSatisfyContractTest(unittest.TestCase):
     """(a) Every registered backend satisfies the contract."""
 
@@ -177,7 +193,13 @@ class RegisteredBackendsSatisfyContractTest(unittest.TestCase):
             with self.subTest(backend_id=descriptor.backend_id):
                 payload = descriptor.as_dict()
                 self.assertEqual(
-                    {"backend_id", "name", "capability", "settings"},
+                    {
+                        "backend_id",
+                        "name",
+                        "capability",
+                        "settings",
+                        "contract_version",
+                    },
                     set(payload),
                 )
                 self.assertIsInstance(payload["settings"], dict)
@@ -234,17 +256,19 @@ class UnknownBackendErrorTest(unittest.TestCase):
         self.assertIn("none registered", str(ctx.exception))
 
     def test_duplicate_registration_is_refused_without_replace(self) -> None:
-        registry = default_powerflow_backend_registry()
-        already = registry.get_descriptor(PANDAPOWER_NATIVE_BACKEND_ID)
+        # Phase 14: the default registry is a cached singleton, so
+        # registration-mechanics tests build their own registry rather than
+        # mutating the shared default.
+        registry = PowerFlowBackendRegistry()
+        already = _UnregisteredBackend.DESCRIPTOR
+        registry.register(_UnregisteredBackend, descriptor=already)
         with self.assertRaises(ValueError) as ctx:
             registry.register(_UnregisteredBackend, descriptor=already)
-        self.assertIn(PANDAPOWER_NATIVE_BACKEND_ID, str(ctx.exception))
+        self.assertIn(already.backend_id, str(ctx.exception))
         self.assertIn("replace=True", str(ctx.exception))
         # ... and replace=True is the deliberate override.
         registry.register(_UnregisteredBackend, descriptor=already, replace=True)
-        self.assertIsInstance(
-            registry.create(PANDAPOWER_NATIVE_BACKEND_ID), _UnregisteredBackend
-        )
+        self.assertIsInstance(registry.create(already.backend_id), _UnregisteredBackend)
 
 
 class ImportHygieneTest(unittest.TestCase):
@@ -340,7 +364,11 @@ class NoEntryPointsDiscoveryTest(unittest.TestCase):
         self.assertEqual([], offenders, offenders)
 
     def test_an_unregistered_backend_is_not_resolvable(self) -> None:
-        registry = default_powerflow_backend_registry()
+        # Phase 14: use a fresh registry; the shared default must not be
+        # mutated by a registration-mechanics test. The registry is populated
+        # first so this distinguishes "unregistered" from "empty registry".
+        registry = PowerFlowBackendRegistry()
+        registry.register(_RegisteredProbeBackend)
         backend_id = _UnregisteredBackend.DESCRIPTOR.backend_id
         with self.assertRaises(UnknownPowerFlowBackendError):
             registry.create(backend_id)

@@ -25,6 +25,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from gridalyn.foundation.platform.extensions import (
+    SUPPORTED_CONTRACT_VERSIONS,
+    UnsupportedContractVersionError,
+)
 from gridalyn.simulation.analytics.network_impact.physics_model import (
     NetworkImpactPhysicsLookupSurrogate,
 )
@@ -92,6 +96,14 @@ class SurrogateRegistry:
         """
         surrogate_descriptor = descriptor or describe_surrogate(factory)
         surrogate_id = surrogate_descriptor.surrogate_id
+        if surrogate_descriptor.contract_version not in SUPPORTED_CONTRACT_VERSIONS:
+            supported = ", ".join(sorted(SUPPORTED_CONTRACT_VERSIONS))
+            raise UnsupportedContractVersionError(
+                f"surrogate {surrogate_id!r} declares contract version "
+                f"{surrogate_descriptor.contract_version!r}, but this engine "
+                f"supports only: {supported}; upgrade or pin the extension to "
+                "a supported contract version"
+            )
         if surrogate_descriptor.error_bound is None:
             raise UnboundedSurrogateError(
                 f"surrogate {surrogate_id!r} declares no error bound; every "
@@ -162,20 +174,45 @@ class SurrogateRegistry:
             ) from exc
 
 
-def default_surrogate_registry() -> SurrogateRegistry:
-    """Build the default registry of surrogates.
+_DEFAULT_SURROGATE_REGISTRY: SurrogateRegistry | None = None
 
-    Returns:
-        A fresh registry holding exactly the surrogates this repository ships:
-        the deterministic topology surrogate behind
-        ``network_impact_predictions.parquet``, and the physics-fitted lookup
-        behind ``network_impact_physics_predictions.parquet``. Fresh per call,
-        so a test registering into one cannot pollute another.
+
+def default_surrogate_registry() -> SurrogateRegistry:
+    """Return the shared default registry of surrogates.
+
+    Built once and cached so external surrogates registered via
+    :func:`register_surrogate_extension` stay resolvable through the default
+    path. Holds exactly the surrogates this repository ships: the
+    deterministic topology surrogate behind ``network_impact_predictions.parquet``
+    and the physics-fitted lookup behind
+    ``network_impact_physics_predictions.parquet``.
     """
-    registry = SurrogateRegistry()
-    registry.register(NetworkImpactTabularSurrogate)
-    registry.register(NetworkImpactPhysicsLookupSurrogate)
-    return registry
+    global _DEFAULT_SURROGATE_REGISTRY
+    if _DEFAULT_SURROGATE_REGISTRY is None:
+        registry = SurrogateRegistry()
+        registry.register(NetworkImpactTabularSurrogate)
+        registry.register(NetworkImpactPhysicsLookupSurrogate)
+        _DEFAULT_SURROGATE_REGISTRY = registry
+    return _DEFAULT_SURROGATE_REGISTRY
+
+
+def register_surrogate_extension(
+    factory: Callable[..., Surrogate],
+    *,
+    descriptor: SurrogateDescriptor,
+    replace: bool = False,
+    registry: SurrogateRegistry | None = None,
+) -> None:
+    """Register an external surrogate (host API).
+
+    A third-party surrogate conforms to the :class:`Surrogate` contract,
+    carries a :class:`SurrogateDescriptor` with a stated error bound and a
+    supported ``contract_version``, and registers it here — no edit to
+    gridalyn's codebase required. Defaults to the shared default registry.
+    """
+    (registry or default_surrogate_registry()).register(
+        factory, descriptor=descriptor, replace=replace
+    )
 
 
 def resolve_surrogate(
@@ -215,6 +252,7 @@ __all__ = [
     "UnboundedSurrogateError",
     "UnknownSurrogateError",
     "default_surrogate_registry",
+    "register_surrogate_extension",
     "registered_error_bounds",
     "resolve_surrogate",
 ]

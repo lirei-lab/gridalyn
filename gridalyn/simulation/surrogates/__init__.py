@@ -55,6 +55,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.surrogates.contract",
         "measure_relief_error_bound",
     ),
+    "register_surrogate_extension": (
+        "gridalyn.simulation.surrogates.registry",
+        "register_surrogate_extension",
+    ),
     "registered_error_bounds": (
         "gridalyn.simulation.surrogates.registry",
         "registered_error_bounds",

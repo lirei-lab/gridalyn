@@ -51,6 +51,10 @@ _LAZY_EXPORTS = {
         "gridalyn.twin.adapters.geojson",
         "extract_building_data",
     ),
+    "register_network_adapter_extension": (
+        "gridalyn.twin.adapters.registry",
+        "register_network_adapter_extension",
+    ),
     "validate_geojson": ("gridalyn.twin.adapters.geojson", "validate_geojson"),
     "write_network_adapter_validation_report": (
         "gridalyn.twin.adapters.validation",

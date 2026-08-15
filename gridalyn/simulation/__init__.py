@@ -34,6 +34,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.backends",
         "solve_power_flow",
     ),
+    "register_powerflow_backend_extension": (
+        "gridalyn.simulation.backends",
+        "register_powerflow_backend_extension",
+    ),
     # Resolved from ``gridalyn.twin.observation``, which owns the contract
     # since Phase 11. Pointing at the deprecated
     # ``gridalyn.simulation.observation`` shim instead would make every
@@ -74,6 +78,14 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "default_surrogate_registry": (
         "gridalyn.simulation.surrogates",
         "default_surrogate_registry",
+    ),
+    "register_surrogate_extension": (
+        "gridalyn.simulation.surrogates",
+        "register_surrogate_extension",
+    ),
+    "register_policy_extension": (
+        "gridalyn.simulation.policies",
+        "register_policy_extension",
     ),
     "measure_relief_error_bound": (
         "gridalyn.simulation.surrogates",

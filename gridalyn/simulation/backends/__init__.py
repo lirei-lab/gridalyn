@@ -58,6 +58,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.backends.contract",
         "describe_powerflow_backend",
     ),
+    "register_powerflow_backend_extension": (
+        "gridalyn.simulation.backends.registry",
+        "register_powerflow_backend_extension",
+    ),
     "resolve_powerflow_backend": (
         "gridalyn.simulation.backends.registry",
         "resolve_powerflow_backend",

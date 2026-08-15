@@ -44,6 +44,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from gridalyn.foundation.platform.extensions import (
+    SUPPORTED_CONTRACT_VERSIONS,
+    UnsupportedContractVersionError,
+)
 from gridalyn.simulation.policies.contract import (
     SENSITIVITY_DISPATCH_POLICY_ID,
     Policy,
@@ -93,6 +97,14 @@ class PolicyRegistry:
         """
         policy_descriptor = descriptor or describe_policy(factory)
         policy_id = policy_descriptor.policy_id
+        if policy_descriptor.contract_version not in SUPPORTED_CONTRACT_VERSIONS:
+            supported = ", ".join(sorted(SUPPORTED_CONTRACT_VERSIONS))
+            raise UnsupportedContractVersionError(
+                f"policy {policy_id!r} declares contract version "
+                f"{policy_descriptor.contract_version!r}, but this engine "
+                f"supports only: {supported}; upgrade or pin the extension to "
+                "a supported contract version"
+            )
         if policy_id in self._registrations and not replace:
             raise ValueError(
                 f"policy already registered: {policy_id} "
@@ -240,25 +252,50 @@ class SensitivityDispatchPolicy:
         return float(min(max(desired_mw, self._low), self._high))
 
 
+_DEFAULT_POLICY_REGISTRY: PolicyRegistry | None = None
+
+
 def default_policy_registry() -> PolicyRegistry:
-    """Build the default registry of voltage-control policies.
+    """Return the shared default registry of voltage-control policies.
 
-    Returns:
-        A registry holding exactly the policies this repository ships, in
-        registration order: the tabular-RL policy (paradigm 1) and the
-        sensitivity-dispatch policy (paradigm 2). Registration constructs
-        nothing and needs neither a trained Q-table nor a measured
-        sensitivity coefficient -- those are bound in at :meth:`PolicyRegistry.
-        create` time. Building this registry imports
-        ``simulation.control.tabular_voltage`` (same layer) but nothing from
-        ``operations`` -- see the module docstring for why.
+    Built once and cached so external policies registered via
+    :func:`register_policy_extension` stay resolvable through the default
+    path. Holds exactly the policies this repository ships, in registration
+    order: the tabular-RL policy (paradigm 1) and the sensitivity-dispatch
+    policy (paradigm 2). Registration constructs nothing and needs neither a
+    trained Q-table nor a measured sensitivity coefficient -- those are bound
+    in at :meth:`PolicyRegistry.create` time. Building this registry imports
+    ``simulation.control.tabular_voltage`` (same layer) but nothing from
+    ``operations`` -- see the module docstring for why.
     """
-    from gridalyn.simulation.control.tabular_voltage import TabularRLPolicy
+    global _DEFAULT_POLICY_REGISTRY
+    if _DEFAULT_POLICY_REGISTRY is None:
+        from gridalyn.simulation.control.tabular_voltage import TabularRLPolicy
 
-    registry = PolicyRegistry()
-    registry.register(TabularRLPolicy)
-    registry.register(SensitivityDispatchPolicy)
-    return registry
+        registry = PolicyRegistry()
+        registry.register(TabularRLPolicy)
+        registry.register(SensitivityDispatchPolicy)
+        _DEFAULT_POLICY_REGISTRY = registry
+    return _DEFAULT_POLICY_REGISTRY
+
+
+def register_policy_extension(
+    factory: Callable[..., Policy],
+    *,
+    descriptor: PolicyDescriptor,
+    replace: bool = False,
+    registry: PolicyRegistry | None = None,
+) -> None:
+    """Register an external voltage-control policy (host API).
+
+    A third-party policy conforms to the :class:`Policy` contract, carries a
+    :class:`PolicyDescriptor` with a supported ``contract_version``, and
+    registers it here — no edit to gridalyn's codebase required. Defaults to
+    the shared default registry.
+    """
+    (registry or default_policy_registry()).register(
+        factory, descriptor=descriptor, replace=replace
+    )
 
 
 __all__ = [
@@ -267,4 +304,5 @@ __all__ = [
     "SensitivityDispatchPolicy",
     "UnknownPolicyError",
     "default_policy_registry",
+    "register_policy_extension",
 ]

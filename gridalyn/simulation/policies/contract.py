@@ -62,6 +62,7 @@ class PolicyDescriptor:
     policy_id: str
     name: str
     paradigm: str
+    contract_version: str = "1"
 
     def as_dict(self) -> dict[str, Any]:
         """Return a plain-JSON view of the descriptor for provenance.
@@ -74,6 +75,7 @@ class PolicyDescriptor:
             "policy_id": self.policy_id,
             "name": self.name,
             "paradigm": self.paradigm,
+            "contract_version": self.contract_version,
         }
 
 

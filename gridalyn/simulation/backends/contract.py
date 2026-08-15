@@ -65,6 +65,7 @@ class PowerFlowBackendDescriptor:
     name: str
     capability: str | None = None
     settings: Mapping[str, Any] = field(default_factory=dict)
+    contract_version: str = "1"
 
     def as_dict(self) -> dict[str, Any]:
         """Return a plain-JSON view of the descriptor for provenance.
@@ -78,6 +79,7 @@ class PowerFlowBackendDescriptor:
             "name": self.name,
             "capability": self.capability,
             "settings": dict(self.settings),
+            "contract_version": self.contract_version,
         }
 
 

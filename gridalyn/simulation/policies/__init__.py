@@ -46,6 +46,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.policies.registry",
         "default_policy_registry",
     ),
+    "register_policy_extension": (
+        "gridalyn.simulation.policies.registry",
+        "register_policy_extension",
+    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)

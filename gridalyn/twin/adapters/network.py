@@ -66,6 +66,7 @@ class NetworkAdapterDescriptor:
     source_standard: str
     source_format: str
     capabilities: tuple[str, ...]
+    contract_version: str = "1"
 
 
 class NetworkSourceAdapter(Protocol):

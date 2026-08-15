@@ -57,6 +57,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ModelProfile": ("gridalyn.twin.adapters", "ModelProfile"),
     "NetworkAdapterDescriptor": ("gridalyn.twin.adapters", "NetworkAdapterDescriptor"),
     "NetworkAdapterRegistry": ("gridalyn.twin.adapters", "NetworkAdapterRegistry"),
+    "register_network_adapter_extension": (
+        "gridalyn.twin.adapters",
+        "register_network_adapter_extension",
+    ),
     "NetworkExportResult": ("gridalyn.twin.adapters", "NetworkExportResult"),
     "NetworkIntegrityReport": ("gridalyn.twin.network", "NetworkIntegrityReport"),
     "NetworkModel": ("gridalyn.twin.network", "NetworkModel"),
@@ -70,6 +74,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ObservationProducerRegistry": (
         "gridalyn.twin.observation",
         "ObservationProducerRegistry",
+    ),
+    "register_observation_producer_extension": (
+        "gridalyn.twin.observation",
+        "register_observation_producer_extension",
     ),
     "ObservationProvenance": (
         "gridalyn.twin.observation",

@@ -320,6 +320,7 @@ class SurrogateDescriptor:
     name: str
     physical_model: str
     error_bound: ErrorBound | None = None
+    contract_version: str = "1"
 
     def as_dict(self) -> dict[str, Any]:
         """Return a plain-JSON view of the descriptor for reports.
@@ -334,6 +335,7 @@ class SurrogateDescriptor:
             "error_bound": (
                 None if self.error_bound is None else self.error_bound.as_dict()
             ),
+            "contract_version": self.contract_version,
         }
 
 

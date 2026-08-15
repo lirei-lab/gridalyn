@@ -87,6 +87,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.ingest",
         "read_measured_observations",
     ),
+    "register_observation_producer_extension": (
+        "gridalyn.twin.observation.registry",
+        "register_observation_producer_extension",
+    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)

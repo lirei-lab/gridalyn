@@ -46,6 +46,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from gridalyn.foundation.platform.extensions import (
+    SUPPORTED_CONTRACT_VERSIONS,
+    UnsupportedContractVersionError,
+)
 from gridalyn.twin.observation.contract import (
     NetworkObservation,
     ObservationProvenance,
@@ -86,6 +90,7 @@ class ObservationProducerDescriptor:
     producer_id: str
     provenance: ObservationProvenance
     summary: str
+    contract_version: str = "1"
 
 
 @dataclass(frozen=True)
@@ -131,6 +136,14 @@ class ObservationProducerRegistry:
                 ``False``.
         """
         producer_id = descriptor.producer_id
+        if descriptor.contract_version not in SUPPORTED_CONTRACT_VERSIONS:
+            supported = ", ".join(sorted(SUPPORTED_CONTRACT_VERSIONS))
+            raise UnsupportedContractVersionError(
+                f"observation producer {producer_id!r} declares contract "
+                f"version {descriptor.contract_version!r}, but this engine "
+                f"supports only: {supported}; upgrade or pin the extension to "
+                "a supported contract version"
+            )
         if producer_id in self._registrations and not replace:
             raise ValueError(
                 f"Observation producer already registered: {producer_id}. "
@@ -211,41 +224,67 @@ class ObservationProducerRegistry:
             ) from exc
 
 
-def default_observation_producer_registry() -> ObservationProducerRegistry:
-    """Build the default registry holding the two shipped producers.
+_DEFAULT_OBSERVATION_PRODUCER_REGISTRY: ObservationProducerRegistry | None = None
 
-    Returns:
-        A registry resolving ``"powerflow"`` to
-        :func:`gridalyn.twin.observation.contract.observe_network` and
-        ``"measured-ingest"`` to
-        :func:`gridalyn.twin.observation.ingest.read_measured_observations`.
+
+def default_observation_producer_registry() -> ObservationProducerRegistry:
+    """Return the shared default registry holding the two shipped producers.
+
+    Built once and cached so external producers registered via
+    :func:`register_observation_producer_extension` stay resolvable through
+    the default path. Resolves ``"powerflow"`` to
+    :func:`gridalyn.twin.observation.contract.observe_network` and
+    ``"measured-ingest"`` to
+    :func:`gridalyn.twin.observation.ingest.read_measured_observations`.
     """
-    registry = ObservationProducerRegistry()
-    registry.register(
-        observe_network,
-        descriptor=ObservationProducerDescriptor(
-            producer_id=POWERFLOW_PRODUCER_ID,
-            provenance="simulated",
-            summary=(
-                "Reads observed state off a solved network's result tables "
-                "(res_bus / res_line); one observation per solved operating "
-                "point."
+    global _DEFAULT_OBSERVATION_PRODUCER_REGISTRY
+    if _DEFAULT_OBSERVATION_PRODUCER_REGISTRY is None:
+        registry = ObservationProducerRegistry()
+        registry.register(
+            observe_network,
+            descriptor=ObservationProducerDescriptor(
+                producer_id=POWERFLOW_PRODUCER_ID,
+                provenance="simulated",
+                summary=(
+                    "Reads observed state off a solved network's result tables "
+                    "(res_bus / res_line); one observation per solved operating "
+                    "point."
+                ),
             ),
-        ),
-    )
-    registry.register(
-        read_measured_observations,
-        descriptor=ObservationProducerDescriptor(
-            producer_id=MEASURED_INGEST_PRODUCER_ID,
-            provenance="measured",
-            summary=(
-                "Reads tidy (timestamp, entity_id, quantity, value) "
-                "measurement rows against a declared entity-to-bus join; one "
-                "observation per instant, as_of stamped from the datum."
+        )
+        registry.register(
+            read_measured_observations,
+            descriptor=ObservationProducerDescriptor(
+                producer_id=MEASURED_INGEST_PRODUCER_ID,
+                provenance="measured",
+                summary=(
+                    "Reads tidy (timestamp, entity_id, quantity, value) "
+                    "measurement rows against a declared entity-to-bus join; one "
+                    "observation per instant, as_of stamped from the datum."
+                ),
             ),
-        ),
+        )
+        _DEFAULT_OBSERVATION_PRODUCER_REGISTRY = registry
+    return _DEFAULT_OBSERVATION_PRODUCER_REGISTRY
+
+
+def register_observation_producer_extension(
+    producer: ObservationProducer,
+    *,
+    descriptor: ObservationProducerDescriptor,
+    replace: bool = False,
+    registry: ObservationProducerRegistry | None = None,
+) -> None:
+    """Register an external observation producer (host API).
+
+    A third-party producer conforms to the observation contract, carries an
+    :class:`ObservationProducerDescriptor` with a supported
+    ``contract_version``, and registers it here — no edit to gridalyn's
+    codebase required. Defaults to the shared default registry.
+    """
+    (registry or default_observation_producer_registry()).register(
+        producer, descriptor=descriptor, replace=replace
     )
-    return registry
 
 
 __all__ = [
@@ -257,4 +296,5 @@ __all__ = [
     "ObservationProducerRegistry",
     "UnknownObservationProducerError",
     "default_observation_producer_registry",
+    "register_observation_producer_extension",
 ]
