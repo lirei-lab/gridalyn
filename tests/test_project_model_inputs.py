@@ -160,3 +160,22 @@ class ResolveDeclaredExtensionsTest(unittest.TestCase):
                 resolved = resolve_declared_extensions(project)
         self.assertEqual([], resolved)
         loader.assert_not_called()
+
+    def test_resolve_propagates_unready_extension_error(self) -> None:
+        """The programmatic path enforces capability readiness (never silent)."""
+        from gridalyn.foundation.platform.capabilities import MissingCapabilityError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = load_project(_load(tmp, "{extensions: ['acme-backend']}"))
+            with (
+                mock.patch(
+                    "gridalyn.foundation.platform.extensions.load_entry_point_extensions",
+                    return_value=[mock.Mock(extension_id="acme-backend")],
+                ),
+                mock.patch(
+                    "gridalyn.foundation.platform.capabilities.require_extension_capabilities",
+                    side_effect=MissingCapabilityError("needs the 'sim' extra"),
+                ),
+            ):
+                with self.assertRaisesRegex(MissingCapabilityError, "sim"):
+                    resolve_declared_extensions(project)

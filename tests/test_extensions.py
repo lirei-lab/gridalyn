@@ -368,6 +368,31 @@ class TestDeclaredOnlyLoading:
         assert "ghost-ext" in message
         assert "none registered" in message
 
+    def test_loader_stamps_entry_point_name_as_registered_id(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        # The module's descriptor declares a DIFFERENT id than the entry-point
+        # name; the entry-point name is authoritative, so the registered and
+        # returned descriptor must carry the declared name (declared ==
+        # registered identity, the F3 invariant).
+        module_name = "acme_mismatch_probe"
+        _write_module(
+            tmp_path,
+            module_name,
+            _EXTENSION_MODULE_BODY.format(extension_id="other-id"),
+        )
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [_entry_point_record("declared-ext", module_name)],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        self._patch_registry(monkeypatch)
+
+        loaded = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["declared-ext"])
+
+        assert [d.extension_id for d in loaded] == ["declared-ext"]
+        assert loaded[0].extension_id == "declared-ext"
+
     def test_load_module_without_convention_raises(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:

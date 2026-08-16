@@ -17,7 +17,12 @@ capability (an always-green check).
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import importlib.util
+
+#: Characters that terminate the name portion of a PEP 508 requirement string,
+#: used to derive import names from the installed distribution's dependencies.
+_REQUIREMENT_NAME_TERMINATORS = "><=~![; "
 
 OPTIONAL_CAPABILITY_MODULES: dict[str, list[str]] = {
     # A base dependency NEVER appears in this map: it is installed on every
@@ -51,6 +56,42 @@ CAPABILITIES_ENTRY_POINT_GROUP = "gridalyn.capabilities"
 CAPABILITY_MODULES_ATTR = "CAPABILITY_MODULES"
 
 
+def _distribution_import_names() -> frozenset[str]:
+    """Import names installed by gridalyn's own base dependencies.
+
+    Derived at runtime from the installed distribution's metadata
+    (``importlib.metadata`` — stdlib-only), so an external capability
+    declaration can be policed for the always-green base-dependency
+    anti-pattern without knowing the repo root. The capability contract test
+    pins this against ``pyproject.toml`` (an external declaration naming a
+    base dependency must be rejected).
+
+    Returns:
+        Lowercased import names of every base dependency, with the known
+        distribution-to-module remap applied (``scikit-learn`` → ``sklearn``).
+    """
+    try:
+        requirements = importlib.metadata.requires("gridalyn") or ()
+    except importlib.metadata.PackageNotFoundError:
+        return frozenset()
+    names: set[str] = set()
+    for requirement in requirements:
+        if "extra ==" in requirement.lower():
+            # Optional extras (e.g. ``; extra == "sim"``) are NOT base
+            # dependencies — a truly-optional module like lightsim2grid must
+            # stay admissible in external capability declarations.
+            continue
+        name = requirement.strip().lower()
+        for index, char in enumerate(name):
+            if char in _REQUIREMENT_NAME_TERMINATORS:
+                name = name[:index]
+                break
+        names.add(name)
+    names.discard("scikit-learn")
+    names.add("sklearn")
+    return frozenset(names)
+
+
 def external_capability_modules(
     group: str = CAPABILITIES_ENTRY_POINT_GROUP,
     *,
@@ -70,9 +111,9 @@ def external_capability_modules(
         group: The entry-point group to read.
         base_modules: Optional set of module names that are base dependencies
             (present on every supported install); an external declaration
-            naming one is rejected as an always-green check. The core map is
-            policed the same way by the capability contract test; pass the
-            pyproject-derived set here to apply the same rule externally.
+            naming one is rejected as an always-green check. Defaults to the
+            set derived from the installed gridalyn distribution, so the rule
+            is enforced at runtime without the repo root.
 
     Returns:
         The externally-declared capability map, sorted by key.
@@ -84,7 +125,7 @@ def external_capability_modules(
     """
     from gridalyn.foundation.platform.extensions import list_entry_point_metadata
 
-    base = base_modules or frozenset()
+    base = _distribution_import_names() if base_modules is None else base_modules
     external: dict[str, list[str]] = {}
     for record in list_entry_point_metadata(group):
         module = importlib.import_module(record.module)

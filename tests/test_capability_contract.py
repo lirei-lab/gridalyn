@@ -317,10 +317,10 @@ class ExternalCapabilityContractTest(unittest.TestCase):
 
     def test_base_dependency_module_is_rejected(self) -> None:
         """Axis (e)(iii): external modules must not be pyproject base deps."""
-        # ``pandas`` is a base dependency in this repo, so requiring it is an
-        # always-green check — the same honesty rule axis (a) pins for the core
-        # map. The base set is passed in because ``capabilities.py`` is
-        # stdlib-only and does not know the repo root.
+        # ``pandas`` is a base dependency of gridalyn, so requiring it is an
+        # always-green check. The base set is derived at runtime from the
+        # installed distribution (no opt-in), so the rule is enforced on the
+        # production path.
         records = self._install_module(
             "base_dep_cap_probe", 'CAPABILITY_MODULES = {"always": ["pandas"]}\n'
         )
@@ -329,9 +329,35 @@ class ExternalCapabilityContractTest(unittest.TestCase):
             return_value=records,
         ):
             with self.assertRaisesRegex(ValueError, "base-dependency"):
-                external_capability_modules(
-                    base_modules=base_dependency_modules(REPO_ROOT)
-                )
+                external_capability_modules()
+
+    def test_optional_extra_module_is_not_falsely_rejected(self) -> None:
+        """Axis (e)(iii): optional-extras modules stay admissible."""
+        # lightsim2grid is the ``sim`` extra — truly optional, NOT a base
+        # dependency. The runtime base set must exclude extras so a legitimate
+        # external capability naming it is accepted.
+        records = self._install_module(
+            "extra_ok_cap_probe",
+            'CAPABILITY_MODULES = {"hpc": ["lightsim2grid"]}\n',
+        )
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            declared = external_capability_modules()
+        self.assertEqual({"hpc": ["lightsim2grid"]}, declared)
+
+    def test_runtime_base_set_pins_against_pyproject(self) -> None:
+        """The runtime-derived base set covers the pyproject contract set."""
+        from gridalyn.foundation.platform.capabilities import _distribution_import_names
+
+        runtime = _distribution_import_names()
+        pyproject_set = base_dependency_modules(REPO_ROOT)
+        self.assertTrue(
+            pyproject_set <= runtime,
+            "runtime base-dependency derivation missed pyproject deps: "
+            f"{sorted(pyproject_set - runtime)}",
+        )
 
     def test_unknown_external_key_still_raises_located(self) -> None:
         # A valid external capability is declared so the located KeyError names
