@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 from gridalyn.foundation.platform.extensions import (
+    DEFAULT_EXTENSIONS_GROUP,
+    EntryPointMetadata,
     ExtensionDescriptor,
     ExtensionRegistry,
     UnknownExtensionError,
     UnsupportedContractVersionError,
     extension_provenance,
+    list_entry_point_metadata,
+    list_installed_extensions,
+    load_entry_point_extensions,
 )
 
 
@@ -35,6 +43,29 @@ def _descriptor(
 
 def _factory() -> str:
     return "acme-instance"
+
+
+def _write_module(tmp_path: Path, name: str, body: str) -> None:
+    """Write a real importable module into the test's temp directory."""
+    (tmp_path / f"{name}.py").write_text(body, encoding="utf-8")
+
+
+def _entry_point_record(
+    name: str,
+    module: str,
+    *,
+    distribution: str | None = "fixture-dist",
+    version: str = "1.0.0",
+) -> EntryPointMetadata:
+    """Build the metadata the discovery walk would return for a fixture module."""
+    return EntryPointMetadata(
+        name=name,
+        value=module,
+        module=module,
+        attr=None,
+        distribution=distribution,
+        version=version,
+    )
 
 
 class TestRegistryIsGeneric:
@@ -204,3 +235,147 @@ class TestStdlibOnly:
                 assert not (node.module or "").startswith(
                     "gridalyn"
                 ), f"extensions.py must not import gridalyn modules: {node.module}"
+
+
+# A minimal extension module body following the loader's convention (exposes
+# callable ``factory`` + ``descriptor``), written into a temp dir per test.
+_EXTENSION_MODULE_BODY = """\
+from gridalyn.foundation.platform.extensions import ExtensionDescriptor
+
+descriptor = ExtensionDescriptor(
+    extension_id={extension_id!r},
+    role="powerflow_backend",
+    name="Fixture extension",
+    version="1.0.0",
+    contract_version="1",
+)
+
+def factory():
+    return "fixture-instance"
+"""
+
+
+class TestEntryPointDiscovery:
+    """Awareness (list) must report without importing any module."""
+
+    def test_list_installed_extensions_reports_without_importing(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        module_name = "acme_awareness_probe"
+        _write_module(tmp_path, module_name, "print('IMPORTED')\n")
+        record = _entry_point_record("acme-backend", module_name)
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [record],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        descriptors = list_installed_extensions()
+
+        assert descriptors[0].extension_id == "acme-backend"
+        assert descriptors[0].source == "entry_point"
+        assert descriptors[0].entry_point_group == DEFAULT_EXTENSIONS_GROUP
+        assert descriptors[0].version == "1.0.0"
+        # The roster never imports the module it reports.
+        assert module_name not in sys.modules
+
+    def test_list_entry_point_metadata_missing_group_is_empty(self) -> None:
+        assert list_entry_point_metadata("gridalyn.definitely_not_a_group") == []
+
+    def test_awareness_and_resolution_are_separate(self) -> None:
+        """Listing is not resolution: role is unknown until a module loads."""
+        record = _entry_point_record("acme-backend", "acme_probe")
+        assert record.name == "acme-backend"
+
+
+class TestDeclaredOnlyLoading:
+    """Resolution imports ONLY the declared IDs, never ambient entries."""
+
+    def _patch_registry(self, monkeypatch: MonkeyPatch) -> ExtensionRegistry:
+        fresh = ExtensionRegistry()
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.DEFAULT_REGISTRY", fresh
+        )
+        return fresh
+
+    def test_load_entry_point_extensions_loads_only_declared(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        module_name = "acme_declared_probe"
+        _write_module(
+            tmp_path,
+            module_name,
+            _EXTENSION_MODULE_BODY.format(extension_id="acme-backend"),
+        )
+        ambient = "acme_ambient_probe"
+        _write_module(tmp_path, ambient, "print('AMBIENT')\n")
+        records = [
+            _entry_point_record("acme-backend", module_name),
+            _entry_point_record("ambient-ext", ambient),
+        ]
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: records,
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        registry = self._patch_registry(monkeypatch)
+
+        loaded = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["acme-backend"])
+
+        assert [d.extension_id for d in loaded] == ["acme-backend"]
+        assert loaded[0].source == "entry_point"
+        assert loaded[0].entry_point_group == DEFAULT_EXTENSIONS_GROUP
+        assert loaded[0].module_hash and len(loaded[0].module_hash) == 64
+        # Only the declared module was imported; the ambient one was not.
+        assert module_name in sys.modules
+        assert ambient not in sys.modules
+        assert registry.get_descriptor("acme-backend").source == "entry_point"
+
+    def test_load_unknown_declared_id_is_located(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [],
+        )
+        with pytest.raises(UnknownExtensionError) as excinfo:
+            load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["ghost-ext"])
+        message = str(excinfo.value)
+        assert "ghost-ext" in message
+        assert "none registered" in message
+
+    def test_load_module_without_convention_raises(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        module_name = "acme_bad_probe"
+        _write_module(tmp_path, module_name, "VALUE = 1\n")
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [_entry_point_record("bad-ext", module_name)],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        self._patch_registry(monkeypatch)
+
+        with pytest.raises(ImportError, match="factory"):
+            load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["bad-ext"])
+
+    def test_module_hash_is_stable_across_loads(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        module_name = "acme_hash_probe"
+        _write_module(
+            tmp_path,
+            module_name,
+            _EXTENSION_MODULE_BODY.format(extension_id="hash-ext"),
+        )
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [_entry_point_record("hash-ext", module_name)],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        self._patch_registry(monkeypatch)
+
+        first = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["hash-ext"])
+        second = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["hash-ext"])
+
+        assert first[0].module_hash == second[0].module_hash

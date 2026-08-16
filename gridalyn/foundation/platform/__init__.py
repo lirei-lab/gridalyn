@@ -80,6 +80,18 @@ _LAZY_EXPORTS = {
         "gridalyn.foundation.platform.extensions",
         "UnsupportedContractVersionError",
     ),
+    "list_entry_point_metadata": (
+        "gridalyn.foundation.platform.extensions",
+        "list_entry_point_metadata",
+    ),
+    "list_installed_extensions": (
+        "gridalyn.foundation.platform.extensions",
+        "list_installed_extensions",
+    ),
+    "load_entry_point_extensions": (
+        "gridalyn.foundation.platform.extensions",
+        "load_entry_point_extensions",
+    ),
 }
 
 __all__ = sorted(_LAZY_EXPORTS)
