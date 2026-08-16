@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib
 import json
 import sys
 
@@ -13,7 +12,6 @@ configure_cli_environment()
 
 from gridalyn.foundation.platform.extensions import (  # noqa: E402
     DEFAULT_EXTENSIONS_GROUP,
-    list_entry_point_metadata,
     list_installed_extensions,
     load_entry_point_extensions,
 )
@@ -40,34 +38,35 @@ def _list_extensions(args: argparse.Namespace) -> int:
 
 
 def _check_capability_readiness(extension_id: str, group: str) -> None:
-    """Raise when an extension declares capabilities its environment lacks.
+    """Surface an unready extension as the platform's capability error.
 
-    The engine is stdlib-only and cannot import ``capabilities``; the CLI is
-    the layer that turns "registered but not ready" into the platform's
-    :class:`MissingCapabilityError` — an extension is never silently accepted.
+    The engine is stdlib-only and cannot import ``capabilities``; the shared
+    readiness gate lives there. The CLI is one caller of it — an extension
+    whose ``REQUIRED_CAPABILITIES`` cannot be met is reported, never silently
+    accepted.
 
     Args:
         extension_id: The resolved extension ID.
         group: The entry-point group it came from.
 
     Raises:
-        MissingCapabilityError: If the extension declares a ``REQUIRED_CAPABILITIES``
-            capability whose optional modules are not importable.
+        MissingCapabilityError: If the extension declares a capability whose
+            optional modules are not importable.
     """
-    from gridalyn.foundation.platform.capabilities import require_capabilities
+    from gridalyn.foundation.platform.capabilities import require_extension_capabilities
 
-    for record in list_entry_point_metadata(group):
-        if record.name != extension_id:
-            continue
-        module = importlib.import_module(record.module)
-        required = getattr(module, "REQUIRED_CAPABILITIES", ())
-        if required:
-            require_capabilities(*required, context=f"extension {extension_id!r}")
-        return
+    require_extension_capabilities(extension_id, group)
 
 
 def _validate_extensions(args: argparse.Namespace) -> int:
-    """Resolve declared extension IDs and report their provenance facts."""
+    """Resolve declared extension IDs and report their provenance facts.
+
+    Validation is deliberately side-effect free: each ID is resolved into a
+    throwaway registry, so a failed ``validate`` never leaves a registration
+    behind in the process-global ``DEFAULT_REGISTRY``.
+    """
+    from gridalyn.foundation.platform.extensions import ExtensionRegistry
+
     declared = args.extension_ids
     if not declared:
         print("validate requires at least one extension ID", file=sys.stderr)
@@ -75,7 +74,9 @@ def _validate_extensions(args: argparse.Namespace) -> int:
     exit_code = 0
     for extension_id in declared:
         try:
-            loaded = load_entry_point_extensions(args.group, [extension_id])
+            loaded = load_entry_point_extensions(
+                args.group, [extension_id], registry=ExtensionRegistry()
+            )
             _check_capability_readiness(extension_id, args.group)
         except Exception as exc:
             print(f"extension {extension_id}: {exc}", file=sys.stderr)

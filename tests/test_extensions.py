@@ -232,6 +232,10 @@ class TestStdlibOnly:
                     for alias in node.names
                 ), f"extensions.py must not import gridalyn modules: {node.names}"
             elif isinstance(node, ast.ImportFrom):
+                assert node.level == 0, (
+                    "extensions.py must not use relative imports (they would "
+                    f"pull gridalyn siblings into the stdlib-only module): {node.level}"
+                )
                 assert not (node.module or "").startswith(
                     "gridalyn"
                 ), f"extensions.py must not import gridalyn modules: {node.module}"
@@ -282,10 +286,30 @@ class TestEntryPointDiscovery:
     def test_list_entry_point_metadata_missing_group_is_empty(self) -> None:
         assert list_entry_point_metadata("gridalyn.definitely_not_a_group") == []
 
-    def test_awareness_and_resolution_are_separate(self) -> None:
+    def test_awareness_and_resolution_are_separate(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Listing is not resolution: role is unknown until a module loads."""
-        record = _entry_point_record("acme-backend", "acme_probe")
-        assert record.name == "acme-backend"
+        module_name = "acme_separation_probe"
+        _write_module(
+            tmp_path,
+            module_name,
+            _EXTENSION_MODULE_BODY.format(extension_id="sep-ext"),
+        )
+        record = _entry_point_record("sep-ext", module_name)
+        monkeypatch.setattr(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            lambda group: [record],
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        descriptors = list_installed_extensions()
+
+        # The roster reports the component without knowing its role — role is
+        # only established when a module is loaded (resolution), never listed.
+        assert descriptors[0].role == ""
+        assert descriptors[0].source == "entry_point"
+        assert module_name not in sys.modules
 
 
 class TestDeclaredOnlyLoading:
@@ -359,7 +383,7 @@ class TestDeclaredOnlyLoading:
         with pytest.raises(ImportError, match="factory"):
             load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["bad-ext"])
 
-    def test_module_hash_is_stable_across_loads(
+    def test_module_hash_is_content_sensitive(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
         module_name = "acme_hash_probe"
@@ -376,6 +400,15 @@ class TestDeclaredOnlyLoading:
         self._patch_registry(monkeypatch)
 
         first = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["hash-ext"])
+
+        # The hash pins "exactly what was loaded": rewriting the module file
+        # must change it (the hash re-reads __file__ contents fresh).
+        _write_module(
+            tmp_path,
+            module_name,
+            _EXTENSION_MODULE_BODY.format(extension_id="hash-ext") + "\n# v2\n",
+        )
         second = load_entry_point_extensions(DEFAULT_EXTENSIONS_GROUP, ["hash-ext"])
 
-        assert first[0].module_hash == second[0].module_hash
+        assert first[0].module_hash and len(first[0].module_hash) == 64
+        assert first[0].module_hash != second[0].module_hash

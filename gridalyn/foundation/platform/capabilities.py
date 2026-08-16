@@ -53,6 +53,8 @@ CAPABILITY_MODULES_ATTR = "CAPABILITY_MODULES"
 
 def external_capability_modules(
     group: str = CAPABILITIES_ENTRY_POINT_GROUP,
+    *,
+    base_modules: frozenset[str] | None = None,
 ) -> dict[str, list[str]]:
     """Return optional-capability modules declared by installed extras.
 
@@ -61,20 +63,28 @@ def external_capability_modules(
     package). Each entry-point module exposes ``CAPABILITY_MODULES`` — a dict
     shaped like :data:`OPTIONAL_CAPABILITY_MODULES`. External declarations are
     additive: they may only declare NEW capability keys, never redefine the
-    core set, and never an empty capability.
+    core set, never an empty capability, and never a pyproject **base**
+    dependency (an always-green check).
 
     Args:
         group: The entry-point group to read.
+        base_modules: Optional set of module names that are base dependencies
+            (present on every supported install); an external declaration
+            naming one is rejected as an always-green check. The core map is
+            policed the same way by the capability contract test; pass the
+            pyproject-derived set here to apply the same rule externally.
 
     Returns:
         The externally-declared capability map, sorted by key.
 
     Raises:
         ValueError: If an entry-point module exposes no capability dict, an
-            empty capability, or a key that collides with the core set.
+            empty capability, a base-dependency module, or a key that
+            collides with the core set.
     """
     from gridalyn.foundation.platform.extensions import list_entry_point_metadata
 
+    base = base_modules or frozenset()
     external: dict[str, list[str]] = {}
     for record in list_entry_point_metadata(group):
         module = importlib.import_module(record.module)
@@ -101,8 +111,52 @@ def external_capability_modules(
                     f"external capability {capability!r} from {record.name!r} "
                     "is empty; an empty capability is an always-green check"
                 )
+            base_hits = sorted(name for name in modules if name.lower() in base)
+            if base_hits:
+                raise ValueError(
+                    f"external capability {capability!r} from "
+                    f"{record.name!r} names base-dependency module(s) "
+                    f"{', '.join(base_hits)}; a base dependency is present on "
+                    "every supported install, so requiring it is an "
+                    "always-green check (name a truly-optional module instead)"
+                )
             external[capability] = list(modules)
     return dict(sorted(external.items()))
+
+
+def require_extension_capabilities(extension_id: str, group: str) -> None:
+    """Raise when a resolved extension declares capabilities its env lacks.
+
+    The shared readiness gate for the ``entry_point`` source: after an
+    extension module is loaded, callers (the CLI ``validate`` path and the
+    programmatic ``resolve_declared_extensions`` path) call this so a
+    registered-but-not-ready extension is surfaced as
+    :class:`MissingCapabilityError` — never silently accepted. The engine
+    itself cannot do this (it is stdlib-only); this helper lives at the
+    capability layer, which both callers reach.
+
+    Args:
+        extension_id: The resolved extension ID.
+        group: The entry-point group it came from.
+
+    Raises:
+        MissingCapabilityError: If the extension declares a
+            ``REQUIRED_CAPABILITIES`` capability whose optional modules are
+            not importable.
+    """
+    from gridalyn.foundation.platform.extensions import (
+        REQUIRED_CAPABILITIES_ATTR,
+        list_entry_point_metadata,
+    )
+
+    for record in list_entry_point_metadata(group):
+        if record.name != extension_id:
+            continue
+        module = importlib.import_module(record.module)
+        required = getattr(module, REQUIRED_CAPABILITIES_ATTR, ())
+        if required:
+            require_capabilities(*required, context=f"extension {extension_id!r}")
+        return
 
 
 def _modules_for(capability: str) -> list[str]:
@@ -155,4 +209,5 @@ __all__ = [
     "external_capability_modules",
     "missing_capability_modules",
     "require_capabilities",
+    "require_extension_capabilities",
 ]

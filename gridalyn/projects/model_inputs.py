@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy as np
+
+if TYPE_CHECKING:  # pragma: no cover - import-time only for annotations
+    from gridalyn.foundation.platform.extensions import ExtensionDescriptor
 
 from gridalyn.assets.modeling.der_dispatch import DERDispatchAsset
 from gridalyn.assets.modeling.energy_assets import BatteryAsset, ProsumerAsset, PVAsset
@@ -176,11 +179,14 @@ def load_declared_extensions(
 
 def resolve_declared_extensions(
     project_or_path: ProjectRef,
-) -> list[Any]:
+) -> list[ExtensionDescriptor]:
     """Resolve (load) the declared extensions on demand.
 
     Groups the declared IDs by entry-point group and loads each via
-    ``load_entry_point_extensions`` — declared-only, never ambient. This is the
+    ``load_entry_point_extensions`` — declared-only, never ambient. After
+    loading, each extension's capability readiness is enforced (an extension
+    whose ``REQUIRED_CAPABILITIES`` cannot be met raises
+    ``MissingCapabilityError`` — never silently accepted). This is the
     on-demand resolution path a caller (CLI, or the Phase 16 runner) uses;
     absent declarations resolve to nothing.
 
@@ -189,16 +195,27 @@ def resolve_declared_extensions(
 
     Returns:
         The resolved (registered) extension descriptors, sorted by ID.
+
+    Raises:
+        UnknownExtensionError: If a declared ID is not installed.
+        MissingCapabilityError: If a declared extension's required
+            capabilities are not importable (registered but not ready).
     """
-    from gridalyn.foundation.platform.extensions import load_entry_point_extensions
+    from gridalyn.foundation.platform.capabilities import require_extension_capabilities
+    from gridalyn.foundation.platform.extensions import (
+        ExtensionDescriptor,
+        load_entry_point_extensions,
+    )
 
     declared = load_declared_extensions(project_or_path)
     by_group: dict[str, list[str]] = {}
     for extension in declared:
         by_group.setdefault(extension.group, []).append(extension.extension_id)
-    resolved: list[Any] = []
+    resolved: list[ExtensionDescriptor] = []
     for group, extension_ids in sorted(by_group.items()):
         resolved.extend(load_entry_point_extensions(group, extension_ids))
+        for extension_id in extension_ids:
+            require_extension_capabilities(extension_id, group)
     return sorted(resolved, key=lambda descriptor: descriptor.extension_id)
 
 

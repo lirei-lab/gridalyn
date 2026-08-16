@@ -407,6 +407,8 @@ def _module_file_hash(module: ModuleType) -> str | None:
 def load_entry_point_extensions(
     group: str,
     declared_ids: Iterable[str],
+    *,
+    registry: ExtensionRegistry | None = None,
 ) -> list[ExtensionDescriptor]:
     """Load and register ONLY the declared extensions from an entry-point group.
 
@@ -418,9 +420,11 @@ def load_entry_point_extensions(
 
     The module convention: an extension module exposes ``factory`` (a callable
     returning the role's component) and ``descriptor`` (an
-    :class:`ExtensionDescriptor`). The descriptor's own ``source`` is
-    overwritten to ``"entry_point"`` because the provenance of HOW it was
-    loaded is the loader's fact, not the module's claim. Capability readiness
+    :class:`ExtensionDescriptor`). The entry-point name is the extension ID:
+    the descriptor's ``extension_id`` is stamped to ``record.name`` so what is
+    registered always matches the ID the caller declared, and ``source`` to
+    ``"entry_point"`` because the provenance of HOW it was loaded is the
+    loader's fact, not the module's claim. Capability readiness
     (``REQUIRED_CAPABILITIES``) is a caller-level check (a layer that may
     import ``gridalyn.foundation.platform.capabilities``) — this engine is
     stdlib-only and never inspects optional-module availability itself.
@@ -428,6 +432,9 @@ def load_entry_point_extensions(
     Args:
         group: The entry-point group to resolve against.
         declared_ids: The extension IDs to load — only these are imported.
+        registry: Registry to register into. Defaults to
+            :data:`DEFAULT_REGISTRY`; pass a fresh instance to resolve without
+            mutating the process-global default (e.g. validation).
 
     Returns:
         The registered descriptors, sorted by extension ID.
@@ -438,6 +445,7 @@ def load_entry_point_extensions(
         ImportError: If a declared extension module cannot be imported or does
             not expose the ``factory``/``descriptor`` convention.
     """
+    targets = registry or DEFAULT_REGISTRY
     by_name = {record.name: record for record in list_entry_point_metadata(group)}
     loaded: list[ExtensionDescriptor] = []
     for extension_id in declared_ids:
@@ -462,11 +470,12 @@ def load_entry_point_extensions(
             )
         registered = replace(
             descriptor,
+            extension_id=record.name,
             source="entry_point",
             entry_point_group=group,
             module_hash=_module_file_hash(module),
         )
-        DEFAULT_REGISTRY.register(factory, descriptor=registered, replace=True)
+        targets.register(factory, descriptor=registered, replace=True)
         loaded.append(registered)
     return sorted(loaded, key=lambda descriptor: descriptor.extension_id)
 

@@ -315,10 +315,33 @@ class ExternalCapabilityContractTest(unittest.TestCase):
                 require_capabilities("hpc", context="external fixture")
         self.assertIn("mpi4py_definitely_missing", str(caught.exception))
 
-    def test_unknown_external_key_still_raises_located(self) -> None:
+    def test_base_dependency_module_is_rejected(self) -> None:
+        """Axis (e)(iii): external modules must not be pyproject base deps."""
+        # ``pandas`` is a base dependency in this repo, so requiring it is an
+        # always-green check — the same honesty rule axis (a) pins for the core
+        # map. The base set is passed in because ``capabilities.py`` is
+        # stdlib-only and does not know the repo root.
+        records = self._install_module(
+            "base_dep_cap_probe", 'CAPABILITY_MODULES = {"always": ["pandas"]}\n'
+        )
         with mock.patch(
             "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
-            return_value=[],
+            return_value=records,
+        ):
+            with self.assertRaisesRegex(ValueError, "base-dependency"):
+                external_capability_modules(
+                    base_modules=base_dependency_modules(REPO_ROOT)
+                )
+
+    def test_unknown_external_key_still_raises_located(self) -> None:
+        # A valid external capability is declared so the located KeyError names
+        # BOTH the core keys and the external key.
+        records = self._install_module(
+            "hpc_unknown_probe", 'CAPABILITY_MODULES = {"hpc": ["mpi4py"]}\n'
+        )
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
         ):
             with self.assertRaises(KeyError) as caught:
                 missing_capability_modules("nope-not-declared")
@@ -326,6 +349,7 @@ class ExternalCapabilityContractTest(unittest.TestCase):
         self.assertIn("nope-not-declared", message)
         for key in sorted(_EXPECTED_CAPABILITY_KEYS):
             self.assertIn(key, message)
+        self.assertIn("hpc", message)
 
 
 if __name__ == "__main__":
