@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -90,6 +91,115 @@ def _required(mapping: Mapping[str, Any], key: str, context: str = "") -> Any:
 
 def _float_mapping(mapping: Mapping[Any, Any]) -> dict[int, float]:
     return {int(key): float(value) for key, value in mapping.items()}
+
+
+#: The entry-point group undeclared extension IDs resolve in. Matches
+#: ``gridalyn.foundation.platform.extensions.DEFAULT_EXTENSIONS_GROUP``; the
+#: literal keeps ``model_inputs`` from importing the engine at module scope.
+_DEFAULT_EXTENSIONS_GROUP = "gridalyn.extensions"
+
+
+@dataclass(frozen=True)
+class DeclaredExtension:
+    """One extension ID a project declares in ``spec.inputs.extensions``.
+
+    Attributes:
+        extension_id: The extension ID to resolve (declared-only, never
+            ambient).
+        group: The entry-point group it resolves in; defaults to
+            ``gridalyn.extensions``.
+    """
+
+    extension_id: str
+    group: str = _DEFAULT_EXTENSIONS_GROUP
+
+
+def load_declared_extensions(
+    project_or_path: ProjectRef,
+) -> tuple[DeclaredExtension, ...]:
+    """Return the extension IDs a project declares, empty when none do.
+
+    Reads ``spec.inputs.extensions`` — a list of declared extension IDs (bare
+    strings resolving in the default ``gridalyn.extensions`` group, or
+    ``{id, group}`` mappings). Absent → empty, so a project that declares no
+    extensions loads nothing and its runs stay byte-identical (R7). A
+    malformed declaration is a located error.
+
+    Args:
+        project_or_path: The project to read.
+
+    Returns:
+        The declared extensions, in declaration order.
+
+    Raises:
+        ValueError: If ``spec.inputs.extensions`` is not a list, or an entry
+            is neither a string nor a mapping naming an ``id``.
+    """
+    project = _project(project_or_path)
+    inputs = _inputs(project)
+    raw = inputs.get("extensions")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(
+            f"{project.path}: spec.inputs.extensions must be a list of "
+            f"declared extension IDs, found {type(raw).__name__}"
+        )
+    declared: list[DeclaredExtension] = []
+    for index, entry in enumerate(raw):
+        if isinstance(entry, str):
+            declared.append(DeclaredExtension(extension_id=entry))
+            continue
+        if isinstance(entry, Mapping):
+            extension_id = entry.get("id")
+            if not isinstance(extension_id, str) or not extension_id:
+                present = ", ".join(sorted(str(item) for item in entry)) or "none"
+                raise ValueError(
+                    f"{project.path}: spec.inputs.extensions[{index}] must "
+                    f"name an 'id' string (present fields: {present})"
+                )
+            group = entry.get("group", _DEFAULT_EXTENSIONS_GROUP)
+            if not isinstance(group, str):
+                raise ValueError(
+                    f"{project.path}: spec.inputs.extensions[{index}].group "
+                    f"must be a string, found {type(group).__name__}"
+                )
+            declared.append(DeclaredExtension(extension_id=extension_id, group=group))
+            continue
+        raise ValueError(
+            f"{project.path}: spec.inputs.extensions[{index}] must be a "
+            f"declared extension ID string or {{id, group}} mapping, found "
+            f"{type(entry).__name__}"
+        )
+    return tuple(declared)
+
+
+def resolve_declared_extensions(
+    project_or_path: ProjectRef,
+) -> list[Any]:
+    """Resolve (load) the declared extensions on demand.
+
+    Groups the declared IDs by entry-point group and loads each via
+    ``load_entry_point_extensions`` — declared-only, never ambient. This is the
+    on-demand resolution path a caller (CLI, or the Phase 16 runner) uses;
+    absent declarations resolve to nothing.
+
+    Args:
+        project_or_path: The project declaring ``spec.inputs.extensions``.
+
+    Returns:
+        The resolved (registered) extension descriptors, sorted by ID.
+    """
+    from gridalyn.foundation.platform.extensions import load_entry_point_extensions
+
+    declared = load_declared_extensions(project_or_path)
+    by_group: dict[str, list[str]] = {}
+    for extension in declared:
+        by_group.setdefault(extension.group, []).append(extension.extension_id)
+    resolved: list[Any] = []
+    for group, extension_ids in sorted(by_group.items()):
+        resolved.extend(load_entry_point_extensions(group, extension_ids))
+    return sorted(resolved, key=lambda descriptor: descriptor.extension_id)
 
 
 def load_radial_feeder_spec(

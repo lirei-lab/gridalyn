@@ -42,7 +42,7 @@ errors.
 |--------|-----|-----------|
 | `core` | gridalyn's own shipped defaults (unchanged behaviour) | `source: "core"` |
 | `host` | `register_extension(factory, descriptor=...)` from the embedding application's entry script or notebook | `source: "host"` |
-| `entry_point` | declared entry-point group / namespace walk, loaded on demand (later phase) | `source: "entry_point"`, `version`, `module_hash` |
+| `entry_point` | declared `gridalyn.extensions` entry-point group / namespace walk, loaded on demand (Phase 15) | `source: "entry_point"`, `version`, `module_hash` |
 
 `register_extension` is the public host API: a third-party component conforms
 to a role contract, builds an `ExtensionDescriptor`, and registers it — no edit
@@ -78,6 +78,47 @@ backend/surrogate/policy, `gridalyn.twin` for producer/adapter).
 The role descriptors that embed in run manifests expose `as_dict()` with a
 JSON-native shape that includes `contract_version`; the twin descriptors
 (producer, adapter) are metadata-only and have no `as_dict()`.
+
+## Discovery & Capabilities
+
+Since Phase 15 the `entry_point` source is wired: a package ships an extension
+by declaring an entry point in the `gridalyn.extensions` group, and gridalyn
+sees it **without loading it**. Awareness and resolution are deliberately
+separate operations:
+
+- **Awareness — `gridalyn extension list`.** Walks the entry-point group and
+  reports every installed extension (`extension_id`, version, contract
+  version, source) without importing any module. `list_entry_point_metadata`
+  is the stdlib primitive behind it.
+- **Resolution — declared-only.** `load_entry_point_extensions(group,
+  declared_ids)` imports **only** the IDs a caller names. Ambient entries are
+  never loaded. An extension module exposes a callable `factory` and an
+  `ExtensionDescriptor` `descriptor`; the loader stamps `source="entry_point"`,
+  the `entry_point_group`, and a content `module_hash`, and registers into the
+  default registry. An undeclared ID is a located error naming what is
+  installed; a module that does not follow the convention is a located
+  `ImportError`.
+- **`gridalyn extension validate ID...`** loads the declared IDs and reports
+  their provenance facts, exiting non-zero on any failure. If an extension
+  declares `REQUIRED_CAPABILITIES` that its environment cannot meet, it is
+  surfaced as `MissingCapabilityError` — registered but not ready is never
+  silent.
+
+A project declares which extensions its runs resolve through
+`spec.inputs.extensions` in `project.yaml` — bare IDs in the default
+`gridalyn.extensions` group, or `{id, group}` mappings. `load_declared_extensions`
+and `resolve_declared_extensions` (in `gridalyn.projects.model_inputs`) read
+and resolve that declaration on demand. A project that declares nothing loads
+nothing, so its runs stay byte-identical (R7).
+
+**Extensible capabilities.** The core capability set (`geo`, `sim`, `ops` —
+truly-optional modules in `OPTIONAL_CAPABILITY_MODULES`) stays fixed. An
+external package may declare NEW capability keys through the
+`gridalyn.capabilities` entry-point group: its module exposes
+`CAPABILITY_MODULES`, a dict shaped like the core map. `require_capabilities`
+merges those declarations additively — an extra may only add new capabilities,
+never redefine the core set, and never an empty (always-green) one. The
+capability contract test validates this external format.
 
 ## Provenance
 
