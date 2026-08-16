@@ -67,6 +67,11 @@ DOMAIN_MODULES: dict[str, tuple[str, str, list[str]]] = {
         "Run platform governance and artifact checks.",
         ["governance"],
     ),
+    "extension": (
+        "gridalyn.interfaces.cli.extension",
+        "List, validate, and inspect installed extensions.",
+        ["extensions"],
+    ),
 }
 
 

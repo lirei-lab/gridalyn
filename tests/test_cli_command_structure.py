@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from gridalyn.interfaces.cli import dashboard, digital_twin, flexibility
+from gridalyn.interfaces.cli import dashboard, digital_twin, extension, flexibility
 from gridalyn.interfaces.cli import gridalyn as gridalyn_cli
 from gridalyn.interfaces.cli import platform, project, semantic
 from gridalyn.interfaces.cli.environment import configure_cli_environment
@@ -185,6 +185,7 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertTrue(callable(dashboard.main))
         self.assertTrue(callable(platform.main))
         self.assertTrue(callable(project.main))
+        self.assertTrue(callable(extension.main))
 
     def test_gridalyn_parser_exposes_product_domains_and_aliases(self):
         # Routing is asserted through parse_args below, so no parser handle is
@@ -206,6 +207,8 @@ class CliCommandStructureTest(unittest.TestCase):
             "dash",
             "platform",
             "governance",
+            "extension",
+            "extensions",
         ]:
             argv = [domain] if domain == "validate" else [domain, "status"]
             args, extra_args = gridalyn_cli.parse_args(argv)
