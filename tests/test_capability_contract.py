@@ -17,19 +17,30 @@ never fail on a supported install. This gate pins the reformed contract
     Generic map iteration (the ``_doctor`` pattern) deliberately does NOT
     count: it touches every key of any map, so it can never fail for one.
 (d) An unknown capability key raises the located, enumerating ``KeyError``.
+
+Phase 15 added axis (e): external ``gridalyn.capabilities`` declarations are
+validated against the same honesty rules (non-empty, no core collision, dict
+shape) and are honored by ``require_capabilities``.
 """
 
 from __future__ import annotations
 
 import ast
+import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from gridalyn.foundation.platform.capabilities import (
     OPTIONAL_CAPABILITY_MODULES,
+    MissingCapabilityError,
+    external_capability_modules,
     missing_capability_modules,
+    require_capabilities,
 )
+from gridalyn.foundation.platform.extensions import EntryPointMetadata
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -218,6 +229,101 @@ class CapabilityContractTest(unittest.TestCase):
             missing_capability_modules("definitely-not-a-capability")
         message = str(caught.exception)
         self.assertIn("unknown capability 'definitely-not-a-capability'", message)
+        for key in sorted(_EXPECTED_CAPABILITY_KEYS):
+            self.assertIn(key, message)
+
+
+class ExternalCapabilityContractTest(unittest.TestCase):
+    """Gate (e): external gridalyn.capabilities declarations are validated.
+
+    An extra may declare NEW capability keys through the ``gridalyn.capabilities``
+    entry-point group; the declaration must be a non-empty dict, must not
+    collide with the core set, and must not be an always-green empty capability.
+    Valid declarations are honored by ``require_capabilities``.
+    """
+
+    _VALID_FIXTURE = 'CAPABILITY_MODULES = {"hpc": ["mpi4py"]}\n'
+
+    def _install_module(self, name: str, body: str) -> list[EntryPointMetadata]:
+        """Write a real importable fixture module and return its metadata."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        (Path(tmp.name) / f"{name}.py").write_text(body, encoding="utf-8")
+        sys.path.insert(0, tmp.name)
+        self.addCleanup(sys.path.remove, tmp.name)
+        return [
+            EntryPointMetadata(
+                name=name,
+                value=name,
+                module=name,
+                attr=None,
+                distribution="fixture-ext",
+                version="1.0.0",
+            )
+        ]
+
+    def test_external_capability_modules_returns_declared_map(self) -> None:
+        records = self._install_module("hpc_fixture_probe", self._VALID_FIXTURE)
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            declared = external_capability_modules()
+        self.assertEqual({"hpc": ["mpi4py"]}, declared)
+
+    def test_declaration_without_dict_is_rejected(self) -> None:
+        records = self._install_module("bad_cap_probe", "VALUE = 1\n")
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            with self.assertRaisesRegex(ValueError, "CAPABILITY_MODULES"):
+                external_capability_modules()
+
+    def test_core_capability_collision_is_rejected(self) -> None:
+        records = self._install_module(
+            "collide_cap_probe", 'CAPABILITY_MODULES = {"sim": ["lightsim2grid"]}\n'
+        )
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            with self.assertRaisesRegex(ValueError, "collides with a core"):
+                external_capability_modules()
+
+    def test_empty_external_capability_is_rejected(self) -> None:
+        records = self._install_module(
+            "empty_cap_probe", 'CAPABILITY_MODULES = {"empty_cap": []}\n'
+        )
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            with self.assertRaisesRegex(ValueError, "always-green"):
+                external_capability_modules()
+
+    def test_require_capabilities_honors_external_key(self) -> None:
+        records = self._install_module(
+            "hpc_require_probe",
+            'CAPABILITY_MODULES = {"hpc": ["mpi4py_definitely_missing"]}\n',
+        )
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=records,
+        ):
+            with self.assertRaises(MissingCapabilityError) as caught:
+                require_capabilities("hpc", context="external fixture")
+        self.assertIn("mpi4py_definitely_missing", str(caught.exception))
+
+    def test_unknown_external_key_still_raises_located(self) -> None:
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=[],
+        ):
+            with self.assertRaises(KeyError) as caught:
+                missing_capability_modules("nope-not-declared")
+        message = str(caught.exception)
+        self.assertIn("nope-not-declared", message)
         for key in sorted(_EXPECTED_CAPABILITY_KEYS):
             self.assertIn(key, message)
 
