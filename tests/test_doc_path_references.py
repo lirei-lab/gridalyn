@@ -157,6 +157,11 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
         "archive/flexibility_cls",
     ): "a git tag, not a path; the notation is indistinguishable from a directory",
     (
+        "CLAUDE.md",
+        "archive/engine-mode-clearing",
+    ): "a git tag, not a path: the retired engine_mode/replay clearing "
+    "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
+    (
         "docs/development/instruction-verification.md",
         "projects/workflows/flexibility/",
     ): "the retirement record names the package that was DELETED on "
