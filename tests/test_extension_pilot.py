@@ -16,6 +16,7 @@ fresh registry (the Phase-16 pattern).
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -30,6 +31,7 @@ from gridalyn.simulation.backends.registry import PowerFlowBackendRegistry
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PILOT_DIR = REPO_ROOT / "examples" / "extensions" / "pilot_backend"
+PILOT_SCRIPT = REPO_ROOT / "examples" / "extensions" / "pilot" / "run_pilot.py"
 
 
 def _pilot_backend_module() -> object:
@@ -103,6 +105,68 @@ class ExternalRoleExtensionTest(unittest.TestCase):
         self.assertEqual("pilot_native_backend", backend["extension_id"])
         self.assertEqual("host", backend["extension_source"])
         self.assertEqual("0.1.0", backend["extension_version"])
+
+
+class EndToEndPilotTest(unittest.TestCase):
+    """The external-pilot run reproduces and populates provenance (18-02).
+
+    Runs ``examples/extensions/pilot/run_pilot.py`` as a subprocess — the pilot
+    registers extensions into the process-global registries, so it must run in
+    its own process (the Phase-14/16 isolation rule). Pins the ROADMAP criteria
+    "end-to-end run reproduces" (determinism) and "provenance.extensions
+    present" (host and entry_point sources).
+    """
+
+    def _run(self, *extra: str) -> tuple[int, str, str]:
+        completed = subprocess.run(
+            [sys.executable, str(PILOT_SCRIPT), *extra],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=180,
+            check=False,
+        )
+        return completed.returncode, completed.stdout, completed.stderr
+
+    def test_host_pilot_populates_provenance(self) -> None:
+        code, stdout, stderr = self._run()
+        self.assertEqual(0, code, stderr[-2000:])
+        summary = json.loads(stdout)
+        sources = [row["source"] for row in summary["extensions"]]
+        self.assertIn("host", sources)
+        backend = summary["powerflow_backend"]
+        self.assertEqual("pilot_native_backend", backend["extension_id"])
+        self.assertEqual("host", backend["extension_source"])
+
+    def test_entry_point_pilot_populates_provenance(self) -> None:
+        code, stdout, stderr = self._run("--entry-point")
+        self.assertEqual(0, code, stderr[-2000:])
+        summary = json.loads(stdout)
+        sources = [row["source"] for row in summary["extensions"]]
+        self.assertIn("entry_point", sources)
+        backend = summary["powerflow_backend"]
+        self.assertEqual("pilot_native_backend", backend["extension_id"])
+        self.assertEqual("host", backend["extension_source"])
+
+    def test_pilot_run_is_deterministic(self) -> None:
+        code1, out1, _ = self._run()
+        code2, out2, _ = self._run()
+        self.assertEqual(0, code1)
+        self.assertEqual(out1, out2)
+
+    def test_pilot_does_not_touch_projects(self) -> None:
+        # R7 guard: the pilot writes only to its system temp dir; projects/
+        # must remain untouched.
+        code, _, stderr = self._run()
+        self.assertEqual(0, code, stderr[-2000:])
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--", "projects"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+        )
+        self.assertEqual("", status.stdout)
 
 
 if __name__ == "__main__":
