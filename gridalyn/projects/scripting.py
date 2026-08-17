@@ -15,10 +15,13 @@ bundles that setup into one call::
 
 from __future__ import annotations
 
+import importlib.util
+import json
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Mapping
 
 import numpy as np
@@ -114,6 +117,91 @@ class ProjectScript:
         target = self.project.root / Path(relative)
         target.parent.mkdir(parents=True, exist_ok=True)
         return target
+
+    def read_json(self, relative: Path | str) -> Any:
+        """Read a project-relative JSON file and return the parsed payload.
+
+        Args:
+            relative: Project-relative path to the JSON file.
+
+        Returns:
+            The parsed JSON value.
+
+        Raises:
+            FileNotFoundError: If the resolved file does not exist, naming the
+                resolved absolute path.
+            ValueError: If the file is not valid JSON, naming the path.
+        """
+        target = self.path(relative)
+        if not target.is_file():
+            raise FileNotFoundError(f"no such JSON file: {target}")
+        try:
+            with target.open(encoding="utf-8") as handle:
+                return json.load(handle)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{target}: malformed JSON: {exc}") from exc
+
+    def write_json(
+        self, relative: Path | str, payload: Mapping[str, Any] | list[Any]
+    ) -> dict[str, Any]:
+        """Write deterministic JSON to a project-relative path.
+
+        Writes ``json.dumps(payload, indent=2, sort_keys=True)`` plus a trailing
+        newline so the bytes are reproducible across runs, then returns the
+        ``file_reference`` provenance record for the written file.
+
+        Args:
+            relative: Project-relative output path.
+            payload: JSON-serialisable payload to write.
+
+        Returns:
+            The provenance record (``path``/``bytes``/``sha256``) for the file.
+        """
+        target = self.path(relative)
+        text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        target.write_text(text, encoding="utf-8")
+        return self.file_reference(target)
+
+    def load_project_module(self, relative: str) -> ModuleType:
+        """Import a project-relative module by dotted path.
+
+        Imports e.g. ``"scripts.config"`` resolved under the project root,
+        without ``sys.path`` mutation or ``Path(__file__).parents[N]``
+        boilerplate. Repeated calls return the cached module.
+
+        Args:
+            relative: Dotted project-relative module path (e.g.
+                ``"scripts.config"``).
+
+        Returns:
+            The imported module.
+
+        Raises:
+            ValueError: If ``relative`` is not a dotted module path.
+            FileNotFoundError: If the resolved module file does not exist,
+                naming the dotted path and the file looked up.
+        """
+        if "." not in relative:
+            raise ValueError(
+                f"expected a dotted project-relative module path "
+                f"(e.g. 'scripts.config'); got {relative!r}"
+            )
+        if relative in sys.modules:
+            return sys.modules[relative]
+        resolved = self.project.root / (relative.replace(".", "/") + ".py")
+        if not resolved.is_file():
+            raise FileNotFoundError(
+                f"no project module {relative!r} (looked for {resolved})"
+            )
+        spec = importlib.util.spec_from_file_location(relative, resolved)
+        if spec is None or spec.loader is None:
+            raise ImportError(
+                f"could not build an import spec for {relative!r} at {resolved}"
+            )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[relative] = module
+        spec.loader.exec_module(module)
+        return module
 
     def report_metadata(self, report_id: str) -> Any:
         """Return ``ReportMetadata`` stamped with this project's identity."""
