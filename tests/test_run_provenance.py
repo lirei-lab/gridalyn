@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS, validate_report
 from gridalyn.projects import init_project, run_workflow
+from gridalyn.projects.runner import _extensions_provenance
 from gridalyn.simulation.backends.contract import (
     DEFAULT_POWERFLOW_BACKEND_ID,
     LIGHTSIM2GRID_BACKEND_ID,
@@ -324,6 +328,77 @@ class TestShippedStudiesDeclareSeeds(unittest.TestCase):
                 "validation",
             ),
         )
+
+
+# A child-process probe that registers a host extension into the generic
+# engine's DEFAULT_REGISTRY and snapshots it, so the end-to-end "host
+# extension -> provenance.extensions" path is proven without mutating the
+# process-global registry in the pytest process.
+_EXTENSIONS_PROBE = """\
+import json
+
+from gridalyn.foundation.platform.extensions import (
+    ExtensionDescriptor,
+    register_extension,
+)
+from gridalyn.projects.runner import _extensions_provenance
+
+register_extension(
+    lambda: "probe-instance",
+    descriptor=ExtensionDescriptor(
+        extension_id="host-probe-ext",
+        role="data_source",
+        name="Probe extension",
+        version="1.0.0",
+        contract_version="1",
+        source="host",
+    ),
+)
+print(json.dumps(_extensions_provenance()))
+"""
+
+
+class TestExtensionsProvenance(unittest.TestCase):
+    """provenance.extensions records which extensions participated (Phase 16)."""
+
+    def test_manifest_extensions_block_present_and_is_a_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            extensions = _run_manifest(tmp)["provenance"]["extensions"]
+        self.assertIsInstance(extensions, list)
+
+    def test_manifest_extensions_block_is_json_native(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            extensions = _run_manifest(tmp)["provenance"]["extensions"]
+        self.assertEqual(extensions, json.loads(json.dumps(extensions)))
+
+    def test_extensions_provenance_empty_when_nothing_registered(self) -> None:
+        # A clean registry yields an empty list, so shipped manifest bytes stay
+        # identical (R7). The real DEFAULT_REGISTRY may carry residue from
+        # other tests, so the source snapshot is patched to the clean state.
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.extension_provenance",
+            return_value=[],
+        ):
+            self.assertEqual([], _extensions_provenance())
+
+    def test_host_extension_appears_in_extensions_snapshot(self) -> None:
+        completed = subprocess.run(
+            [sys.executable, "-c", _EXTENSIONS_PROBE],
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).resolve().parents[1],
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(0, completed.returncode, completed.stderr[-2000:])
+        snapshot = json.loads(completed.stdout)
+        ids = [row["extension_id"] for row in snapshot]
+        self.assertIn("host-probe-ext", ids)
+        row = next(
+            record for record in snapshot if record["extension_id"] == "host-probe-ext"
+        )
+        self.assertEqual("host", row["source"])
+        self.assertEqual("1", row["contract_version"])
 
 
 if __name__ == "__main__":

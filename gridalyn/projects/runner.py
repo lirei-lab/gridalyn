@@ -332,7 +332,28 @@ def _build_provenance(
         "macro_model": _macro_model_provenance(),
         "powerflow_backend": _powerflow_backend_provenance(project),
         "input_hashes": _input_hashes(project),
+        "extensions": _extensions_provenance(),
     }
+
+
+def _extensions_provenance() -> list[dict[str, Any]]:
+    """Snapshot the extensions participating in this run.
+
+    Records every extension registered in the generic engine's
+    ``DEFAULT_REGISTRY`` — host registrations via ``register_extension`` and
+    entry-point-sourced extensions loaded via ``load_entry_point_extensions`` —
+    as a JSON-native list sorted by ``extension_id``. A study that declares and
+    uses no extension produces an empty list, so shipped manifest bytes stay
+    identical (R7). Side-effect free: it only reads the registry.
+
+    Returns:
+        One plain dict per registered extension (``extension_id``, ``role``,
+        ``name``, ``version``, ``contract_version``, ``source``,
+        ``entry_point_group``, ``module_hash``), sorted by ``extension_id``.
+    """
+    from gridalyn.foundation.platform.extensions import extension_provenance
+
+    return extension_provenance()
 
 
 def _clearing_engine_provenance(project: StudyProject) -> dict[str, Any]:
