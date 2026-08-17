@@ -12,11 +12,13 @@ returns a frozen :class:`ProjectComponents` bundle a stage script drives::
     components = bind_project_components(script)
     net = components.build_feeder()
 
-Project-defined models / observers / controllers register through the per-role
-extension registries (``register_powerflow_backend_extension``, the
-observation-producer ``register``, surrogates, policies, adapters) before the
-bind, and are consumed by explicit ID via :meth:`ProjectComponents.consume` —
-never by ambient discovery.
+Project-defined components register through the per-role extension registries
+before the bind and are consumed by explicit ID via
+:meth:`ProjectComponents.consume` — never by ambient discovery. The currently
+wired role is the power-flow **backend** (``register_powerflow_backend_extension``
+→ ``consume("backend", id)``); the observation-producer / surrogate / policy
+roles are declared surface for a follow-up (their registries do not yet expose
+a ``registration_source`` discriminator the way the backend registry does).
 """
 
 from __future__ import annotations
@@ -80,12 +82,15 @@ class ProjectComponents:
         """Return a project-registered component by role and explicit ID.
 
         Args:
-            role: The per-role registry name (``backend``, ``observation_producer``,
-                ``surrogate``, ``policy``, ``adapter``).
+            role: The per-role registry name. Currently wired: ``backend``.
+                The ``observation_producer`` / ``surrogate`` / ``policy``
+                roles are declared follow-up surface (their registries do not
+                yet expose a ``registration_source`` discriminator).
             component_id: The explicit component ID the project registered.
 
         Returns:
-            The registered component object.
+            The registered component object (a resolved ``PowerFlowBackend``
+            for the ``backend`` role).
 
         Raises:
             ValueError: If the role or ID is not registered.
@@ -102,6 +107,9 @@ class ProjectComponents:
             from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
             return resolve_powerflow_backend(component_id)
+        # Unwired roles are unreachable today: only backend ever populates
+        # ``registered``. Returning the stored object here keeps the future
+        # surface honest when the other roles are wired.
         return by_role[component_id]
 
     def to_dict(self) -> dict[str, Any]:
@@ -129,12 +137,7 @@ def _collect_backend_registrations() -> dict[str, dict[str, Any]]:
     Records every registered backend whose ``registration_source != "core"``
     by ID -> descriptor. Core defaults are never project components.
     """
-    try:
-        from gridalyn.simulation.backends.registry import (
-            default_powerflow_backend_registry,
-        )
-    except ImportError:
-        return {}
+    from gridalyn.simulation.backends.registry import default_powerflow_backend_registry
 
     registry = default_powerflow_backend_registry()
     project_backends: dict[str, dict[str, Any]] = {}
@@ -143,6 +146,23 @@ def _collect_backend_registrations() -> dict[str, dict[str, Any]]:
         if registry.registration_source(backend_id) != "core":
             project_backends[backend_id] = descriptor
     return {"backend": project_backends} if project_backends else {}
+
+
+def _declared_input_keys(script: ProjectScript) -> set[str]:
+    """Return the input keys a project declares in ``spec.inputs``.
+
+    Absence (a key not declared) is the *optional* case a bind may treat as
+    ``None``; presence is the *contract* case, where the loader's located
+    ``ValueError`` must propagate rather than being swallowed.
+
+    Args:
+        script: The prepared ``ProjectScript`` for the running project.
+
+    Returns:
+        The set of declared ``spec.inputs`` keys (``set()`` when none).
+    """
+    inputs = script.project.raw.get("spec", {}).get("inputs", {})
+    return set(inputs) if isinstance(inputs, dict) else set()
 
 
 def bind_project_components(script: ProjectScript) -> ProjectComponents:
@@ -154,6 +174,11 @@ def bind_project_components(script: ProjectScript) -> ProjectComponents:
     project with none of those declared returns a minimal-but-valid bundle
     (a stage that only writes reports needs nothing bound).
 
+    Absent inputs are optional (bound to ``None``); a declared-but-malformed
+    input is a contract violation and the loader's located ``ValueError``
+    propagates — a silent swallow would mask a typo'd ``sourceNetwork`` as
+    "no sourceNetwork declared".
+
     Args:
         script: The prepared ``ProjectScript`` for the running project.
 
@@ -161,23 +186,22 @@ def bind_project_components(script: ProjectScript) -> ProjectComponents:
         A frozen :class:`ProjectComponents` with the declared components bound.
 
     Raises:
-        ValueError: If a declared component cannot be resolved (a located error
-            naming the YAML key and available inputs, per the loader contract).
+        ValueError: If a declared component is present but cannot be resolved
+            (a located error naming the YAML key and available inputs, per the
+            loader contract).
     """
-    try:
-        feeder_spec = script.load_radial_feeder_spec()
-    except ValueError:
-        feeder_spec = None
+    declared = _declared_input_keys(script)
 
-    try:
-        load_profiles = script.load_generated_load_profiles()
-    except ValueError:
-        load_profiles = None
-
-    try:
-        backend = script.powerflow_backend()
-    except ValueError:
-        backend = None
+    feeder_spec = (
+        script.load_radial_feeder_spec() if "sourceNetwork" in declared else None
+    )
+    load_profiles = (
+        script.load_generated_load_profiles() if "loadGeneration" in declared else None
+    )
+    # The backend is never optional: a study that declares nothing still gets
+    # the registry default, so this always resolves (or raises a located error
+    # / MissingCapabilityError for a genuinely bad declaration).
+    backend = script.powerflow_backend()
 
     registered = _collect_backend_registrations()
 

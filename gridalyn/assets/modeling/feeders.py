@@ -45,7 +45,7 @@ def validate_radial_feeder_spec(spec: RadialFeederSpec) -> None:
         raise ValueError("RadialFeederSpec.base_voltage_kv must be positive")
 
 
-def build_lv_feeder(
+def lv_feeder_spec(
     *,
     name: str,
     bus_count: int,
@@ -64,6 +64,12 @@ def build_lv_feeder(
     over short LV lines (default 50 m, ``line_max_i_ka=0.2``). The result passes
     :func:`validate_radial_feeder_spec` and is deterministic for fixed inputs, so
     a study can rebuild an LV feeder without bespoke network construction.
+
+    The name is deliberately a *spec* constructor (``lv_feeder_spec``), not a
+    ``build_*`` network builder: it returns a :class:`RadialFeederSpec` contract,
+    and a net is built from it later via the power-flow builder. This also avoids
+    colliding with study-local ``build_lv_feeder`` functions that construct a net
+    (e.g. ``admm_thermal_consensus/scripts/lv_feeder.py``).
 
     Args:
         name: Feeder name for the spec.
@@ -93,7 +99,7 @@ def build_lv_feeder(
         q_to_p_ratio=q_to_p_ratio,
         line_length_km=line_length_km,
         line_max_i_ka=line_max_i_ka,
-        metadata={"builder": "build_lv_feeder", "class": "lv"},
+        metadata={"builder": "lv_feeder_spec", "class": "lv"},
     )
     validate_radial_feeder_spec(spec)
     return spec
@@ -101,6 +107,6 @@ def build_lv_feeder(
 
 __all__ = [
     "RadialFeederSpec",
-    "build_lv_feeder",
+    "lv_feeder_spec",
     "validate_radial_feeder_spec",
 ]

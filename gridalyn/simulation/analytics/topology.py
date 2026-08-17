@@ -32,6 +32,7 @@ import numpy as np
 __all__ = [
     "assert_radial_no_generation",
     "downstream_bus_map",
+    "size_feeder_subtree_kw",
     "thermal_ratings_kw",
 ]
 
@@ -79,6 +80,24 @@ def thermal_ratings_kw(
                 f"thermal_ratings_kw requires the net.{table} table; the "
                 "provided net has none. Remediation: pass a loaded pandapower-"
                 "style net with bus/line/trafo."
+            )
+    # Located column validation: a missing column raises a ValueError naming
+    # the table and column (and the fix), not a bare pandas KeyError.
+    required_columns = {
+        "bus": ("vn_kv",),
+        "line": ("from_bus", "to_bus", "max_i_ka"),
+        "trafo": ("hv_bus", "lv_bus", "sn_mva"),
+    }
+    for table, columns in required_columns.items():
+        frame = getattr(net, table)
+        missing = [column for column in columns if column not in frame.columns]
+        if missing:
+            raise ValueError(
+                f"thermal_ratings_kw requires net.{table} columns "
+                f"{', '.join(missing)}; the provided net.{table} has: "
+                f"{', '.join(str(c) for c in frame.columns) or 'no columns'}. "
+                "Remediation: pass a loaded pandapower-style net with the full "
+                "bus/line/trafo column set."
             )
     vn = net.bus["vn_kv"].to_numpy(dtype="float64")
     from_bus = net.line["from_bus"].to_numpy()

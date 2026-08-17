@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from typing import Any
 
 from gridalyn.projects.loader import load_workflow
 from gridalyn.projects.models import (
@@ -112,7 +113,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name in _LAZY_EXPORTS:
         module_name, attr_name = _LAZY_EXPORTS[name]
         value = getattr(import_module(module_name), attr_name)

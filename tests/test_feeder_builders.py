@@ -1,4 +1,4 @@
-"""Tests for the SDK LV-feeder builder (RadialFeederSpec variant)."""
+"""Tests for the SDK LV-feeder spec constructor (RadialFeederSpec variant)."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ import unittest
 
 from gridalyn.assets.modeling.feeders import (
     RadialFeederSpec,
-    build_lv_feeder,
+    lv_feeder_spec,
     validate_radial_feeder_spec,
 )
 
 
-class TestBuildLvFeeder(unittest.TestCase):
+class TestLvFeederSpec(unittest.TestCase):
     def test_returns_valid_spec(self) -> None:
-        spec = build_lv_feeder(
+        spec = lv_feeder_spec(
             name="lv-01",
             bus_count=3,
             sn_mva=0.4,
@@ -36,13 +36,13 @@ class TestBuildLvFeeder(unittest.TestCase):
             "base_voltage_kv": 0.4,
             "loads_mw": {1: 0.01, 2: 0.02},
         }
-        spec_a = build_lv_feeder(**kwargs)
-        spec_b = build_lv_feeder(**kwargs)
+        spec_a = lv_feeder_spec(**kwargs)
+        spec_b = lv_feeder_spec(**kwargs)
         self.assertEqual(spec_a, spec_b)
 
     def test_invalid_spec_raises_located(self) -> None:
         with self.assertRaises(ValueError) as ctx:
-            build_lv_feeder(
+            lv_feeder_spec(
                 name="bad",
                 bus_count=1,
                 sn_mva=0.4,
@@ -53,7 +53,7 @@ class TestBuildLvFeeder(unittest.TestCase):
 
     def test_load_on_slack_bus_raises(self) -> None:
         with self.assertRaises(ValueError) as ctx:
-            build_lv_feeder(
+            lv_feeder_spec(
                 name="bad",
                 bus_count=3,
                 sn_mva=0.4,

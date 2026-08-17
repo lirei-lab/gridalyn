@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 import pandapower as pp
+import yaml
 
 from gridalyn.projects import (
     ProjectComponents,
@@ -73,6 +74,28 @@ class TestBindProjectComponents(unittest.TestCase):
         self.assertIn("feeder_spec", payload)
         self.assertIn("has_load_profiles", payload)
         self.assertIn("backend_id", payload)
+
+    def test_declared_but_malformed_input_raises_not_swallowed(self) -> None:
+        # A declared-but-malformed sourceNetwork is a contract violation: the
+        # loader's located ValueError must propagate, NOT be silently converted
+        # to feeder_spec=None (which would mis-report "no sourceNetwork").
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "bare"
+            init_project(target, name="bare")
+            project_yaml = target / "project.yaml"
+            raw = yaml.safe_load(project_yaml.read_text(encoding="utf-8"))
+            raw.setdefault("spec", {}).setdefault("inputs", {})["sourceNetwork"] = {
+                # A mapping with the WRONG model.type — the loader rejects it
+                # with a located error naming the key.
+                "model": {"type": "not_a_feeder", "name": "broken"}
+            }
+            project_yaml.write_text(yaml.safe_dump(raw), encoding="utf-8")
+            script = project_script(target)
+
+            with self.assertRaises(ValueError) as ctx:
+                bind_project_components(script)
+            # The loader's located error names the key, not a generic message.
+            self.assertIn("sourceNetwork", str(ctx.exception))
 
 
 class TestRegisteredComponents(unittest.TestCase):

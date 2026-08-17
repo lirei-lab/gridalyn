@@ -38,8 +38,13 @@ remove the boilerplate the heavy studies used to repeat.
   malformed files raise located errors naming the resolved path.
 - **Project-module import** — `script.load_project_module("scripts.config")`
   imports a dotted project-relative module without `sys.path` mutation or
-  `Path(__file__).parents[N]` boilerplate, and caches it. This replaces the
-  35-file `sys.path`/`noqa: E402` pattern the heavy studies carried.
+  `Path(__file__).parents[N]` boilerplate, and caches it. It is the
+  *programmatic* import path (a stage that wants the module as a Python
+  object). Heavy-study stages run as modules instead —
+  `{python} -m projects.<study>.scripts.<module>` — which keeps module
+  identity for pickled artifacts and binds the interpreter via the runner's
+  `{python}` placeholder; both are sanctioned, and neither needs
+  `sys.path`/`parents[N]` boilerplate.
 
 Plus the existing surface: typed input loaders (`load_radial_feeder_spec`,
 `load_generated_load_profiles`, …), `simulation_seed(stream)`,
@@ -58,15 +63,21 @@ literals. It returns a frozen `ProjectComponents` bundle:
   from the bound feeder spec (no implicit solve).
 - `components.consume(role, component_id)` — resolves a project-defined
   component registered through the per-role extension registries by explicit
-  ID (never ambient). Roles: `backend`, `observation_producer`, `surrogate`,
-  `policy`, `adapter`.
+  ID (never ambient). Currently wired: `backend`
+  (`register_powerflow_backend_extension` → `consume("backend", id)`). The
+  `observation_producer` / `surrogate` / `policy` roles are declared follow-up
+  surface — their registries do not yet expose a `registration_source`
+  discriminator, so the bind cannot tell a project-registered component from a
+  core default for them.
 - `components.to_dict()` — a JSON-native summary for reports and manifests.
 
 A project registers its own components through the per-role extension
-registries before the bind (`register_powerflow_backend_extension`, the
-observation-producer `register`, … — see
+registries before the bind (`register_powerflow_backend_extension`, … — see
 [the extension framework](extensions.md)); the bind records every non-core
-registration by ID so it is visible, declared and in provenance.
+**backend** registration by ID so it is visible, declared and in provenance.
+Declared-but-malformed inputs are contract violations: the bind lets the
+loader's located `ValueError` propagate rather than silently degrading the
+component to `None`.
 
 ## Uniform validation
 
@@ -94,9 +105,11 @@ The binding surface builds on SDK functions the flagship used to re-implement:
 
 - `gridalyn.simulation.analytics.topology` — `thermal_ratings_kw` (per-line /
   per-transformer kW rating), `downstream_bus_map` (radial BFS downstream sets,
-  transformer-hop aware), `assert_radial_no_generation`.
-- `gridalyn.assets.modeling.feeders.build_lv_feeder` — a declared
-  `RadialFeederSpec` LV-feeder variant.
+  transformer-hop aware), `size_feeder_subtree_kw`,
+  `assert_radial_no_generation`.
+- `gridalyn.assets.modeling.feeders.lv_feeder_spec` — a declared
+  `RadialFeederSpec` LV-feeder variant (a spec constructor; a net is built from
+  it via `build_radial_pandapower_feeder`).
 - `build_radial_pandapower_feeder` — turns a `RadialFeederSpec` into a net.
 
 When a stage needs a piece of network construction or analytics, prefer these

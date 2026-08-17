@@ -9,6 +9,7 @@ import pandapower as pp
 from gridalyn.simulation.analytics.topology import (
     assert_radial_no_generation,
     downstream_bus_map,
+    size_feeder_subtree_kw,
     thermal_ratings_kw,
 )
 
@@ -86,6 +87,14 @@ class TestThermalRatingsKw(unittest.TestCase):
             thermal_ratings_kw(BareNet(), pf=0.95)
         self.assertIn("net.bus", str(ctx.exception))
 
+    def test_missing_column_raises_located(self) -> None:
+        net = _radial_with_transformer()
+        net.line = net.line.drop(columns=["max_i_ka"])
+        with self.assertRaises(ValueError) as ctx:
+            thermal_ratings_kw(net, pf=0.95)
+        self.assertIn("max_i_ka", str(ctx.exception))
+        self.assertIn("line", str(ctx.exception))
+
 
 class TestDownstreamBusMap(unittest.TestCase):
     def test_transformer_hop_includes_lv_subtree(self) -> None:
@@ -148,6 +157,40 @@ class TestAssertRadialNoGeneration(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             assert_radial_no_generation(net)
         self.assertIn("embedded generation", str(ctx.exception))
+
+
+class TestSizeFeederSubtreeKw(unittest.TestCase):
+    def test_resizes_to_downstream_nameplate(self) -> None:
+        # transformer:0 downstream = {2, 3} with nameplate 0.02 + 0.03 kW;
+        # line:0 downstream = {1, 2, 3} with nameplate 0.01 + 0.02 + 0.03.
+        element_keys = {
+            "transformer:0": frozenset({2, 3}),
+            "line:0": frozenset({1, 2, 3}),
+        }
+        nameplate = {1: 0.01, 2: 0.02, 3: 0.03}
+        sized = size_feeder_subtree_kw(
+            element_keys, nameplate, peak_factor=2.0, utilization_margin=0.8
+        )
+        # ceil((0.05 * 2.0) / 0.8) = ceil(0.125) = 1.0
+        self.assertEqual(sized["transformer:0"], 1.0)
+        # ceil((0.06 * 2.0) / 0.8) = ceil(0.15) = 1.0
+        self.assertEqual(sized["line:0"], 1.0)
+
+    def test_utilization_margin_out_of_range_raises(self) -> None:
+        with self.assertRaises(ValueError) as ctx:
+            size_feeder_subtree_kw({}, {}, peak_factor=1.0, utilization_margin=1.5)
+        self.assertIn("utilization_margin", str(ctx.exception))
+
+    def test_missing_buses_treated_as_zero(self) -> None:
+        element_keys = {"line:0": frozenset({1, 2})}
+        sized = size_feeder_subtree_kw(
+            {**element_keys, "line:1": frozenset({9})},
+            {1: 0.01, 2: 0.02},
+            peak_factor=1.0,
+            utilization_margin=1.0,
+        )
+        # line:1 has no nameplate entries -> 0 kW.
+        self.assertEqual(sized["line:1"], 0.0)
 
 
 if __name__ == "__main__":

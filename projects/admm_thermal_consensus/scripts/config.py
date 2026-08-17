@@ -25,13 +25,28 @@ FIGURES_DIR = OUTPUTS_DIR / "figures"
 
 
 def _study_config() -> dict:
-    """Load the declared ``spec.inputs.studyConfig`` block from project.yaml."""
-    raw = yaml.safe_load((PROJECT_ROOT / "project.yaml").read_text(encoding="utf-8"))
-    config = raw["spec"]["inputs"]["studyConfig"]
+    """Load the declared ``spec.inputs.studyConfig`` block from project.yaml.
+
+    Raises:
+        ValueError: A located error naming the project file and the input key
+            when ``studyConfig`` is absent or not a mapping (never a bare
+            ``KeyError``), so a dropped block is diagnosable from the message.
+    """
+    project_file = PROJECT_ROOT / "project.yaml"
+    raw = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+    inputs = (raw or {}).get("spec", {}).get("inputs", {})
+    if not isinstance(inputs, dict) or "studyConfig" not in inputs:
+        available = ", ".join(sorted(str(k) for k in inputs)) or "none declared"
+        raise ValueError(
+            f"{project_file}: spec.inputs.studyConfig not found "
+            f"(available inputs: {available}). Remediation: declare the study "
+            "knobs under spec.inputs.studyConfig in project.yaml."
+        )
+    config = inputs["studyConfig"]
     if not isinstance(config, dict):
-        raise TypeError(
-            f"{PROJECT_ROOT / 'project.yaml'}: spec.inputs.studyConfig must be "
-            f"a mapping, found {type(config).__name__}"
+        raise ValueError(
+            f"{project_file}: spec.inputs.studyConfig must be a mapping, "
+            f"found {type(config).__name__}"
         )
     return config
 

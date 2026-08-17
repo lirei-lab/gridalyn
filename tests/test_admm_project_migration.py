@@ -31,29 +31,20 @@ def test_no_syspath_or_parents_remains_in_admm_scripts() -> None:
 
 def test_admm_config_reads_from_project_yaml() -> None:
     # config.py must read spec.inputs.studyConfig (config-as-contract), not
-    # hardcode the study values.
-    config_text = (ADMM / "scripts" / "config.py").read_text(encoding="utf-8")
-    assert "studyConfig" in config_text
-    assert "spec" in config_text or "_study_config" in config_text
-    # project.yaml declares the studyConfig block with the study's seed.
+    # hardcode the study values. The runtime assertion proves the values come
+    # from YAML, not just that the word "studyConfig" appears in the file.
+    from projects.admm_thermal_consensus.scripts import config as study_config
+
+    assert study_config.SEED == 42
+    assert study_config.N_AGENTS == 74
+    # And project.yaml really declares those values (the single source of truth
+    # config.py reads them from).
     import yaml
 
     with open(ADMM / "project.yaml", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle)
     assert raw["spec"]["inputs"]["studyConfig"]["seed"] == 42
     assert raw["spec"]["inputs"]["studyConfig"]["nAgents"] == 74
-
-
-def test_pipeline_scripts_use_read_write_json() -> None:
-    # Every pipeline stage that reads/writes JSON should go through the
-    # ProjectScript helpers where a script is in scope.
-    uses_helper = 0
-    for script in _pipeline():
-        text = script.read_text(encoding="utf-8")
-        if "script.read_json" in text or "script.write_json" in text:
-            uses_helper += 1
-    # At least the core stages adopt the governed helpers.
-    assert uses_helper >= 6, f"only {uses_helper} pipeline scripts use read/write_json"
 
 
 @pytest.mark.skipif(
@@ -89,5 +80,34 @@ def test_admm_sense_check_still_passes() -> None:
 
 
 def test_ev_hosting_flex_untouched() -> None:
-    # 19-05 migrates admm only; the flagship is out of scope.
-    assert True  # verified via `git status --porcelain projects/ev_hosting_flex` in CI gate
+    # 19-05 migrates admm only; the flagship is out of scope. This guards the
+    # R7 promise that 19-05's migration touched nothing under ev_hosting_flex:
+    # the phase's own commit range must NOT contain any ev_hosting_flex change.
+    # (19-04 legitimately added project.yaml + scripts/sense_checks.py — that
+    # commit predates this test and is not in the range checked here.)
+    import subprocess
+
+    base = "9cbc6ac3^"  # the commit before the 19-05 migration commit
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", base, "HEAD", "--", "projects/ev_hosting_flex"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert (
+        changed == []
+    ), f"19-05 must not modify projects/ev_hosting_flex; found changes: {changed}"
+
+
+def test_pipeline_scripts_use_read_write_json() -> None:
+    # Every pipeline stage that reads/writes JSON should go through the
+    # ProjectScript helpers where a script is in scope.
+    uses_helper = 0
+    for script in _pipeline():
+        text = script.read_text(encoding="utf-8")
+        if "script.read_json" in text or "script.write_json" in text:
+            uses_helper += 1
+    # At least the core stages adopt the governed helpers. 10 of 14 pipeline
+    # scripts currently adopt; pin above the 6-script floor so a partial
+    # regression that silently halves the adoption still fails.
+    assert uses_helper >= 10, f"only {uses_helper} pipeline scripts use read/write_json"
