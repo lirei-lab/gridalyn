@@ -89,6 +89,20 @@ class ExternalRoleExtensionTest(unittest.TestCase):
         self.assertEqual("host", registry.registration_source("pilot_native_backend"))
         self.assertEqual("0.1.0", registry.registration_version("pilot_native_backend"))
 
+    def test_external_backend_pyproject_declares_no_generic_entry_point(self) -> None:
+        # Review cycle 2 (TRA S): a backend's descriptor is a
+        # PowerFlowBackendDescriptor, which the generic entry-point loader
+        # rejects — the pyproject must NOT wire a gridalyn.extensions entry
+        # point (backends register via the host API only). Unpinned before:
+        # re-adding that block would have shipped green.
+        import tomllib
+
+        pyproject = tomllib.loads(
+            (PILOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        entry_points = pyproject.get("project", {}).get("entry-points", {})
+        self.assertNotIn("gridalyn.extensions", entry_points)
+
     def test_external_backend_appears_in_backend_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = _grid_study_declaring_backend(tmp, "pilot_native_backend")
