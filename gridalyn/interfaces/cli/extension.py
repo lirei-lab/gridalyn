@@ -115,7 +115,7 @@ def _new_extension(args: argparse.Namespace) -> int:
             target=args.target,
             force=args.force,
         )
-    except (ValueError, FileExistsError) as exc:
+    except (ValueError, OSError) as exc:
         print(f"extension new: {exc}", file=sys.stderr)
         return 1
     print(f"scaffolded extension {args.name!r} at {package_dir}")

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import hello_world  # noqa: E402  - scaffolded fixture, ordering is deliberate
+import hello_world
 
 from gridalyn.foundation.platform.extensions import SUPPORTED_CONTRACT_VERSIONS
 

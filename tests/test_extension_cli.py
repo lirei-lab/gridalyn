@@ -252,6 +252,7 @@ class ScaffoldCliTest(unittest.TestCase):
             sys.path.insert(0, str(module_dir))
             self.addCleanup(sys.path.remove, str(module_dir))
             module = importlib.import_module(name)
+            self.addCleanup(sys.modules.pop, name, None)
         descriptor = module.descriptor
         self.assertIsInstance(descriptor, ExtensionDescriptor)
         self.assertEqual(name, descriptor.extension_id)
@@ -260,11 +261,77 @@ class ScaffoldCliTest(unittest.TestCase):
         self.assertTrue(callable(module.factory))
 
     def test_new_rejects_bad_name_with_located_error(self) -> None:
-        stderr = io.StringIO()
-        with redirect_stderr(stderr):
-            code = extension.main(["new", "../evil", "--target", tempfile.mkdtemp()])
-        self.assertEqual(1, code)
-        self.assertIn("extension new", stderr.getvalue())
+        # Review cycle 2: names outside the PEP 508/bare-key charset (spaces,
+        # '=', non-ASCII, '#' — or path traversal) must be a located CLI error,
+        # never a silently-uninstallable package.
+        with tempfile.TemporaryDirectory() as tmp:
+            for bad_name in ["../evil", "hello world", "a=b", "héllo", "x#y"]:
+                with self.subTest(name=bad_name):
+                    stderr = io.StringIO()
+                    with redirect_stderr(stderr):
+                        code = extension.main(["new", bad_name, "--target", tmp])
+                    self.assertEqual(1, code, bad_name)
+                    self.assertIn("extension new", stderr.getvalue())
+
+    def test_scaffolded_pyproject_wires_the_entry_point(self) -> None:
+        # Review cycle 2 (TRA W2): the load-bearing pyproject wiring — the
+        # piece that makes `pip install` -> `extension validate <id>` work —
+        # is pinned by parsing the generated TOML.
+        import tomllib
+
+        with tempfile.TemporaryDirectory() as tmp:
+            code = extension.main(["new", "scaff_toml_ext", "--target", tmp])
+            self.assertEqual(0, code)
+            pyproject = tomllib.loads(
+                (Path(tmp) / "scaff_toml_ext" / "pyproject.toml").read_text(
+                    encoding="utf-8"
+                )
+            )
+        entry_points = pyproject["project"]["entry-points"]
+        self.assertEqual(
+            "scaff_toml_ext",
+            entry_points["gridalyn.extensions"]["scaff_toml_ext"],
+        )
+        self.assertIn("scaff_toml_ext", pyproject["tool"]["setuptools"]["py-modules"])
+
+    def test_scaffold_output_matches_committed_example_verbatim(self) -> None:
+        # Review cycle 2 (W1): the committed example must be exactly what the
+        # scaffolder produces, so scaffold.yaml's "generated verbatim" note is
+        # true and reproducible (and the output is black/isort-clean by
+        # construction, since the committed example passes pre-commit).
+        from gridalyn.interfaces.cli.scaffold import scaffold_extension
+
+        committed = (
+            Path(__file__).resolve().parents[1]
+            / "examples"
+            / "extensions"
+            / "hello_world"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            scaffold_extension("hello_world", role="data_source", target=tmp)
+            generated = Path(tmp) / "hello_world"
+            for relative in (
+                "hello_world.py",
+                "test_hello_world.py",
+                "pyproject.toml",
+            ):
+                with self.subTest(file=relative):
+                    self.assertEqual(
+                        (committed / relative).read_text(encoding="utf-8"),
+                        (generated / relative).read_text(encoding="utf-8"),
+                    )
+
+    def test_name_edge_cases_are_validated_or_sanitized(self) -> None:
+        # Review cycle 2 (TRA S4): the defensive branches of _validate_name /
+        # _module_name are pinned, not left implicit.
+        from gridalyn.interfaces.cli.scaffold import _module_name, _validate_name
+
+        for bad in ["", "   ", ".", "..", "hello world", "a=b", "héllo"]:
+            with self.subTest(name=bad):
+                with self.assertRaises(ValueError):
+                    _validate_name(bad)
+        self.assertEqual("module_123", _module_name("123"))
+        self.assertEqual("hello_world", _module_name("hello-world"))
 
     def test_new_refuses_existing_directory_without_force(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -311,6 +378,7 @@ class ScaffoldResolvesTest(unittest.TestCase):
             module_dir = Path(tmp) / "scaff_resolve_ext"
             sys.path.insert(0, str(module_dir))
             self.addCleanup(sys.path.remove, str(module_dir))
+            self.addCleanup(sys.modules.pop, "scaff_resolve_ext", None)
             with mock.patch(
                 "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
                 return_value=self._records("scaff_resolve_ext"),
@@ -336,6 +404,7 @@ class ScaffoldResolvesTest(unittest.TestCase):
             module_dir = Path(tmp) / "scaff_cli_ext"
             sys.path.insert(0, str(module_dir))
             self.addCleanup(sys.path.remove, str(module_dir))
+            self.addCleanup(sys.modules.pop, "scaff_cli_ext", None)
             with mock.patch(
                 "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
                 return_value=self._records("scaff_cli_ext"),
@@ -381,6 +450,7 @@ class CommittedExampleTest(unittest.TestCase):
         self.assertTrue((example_dir / "hello_world.py").is_file())
         sys.path.insert(0, str(example_dir))
         self.addCleanup(sys.path.remove, str(example_dir))
+        self.addCleanup(sys.modules.pop, "hello_world", None)
         with mock.patch(
             "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
             return_value=self._records("hello_world"),

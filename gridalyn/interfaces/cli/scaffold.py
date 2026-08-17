@@ -16,6 +16,8 @@ validate the requested descriptor shape, and it never registers anything.
 
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 
 from gridalyn.foundation.platform.extensions import (
@@ -28,6 +30,29 @@ DEFAULT_EXTENSION_ROLE = "powerflow_backend"
 
 #: Default semantic version stamped into the scaffolded descriptor.
 DEFAULT_EXTENSION_VERSION = "0.1.0"
+
+#: Names safe to use as a package name AND as a bare key in the pyproject
+#: entry-point table (PEP 508 package-name charset, which is also the TOML
+#: bare-key charset): ASCII alphanumerics, dots, underscores, hyphens, never
+#: starting or ending with a separator.
+_NAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def _py_literal(value: str) -> str:
+    """Return a double-quoted Python string literal for ``value``.
+
+    ``json.dumps`` produces JSON string syntax, which is valid Python source
+    and — unlike ``repr`` — uses double quotes, so generated code stays
+    black-formatter clean.
+
+    Args:
+        value: The string to embed.
+
+    Returns:
+        A double-quoted, escaped Python literal.
+    """
+    return json.dumps(value)
+
 
 _MODULE_TEMPLATE = '''\
 """Extension {name!r} (role: {role!r}), scaffolded by gridalyn extension new.
@@ -43,11 +68,11 @@ from __future__ import annotations
 from gridalyn.foundation.platform.extensions import ExtensionDescriptor
 {capabilities_block}
 descriptor = ExtensionDescriptor(
-    extension_id={name!r},
-    role={role!r},
-    name={name!r},
-    version={version!r},
-    contract_version={contract_version!r},
+    extension_id={name_literal},
+    role={role_literal},
+    name={name_literal},
+    version={version_literal},
+    contract_version={contract_version_literal},
 )
 
 
@@ -66,15 +91,15 @@ _TEST_TEMPLATE = '''\
 
 from __future__ import annotations
 
-from gridalyn.foundation.platform.extensions import SUPPORTED_CONTRACT_VERSIONS
+import {module_name}
 
-import {module_name}  # noqa: E402  - scaffolded fixture, ordering is deliberate
+from gridalyn.foundation.platform.extensions import SUPPORTED_CONTRACT_VERSIONS
 
 
 def test_descriptor_is_conformant() -> None:
     descriptor = {module_name}.descriptor
-    assert descriptor.extension_id == {name!r}
-    assert descriptor.role == {role!r}
+    assert descriptor.extension_id == {name_literal}
+    assert descriptor.role == {role_literal}
     assert descriptor.contract_version in SUPPORTED_CONTRACT_VERSIONS
 
 
@@ -91,6 +116,9 @@ dependencies = ["gridalyn"]
 
 [project.entry-points.{group!r}]
 {name} = "{module_name}"
+
+[tool.setuptools]
+py-modules = ["{module_name}"]
 """
 
 
@@ -116,12 +144,20 @@ def _module_name(name: str) -> str:
 def _validate_name(name: str) -> None:
     """Reject an extension name that cannot be safely scaffolded.
 
+    The name becomes a directory, a Python module name, a package name, and a
+    bare key in the pyproject entry-point table, so it must be a PEP 508
+    package name (ASCII alphanumerics/dot/underscore/hyphen, no leading or
+    trailing separator) — which is also the TOML bare-key charset. A name
+    outside that set would pass validation but produce an unparseable
+    ``pyproject.toml`` and an uninstallable package.
+
     Args:
         name: The extension ID/package name.
 
     Raises:
         ValueError: If the name is empty, contains path separators or ``..``
-            (path traversal), or yields no valid Python module identifier.
+            (path traversal), is not a valid package/bare-key name, or yields
+            no valid Python module identifier.
     """
     if not name or not name.strip():
         raise ValueError("extension name must be a non-empty string")
@@ -129,6 +165,12 @@ def _validate_name(name: str) -> None:
         raise ValueError(
             f"extension name {name!r} must not contain path separators or "
             "'..' (it is used as a directory and module name)"
+        )
+    if not _NAME_RE.match(name):
+        raise ValueError(
+            f"extension name {name!r} is not a valid package name (only "
+            "ASCII letters, digits, dots, underscores and hyphens, not "
+            "starting or ending with a separator)"
         )
     _module_name(name)
 
@@ -190,9 +232,14 @@ def scaffold_extension(
         )
     package_dir.mkdir(parents=True, exist_ok=True)
     module_name = _module_name(name)
-    capabilities_block = (
-        f"REQUIRED_CAPABILITIES = {capabilities!r}\n\n" if capabilities else ""
-    )
+    name_literal = _py_literal(name)
+    role_literal = _py_literal(role)
+    version_literal = _py_literal(version)
+    contract_version_literal = _py_literal(contract_version)
+    capabilities_block = ""
+    if capabilities:
+        literals = ", ".join(_py_literal(capability) for capability in capabilities)
+        capabilities_block = f"REQUIRED_CAPABILITIES = ({literals})\n\n"
     module_body = _MODULE_TEMPLATE.format(
         name=name,
         role=role,
@@ -200,11 +247,17 @@ def scaffold_extension(
         contract_version=contract_version,
         group=DEFAULT_EXTENSIONS_GROUP,
         capabilities_block=capabilities_block,
+        name_literal=name_literal,
+        role_literal=role_literal,
+        version_literal=version_literal,
+        contract_version_literal=contract_version_literal,
     )
     test_body = _TEST_TEMPLATE.format(
         name=name,
         role=role,
         module_name=module_name,
+        name_literal=name_literal,
+        role_literal=role_literal,
     )
     pyproject_body = _PYPROJECT_TEMPLATE.format(
         name=name,

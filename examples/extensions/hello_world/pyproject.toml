@@ -6,3 +6,6 @@ dependencies = ["gridalyn"]
 
 [project.entry-points.'gridalyn.extensions']
 hello_world = "hello_world"
+
+[tool.setuptools]
+py-modules = ["hello_world"]
