@@ -174,13 +174,16 @@ After installing the package (so its entry point is visible to
 
 ## Provenance
 
-`extension_provenance()` returns a JSON-native snapshot of the extensions in
-the generic engine's `DEFAULT_REGISTRY` (id, role, name, version, contract
-version, source, entry-point group, module hash), sorted by `extension_id`.
-The five per-role host registrations surface through role-level provenance
-instead — backends today via `provenance.powerflow_backend`; the rest when the
-later `provenance.extensions` phase lands. A plugin may be discoverable, but it
-is never silent.
+`provenance.extensions` (Phase 16) is a JSON-native snapshot of the extensions
+in the generic engine's `DEFAULT_REGISTRY` (id, role, name, version, contract
+version, source, entry-point group, module hash), sorted by `extension_id` —
+populated whenever an extension is registered (host) or loaded (entry point)
+into the runner's process before the manifest is written. Role-level provenance
+records which extension served a role: `provenance.powerflow_backend` carries
+`extension_id`/`extension_source`/`extension_version` when the resolved backend
+is an external extension (`source != "core"`); the other four roles will reach
+the manifest the same way in a later phase. A plugin may be discoverable, but
+it is never silent.
 
 ## Compatibility
 

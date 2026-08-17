@@ -151,7 +151,9 @@ The natural next step is calibration:
 - add profile variants by climate zone and building vintage;
 - use measured or EnergyPlus-style data to tune archetype parameters;
 - link scenario EV adoption to the model-layer device registry;
-- expose building/device entities in the semantic graph and FalkorDB exporter;
+- expose building/device entities in the semantic graph and FalkorDB-ready
+  export (the RDF/XML and FalkorDB exporters were removed 2026-08-07; the
+  shipped path prepares Cypher-compatible batches for your own store);
 - let flexibility clearing select providers through building/device model IDs
   instead of ad hoc load rows.
 
