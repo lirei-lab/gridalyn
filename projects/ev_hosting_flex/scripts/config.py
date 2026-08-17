@@ -9,6 +9,8 @@ the stage scripts import them directly.
 import json
 from pathlib import Path
 
+import yaml as _yaml
+
 ROOT = Path(__file__).parents[3]
 PROJECT_ROOT = ROOT / "projects" / "ev_hosting_flex"
 PROJECT_OUTPUTS_DIR = PROJECT_ROOT / "outputs"
@@ -24,29 +26,87 @@ GRID_CONFIG_PATH = PROJECT_ROOT / "inputs" / "synthetic_network_config.json"
 with open(GRID_CONFIG_PATH) as f:
     GRID_CONFIG = json.load(f)
 
+
+# ─── Config-as-contract (Phase 20): project.yaml is the single source of truth ─
+# The study values are declared under spec.inputs.studyConfig in project.yaml;
+# this module reads them through located errors (never a bare KeyError), so a
+# dropped block or a missing key is diagnosable from the message. Paths/layout,
+# the GRID_CONFIG JSON load, and the derived constants below remain code: they
+# are layout or computed relationships, not study parameters.
+
+_PROJECT_FILE = PROJECT_ROOT / "project.yaml"
+
+
+def _study_config() -> dict:
+    """Load the declared ``spec.inputs.studyConfig`` block from project.yaml.
+
+    Raises:
+        ValueError: A located error naming the project file and the input key
+            when ``studyConfig`` is absent or not a mapping.
+    """
+    raw = _yaml.safe_load(_PROJECT_FILE.read_text(encoding="utf-8"))
+    inputs = (raw or {}).get("spec", {}).get("inputs", {})
+    if not isinstance(inputs, dict) or "studyConfig" not in inputs:
+        available = ", ".join(sorted(str(k) for k in inputs)) or "none declared"
+        raise ValueError(
+            f"{_PROJECT_FILE}: spec.inputs.studyConfig not found "
+            f"(available inputs: {available}). Remediation: declare the study "
+            "knobs under spec.inputs.studyConfig in project.yaml."
+        )
+    config = inputs["studyConfig"]
+    if not isinstance(config, dict):
+        raise ValueError(
+            f"{_PROJECT_FILE}: spec.inputs.studyConfig must be a mapping, "
+            f"found {type(config).__name__}"
+        )
+    return config
+
+
+class _LocatedStudyConfig(dict):
+    """A ``studyConfig`` mapping whose missing-key errors are located.
+
+    A bare ``KeyError: 'seed'`` names neither the file nor the fix; every
+    ``_CONFIG[...]`` access through this mapping raises a ``ValueError`` that
+    does both.
+    """
+
+    def __getitem__(self, key: object) -> object:
+        if key not in self:
+            available = ", ".join(sorted(str(k) for k in self)) or "none declared"
+            raise ValueError(
+                f"{_PROJECT_FILE}: spec.inputs.studyConfig.{key} not found "
+                f"(available studyConfig keys: {available}). Remediation: add "
+                "the missing knob to spec.inputs.studyConfig in project.yaml."
+            )
+        return super().__getitem__(key)
+
+
+_CONFIG = _LocatedStudyConfig(_study_config())
+
 # ─── Phase-8 locked reproducibility + threshold conventions ─────────────
+
 # These are flattened module-level constants (the contract for downstream
 # stages). A nested PROJECT_CONFIG dict can grow later for grouping, but the
 # flat names below are what every consumer imports.
 
-POWER_FACTOR = 0.95
+POWER_FACTOR = _CONFIG["powerFactor"]
 """Power factor for BOTH line and transformer kW conversion (D-05, A4)."""
 
-LINE_LOADING_LIMIT_PERCENT = 100
+LINE_LOADING_LIMIT_PERCENT = _CONFIG["lineLoadingLimitPercent"]
 """Thermal loading limit (%) above which a line is congested (D-06)."""
 
-DTYPE = "float64"
+DTYPE = _CONFIG["dtype"]
 """Float dtype used throughout every numeric path (D-07)."""
 
-SEED = 42
+SEED = _CONFIG["seed"]
 """Single pinned seed. Consume via ``np.random.default_rng(SEED)`` — NEVER the
 global ``np.random.seed`` (D-07)."""
 
-ROUND_DECIMALS = 6
+ROUND_DECIMALS = _CONFIG["roundDecimals"]
 """Pre-write rounding so float noise < 1e-6 never reaches the Phase-12
 regression comparator (D-07)."""
 
-FEEDER_ID = None
+FEEDER_ID = _CONFIG["feederId"]
 """Feeder-selection override (D-02). ``None`` → deterministic
 max-downstream-load selection with a ``(-load_kw, idx)`` tie-break."""
 
@@ -135,13 +195,13 @@ unedited (Pitfall 6).
 derived from ``CALENDAR_START_WEEKDAY``. Weekends carry slightly higher
 residential occupancy load."""
 
-EV_UNIT_KW = 7.2
+EV_UNIT_KW = _CONFIG["evUnitKw"]
 """Per-EV charging power in kW (D-05). A typical residential 240 V / 32 A AC
 Level-2 charger draws ~7.2 kW at full power. Kept at the L2 nameplate per
 CALIBRATION.md (the coincident draw is set via ``DIVERSITY_FACTOR``, not by
 lowering the nameplate)."""
 
-DIVERSITY_FACTOR = 0.35
+DIVERSITY_FACTOR = _CONFIG["diversityFactor"]
 """Simultaneous-draw fraction at the evening peak (D-05, Pitfall 5). Not all EVs
 charge at once; this is the coincident fraction applied to the per-EV unit draw.
 
@@ -152,7 +212,7 @@ high-end). Canadian diversified is ~1.4 kW on large feeders, raised here for a
 small/cold 26-dwelling feeder. Deliberately NOT 1.0 (over-pessimistic) and NOT
 negligible."""
 
-CHARGING_WINDOW = (17, 20)
+CHARGING_WINDOW = tuple(_CONFIG["chargingWindow"])
 """``(start_hour, end_hour)`` evening EV charging window (D-04), end-exclusive.
 Chosen to overlap the evening winter heating peak in ``DAILY_PATTERN`` (the
 17:00-19:00 peak) so EV coincidence binds the firm hosting limit.
@@ -163,35 +223,7 @@ Recalibrated 10-03 per CALIBRATION.md "Recommended values": EV daily energy
 yielded 21.6 kWh, ~2x the verified Canadian session energy). The flat in-window
 shape stays seasonless (Charge-the-North validated)."""
 
-EV_SWEEP = (
-    0,
-    2,
-    4,
-    6,
-    8,
-    10,
-    12,
-    14,
-    16,
-    18,
-    20,
-    22,
-    24,
-    26,
-    28,
-    30,
-    32,
-    34,
-    36,
-    38,
-    40,
-    42,
-    44,
-    46,
-    48,
-    50,
-    52,
-)
+EV_SWEEP = tuple(_CONFIG["evSweep"])
 """Ascending total-feeder EV counts to sweep (D-07/D-08), integer step 2 from 0
 to 52. The swept variable is the TOTAL EV count on the feeder (the headline
 units).
@@ -203,11 +235,11 @@ crossing so a feasible swept point strictly above firm (and below the 1%
 curtailed-energy tolerance) is reachable; the prior step-20 grid jumped firm(20)
 straight to first-overload(40) and could land no passing point between them."""
 
-CALENDAR_HOURS = 8760
+CALENDAR_HOURS = _CONFIG["calendarHours"]
 """Non-leap hour-of-year count (Open-Q3). 365 days x 24 h; the pinned time index
 for every annual profile and the Phase-12 hour x line congestion heatmap."""
 
-CALENDAR_START_WEEKDAY = 0
+CALENDAR_START_WEEKDAY = _CONFIG["calendarStartWeekday"]
 """Weekday of hour-of-year 0 (Open-Q3), Mon=0 .. Sun=6. Pinned to Monday so the
 season->hour mapping is deterministic: day-of-year = ``hour_of_year // 24``,
 weekday = ``(day_of_year + CALENDAR_START_WEEKDAY) % 7``; winter (Jan/Dec) sits
@@ -219,7 +251,7 @@ at the low/high day-of-year ends, summer (Jul) near day 180."""
 # transformer is project-locally load-aware sized to its annual winter-peak
 # downstream base demand, instead of the fixed 0.21 MVA SDK std_type.
 
-TRANSFORMER_UTILIZATION_MARGIN = 0.8
+TRANSFORMER_UTILIZATION_MARGIN = _CONFIG["transformerUtilizationMargin"]
 """Headroom margin the selected feeder transformer is load-aware sized to (09-03).
 
 Mirrors the line-sizing precedent in
@@ -285,13 +317,13 @@ Active acceptability-criterion selector (D-06): the only accepted values are
 
 TMY_INPUT_PATH = PROJECT_ROOT / "inputs" / "tmy_trois_rivieres.csv"
 """Committed project-local TMY (D-09). PVGIS SARAH-3 Trois-Rivieres, committed
-with independent provenance for a self-contained governed study. Network-free: the heating-degree base reads
-``temp_air`` from THIS file — never ``download_tmy()`` / weather source
-``"auto"`` (REPRO guard inherited)."""
+with independent provenance for a self-contained governed study. Network-free:
+the heating-degree base reads ``temp_air`` from THIS file — never
+``download_tmy()`` / weather source ``"auto"`` (REPRO guard inherited)."""
 
 # ─── HQ residential LV-transformer sizing (D-01/D-03/D-04) ───────────────
 
-TRANSFORMER_KVA = 75.0
+TRANSFORMER_KVA = _CONFIG["transformerKva"]
 """Modeled nameplate rating (kVA) of the small HQ residential LV transformer that
 is now the unit of congestion (D-01).
 
@@ -320,7 +352,7 @@ meaningful unit of congestion. This rating is DECOUPLED from the twin's physical
 demand, NOT ``net.trafo.sn_mva``; the twin / topology cache / net stay physically
 intact."""
 
-ADMD_KW = 6.5
+ADMD_KW = _CONFIG["admdKw"]
 """After-diversity max demand per all-electric home (kW), small group (D-04).
 
 CALIBRATION.md derivation: per-dwelling installed ~13 kW baseboard nameplate ×
@@ -331,13 +363,13 @@ nameplate). Cross-checked against the design-cold heating-degree path below:
 6.5 kW/home`` — the two derivations agree. Reconciled to the manuscript's
 6.5 kW/home anchor (D-04)."""
 
-UTIL = 0.8
+UTIL = _CONFIG["util"]
 """Winter-peak base utilization target on ``TRANSFORMER_KVA`` (manuscript KNOB,
 mirrors ``TRANSFORMER_UTILIZATION_MARGIN``). The diversified winter base loads the
 modeled transformer to ~80% of its usable kW at the cold-evening peak, reserving
 CLPU headroom (CALIBRATION.md §4: 0.8 is the defensible HQ value)."""
 
-TARGET_HOMES = 6
+TARGET_HOMES = _CONFIG["targetHomes"]
 """Manuscript-intent target downstream-home count for feeder re-pointing (D-03).
 
 ``select_feeder`` ranks the MV/LV (25/0.4 kV) transformers by
@@ -351,48 +383,48 @@ would yield ~9). Congestion is computed on the twin's real 7-home subtree."""
 
 # ─── Stochastic-EV generative model (D-05, manuscript-calibrated) ────────
 
-CHARGER_MIX = {7.2: 0.75, 9.6: 0.20, 11.5: 0.05}
+CHARGER_MIX = _CONFIG["chargerMix"]
 """Quebec residential charger-power mix (kW → share), manuscript-calibrated:
 7.2 kW L2 dominant, 9.6 kW minority, 11.5 kW a small stress fraction. Shares sum
 to 1.0; sampled per EV in the stochastic generative model (Plan 02)."""
 
-EV_KWH_MEDIAN = 8.0
+EV_KWH_MEDIAN = _CONFIG["evKwhMedian"]
 """Lognormal median daily EV charging energy (kWh) (manuscript KNOB). Mid of the
 CALIBRATION.md §5 Canadian 6–13 kWh/session band."""
 
-EV_KWH_SIGMA = 0.5
+EV_KWH_SIGMA = _CONFIG["evKwhSigma"]
 """Lognormal sigma (log-space) of daily EV charging energy (manuscript KNOB)."""
 
-EV_KWH_MIN = 1.0
+EV_KWH_MIN = _CONFIG["evKwhMin"]
 """Floor (kWh) clipping the sampled daily EV charging energy (manuscript KNOB)."""
 
-PLUGIN_PROB = 0.65
+PLUGIN_PROB = _CONFIG["pluginProb"]
 """Probability an EV charges on a given evening (manuscript KNOB). CALIBRATION.md
 §5: EVs are plugged ~11 h but drawing only ~2 h, and not every evening."""
 
-ARRIVAL_MEAN_H = 18.0
+ARRIVAL_MEAN_H = _CONFIG["arrivalMeanH"]
 """Mean evening EV arrival hour (manuscript KNOB). CALIBRATION.md §5: residential
 charging peaks 15:00–24:00 ("EV duck curve"), overlapping the heating peak."""
 
-ARRIVAL_STD_H = 1.5
+ARRIVAL_STD_H = _CONFIG["arrivalStdH"]
 """Std-dev (hours) of the Gaussian EV arrival time (manuscript KNOB)."""
 
-ARRIVAL_CLIP = (16.0, 22.0)
+ARRIVAL_CLIP = tuple(_CONFIG["arrivalClip"])
 """``(min, max)`` clip on the sampled EV arrival hour (manuscript KNOB)."""
 
 # ─── TMY heating-degree base (D-08, manuscript-calibrated) ───────────────
 
-T_BALANCE = 18.0
+T_BALANCE = _CONFIG["tBalance"]
 """Heating balance point (degC) of the heating-degree base model (D-08). Per-home
 heating load = ``max(0, T_BALANCE − T_out) / R_THERM`` (+ background). Manuscript
 anchor, reconciled to CALIBRATION.md §2."""
 
-R_THERM = 8.1
+R_THERM = _CONFIG["rTherm"]
 """Per-home thermal envelope resistance (degC/kW) (D-08). Design-cold check:
 ``(18 − (−25)) / 8.1 ≈ 5.3 kW`` heating + ``BG_KW`` ≈ 6.5 kW/home, matching
 ``ADMD_KW`` and CALIBRATION.md §2 (~6 kW heat at −25 degC + ~1.5 kW background)."""
 
-BG_KW = 1.2
+BG_KW = _CONFIG["bgKw"]
 """Per-home non-heating background load (kW), occupancy-shaped (D-08). Manuscript
 anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
 
@@ -424,29 +456,7 @@ manuscript used 1500–2000). Default 1000 — the smallest K targeted to keep P
 stable to the Phase-12 1e-6 baseline while staying fast over 8760 h. Part of the
 reproducibility contract with ``SEED`` (D-13); revisit in Plan 02 if P95 drifts."""
 
-PENETRATION_SWEEP = (
-    0.0,
-    0.1,
-    0.2,
-    0.3,
-    0.4,
-    0.5,
-    0.6,
-    0.7,
-    0.8,
-    0.9,
-    1.0,
-    1.1,
-    1.2,
-    1.3,
-    1.4,
-    1.5,
-    1.6,
-    1.7,
-    1.8,
-    1.9,
-    2.0,
-)
+PENETRATION_SWEEP = tuple(_CONFIG["penetrationSweep"])
 """EV-per-home penetration grid (0 → 2.0) swept on the small LV transformer
 (D-07, discretion). Supersedes the Phase-9 integer ``EV_SWEEP`` (a total-feeder
 count on 26 dwellings). The headline is also expressed as an EV count
@@ -455,7 +465,7 @@ firm/flexible crossing near the manuscript's ~1 EV/home congestion onset."""
 
 # ─── Re-calibrated firm / flexible acceptability gates (D-06/D-12) ───────
 
-FIRM_PCONG_TOLERANCE = 0.10
+FIRM_PCONG_TOLERANCE = _CONFIG["firmPcongTolerance"]
 """Firm-leg congestion-probability tolerance (D-06). ``firm`` = the largest
 adoption whose ``P(congestion) ≤ 10%`` (probability of ANY hour exceeding the
 LV-transformer rating over the K realizations). Replaces the Phase-9 CONG-03
@@ -487,42 +497,42 @@ curtailment curve keeps its own ``TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX``."""
 # ``T_BALANCE``, ``R_THERM``, ``BG_KW``, the charger/arrival knobs,
 # ``TMY_INPUT_PATH`` and ``CALENDAR_HOURS`` (do NOT redefine them).
 
-EPS_HEADLINE = 0.05
+EPS_HEADLINE = _CONFIG["epsHeadline"]
 """Fixed per-hour reliability operating point for the citable hosting headline
 (D-04/D-07). The optimal ``flexible_ev_count`` / ``hosting_expansion_percent`` are
 re-derived under the two-stage scheme at ``1 − EPS_HEADLINE = 95%`` per-hour
 reliability — a single fixed ε is required for a citable number (chosen over a
 frontier-only result)."""
 
-EPS_FRONTIER = (0.5, 0.4, 0.3, 0.2, 0.15, 0.10, 0.05, 0.02, 0.01)
+EPS_FRONTIER = tuple(_CONFIG["epsFrontier"])
 """Cost-vs-reliability sensitivity sweep (D-04). The supporting ε-grid traced for
 the frontier; reliability ``1 − ε`` rises monotonically as ε falls. Reported as
 sensitivity evidence around the ``EPS_HEADLINE`` operating point."""
 
-EPS_SHOW = 0.10
+EPS_SHOW = _CONFIG["epsShow"]
 """Reserve-vs-activation cold-day panel epsilon (D-07). The mechanism-evidence
 panel (day-ahead ``r_t`` vs real-time ``E[a_t]``) is drawn at this ε — the
 prototype's ``EPS_SHOW`` (``twostage_prototype.py`` L42), where activation ≈ ¼ of
 the reserved peak illustrates "reserve the tail, activate only what is needed"."""
 
-SIGMA_DAILY = 2.0
+SIGMA_DAILY = _CONFIG["sigmaDaily"]
 """Day-ahead temperature-forecast per-day offset std in °C (D-03). One ``N(0,
 SIGMA_DAILY)`` draw per scenario perturbs the whole cold TMY day uniformly — the
 unknown-day-ahead weather component that makes the scheme genuinely
 two-stage-under-uncertainty. Prototype ``TEMP_FCAST_OFFSET_STD``."""
 
-SIGMA_HOURLY = 0.8
+SIGMA_HOURLY = _CONFIG["sigmaHourly"]
 """Per-hour temperature-forecast noise std in °C (D-03). A 24-vector ``N(0,
 SIGMA_HOURLY)`` draw per scenario adds hourly weather noise on top of the daily
 offset. Prototype ``TEMP_FCAST_HOURLY_STD``."""
 
-N_SCENARIOS = 4000
+N_SCENARIOS = _CONFIG["nScenarios"]
 """Monte-Carlo scenario count for the per-hour quantile estimates (D-10). Large
 enough for stable tail quantiles at the tightest ε=0.01. Reconciles the divergent
 prototype seeds/counts (``twostage_prototype.py`` N=4000 / ``breakeven_nonwires``
 N=1000) to a single reproducibility contract on ``SEED=42``."""
 
-C_RESERVE = 0.5
+C_RESERVE = _CONFIG["cReserve"]
 """ILLUSTRATIVE labelled reservation price per kW·h reserved day-ahead (D-06).
 The optimal policy (``r* = Q_{1−ε}``, ``a* = min``) is PRICE-INDEPENDENT as long
 as ``C_ACTIVATE > 0`` — this price only SCALES the separately-reported, clearly
@@ -532,7 +542,7 @@ the governed ECON-02 constants ``C_R_BASE`` / ``C_A`` (Phase 16, D-16-4);
 ``C_RESERVE`` remains the two-stage frontier-scaling price and is distinct from
 them."""
 
-C_ACTIVATE = 2.0
+C_ACTIVATE = _CONFIG["cActivate"]
 """ILLUSTRATIVE labelled activation price per kW·h activated in real time (D-06).
 As with ``C_RESERVE``, illustrative-only: the optimum is price-independent for any
 ``C_ACTIVATE > 0`` and this merely scales the reported frontier. Prototype
@@ -540,7 +550,7 @@ As with ``C_RESERVE``, illustrative-only: the optimum is price-independent for a
 constants ``C_A`` / ``CAPEX_UPGRADE`` (Phase 16, D-16-4); ``C_ACTIVATE`` remains the
 two-stage frontier-scaling price and is distinct from them."""
 
-TWOSTAGE_SOLVER = "CLARABEL"
+TWOSTAGE_SOLVER = _CONFIG["twostageSolver"]
 """Single pinned deterministic cvxpy solver for the gated two-stage solve (D-08).
 CLARABEL is the project default (``der_voltage.py``) and is present in this env
 (``cvxpy.installed_solvers() == ['CLARABEL','HIGHS','OSQP','SCIPY','SCS']``).
@@ -673,7 +683,7 @@ the golden config bytes are never mutated."""
 # literature-grounded mixing weight ``EV_COINCIDENCE_RHO`` so the model CF lands at
 # the citable 0.55–0.7 band for ~7 cold-Québec dwellings.
 
-EV_COINCIDENCE_RHO = 0.5
+EV_COINCIDENCE_RHO = _CONFIG["evCoincidenceRho"]
 """EV-aggregate coincidence mixing weight ``ρ`` in [0, 1] (EV-COINCIDENCE-RECAL).
 
 The per-feeder EV aggregate at an integer EV ``count`` is the ρ-blend
@@ -728,7 +738,7 @@ byte-stable per-count blend kernel."""
 # ``POWER_FACTOR``, ``CHARGER_MIX``, ``EV_KWH_*``, ``ARRIVAL_*``, ``PLUGIN_PROB``,
 # ``SIGMA_DAILY``, ``SIGMA_HOURLY``, ``FIRM_PCONG_TOLERANCE`` (do NOT redefine them).
 
-R_QUEBEC = 7.0
+R_QUEBEC = _CONFIG["rQuebec"]
 """Recalibrated per-home thermal envelope resistance (°C/kW) of the SDK building
 agent for the Québec all-electric archetype (GEN-02; the LOCKED operating point).
 
@@ -742,7 +752,7 @@ at **~8.4 kW/home coincident / ~82–87% of the 71.25 kW rating, firm=3**
 firm-sweep R=7.0 row is the locked grid point. NO CLPU (the heating recalibration
 is the dominant lever; CLPU on top overshoots to ~117% / firm=0)."""
 
-P_HEAT_QUEBEC = 13.0
+P_HEAT_QUEBEC = _CONFIG["pHeatQuebec"]
 """Recalibrated per-home baseboard heating capacity (kW) of the SDK building agent
 (GEN-02; the LOCKED operating point).
 
@@ -752,7 +762,7 @@ baseboard). Anchored to the Québec all-electric archetype (~13 kW installed
 baseboard nameplate; HQ 10–15 kW/dwelling), it pairs with ``R_QUEBEC = 7.0`` to
 land the design-day base at the locked ~82–87% rating / firm=3 operating point."""
 
-DESIGN_DAY_RES_MINUTES = 60
+DESIGN_DAY_RES_MINUTES = _CONFIG["designDayResMinutes"]
 """Monte-Carlo aggregation resolution (minutes) for the design-day ensemble (GEN-01,
 Claude's discretion per CONTEXT). ``select_peak_load_day`` returns the design day at
 1-min native resolution; the building realization aggregates ``p_total_kw`` to this
@@ -760,7 +770,7 @@ step (the building hourly aggregate worked in the probes — ``exp_firmsweep.py`
 ``exp_genseam.py``). Default 60 (hourly → ``n_steps = 24``); a finer 5/15-min step
 is an option if the K ensemble fidelity needs it, at higher MC cost."""
 
-K_DESIGN = 60
+K_DESIGN = _CONFIG["kDesign"]
 """Design-day Monte-Carlo realization count (GEN-01, Claude's discretion).
 
 Each realization re-seeds the SDK building agent + the temperature-forecast-error
@@ -771,7 +781,7 @@ empirically verified on the 1990-01-19 design day (``exp_firmsweep.py`` /
 the 7-home / 24-step kernel inside the unit-test budget (< 60 s). Part of the
 reproducibility contract with ``SEED``; the Phase-14 firm pin re-uses this K."""
 
-N_HOMES_FALLBACK = 6
+N_HOMES_FALLBACK = _CONFIG["nHomesFallback"]
 """Downstream-home count used by the design-day kernel when the topology cache's
 selected-feeder home count is unavailable (e.g. cache-free unit tests). Option B
 (2026-07-06): the twin's LV transformers are now PHYSICALLY 75 kVA, the clustering
@@ -781,7 +791,7 @@ idx-62 → 7). The governed stage passes the cache value, the unit tests pass th
 fallback so they stay cache-free (CONTEXT: the gitignored cache lives only in the
 main tree)."""
 
-DESIGN_DAY_EV_MAX = 18
+DESIGN_DAY_EV_MAX = _CONFIG["designDayEvMax"]
 """Nested-EV pool ceiling for the design-day MC sweep (GEN-03). ``ev_nested_pool``
 returns a ``(DESIGN_DAY_EV_MAX + 1, n_steps)`` cumulative pool (row n = the first n
 EVs) so the Phase-14 congestion sweep can overlay any EV count up to this ceiling.
@@ -798,14 +808,14 @@ point; the EV sweep crosses the rating well below 18) per the probe
 # with a seed block disjoint from the plan set, plus an adversarial colder-Q_real
 # degradation test. All three knobs are PINNED for Phase-17 byte-stability.
 
-OOS_N = 60
+OOS_N = _CONFIG["oosN"]
 """Out-of-sample validation ensemble size N (D-04). Symmetric with ``K_DESIGN``
 (N = K = 60): the realized ``P(overload after activation)`` is evaluated on N
 independent ``Q_real`` realizations drawn at controller time. A larger N (200–500)
 for a tighter ε-tail estimate is a later precision option (D-04); pinned at 60
 here for the symmetric plan/validation budget."""
 
-OOS_SEED_OFFSET = 10000
+OOS_SEED_OFFSET = _CONFIG["oosSeedOffset"]
 """Disjoint validation seed-block offset (D-03). The out-of-sample ``Q_real``
 ensemble is drawn via ``make_design_day_ensemble(seed=SEED + OOS_SEED_OFFSET)`` so
 every per-realization stream (building ``seed + r``, EV pool ``seed + 7919·r``,
@@ -821,7 +831,7 @@ the realized ``P(overload)`` is asserted to DEGRADE above ε — quantified and
 REPORTED, never gated to fail (the in-band realized check is the non-adversarial
 assertion)."""
 
-ADV_SEED_OFFSET = 20000
+ADV_SEED_OFFSET = _CONFIG["advSeedOffset"]
 """Disjoint adversarial seed-block offset (RESEARCH A4). The adversarial colder
 ``Q_real`` ensemble is drawn from ``SEED + ADV_SEED_OFFSET + r`` — a third disjoint
 block distinct from both ``SEED`` (plan) and ``SEED + OOS_SEED_OFFSET`` (the
@@ -841,7 +851,7 @@ in-band validation set) — so the three ensembles stay byte-independent."""
 # nonwires_economics.py and breakeven_nonwires.py (the two scripts agree on the
 # shared prices C_R_BASE/C_A/CAPEX_UPGRADE/DISCOUNT/LIFE_YEARS/TOL_FRACTION).
 
-C_R_BASE = 2.0
+C_R_BASE = _CONFIG["cRBase"]
 """Baseline reservation price, $/kW per reservation-day (ECON-02 / D-16-4).
 Promotes the manuscript's previously illustrative per-reservation availability fee
 to a governed constant. Provenance: ``nonwires_economics.py`` ``C_R_BASE`` and
@@ -849,57 +859,57 @@ to a governed constant. Provenance: ``nonwires_economics.py`` ``C_R_BASE`` and
 frontier; does NOT move the hosting headline (distinct from the ``C_RESERVE``
 two-stage frontier-scaling price above)."""
 
-C_A = 0.30
+C_A = _CONFIG["cA"]
 """Activation price, $/kWh shifted/activated in real time (ECON-02 / D-16-4).
 Promotes the manuscript's illustrative DR-like energy-shift price to a governed
 constant. Provenance: ``nonwires_economics.py`` / ``breakeven_nonwires.py`` ``C_A``
 (both = 0.30)."""
 
-CAPEX_UPGRADE = 8000.0
+CAPEX_UPGRADE = _CONFIG["capexUpgrade"]
 """Reinforcement capital cost, $ (ECON-02 / D-16-4). Installed cost to replace the
 50 → 100 kVA residential transformer (HQ residential). The annualized
 capital-recovery figure (CRF · CAPEX) is kernel-derived in Plan 02, not here.
 Provenance: ``nonwires_economics.py`` and ``breakeven_nonwires.py``
 ``CAPEX_UPGRADE`` (both = 8000.0)."""
 
-DISCOUNT_RATE = 0.05
+DISCOUNT_RATE = _CONFIG["discountRate"]
 """Annual discount rate for the capital-recovery factor (ECON-02 / D-16-4). Named
 ``DISCOUNT_RATE`` (NOT ``DISCOUNT``) so it is unambiguous and self-documenting; the
 Plan-02 CRF formula consumes ``DISCOUNT_RATE``. Provenance: ``nonwires_economics.py``
 and ``breakeven_nonwires.py`` ``DISCOUNT`` (both = 0.05)."""
 
-LIFE_YEARS = 30
+LIFE_YEARS = _CONFIG["lifeYears"]
 """Asset life in years for the capital-recovery factor (ECON-02 / D-16-4).
 Provenance: ``nonwires_economics.py`` and ``breakeven_nonwires.py`` ``LIFE_YEARS``
 (both = 30)."""
 
-P0_ADOPT = 0.5
+P0_ADOPT = _CONFIG["p0Adopt"]
 """Today's EV penetration, EV/home, for the adoption ramp (ECON-02 / D-16-4).
 Provenance: ``nonwires_economics.py`` ``P0_ADOPT`` (= 0.5)."""
 
-PMAX_ADOPT = 4.0
+PMAX_ADOPT = _CONFIG["pmaxAdopt"]
 """Adoption target, EV/home (ECON-02 / D-16-4). The terminal penetration the
 adoption ramp climbs toward. Provenance: ``nonwires_economics.py`` ``PMAX_ADOPT``
 (= 4.0)."""
 
-ADOPT_YEARS_BASE = 15
+ADOPT_YEARS_BASE = _CONFIG["adoptYearsBase"]
 """Baseline years-to-``PMAX_ADOPT`` for the deferral-NPV headline (ECON-02 /
 D-16-4). Provenance: ``nonwires_economics.py`` ``ADOPT_YEARS_BASE`` (= 15)."""
 
-TOL_FRACTION = 0.05
+TOL_FRACTION = _CONFIG["tolFraction"]
 """Deferral feasibility ceiling = undeliverable / EV-energy fraction (ECON-02 /
 D-16-4). The annual-curtailed-over-EV-energy ratio above which the deferral is
 declared infeasible. Provenance: ``nonwires_economics.py`` and
 ``breakeven_nonwires.py`` ``TOL_FRACTION`` (both = 0.05)."""
 
-DEFERRAL_ENROLLMENT_FRACTION = 0.30
+DEFERRAL_ENROLLMENT_FRACTION = _CONFIG["deferralEnrollmentFraction"]
 """Fraction of EVs enrolled in managed/deferred charging — the GOVERNING flex
 headline knob (ECON-02 / D-16-4, D-16-2a). The single binding lever on the
 deferral-model flex count. Provenance: the manuscript's conservative +100% / flex 6
 end, reconciled with the Phase-16 sensitivity spike (D-16-2a): 25–30% → 6, 50% → 8,
 60% → 13, ≥70% → pool-capped. Pinned at the 0.30 conservative headline value."""
 
-DEFERRAL_PLUGIN_WINDOW = (18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7)
+DEFERRAL_PLUGIN_WINDOW = tuple(_CONFIG["deferralPluginWindow"])
 """Overnight plug-in / availability window, hour-of-day (ECON-02 / D-16-4,
 D-16-1/D-16-2a). Arrival ~18:00 → departure ~07:00 (14 hours). Revives the
 Phase-15-retired ``PLUGIN_WINDOW`` for the deferral model; governed for faithfulness
@@ -907,7 +917,7 @@ but NON-BINDING per the Phase-16 spike (the overnight window comfortably accommo
 the shiftable EV energy). Provenance: the manuscript deferral model's overnight
 availability assumption."""
 
-DEFERRAL_CHARGER_KW_CEILING = 7.2
+DEFERRAL_CHARGER_KW_CEILING = _CONFIG["deferralChargerKwCeiling"]
 """Per-charger power ceiling, kW (Level-2 EVSE) (ECON-02 / D-16-4). Governed for
 completeness but NON-BINDING per the Phase-16 spike — 3.7–11 kW all give the same
 deferral count because the overnight window, not the charger power, is the binding
@@ -920,7 +930,7 @@ constraint. Provenance: standard Level-2 residential EVSE rating."""
 # secondary): a deterministic design-day power flow per EV scenario, emitting
 # governed bus-voltage / line-loading / transformer-loading artifacts.
 
-SLACK_VM_PU = 1.04
+SLACK_VM_PU = _CONFIG["slackVmPu"]
 """Substation slack (LTC-regulated 25 kV bus) voltage setpoint in pu for the AC
 validation power flows. HQ substation LTCs hold distribution feeders slightly
 above nominal; empirically verified on this twin (2026-07-06 session probes):
@@ -929,12 +939,12 @@ the ADMD winter peak, 1.05 pu leaves none — 1.04 is the mid setpoint. Consumed
 only by the validate_powerflow stage; the kW-proxy congestion chain (stages
 3-6) never reads it."""
 
-VOLTAGE_LIMITS_PU = {"normal_low": 0.917, "extreme_low": 0.883, "normal_high": 1.042}
+VOLTAGE_LIMITS_PU = _CONFIG["voltageLimitsPu"]
 """CSA C235 service-voltage bands on the 120 V base, in pu (normal range
 110-125 V -> 0.917-1.042; extreme low 106 V -> 0.883). The violation counters in
 the validate_powerflow stage classify LV bus voltages against these bands."""
 
-NETWORK_PENETRATION_SCENARIOS = (0.0, 0.5, 1.0, 1.5)
+NETWORK_PENETRATION_SCENARIOS = tuple(_CONFIG["networkPenetrationScenarios"])
 """Network-wide uniform EV adoption levels (EV/home) for the AC validation's
 "before vs after" scenario family. Every one of the 3235 homes receives the
 diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
@@ -966,9 +976,9 @@ diversified coincident EV draw ``penetration x EV_UNIT_KW x DIVERSITY_FACTOR``
 # the R_STUDY_B energy calibration below stands as-is.
 #
 # Residual bias is -5.3%, not zero: the base remains mildly optimistic.
-HEATING_CONTROL = "hysteresis"
+HEATING_CONTROL = _CONFIG["heatingControl"]
 
-R_STUDY_B = 7.5
+R_STUDY_B = _CONFIG["rStudyB"]
 """Per-home thermal envelope resistance (deg C/kW), study-B all-electric base.
 
 RE-BASED 2026-07-14 (spec realistic-building-base-dhw): 5.0 -> 7.5. The old 5.0
@@ -979,12 +989,12 @@ envelope, which inflated annual energy to ~39 MWh/home (~1.8x the SDK-native
 coincident peak to the HQ 10-15 kW band WITHOUT the energy inflation. Final value
 fixed by calibrate_base.py. Supersedes the peak-calibrated 5.0."""
 
-K_ANNUAL = 1
+K_ANNUAL = _CONFIG["kAnnual"]
 """Annual SDK base realization count (D-B2). Study-B faithful default 1 (the
 within-year day-to-day thermostat/AR(1)/weather variation is the sampling
 axis); the plumbing accepts K > 1 (seeds ``SEED + r``) for ensemble tails."""
 
-ANNUAL_RES_MINUTES = 15
+ANNUAL_RES_MINUTES = _CONFIG["annualResMinutes"]
 """Temporal resolution (minutes) of the annual kW chain (2026-07-07 granularity
 finding). Hourly means UNDERSTATE the sub-hourly coincidence of the few 13 kW
 baseboard thermostats + the discrete 7.2-11.5 kW EV step: the Jan-Mar 1-min
@@ -1000,15 +1010,15 @@ HOURLY (aggregated from this) — 96-step power flows would ~4x a validation cos
 for no gate value. Arrays are ``(K, N_DAYS * 24*60/ANNUAL_RES_MINUTES)`` = 35040
 steps at 15 min; energy is ``sum(kW_per_step) * ANNUAL_RES_MINUTES/60``."""
 
-FC_SIGMAS = (0.0, 1.5, 3.0, 5.0)
+FC_SIGMAS = tuple(_CONFIG["fcSigmas"])
 """Day-ahead temperature-forecast error sigmas (°C) for the notice-quality
 forecast bases (D-B3). Provenance: ``generate_sdk_base.py`` ``FC_SIGMAS``."""
 
-SEED_FC_OFFSETS = 7
+SEED_FC_OFFSETS = _CONFIG["seedFcOffsets"]
 """RNG seed of the per-day N(0, σ) forecast-offset draws (D-B3). Provenance:
 ``generate_sdk_base.py`` ``rng = default_rng(7)``."""
 
-POOL_MAX_ANNUAL = 16
+POOL_MAX_ANNUAL = _CONFIG["poolMaxAnnual"]
 """Nested annual EV pool ceiling (D-B4). One governed pool
 ``(POOL_MAX_ANNUAL, 8760)`` drawn from ``default_rng(SEED)``; every sweep
 (hosting, enrollment, economics) uses row prefixes. DEVIATION from study_b's
@@ -1022,70 +1032,70 @@ pool artefact -- but the ceiling must sit above it for the boundary to be
 demonstrable rather than assumed. 16 = 2.67 EV/home, comfortably above both the
 firm limit and the 1.32 EV/home Québec saturation."""
 
-E_TREF_C = 15.0
+E_TREF_C = _CONFIG["eTrefC"]
 """Cold-intensity reference temperature (°C) (D-B4): ``cp = max(0, E_TREF_C −
 Tday)`` drives BOTH the session-energy and plug-in cold penalties. Provenance:
 ``curtailment_study_refined.py`` ``E_TREF``."""
 
-EV_KWH_BASE = 8.0
+EV_KWH_BASE = _CONFIG["evKwhBase"]
 """Mild-day median session energy (kWh) (D-B4). Provenance: ``E_BASE = 8.0``
 (consistent with the Phase-10.1 ``EV_KWH_MEDIAN``)."""
 
-EV_KWH_KCOLD = 0.0125
+EV_KWH_KCOLD = _CONFIG["evKwhKcold"]
 """Session-energy cold slope (per °C of cold intensity) (D-B4): median =
 ``EV_KWH_BASE·(1 + EV_KWH_KCOLD·cp)`` → +50 % at −25 °C (cp = 40). Cold cuts EV
 range ~40–50 % so sessions deepen exactly on the critical evenings. Provenance:
 ``E_KCOLD = 0.0125``."""
 
-PLUGIN_BASE = 0.60
+PLUGIN_BASE = _CONFIG["pluginBase"]
 """Mild-day plug-in probability (D-B4). Provenance: ``PLUG_BASE = 0.60``."""
 
-PLUGIN_KCOLD = 0.006
+PLUGIN_KCOLD = _CONFIG["pluginKcold"]
 """Plug-in probability cold slope (per °C of cold intensity) (D-B4):
 ``min(PLUGIN_MAX, PLUGIN_BASE + PLUGIN_KCOLD·cp)`` — range anxiety +
 preconditioning + everyone-home raise evening plug-ins with cold. Provenance:
 ``PLUG_KCOLD = 0.006``."""
 
-PLUGIN_MAX = 0.85
+PLUGIN_MAX = _CONFIG["pluginMax"]
 """Plug-in probability ceiling on the coldest days (D-B4). Provenance:
 ``PLUG_MAX = 0.85``."""
 
-EV_SIGMA_LOG = 0.5
+EV_SIGMA_LOG = _CONFIG["evSigmaLog"]
 """Lognormal sigma (log-space) of the session energy (D-B4; same value as the
 Phase-10.1 ``EV_KWH_SIGMA``, restated here as the annual-path contract)."""
 
-ARRIVAL_MEAN_ANNUAL_H = 18.0
+ARRIVAL_MEAN_ANNUAL_H = _CONFIG["arrivalMeanAnnualH"]
 """Evening arrival mean hour (D-B4). Provenance: ``rng.normal(18.0, 1.5)``."""
 
-ARRIVAL_STD_ANNUAL_H = 1.5
+ARRIVAL_STD_ANNUAL_H = _CONFIG["arrivalStdAnnualH"]
 """Evening arrival std (hours) (D-B4)."""
 
-ARRIVAL_CLIP_ANNUAL = (16.0, 22.0)
+ARRIVAL_CLIP_ANNUAL = tuple(_CONFIG["arrivalClipAnnual"])
 """Arrival clip window (hours) (D-B4). Provenance: ``np.clip(s, 16.0, 22.0)``."""
 
-COLD_DAY_TMEAN_C = 5.0
+COLD_DAY_TMEAN_C = _CONFIG["coldDayTmeanC"]
 """Cold-day classifier (D-B5): days with mean temperature below this (°C) form
 the cold-day set of the firm P95-evening rule. Provenance:
 ``curtailment_study_refined.py`` ``tday < 5.0``."""
 
-EVENING_WINDOW_ANNUAL = (16, 23)
+EVENING_WINDOW_ANNUAL = tuple(_CONFIG["eveningWindowAnnual"])
 """Evening hours-of-day window (end-exclusive) of the firm rule (D-B5): firm =
 largest n with ``P95(cold-day max evening loading) ≤ 100 %``. Provenance:
 ``[:, 16:23].max(1)``."""
 
-FIRM_P95_LIMIT_PERCENT = 100.0
+FIRM_P95_LIMIT_PERCENT = _CONFIG["firmP95LimitPercent"]
 """Firm-rule loading threshold (%) on the P95 cold-day evening peak (D-B5)."""
 
-C_AVAIL_EV_YR = 80.0
+C_AVAIL_EV_YR = _CONFIG["cAvailEvYr"]
 """Curtailment-contract availability payment ($/EV/yr) (D-B6). Provenance:
 ``C_AVAIL = 80.0``."""
 
-C_A_CURTAIL = 0.5
+C_A_CURTAIL = _CONFIG["cACurtail"]
 """Curtailment-contract activation price ($/kWh curtailed) (D-B6). Provenance:
 ``curtailment_study_refined.py`` ``C_A = 0.5`` (~5× retail; distinct from the
 governed deferral ``C_A = 0.30``)."""
 
-C_RETAIL_KWH = 0.10
+C_RETAIL_KWH = _CONFIG["cRetailKwh"]
 """Retail energy value ($/kWh) of the foregone charging energy — the household
 floor of the zone-of-agreement panel (D-B6). Provenance: ``C_RETAIL = 0.10``."""
 
@@ -1102,13 +1112,13 @@ floor of the zone-of-agreement panel (D-B6). Provenance: ``C_RETAIL = 0.10``."""
 # the firm/flexible headlines are unaffected; these constants touch ONLY the
 # validate_powerflow network family.
 
-TRANSFORMER_KVA_LADDER = (25.0, 37.5, 50.0, 75.0, 100.0, 167.0)
+TRANSFORMER_KVA_LADDER = tuple(_CONFIG["transformerKvaLadder"])
 """Standard single-phase distribution-transformer sizes (kVA) HQ picks from.
 Each LV transformer is sized to the smallest ladder rung whose usable kW
 (``kVA × POWER_FACTOR``) covers its SDK design-cold aggregate load; a 6-home
 cluster lands at 75 kVA (matching the governed unit), a 12-home at 167 kVA."""
 
-LV_DYNAMIC_RATING_K = 1.4
+LV_DYNAMIC_RATING_K = _CONFIG["lvDynamicRatingK"]
 """Cold-ambient dynamic thermal rating factor for the LV transformers at the
 design cold (IEEE C57.91). A transformer runs cooler in a −20 °C ambient and can
 carry more than nameplate without exceeding its 110 °C hot-spot limit.
@@ -1129,7 +1139,7 @@ simplified model has cold-weather uncertainties (oil viscosity, hot-spot factor)
 firm/flexible gate stays on the conservative STATIC rating (``TRANSFORMER_KVA ×
 POWER_FACTOR``), so the ~2 % optimism never touches the headlines."""
 
-LV_LINE_UTIL_TARGET = 0.85
+LV_LINE_UTIL_TARGET = _CONFIG["lvLineUtilTarget"]
 """Design-cold thermal utilization target the LV secondary conductors are sized
 to (2026-07-07 network verification). Like the transformers, the SDK
 ``load_aware`` line sizing used the clustering's soft coincident model
@@ -1140,7 +1150,7 @@ The validate_powerflow stage upsizes each LV line so its design-cold current
 sits at this fraction of the (re-sized) conductor ampacity. GOVERNED chain
 untouched (in-memory, AC layer only)."""
 
-LV_LINE_VDROP_BUDGET_PU = 0.01
+LV_LINE_VDROP_BUDGET_PU = _CONFIG["lvLineVdropBudgetPu"]
 """Per-conductor design-cold voltage-drop budget (pu) the LV lines are ALSO
 sized to (2026-07-07 verification). Real LV design sizes conductors for BOTH
 thermal ampacity AND voltage drop — on loaded runs the voltage constraint
@@ -1158,7 +1168,7 @@ with the substation LTC / line regulators, not conductor gauge."""
 # (losses / substation constraint / per-transformer hosting headroom) over the
 # design-day full-net power flows, before the economic analysis.
 
-SUBSTATION_DYNAMIC_RATING_K = 1.41
+SUBSTATION_DYNAMIC_RATING_K = _CONFIG["substationDynamicRatingK"]
 """Cold-ambient IEEE C57.91 dynamic rating factor of the HV/MV substation
 transformers. Provenance: the config ``transformers.mv_hv`` note ("K(−22.5 °C)=
 1.41"). VERIFIED (2026-07-08) — same C57.91 hot-spot check as
@@ -1171,9 +1181,7 @@ loading against BOTH its static nameplate (100 %) and this dynamic limit
 and stays within the dynamic limit across the sweep — the FEEDERS bind first,
 not the substation (this factor is reporting-only, never a governed gate)."""
 
-HEADROOM_PENETRATION_GRID = (
-    0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0,
-)
+HEADROOM_PENETRATION_GRID = tuple(_CONFIG["headroomPenetrationGrid"])
 """EV-per-home penetration grid swept for the loss / substation / headroom
 curves (D). Each point is a 24-hour design-day full-net power flow; per-element
 peak loading is interpolated across the grid to find the penetration at which
@@ -1190,14 +1198,14 @@ each transformer first crosses its limit (the hosting-headroom map)."""
 # real, not an artifact. Size each substation transformer to ITS downstream
 # design-cold load, mirroring the LV-fleet philosophy.
 
-SUBSTATION_MVA_LADDER = (16.7, 20.0, 25.0, 33.3, 40.0, 50.0)
+SUBSTATION_MVA_LADDER = tuple(_CONFIG["substationMvaLadder"])
 """Standard HQ-realistic 120/25 kV substation-transformer sizes (MVA) the twin's
 substation transformers are matched to. Provenance: HQ distribution substations
 use 33-140 MVA units (33.3 on 120-12 kV, 50-100 in growth zones, 140 on
 315-25 kV); for the ~1600-home half each of our transformers serves, the lower
 ladder rungs (25-33.3 MVA) are the realistic match."""
 
-SUBSTATION_UTIL_TARGET = 0.85
+SUBSTATION_UTIL_TARGET = _CONFIG["substationUtilTarget"]
 """Design-cold utilization target the substation transformers are sized to (like
 ``LV_LINE_UTIL_TARGET`` and the LV-transformer 0.8 margin). Each substation
 transformer takes the smallest MVA ladder rung whose usable MW
@@ -1217,7 +1225,7 @@ reliability margin beyond this study's normal-operation hosting scope."""
 # substation with a common (tied) MV bus, each transformer sized so the (N-1)
 # remaining units carry the full area load.
 
-SUBSTATION_N_TRANSFORMERS = 2
+SUBSTATION_N_TRANSFORMERS = _CONFIG["substationNTransformers"]
 """Number of identical parallel 120/25 kV substation transformers on a common
 (tied) MV bus. The STANDARD/typical HQ distribution-substation configuration is
 TWO identical redundant units adhering to N-1 (each carries the full load on a
@@ -1227,14 +1235,14 @@ twin ships exactly 2 (separate MV halves); the validate_powerflow reconfiguratio
 ties their MV buses onto a common node so they parallel-share and the N-1
 contingency is realizable — no unit is added at N = 2."""
 
-SUBSTATION_EMERGENCY_FACTOR = 1.5
+SUBSTATION_EMERGENCY_FACTOR = _CONFIG["substationEmergencyFactor"]
 """Short-term emergency loading factor for the substation transformers on an N-1
 contingency (utility practice: 1.5x nameplate for units < 100 MVA, 1.3x for
 > 100 MVA). The firm-capacity metric reports the load the substation can serve
 with one transformer out at BOTH the normal rating ((N-1) x nameplate) and this
 emergency rating ((N-1) x nameplate x factor)."""
 
-SUBSTATION_N1_CONTINGENCY_TARGET = 1.20
+SUBSTATION_N1_CONTINGENCY_TARGET = _CONFIG["substationN1ContingencyTarget"]
 """Target loading (per-unit of nameplate) of the (N-1) remaining transformers on
 a single-unit contingency, used to SIZE the bank: each unit is the smallest
 ``SUBSTATION_MVA_LADDER`` rung with ``nameplate >= total_load_MVA / ((N-1) x
@@ -1250,22 +1258,22 @@ size): ~56 % loaded normally, ~112 % on an N-1 contingency."""
 # from a mean-preserving lognormal so the fleet is invariant while dispersion
 # (Gini/CoV) grows. Sweeps mean adoption (CLUSTER_MU_GRID) and dispersion
 # (CLUSTER_DISPERSION_GRID); CLUSTER_MC_DRAWS realizations per level give bands.
-CLUSTER_MEAN_RATE = 1.0
+CLUSTER_MEAN_RATE = _CONFIG["clusterMeanRate"]
 """Fixed mean adoption (EV/home) for the penalty-vs-Gini axis (Part 1, eje A)."""
 
-CLUSTER_MU_GRID = (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
+CLUSTER_MU_GRID = tuple(_CONFIG["clusterMuGrid"])
 """Mean-adoption grid (EV/home) swept for the first-reinforcement axis (eje B):
 the mean penetration at which the WORST transformer first crosses 100%."""
 
-CLUSTER_DISPERSION_GRID = (0.0, 0.35, 0.7, 1.1)
+CLUSTER_DISPERSION_GRID = tuple(_CONFIG["clusterDispersionGrid"])
 """Lognormal dispersion levels (sigma). 0.0 = uniform (a_t == mu exactly);
 higher = more clustered. The Gini/CoV of the adoption vector rises with it."""
 
-CLUSTER_MC_DRAWS = 6
+CLUSTER_MC_DRAWS = _CONFIG["clusterMcDraws"]
 """Monte-Carlo draws of the adoption vector per (dispersion, mu) level; the
 per-transformer loading is reduced across draws (median) for stable curves."""
 
-CLUSTER_MAX_RATE = 4.0
+CLUSTER_MAX_RATE = _CONFIG["clusterMaxRate"]
 """Physical cap on per-transformer adoption (EV/home) after the mean-preserving
 draw, guarding absurd tail values; realized fleet drift from the cap is
 reported. Chosen well above CLUSTER_MU_GRID[-1] so it rarely binds."""
@@ -1282,23 +1290,23 @@ CLIMATE_BIN_EDGES = (-25.0, -20.0, -15.0, -10.0, -5.0, 0.0, 5.0)
 """Daily-mean-temperature bin edges (°C) for the climate axis; days are grouped
 into the half-open bins [edge_i, edge_{i+1})."""
 
-HOSTING_TARGET_EV_PER_HOME = 2.0
+HOSTING_TARGET_EV_PER_HOME = _CONFIG["hostingTargetEvPerHome"]
 """Fleet to host on the 6-home feeder (× 6 = N EVs). Chosen in the binding
 range: uncontrolled must exceed 100% P95 in the cold bins so flexibility is
 actually needed (the stage reports if it is not binding in a bin)."""
 
-WTA_SHIFT_MEDIAN = 30.0
+WTA_SHIFT_MEDIAN = _CONFIG["wtaShiftMedian"]
 """Median willingness-to-accept ($/EV·yr) to enrol in a SHIFT program (low —
 overnight smart-charging is little inconvenience). Lognormal location."""
 
-WTA_SHIFT_SIGMA = 0.5
+WTA_SHIFT_SIGMA = _CONFIG["wtaShiftSigma"]
 """Lognormal sigma (spread) of the SHIFT WTA distribution."""
 
-WTA_CURTAIL_MEDIAN = 120.0
+WTA_CURTAIL_MEDIAN = _CONFIG["wtaCurtailMedian"]
 """Median willingness-to-accept ($/EV·yr) to enrol in a CURTAILMENT program
 (higher — giving up / delaying charge has real disutility). Lognormal location."""
 
-WTA_CURTAIL_SIGMA = 0.5
+WTA_CURTAIL_SIGMA = _CONFIG["wtaCurtailSigma"]
 """Lognormal sigma (spread) of the CURTAILMENT WTA distribution."""
 
 # ─── Study 1A reframe: penetration crossover (2026-07-09) ────────────────────
@@ -1311,11 +1319,11 @@ WTA_CURTAIL_SIGMA = 0.5
 # (less headroom). Beyond the ceiling, curtailment is required. To resolve that
 # ceiling the 12-EV pool is TILED, and the incentive crossover is evaluated at a
 # high-adoption target above the cold ceiling.
-POOL_TILES = 4
+POOL_TILES = _CONFIG["poolTiles"]
 """Integer tiling of the 12-EV pool for the penetration sweep (× 12 = max EVs;
 4 → 48 EVs = 8 EV/home on the 6-home feeder). Homogeneous-fleet penetration."""
 
-INCENTIVE_TARGET_EV_PER_HOME = 5.0
+INCENTIVE_TARGET_EV_PER_HOME = _CONFIG["incentiveTargetEvPerHome"]
 """High-adoption target (EV/home) at which the incentive crossover is evaluated —
 chosen ABOVE the coldest-bin shift ceiling (~3.8) and below the mild-bin ceiling
 so the optimal incentive migrates shift→curtail as the shift ceiling falls with
@@ -1329,11 +1337,11 @@ robust physical headline."""
 # performance panel across G reveals the loadedness band where flexibility is
 # the right tool: below it the network is over-built (flex marginal), above it
 # the base itself overloads (reinforcement required).
-LOAD_GROWTH_GRID = (1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
+LOAD_GROWTH_GRID = tuple(_CONFIG["loadGrowthGrid"])
 """Load-growth factors G applied to the heating base (the network is sized at
 G=1). Swept to trace utilization / overload / the flexibility window vs load."""
 
-PERFORMANCE_REF_EV_PER_HOME = 1.0
+PERFORMANCE_REF_EV_PER_HOME = _CONFIG["performanceRefEvPerHome"]
 """Reference EV adoption (EV/home) for the flexible-vs-inflexible peak
 decomposition and the feeder flexibility-window band target T."""
 
@@ -1342,24 +1350,24 @@ decomposition and the feeder flexibility-window band target T."""
 # generators (building base + EV fleet) to estimate the probability and
 # peak-severity of cold-day congestion across a realistic load-growth surface.
 # No flexibility. Peaks (coincident 15-min daily max on cold days), not averages.
-CONGESTION_G_GRID = (1.0, 1.1, 1.2)
+CONGESTION_G_GRID = tuple(_CONFIG["congestionGGrid"])
 """Base electrification growth factors G (the network is sized at G=1)."""
 
-CONGESTION_EV_PER_HOME_GRID = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0)
+CONGESTION_EV_PER_HOME_GRID = tuple(_CONFIG["congestionEvPerHomeGrid"])
 """EV-adoption sweep (EV/home) for the congestion-risk surface."""
 
-CONGESTION_K_BASE = 6
+CONGESTION_K_BASE = _CONFIG["congestionKBase"]
 """Monte-Carlo realizations of the SDK building base per distinct transformer
 size (expensive — SDK agent; cached in base_mc_by_size.npz)."""
 
-CONGESTION_K_EV = 20
+CONGESTION_K_EV = _CONFIG["congestionKEv"]
 """Monte-Carlo draws of the EV fleet (cheap) crossed with the base realizations."""
 
-CONGESTION_RISK_THRESHOLD = 0.05
+CONGESTION_RISK_THRESHOLD = _CONFIG["congestionRiskThreshold"]
 """A transformer is 'at risk' when its congestion probability P(cong) exceeds
 this (5% of cold-day realizations with the peak over the rating)."""
 
-CONGESTION_AT_RISK_FRACTION = 0.10
+CONGESTION_AT_RISK_FRACTION = _CONFIG["congestionAtRiskFraction"]
 """Network first-risk trigger: the smallest growth scenario at which this
 fraction of transformers cross CONGESTION_RISK_THRESHOLD."""
 
@@ -1368,21 +1376,21 @@ fraction of transformers cross CONGESTION_RISK_THRESHOLD."""
 # phase imbalance is at 25 kV MV, where single-phase pole transformers are spread
 # across the three phases. Stochastic EV adoption that clusters on one phase's
 # transformers overloads/undervolts that phase. Diagnostic — no flexibility.
-PHASE_EV_GRID = (0.0, 0.5, 1.0, 1.5, 2.0)
+PHASE_EV_GRID = tuple(_CONFIG["phaseEvGrid"])
 """EV-adoption sweep (EV/home) for the phase-imbalance diagnostic."""
 
-PHASE_MC_DRAWS = 20
+PHASE_MC_DRAWS = _CONFIG["phaseMcDraws"]
 """Monte-Carlo draws of which homes adopt EVs (per-transformer Poisson counts);
 the phase imbalance emerges from the stochastic clustering of adopters."""
 
-PHASE_R0_MULT = 4.0
+PHASE_R0_MULT = _CONFIG["phaseR0Mult"]
 """Zero-sequence line resistance multiplier (r0 = PHASE_R0_MULT * r1) — a
 standard overhead-distribution assumption; calibratable, documented."""
 
-PHASE_X0_MULT = 3.0
+PHASE_X0_MULT = _CONFIG["phaseX0Mult"]
 """Zero-sequence line reactance multiplier (x0 = PHASE_X0_MULT * x1)."""
 
-PHASE_RISK_THRESHOLD = 0.10
+PHASE_RISK_THRESHOLD = _CONFIG["phaseRiskThreshold"]
 """P(any MV phase < CSA 0.917 pu) above which the scenario is 'at risk' — used
 for the first-risk adoption trigger."""
 
@@ -1391,13 +1399,13 @@ for the first-risk adoption trigger."""
 # severity of LV undervoltage on the governed feeder under EV adoption, MC over
 # the EV fleet x cold days with balanced AC power flow. Diagnostic — no
 # flexibility. Peaks (min voltage at the coincident-peak hour), not averages.
-VOLTAGE_EV_GRID = (0.0, 0.5, 1.0, 1.5, 2.0)
+VOLTAGE_EV_GRID = tuple(_CONFIG["voltageEvGrid"])
 """EV-adoption sweep (EV/home) for the voltage-risk diagnostic."""
 
-VOLTAGE_MC_DRAWS = 8
+VOLTAGE_MC_DRAWS = _CONFIG["voltageMcDraws"]
 """Monte-Carlo resamples of the EV fleet crossed with the cold days."""
 
-VOLTAGE_RISK_THRESHOLD = 0.10
+VOLTAGE_RISK_THRESHOLD = _CONFIG["voltageRiskThreshold"]
 """P(min LV voltage < CSA normal-low) above which the scenario is 'at risk' —
 used for the first-risk adoption trigger."""
 
@@ -1408,11 +1416,11 @@ used for the first-risk adoption trigger."""
 # resampled EV fleets, one full-net lightsim solve per (day, draw, level) at the
 # network coincident-peak hour. Reuses VOLTAGE_EV_GRID / VOLTAGE_RISK_THRESHOLD /
 # VOLTAGE_LIMITS_PU / COLD_DAY_TMEAN_C / SLACK_VM_PU / SEED.
-VOLTAGE_NET_MC_DRAWS = 8
+VOLTAGE_NET_MC_DRAWS = _CONFIG["voltageNetMcDraws"]
 # Fleet size whose per-EV mean is the uniform per-home EV overlay shape. Large
 # enough for a stable mean; draw-to-draw variance is secondary to the cold-day
 # weather axis (163 days), which dominates the undervoltage probability.
-VOLTAGE_NET_EV_POOL = 300
+VOLTAGE_NET_EV_POOL = _CONFIG["voltageNetEvPool"]
 
 # ── Realistic residential base: electric DHW tank + background split ──────────
 # The single-R RC envelope couples peak and energy (no single R hits both HQ
@@ -1423,38 +1431,53 @@ VOLTAGE_NET_EV_POOL = 300
 # double-counted DHW from the background. Provenance: spec
 # 2026-07-14-ev-hosting-flex-realistic-building-base-dhw. INITIAL values; the final
 # ones are fixed by calibrate_base.py (Task 4) to land the targets.
-DHW_TANK_L = 270.0            # 60-gal tank water volume (L)
-DHW_ELEMENT_KW = 4.5         # resistive element power (kW), standard QC
-DHW_T_SET = 60.0             # thermostat setpoint (deg C)
-DHW_T_LOW = 53.0             # element turns on below this (deg C)
-DHW_T_AMB = 20.0             # tank ambient (indoor) (deg C)
-DHW_UA_KW_PER_K = 0.0025     # standby heat loss (kW/K), well-insulated tank
-DHW_DAILY_L_MEAN = 180.0     # mean daily hot-water draw per home (L)
-DHW_DAILY_L_STD = 30.0       # per-home draw variability (L)
-DHW_DAILY_L_MIN = 60.0       # floor on the per-home daily draw (L)
+DHW_TANK_L = _CONFIG["dhwTankL"]  # 60-gal tank water volume (L)
+DHW_ELEMENT_KW = _CONFIG["dhwElementKw"]  # resistive element power (kW), standard QC
+DHW_T_SET = _CONFIG["dhwTSet"]  # thermostat setpoint (deg C)
+DHW_T_LOW = _CONFIG["dhwTLow"]  # element turns on below this (deg C)
+DHW_T_AMB = _CONFIG["dhwTAmb"]  # tank ambient (indoor) (deg C)
+DHW_UA_KW_PER_K = _CONFIG[
+    "dhwUaKwPerK"
+]  # standby heat loss (kW/K), well-insulated tank
+DHW_DAILY_L_MEAN = _CONFIG["dhwDailyLMean"]  # mean daily hot-water draw per home (L)
+DHW_DAILY_L_STD = _CONFIG["dhwDailyLStd"]  # per-home draw variability (L)
+DHW_DAILY_L_MIN = _CONFIG["dhwDailyLMin"]  # floor on the per-home daily draw (L)
 # DEPRECATED 2026-07-16 (smooth-occupancy fix): the sparse on/off draw schedule
 # caused a coincident aggregate step. dhw_tank_annual no longer reads this; the
 # continuous dhw_draw_profile() replaces it. Kept for provenance / diff tests.
-DHW_DRAW_WEIGHTS = {         # hour-of-day draw weights (occupancy-clustered)
-    6: 0.09, 7: 0.17, 8: 0.11, 12: 0.05,
-    17: 0.10, 18: 0.15, 19: 0.14, 20: 0.09, 21: 0.04,
+DHW_DRAW_WEIGHTS = {  # hour-of-day draw weights (occupancy-clustered)
+    6: 0.09,
+    7: 0.17,
+    8: 0.11,
+    12: 0.05,
+    17: 0.10,
+    18: 0.15,
+    19: 0.14,
+    20: 0.09,
+    21: 0.04,
 }
-DHW_INLET_MIN_C = 10.0       # cold-water inlet, winter (deg C)
-DHW_INLET_MAX_C = 15.0       # cold-water inlet, summer (deg C)
-DHW_SEED_SALT = 991          # RNG salt so DHW draws are independent of the base seed
-BG_SCALE = 0.6               # ARX background scale (remove double-counted DHW)
+DHW_INLET_MIN_C = _CONFIG["dhwInletMinC"]  # cold-water inlet, winter (deg C)
+DHW_INLET_MAX_C = _CONFIG["dhwInletMaxC"]  # cold-water inlet, summer (deg C)
+DHW_SEED_SALT = _CONFIG[
+    "dhwSeedSalt"
+]  # RNG salt so DHW draws are independent of the base seed
+BG_SCALE = _CONFIG["bgScale"]  # ARX background scale (remove double-counted DHW)
 
 # ── Pilar-2: network non-wires value (analyze_nonwires_value) ─────────────────
 # Deferral of reinforcement ($ NPV + transformer-years) as EV adoption ramps.
 # Cost anchors are literature-illustrative (like the pilar-1 WTA): the physical
 # crossing (A0/A1) is the robust result, the $ are illustrative. Spec
 # 2026-07-14-ev-hosting-flex-nonwires-network-value.
-TRAFO_CAPEX_PER_KVA = 107.0       # $/kVA INSTALLED reinforcement (hardware+labor+
+TRAFO_CAPEX_PER_KVA = _CONFIG[
+    "trafoCapexPerKva"
+]  # $/kVA INSTALLED reinforcement (hardware+labor+
 #                                   outage); reconciles with pilar-1 CAPEX_UPGRADE
 #                                   8000 / 75 kVA = ~107 (raw transformer hardware
 #                                   is only ~$20-40/kVA — too low; the flex has no
 #                                   value against trivially-cheap reinforcement).
-SUBSTATION_CAPEX_PER_MVA = 25000.0  # $/MVA substation reinforcement (~$15-30k/MVA)
+SUBSTATION_CAPEX_PER_MVA = _CONFIG[
+    "substationCapexPerMva"
+]  # $/MVA substation reinforcement (~$15-30k/MVA)
 # ---------------------------------------------------------------------------
 # EV adoption anchored to Québec reality (2026-07-30)
 #
@@ -1465,13 +1488,13 @@ SUBSTATION_CAPEX_PER_MVA = 25000.0  # $/MVA substation reinforcement (~$15-30k/M
 # figures rather than chosen.
 # ---------------------------------------------------------------------------
 
-QC_LIGHT_VEHICLES = 5_500_000
+QC_LIGHT_VEHICLES = _CONFIG["qcLightVehicles"]
 """Automobiles + light trucks in circulation in Québec, 2021.
 
 Source: Statistique Québec, "Véhicules en circulation".
 """
 
-QC_RESIDENTIAL_ACCOUNTS = 4_178_346
+QC_RESIDENTIAL_ACCOUNTS = _CONFIG["qcResidentialAccounts"]
 """Hydro-Québec residential customer accounts, 2024.
 
 Source: Hydro-Québec Rapport annuel 2024, Operating Statistics. Used as the
@@ -1479,7 +1502,7 @@ per-home denominator because it is the same "home" this study models -- an HQ
 residential service -- and it is a published hard number.
 """
 
-QC_PLUGIN_VEHICLES_2026 = 454_922
+QC_PLUGIN_VEHICLES_2026 = _CONFIG["qcPluginVehicles2026"]
 """Plug-in vehicles registered in Québec, 2026 (6.15 % of the fleet).
 
 Source: SAAQ statistics compiled by AVÉQ.
@@ -1505,12 +1528,16 @@ electrified, 5.5M vehicles / 4,178,346 residential accounts). Was 2.0, which
 modelled a future with more EVs per home than Québec has VEHICLES per home —
 so any crossing placed above 1.32 was unreachable by construction and silently
 became 'never happens'."""
-RAMP_HORIZON_YEARS = 15           # planning horizon (years)
-RAMP_MIDPOINT_YEAR = 7.0          # logistic S-curve midpoint (year of MAX/2)
-RAMP_STEEPNESS = 0.7              # logistic growth rate
-RAMP_SHAPE = "logistic"          # "logistic" | "linear"
+RAMP_HORIZON_YEARS = _CONFIG["rampHorizonYears"]  # planning horizon (years)
+RAMP_MIDPOINT_YEAR = _CONFIG[
+    "rampMidpointYear"
+]  # logistic S-curve midpoint (year of MAX/2)
+RAMP_STEEPNESS = _CONFIG["rampSteepness"]  # logistic growth rate
+RAMP_SHAPE = _CONFIG["rampShape"]  # "logistic" | "linear"
 NONWIRES_ADOPTION_GRID = tuple(round(0.1 * i, 6) for i in range(21))  # 0.0..2.0
-NONWIRES_CURTAIL_TOLERANCE = 0.10  # max curtailed EV-energy fraction before flex
+NONWIRES_CURTAIL_TOLERANCE = _CONFIG[
+    "nonwiresCurtailTolerance"
+]  # max curtailed EV-energy fraction before flex
 #                                    is unacceptable (the reliability side of A1)
 
 # ── Credibility layer: confidence intervals on the headlines (analyze_credibility)
@@ -1518,10 +1545,16 @@ NONWIRES_CURTAIL_TOLERANCE = 0.10  # max curtailed EV-energy fraction before fle
 # temperature anomaly (a cold year vs mild year); the point headlines firm/flex/
 # breakeven become P5/P50/P95 distributions. Single TMY -> the weather axis is a
 # synthetic severity proxy (uniform per-day offset), not measured weather years.
-CREDIBILITY_K = 50               # number of realizations
-WEATHER_SIGMA_C = 1.5            # winter-severity anomaly std (deg C, inter-annual)
-CREDIBILITY_WEATHER_SALT = 104729  # RNG salt for the per-realization temp offsets
-CREDIBILITY_EV_SALT = 7919       # EV-fleet seed multiplier per realization
+CREDIBILITY_K = _CONFIG["credibilityK"]  # number of realizations
+WEATHER_SIGMA_C = _CONFIG[
+    "weatherSigmaC"
+]  # winter-severity anomaly std (deg C, inter-annual)
+CREDIBILITY_WEATHER_SALT = _CONFIG[
+    "credibilityWeatherSalt"
+]  # RNG salt for the per-realization temp offsets
+CREDIBILITY_EV_SALT = _CONFIG[
+    "credibilityEvSalt"
+]  # EV-fleet seed multiplier per realization
 
 # ── DHW realism: smooth occupancy draw profile + per-home tank diversity ──────
 # The old sparse DHW_DRAW_WEIGHTS (zeros between clusters, identical per home)
@@ -1530,17 +1563,19 @@ CREDIBILITY_EV_SALT = 7919       # EV-fleet seed multiplier per realization
 # morning/evening Gaussians) and jitter the tank parameters per home so reheats
 # stagger. Spec 2026-07-16-ev-hosting-flex-dhw-smooth-occupancy. INITIAL values;
 # calibrate_base.py fixes the finals (Task 3).
-DHW_BASE_WEIGHT = 0.15       # all-day baseline draw weight (no zero hours)
-DHW_MORNING_HOUR = 7.0       # morning occupancy peak (local hour)
-DHW_MORNING_SIGMA = 1.6      # morning peak width (h)
-DHW_MORNING_AMP = 1.0        # morning peak amplitude
-DHW_EVENING_HOUR = 19.0      # evening occupancy peak (local hour)
-DHW_EVENING_SIGMA = 2.2      # evening peak width (h)
-DHW_EVENING_AMP = 1.3        # evening peak amplitude
-DHW_SETPOINT_JITTER_C = 2.0  # per-home setpoint std (deg C)
-DHW_DEADBAND_JITTER_C = 1.5  # per-home deadband std (deg C)
-DHW_ELEMENT_JITTER_KW = 0.5  # per-home element-power std (kW)
-DHW_TANK_L_JITTER_L = 30.0   # per-home tank-volume std (L)
+DHW_BASE_WEIGHT = _CONFIG[
+    "dhwBaseWeight"
+]  # all-day baseline draw weight (no zero hours)
+DHW_MORNING_HOUR = _CONFIG["dhwMorningHour"]  # morning occupancy peak (local hour)
+DHW_MORNING_SIGMA = _CONFIG["dhwMorningSigma"]  # morning peak width (h)
+DHW_MORNING_AMP = _CONFIG["dhwMorningAmp"]  # morning peak amplitude
+DHW_EVENING_HOUR = _CONFIG["dhwEveningHour"]  # evening occupancy peak (local hour)
+DHW_EVENING_SIGMA = _CONFIG["dhwEveningSigma"]  # evening peak width (h)
+DHW_EVENING_AMP = _CONFIG["dhwEveningAmp"]  # evening peak amplitude
+DHW_SETPOINT_JITTER_C = _CONFIG["dhwSetpointJitterC"]  # per-home setpoint std (deg C)
+DHW_DEADBAND_JITTER_C = _CONFIG["dhwDeadbandJitterC"]  # per-home deadband std (deg C)
+DHW_ELEMENT_JITTER_KW = _CONFIG["dhwElementJitterKw"]  # per-home element-power std (kW)
+DHW_TANK_L_JITTER_L = _CONFIG["dhwTankLJitterL"]  # per-home tank-volume std (L)
 
 # ── Cold-tail insurance study (analyze_cold_insurance) ───────────────────────
 # Hosting capacity is a DISTRIBUTION under winter-severity uncertainty (the
@@ -1552,8 +1587,12 @@ DHW_TANK_L_JITTER_L = 30.0   # per-home tank-volume std (L)
 # (CREDIBILITY_K / WEATHER_SIGMA_C / CREDIBILITY_WEATHER_SALT /
 # CREDIBILITY_EV_SALT) so the two studies share one firm distribution.
 INSURANCE_ADOPTION_GRID = tuple(range(1, 13))  # target EV counts on the 6-home feeder
-INSURANCE_RELIABILITY_TARGET = 0.95  # both strategies must cover >= 95 % of years
-INSURANCE_REF_ADOPTION = 6           # 1 EV/home on the governed feeder (pin reference)
+INSURANCE_RELIABILITY_TARGET = _CONFIG[
+    "insuranceReliabilityTarget"
+]  # both strategies must cover >= 95 % of years
+INSURANCE_REF_ADOPTION = _CONFIG[
+    "insuranceRefAdoption"
+]  # 1 EV/home on the governed feeder (pin reference)
 
 # ---------------------------------------------------------------------------
 # Fleet triage (2026-07-29)
@@ -1573,7 +1612,7 @@ INSURANCE_REF_ADOPTION = 6           # 1 EV/home on the governed feeder (pin ref
 # (6.5 % curtailed), i.e. firm 5 -> flexible 20 (+300 %, not +140 %).
 # ---------------------------------------------------------------------------
 
-TRIAGE_ADOPTION_GRID = (0.11, 0.25, 0.5, 0.75, 1.0, 1.32)
+TRIAGE_ADOPTION_GRID = tuple(_CONFIG["triageAdoptionGrid"])
 """EV-per-home adoption levels at which the fleet is triaged."""
 
 TRIAGE_CURTAIL_TOLERANCE = NONWIRES_CURTAIL_TOLERANCE
@@ -1584,17 +1623,17 @@ the SERVICE the customer is denied, so the limit is a commercial term, not a
 physical one.
 """
 
-TRIAGE_POOL_PER_HOME = 6.0
+TRIAGE_POOL_PER_HOME = _CONFIG["triagePoolPerHome"]
 """EV-per-home pool depth searched for the flexible count.
 
 Must exceed the largest adoption on the grid by enough headroom that the
 tolerance binds before the pool does -- the artefact this stage corrects.
 """
 
-TRIAGE_K_BASE = 3
+TRIAGE_K_BASE = _CONFIG["triageKBase"]
 """Base realizations per size class (the triage reports the median)."""
 
-TRIAGE_BASE_FLOOR_TOLERANCE_H = 0.0
+TRIAGE_BASE_FLOOR_TOLERANCE_H = _CONFIG["triageBaseFloorToleranceH"]
 """Base-alone overload hours a transformer may carry before it needs steel.
 
 An EV flexibility contract can only curtail EV load. In the hours where the
@@ -1616,7 +1655,7 @@ Reuses the clustered-adoption stage's grid so the two studies are directly
 comparable. `0.0` is the uniform reference, NOT the base case.
 """
 
-TRIAGE_BASE_DISPERSION = 0.7
+TRIAGE_BASE_DISPERSION = _CONFIG["triageBaseDispersion"]
 """Headline dispersion for the fleet triage (Gini ~0.37 across transformers).
 
 EV ownership is spatially correlated -- income, detached housing with a
@@ -1634,7 +1673,7 @@ TRIAGE_CLUSTER_DRAWS = CLUSTER_MC_DRAWS
 """Allocation draws averaged per (adoption, dispersion) cell."""
 
 
-TRIAGE_RATING_CONVENTIONS = ("static", "hourly_kt")
+TRIAGE_RATING_CONVENTIONS = tuple(_CONFIG["triageRatingConventions"])
 """Rating conventions the fleet triage evaluates side by side.
 
 `static` judges every hour against the nameplate, which is defined at a 30 °C
@@ -1646,7 +1685,7 @@ but WHAT IT IS ATTRIBUTED TO. Both are emitted so the reader sees the spread
 instead of inheriting one convention silently.
 """
 
-TRIAGE_HOTSPOT_LIMIT_C = 110.0
+TRIAGE_HOTSPOT_LIMIT_C = _CONFIG["triageHotspotLimitC"]
 """Hot-spot limit defining the C57.91 capability (normal insulation life)."""
 
 # ---------------------------------------------------------------------------
@@ -1659,7 +1698,7 @@ TRIAGE_HOTSPOT_LIMIT_C = 110.0
 # rather than implied by each stage building its own scalar.
 # ---------------------------------------------------------------------------
 
-RATING_CONVENTION = "hourly_kt"
+RATING_CONVENTION = _CONFIG["ratingConvention"]
 """How the feeder's usable rating is evaluated: 'hourly_kt' or 'static'.
 
 'static' uses the nameplate, a rating defined at a 30 °C ambient basis.
@@ -1679,7 +1718,7 @@ below the 110 °C normal-insulation-life limit, so the extra capability is not
 borrowed against transformer life.
 """
 
-EV_KWH_PER_YEAR = 2509.0
+EV_KWH_PER_YEAR = _CONFIG["evKwhPerYear"]
 """Annual energy of one EV as this study's own generator produces it (kWh).
 
 MEASURED, not assumed: mean over a 60-EV draw from `ev_fleet_annual` on the
