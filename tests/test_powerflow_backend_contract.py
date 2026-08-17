@@ -377,6 +377,45 @@ class NoEntryPointsDiscoveryTest(unittest.TestCase):
         self.assertIsInstance(registry.create(backend_id), _UnregisteredBackend)
 
 
+class RegistrationSourceTrackingTest(unittest.TestCase):
+    """Per-registration source: shipped 'core', extensions 'host' (16-02)."""
+
+    def test_shipped_backends_record_source_core(self) -> None:
+        registry = PowerFlowBackendRegistry()
+        registry.register(_RegisteredProbeBackend)
+        self.assertEqual(
+            "core", registry.registration_source("probe_registered_backend")
+        )
+        self.assertIsNone(registry.registration_version("probe_registered_backend"))
+
+    def test_host_extension_records_source_host_and_version(self) -> None:
+        from gridalyn.simulation.backends.registry import (
+            register_powerflow_backend_extension,
+        )
+
+        registry = PowerFlowBackendRegistry()
+        register_powerflow_backend_extension(
+            _RegisteredProbeBackend,
+            descriptor=PowerFlowBackendDescriptor(
+                backend_id="host_probe_backend",
+                name="Host-registered probe backend",
+            ),
+            registry=registry,
+            version="2.0.0",
+        )
+        self.assertEqual("host", registry.registration_source("host_probe_backend"))
+        self.assertEqual("2.0.0", registry.registration_version("host_probe_backend"))
+
+    def test_default_registry_ships_everything_as_core(self) -> None:
+        registry = default_powerflow_backend_registry()
+        for descriptor in registry.list_descriptors():
+            with self.subTest(backend_id=descriptor.backend_id):
+                self.assertEqual(
+                    "core", registry.registration_source(descriptor.backend_id)
+                )
+                self.assertIsNone(registry.registration_version(descriptor.backend_id))
+
+
 class SolveSiteReconciliationTest(unittest.TestCase):
     """Zero direct ``pp.runpp`` outside the backends package (AST-derived)."""
 

@@ -37,10 +37,26 @@ class UnknownPowerFlowBackendError(KeyError):
 
 @dataclass(frozen=True)
 class PowerFlowBackendRegistration:
-    """Factory and descriptor for a registered power-flow backend."""
+    """Factory, descriptor and registration source for a power-flow backend.
+
+    Attributes:
+        descriptor: What the registry records about the backend.
+        factory: Callable producing a backend instance.
+        source: Where the registration came from: ``"core"`` for the shipped
+            defaults, ``"host"`` when registered through the host extension
+            API (:func:`register_powerflow_backend_extension`). Recorded so
+            ``provenance.powerflow_backend`` can name WHICH extension served
+            the role rather than only that one exists.
+        version: Optional semantic version recorded by a host extension;
+            ``None`` for shipped backends and for registrations that do not
+            declare one. Role descriptors have no version field, so this is
+            the only place a version can be recorded.
+    """
 
     descriptor: PowerFlowBackendDescriptor
     factory: Callable[..., PowerFlowBackend]
+    source: str = "core"
+    version: str | None = None
 
 
 class PowerFlowBackendRegistry:
@@ -56,6 +72,8 @@ class PowerFlowBackendRegistry:
         *,
         descriptor: PowerFlowBackendDescriptor | None = None,
         replace: bool = False,
+        source: str = "core",
+        version: str | None = None,
     ) -> None:
         """Register a backend factory under its descriptor's ID.
 
@@ -64,6 +82,9 @@ class PowerFlowBackendRegistry:
             descriptor: Descriptor to register under. Defaults to the one the
                 factory declares.
             replace: Allow overwriting an already-registered ID.
+            source: Registration source -- ``"core"`` for the shipped
+                defaults, ``"host"`` when a host extension registers.
+            version: Optional semantic version when an extension supplies one.
 
         Raises:
             ValueError: If the ID is taken and ``replace`` is false. The
@@ -87,6 +108,8 @@ class PowerFlowBackendRegistry:
         self._registrations[backend_id] = PowerFlowBackendRegistration(
             descriptor=backend_descriptor,
             factory=factory,
+            source=source,
+            version=version,
         )
 
     def get_descriptor(self, backend_id: str) -> PowerFlowBackendDescriptor:
@@ -99,6 +122,30 @@ class PowerFlowBackendRegistry:
             The registered descriptor.
         """
         return self._registration(backend_id).descriptor
+
+    def registration_source(self, backend_id: str) -> str:
+        """Return the source a backend was registered under.
+
+        Args:
+            backend_id: The registered ID.
+
+        Returns:
+            ``"core"`` for the shipped defaults, ``"host"`` for a host
+            extension registration.
+        """
+        return self._registration(backend_id).source
+
+    def registration_version(self, backend_id: str) -> str | None:
+        """Return the semantic version an extension recorded, if any.
+
+        Args:
+            backend_id: The registered ID.
+
+        Returns:
+            The recorded version, or ``None`` when the registration did not
+            supply one.
+        """
+        return self._registration(backend_id).version
 
     def list_descriptors(self) -> list[PowerFlowBackendDescriptor]:
         """Return registered backend descriptors sorted by backend ID.
@@ -168,17 +215,32 @@ def register_powerflow_backend_extension(
     *,
     descriptor: PowerFlowBackendDescriptor,
     replace: bool = False,
+    version: str | None = None,
     registry: PowerFlowBackendRegistry | None = None,
 ) -> None:
     """Register an external power-flow backend (host API).
 
     A third-party backend conforms to the :class:`PowerFlowBackend` contract,
     carries a :class:`PowerFlowBackendDescriptor` with a supported
-    ``contract_version``, and registers it here — no edit to gridalyn's
-    codebase required. Defaults to the shared default registry.
+    ``contract_version``, and registers it here -- no edit to gridalyn's
+    codebase required. Defaults to the shared default registry. The
+    registration is recorded with ``source="host"`` so the run manifest can
+    name the extension that served the backend role.
+
+    Args:
+        factory: Callable returning a :class:`PowerFlowBackend`.
+        descriptor: Descriptor declaring the backend's identity and contract
+            version.
+        replace: Allow overwriting an already-registered ID.
+        version: Optional semantic version of the extension.
+        registry: Registry to register into; defaults to the shared default.
     """
     (registry or default_powerflow_backend_registry()).register(
-        factory, descriptor=descriptor, replace=replace
+        factory,
+        descriptor=descriptor,
+        replace=replace,
+        source="host",
+        version=version,
     )
 
 

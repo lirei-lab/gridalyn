@@ -26,6 +26,7 @@ from gridalyn.simulation.backends.contract import (
     LIGHTSIM2GRID_BACKEND_ID,
     PANDAPOWER_NATIVE_BACKEND_ID,
 )
+from gridalyn.simulation.backends.registry import PowerFlowBackendRegistry
 
 
 def _grid_study_project(tmp: str) -> Path:
@@ -399,6 +400,66 @@ class TestExtensionsProvenance(unittest.TestCase):
         )
         self.assertEqual("host", row["source"])
         self.assertEqual("1", row["contract_version"])
+
+
+def _grid_study_declaring_backend(tmp: str, backend_id: str) -> Path:
+    """Scaffold a grid-study project that declares ``backend_id``."""
+    import yaml
+
+    target = _grid_study_project(tmp)
+    project_file = target / "project.yaml"
+    data = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+    data["spec"]["simulation"]["powerflowBackend"] = backend_id
+    project_file.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    return target
+
+
+def _registry_with_host_backend() -> PowerFlowBackendRegistry:
+    from gridalyn.simulation.backends.contract import PowerFlowBackendDescriptor
+    from gridalyn.simulation.backends.pandapower_native import PandapowerNativeBackend
+
+    registry = PowerFlowBackendRegistry()
+    registry.register(PandapowerNativeBackend, source="core", version="3.1.2")
+    registry.register(
+        PandapowerNativeBackend,
+        descriptor=PowerFlowBackendDescriptor(
+            backend_id="host_backend_probe",
+            name="Probe host backend",
+        ),
+        source="host",
+        version="2.0.0",
+    )
+    return registry
+
+
+class TestBackendExtensionProvenance(unittest.TestCase):
+    """Role-level identity: WHICH extension served the backend role (16-02)."""
+
+    def test_core_backend_has_no_extension_identity_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
+        self.assertNotIn("extension_id", backend)
+        self.assertNotIn("extension_source", backend)
+        self.assertNotIn("extension_version", backend)
+
+    def test_host_backend_records_extension_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _grid_study_declaring_backend(tmp, "host_backend_probe")
+            with mock.patch(
+                "gridalyn.simulation.backends.registry"
+                ".default_powerflow_backend_registry",
+                return_value=_registry_with_host_backend(),
+            ):
+                run_workflow(target, dry_run=True)
+                manifest_path = (
+                    target / "outputs" / "manifests" / "project_run_manifest.json"
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backend = manifest["provenance"]["powerflow_backend"]
+        self.assertEqual("host_backend_probe", backend["backend_id"])
+        self.assertEqual("host_backend_probe", backend["extension_id"])
+        self.assertEqual("host", backend["extension_source"])
+        self.assertEqual("2.0.0", backend["extension_version"])
 
 
 if __name__ == "__main__":

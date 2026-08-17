@@ -285,6 +285,20 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     }
     backend_id = load_powerflow_backend_id(project)
     provenance = registry.get_descriptor(backend_id).as_dict()
+    # Role-level extension identity (Phase 16, plan 16-02): when the resolved
+    # backend is served by an extension rather than a shipped core backend,
+    # record WHICH one -- its ID, registration source and version. This is
+    # additive-only: a study using only the shipped backends keeps
+    # byte-identical manifest bytes (R7). The other roles will reach the
+    # manifest in a later phase and should record the same extension_id /
+    # extension_source keys when they do.
+    registration_source = registry.registration_source(backend_id)
+    if registration_source != "core":
+        provenance["extension_id"] = backend_id
+        provenance["extension_source"] = registration_source
+        extension_version = registry.registration_version(backend_id)
+        if extension_version is not None:
+            provenance["extension_version"] = extension_version
     overrides = load_powerflow_backend_by_stage(project)
     provenance["by_stage"] = {
         stage_id: registry.get_descriptor(stage_backend_id).as_dict()
