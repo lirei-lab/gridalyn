@@ -432,6 +432,46 @@ def _registry_with_host_backend() -> PowerFlowBackendRegistry:
     return registry
 
 
+class TestExtensionCompletenessGate(unittest.TestCase):
+    """The "never silent" rule as a gate (Phase 16, plan 16-03).
+
+    An extension that serves a role MUST be named in provenance — a role
+    resolved through an extension that leaves no ``extension_id`` trace is a
+    red build, not quiet drift. Mutation-verified: removing the 16-02 wiring
+    from ``_powerflow_backend_provenance`` turns this red.
+    """
+
+    def test_extension_served_role_is_never_silent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _grid_study_declaring_backend(tmp, "host_backend_probe")
+            with mock.patch(
+                "gridalyn.simulation.backends.registry"
+                ".default_powerflow_backend_registry",
+                return_value=_registry_with_host_backend(),
+            ):
+                run_workflow(target, dry_run=True)
+                manifest_path = (
+                    target / "outputs" / "manifests" / "project_run_manifest.json"
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backend = manifest["provenance"]["powerflow_backend"]
+        self.assertEqual(
+            "host_backend_probe",
+            backend.get("extension_id"),
+            "a role served by an extension must name the extension; "
+            "provenance.powerflow_backend.extension_id is missing",
+        )
+        self.assertEqual("host", backend.get("extension_source"))
+
+    def test_core_only_role_stays_silent(self) -> None:
+        # The other side of the gate: a shipped backend is not an extension,
+        # and must NOT be branded as one (R7 byte-identical manifests).
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
+        self.assertNotIn("extension_id", backend)
+        self.assertNotIn("extension_source", backend)
+
+
 class TestBackendExtensionProvenance(unittest.TestCase):
     """Role-level identity: WHICH extension served the backend role (16-02)."""
 
