@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
-
-ROOT = Path(__file__).parents[3]
-sys.path.insert(0, str(ROOT))
 
 from projects.admm_thermal_consensus.scripts import config as C
 

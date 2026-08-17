@@ -9,13 +9,8 @@ voltage is reported as a secondary severity measure.
 from __future__ import annotations
 
 import math
-import sys
-from pathlib import Path
 
 import pandas as pd
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
 
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
@@ -53,13 +48,23 @@ def main() -> None:
             {
                 "scenario": scenario,
                 "peak_kw": float(agg_kw.max()),
-                "worst_min_voltage_pu": None if worst_vmin is math.inf else float(worst_vmin),
-                "worst_transformer_loading_pct": None if worst_load == -math.inf else float(worst_load),
+                "worst_min_voltage_pu": (
+                    None if worst_vmin is math.inf else float(worst_vmin)
+                ),
+                "worst_transformer_loading_pct": (
+                    None if worst_load == -math.inf else float(worst_load)
+                ),
                 "worst_step": worst_step,
-                "voltage_violation": (worst_vmin < C.VOLTAGE_LOWER_PU)
-                if worst_vmin is not math.inf else None,
-                "transformer_violation": (worst_load > C.TRANSFORMER_LOADING_LIMIT_PCT)
-                if worst_load != -math.inf else None,
+                "voltage_violation": (
+                    (worst_vmin < C.VOLTAGE_LOWER_PU)
+                    if worst_vmin is not math.inf
+                    else None
+                ),
+                "transformer_violation": (
+                    (worst_load > C.TRANSFORMER_LOADING_LIMIT_PCT)
+                    if worst_load != -math.inf
+                    else None
+                ),
                 "nonconverged_steps": nonconverged,
             }
         )
@@ -77,10 +82,18 @@ def main() -> None:
         artifacts=[script.file_reference(feas_path)],
         summary={
             "scenarios": feas["scenario"].tolist(),
-            "uncoordinated_worst_transformer_loading_pct": _val("uncoordinated", "worst_transformer_loading_pct"),
-            "ideal_worst_transformer_loading_pct": _val("coordinated_ideal", "worst_transformer_loading_pct"),
-            "uncoordinated_worst_min_voltage_pu": _val("uncoordinated", "worst_min_voltage_pu"),
-            "ideal_worst_min_voltage_pu": _val("coordinated_ideal", "worst_min_voltage_pu"),
+            "uncoordinated_worst_transformer_loading_pct": _val(
+                "uncoordinated", "worst_transformer_loading_pct"
+            ),
+            "ideal_worst_transformer_loading_pct": _val(
+                "coordinated_ideal", "worst_transformer_loading_pct"
+            ),
+            "uncoordinated_worst_min_voltage_pu": _val(
+                "uncoordinated", "worst_min_voltage_pu"
+            ),
+            "ideal_worst_min_voltage_pu": _val(
+                "coordinated_ideal", "worst_min_voltage_pu"
+            ),
             "transformer_loading_limit_pct": C.TRANSFORMER_LOADING_LIMIT_PCT,
             "voltage_lower_pu": C.VOLTAGE_LOWER_PU,
         },

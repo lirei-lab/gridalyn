@@ -44,6 +44,53 @@ spec:
     weather:
       source: synthetic
       role: Deterministic synthetic cold-day temperature for load synthesis.
+    studyConfig:
+      # Centralized study knobs (config-as-contract, Phase 19): the values were
+      # previously hardcoded in scripts/config.py; they are declared here so
+      # project.yaml is the single source of truth. Values are identical to the
+      # pre-migration config (identity-preserving).
+      seed: 42
+      nAgents: 74
+      resolutionMinutes: 15
+      durationHours: 24
+      weatherSource: synthetic
+      generator: thermodynamic
+      rStudyB: 7.5
+      pHeatQuebec: 13.0
+      bgScale: 0.6
+      heatingControl: hysteresis
+      dhwSeedSalt: 91931
+      admmRho: 5.0
+      admmRelax: 1.7
+      admmLambda: 0.15
+      admmMu: 1.0
+      admmMaxIters: 500
+      admmTol: 0.0001
+      deferrabilityAlpha: 0.5
+      comfortGamma: 2.0
+      comfortBandC: 1.0
+      rhoSweep: [0.0, 0.2, 0.35, 0.42, 0.45, 0.48, 0.5, 0.52, 0.55, 0.6, 0.8, 1.0]
+      illustrativeRho: 0.55
+      powerFactor: 0.95
+      mvKv: 25.0
+      lvKv: 0.208
+      transformerKva: 500.0
+      nLvFeeders: 4
+      busesPerFeeder: 2
+      lvSectionKm: 0.014
+      lvROhmKm: 0.206
+      lvXOhmKm: 0.080
+      lvMaxIKa: 0.6
+      voltageLowerPu: 0.95
+      transformerLoadingLimitPct: 105.0
+      lineLoadingLimitPct: 105.0
+      uqNDraws: 200
+      uqPeakGridN: 41
+      uqPeakRangeMw: [3.4, 5.4]
+      uqBandLowPct: 5.0
+      uqBandHighPct: 95.0
+      comparisonRepRho: 0.5
+      comparisonMcDraws: 100
   artifacts:
     project:
       data: projects/admm_thermal_consensus/outputs/data

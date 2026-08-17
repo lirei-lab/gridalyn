@@ -105,6 +105,28 @@ the scenario would have rested on an asset that does not exist.
 Methodology adapted from the reja MAS/ADMM thesis and extended with power-flow
 validation.
 
+## Project Developer API migration (Phase 19, 2026-08-17)
+
+This study was migrated onto the Project Developer API surface (R22) in an
+**identity-preserving** pass — same values, new location — so its baselines did
+not move (R7):
+
+- **Config → contract**: the study knobs formerly hardcoded in
+  `scripts/config.py` are now declared in `project.yaml` under
+  `spec.inputs.studyConfig`; `scripts/config.py` reads them. `project.yaml` is
+  the single source of truth; `config.py` remains the module the stage scripts
+  import, exposing the same names and values.
+- **Boilerplate removed**: the `ROOT = Path(__file__).parents[N]` +
+  `sys.path.insert` pattern is gone from every script. Stages now run as modules
+  (`uv run python -m projects.admm_thermal_consensus.scripts.pipeline.<stage>`),
+  which puts the repo root on `sys.path` natively and preserves the module
+  identities the imputer pickle depends on.
+- **Governed JSON IO**: stage scripts read/write JSON through
+  `script.read_json` / `script.write_json` (ProjectScript fills) instead of
+  hand-rolled `json.dumps`/`json.loads` + path arithmetic.
+- The migration is identity-preserving: the committed `results_baseline.json`
+  values are unchanged (compared by json_path + tolerance).
+
 ## Related
 
 - `projects/ev_hosting_flex` — the flagship study, which shows that in a Québec

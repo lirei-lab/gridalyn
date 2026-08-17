@@ -17,40 +17,43 @@ counter the silent peaks; without it those peaks pass through uncompensated.
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
-from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts import comfort
+from projects.admm_thermal_consensus.scripts import config as C
+from projects.admm_thermal_consensus.scripts import lv_feeder
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 from projects.admm_thermal_consensus.scripts.forecast.methods import (
     ESTIMATING_METHODS,
     fit_predict,
 )
-from projects.admm_thermal_consensus.scripts import lv_feeder
 
 METHODS = (*ESTIMATING_METHODS, "none")  # add the no-imputation baseline
 DISPLAY = {
-    "lightgbm": "LightGBM", "random_forest": "Random forest", "ridge": "Ridge",
-    "knn": "k-NN", "mean_level": "Mean-level (naive)", "none": "No imputation",
+    "lightgbm": "LightGBM",
+    "random_forest": "Random forest",
+    "ridge": "Ridge",
+    "knn": "k-NN",
+    "mean_level": "Mean-level (naive)",
+    "none": "No imputation",
 }
 
 
 def _admm_responsive(heating, background, prox_subset):
     """Flatten a (responsive) subset and return its coordinated schedules."""
     res = solve_sharing_admm(
-        heating=heating, background=background, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-        max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
+        heating=heating,
+        background=background,
+        alpha=C.DEFERRABILITY_ALPHA,
+        rho=C.ADMM_RHO,
+        lam=C.ADMM_LAMBDA,
+        mu=C.ADMM_MU,
+        relax=C.ADMM_RELAX,
+        max_iters=C.ADMM_MAX_ITERS,
+        tol=C.ADMM_TOL,
         comfort_prox_inverse=prox_subset,
     )
     return res.x
@@ -70,15 +73,23 @@ def _realized_peak(method, heat, bg, levels, temp, silent, seed, prox):
         realized = sched.sum(axis=0) + heat[silent].sum(axis=0) + bg_total
         return float(realized.max())
     # estimating methods: pin silent homes to the estimate, optimize responsives
-    estimate = fit_predict(method, temp, heat[resp_idx], levels[resp_idx],
-                           levels[silent], seed)
+    estimate = fit_predict(
+        method, temp, heat[resp_idx], levels[resp_idx], levels[silent], seed
+    )
     forecast = heat.copy()
     forecast[silent] = estimate
     res = solve_sharing_admm(
-        heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-        max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
-        responsive=resp, forecast=forecast,
+        heating=heat,
+        background=bg,
+        alpha=C.DEFERRABILITY_ALPHA,
+        rho=C.ADMM_RHO,
+        lam=C.ADMM_LAMBDA,
+        mu=C.ADMM_MU,
+        relax=C.ADMM_RELAX,
+        max_iters=C.ADMM_MAX_ITERS,
+        tol=C.ADMM_TOL,
+        responsive=resp,
+        forecast=forecast,
         comfort_prox_inverse=prox,
     )
     # REALITY: silent homes draw their true heating, not the estimate
@@ -96,11 +107,14 @@ def _intrinsic_cv(heat, levels, temp):
         for fold in folds:
             test = np.asarray(fold)
             train = np.array([i for i in range(C.N_AGENTS) if i not in set(test)])
-            preds = fit_predict(method, temp, heat[train], levels[train],
-                                levels[test], C.SEED)
+            preds = fit_predict(
+                method, temp, heat[train], levels[train], levels[test], C.SEED
+            )
             truth = heat[test]
             for k in range(len(test)):  # per-agent (matches train_forecaster)
-                per_agent_rmse.append(float(np.sqrt(np.mean((preds[k] - truth[k]) ** 2))))
+                per_agent_rmse.append(
+                    float(np.sqrt(np.mean((preds[k] - truth[k]) ** 2)))
+                )
                 per_agent_mae.append(float(np.mean(np.abs(preds[k] - truth[k]))))
             rss.append(((preds - truth) ** 2).sum())
             tss.append(((truth - truth.mean()) ** 2).sum())
@@ -119,7 +133,7 @@ def main() -> None:
     heat = pd.read_parquet(C.DATA_DIR / "agents_heating.parquet").to_numpy()
     bg = pd.read_parquet(C.DATA_DIR / "agents_background.parquet").to_numpy()
     levels = heat.mean(axis=1)
-    params = json.loads((C.JSON_DIR / "agent_params.json").read_text())
+    params = script.read_json("outputs/json/agent_params.json")
     temp = np.asarray(params["temperature_c"], dtype=float)
 
     uncoordinated_peak = float(params["uncoordinated_peak_kw"])
@@ -142,9 +156,14 @@ def main() -> None:
         silent = drop[:n_down]
         for m in METHODS:
             pk = _realized_peak(m, heat, bg, levels, temp, silent, C.SEED, prox)
-            curves[m].append({"rho": rho_frac, "peak_kw": pk,
-                              "loading_pct": loading_of(pk),
-                              "violation": loading_of(pk) > C.LINE_LOADING_LIMIT_PCT})
+            curves[m].append(
+                {
+                    "rho": rho_frac,
+                    "peak_kw": pk,
+                    "loading_pct": loading_of(pk),
+                    "violation": loading_of(pk) > C.LINE_LOADING_LIMIT_PCT,
+                }
+            )
 
     # Coordinated loading with every agent responding (rho = 0): the headroom
     # the schedule leaves before any communication failure is considered.
@@ -191,15 +210,16 @@ def main() -> None:
         "methods": list(METHODS),
         "display_names": DISPLAY,
     }
-    res_path = C.JSON_DIR / "imputer_comparison.json"
-    res_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    res_path = script.write_json("outputs/json/imputer_comparison.json", results)
 
     script.write_report(
         "imputer_comparison_report",
-        artifacts=[script.file_reference(curve_path), script.file_reference(res_path)],
+        artifacts=[script.file_reference(curve_path), res_path],
         summary={
             "methods": list(METHODS),
-            "intrinsic_rmse_kw": {m: intrinsic[m]["rmse_kw"] for m in ESTIMATING_METHODS},
+            "intrinsic_rmse_kw": {
+                m: intrinsic[m]["rmse_kw"] for m in ESTIMATING_METHODS
+            },
             "rep_rho": rep,
             # Realized peak is the discriminating metric, and P(violation) is
             # reported beside it as a saturated one -- see `violation_margin_pct`

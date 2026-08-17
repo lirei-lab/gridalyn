@@ -2,14 +2,7 @@
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-
 import pandas as pd
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
 
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
@@ -17,8 +10,8 @@ from projects.admm_thermal_consensus.scripts import config as C
 
 def main() -> None:
     script = project_script()
-    kpis = json.loads((C.JSON_DIR / "aggregate_kpis.json").read_text())
-    cv = json.loads((C.JSON_DIR / "forecast_cv.json").read_text())
+    kpis = script.read_json("outputs/json/aggregate_kpis.json")
+    cv = script.read_json("outputs/json/forecast_cv.json")
     feas = pd.read_parquet(C.DATA_DIR / "network_feasibility.parquet")
 
     results = {
@@ -33,13 +26,11 @@ def main() -> None:
             "transformer_kva": C.TRANSFORMER_KVA,
         },
     }
-    C.JSON_DIR.mkdir(parents=True, exist_ok=True)
-    results_path = C.JSON_DIR / "study_results.json"
-    results_path.write_text(json.dumps(results, indent=2, sort_keys=True), encoding="utf-8")
+    results_path = script.write_json("outputs/json/study_results.json", results)
 
     script.write_report(
         "study_report",
-        artifacts=[script.file_reference(results_path)],
+        artifacts=[results_path],
         summary={
             "ideal_peak_reduction_fraction": 1
             - kpis["coordinated_ideal"]["peak_kw"] / kpis["uncoordinated"]["peak_kw"],

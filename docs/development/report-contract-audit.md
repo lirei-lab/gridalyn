@@ -868,3 +868,70 @@ still describes live code; only its workflow-side caller is gone.
 hazard recorded at the end of §10 lived in `spatial_powerflow_validation.py`,
 which no longer exists. It is closed by deletion, not by a fix — if that
 module is ever reinstated, the hazard returns with it.
+
+## 12. Amendment — 2026-08-17: admm migration onto the Project Developer API
+
+**Counts move: direct-JSON sites 69 → 59, helper-routed sites 18 → 28.**
+`tests/test_report_contract.py` pins both numbers and both classified sets; it
+caught every one of these reclassifications before this section was written,
+which is what the vanished-site assertions exist for.
+
+**Why.** Phase 19 (Project Developer API) migrated the
+`admm_thermal_consensus` pipeline's study-data JSON writes off raw
+`json.dumps` onto the new `script.write_json(...)` surface
+(`gridalyn/projects/scripting.py::ProjectScript.write_json`). A direct write
+site becomes invisible to the direct scan once the payload is serialized
+inside a helper — the direct scan attributes it to the helper instead — so
+those 10 documents moved from the §3.7 direct enumeration to the §3.9
+helper-routed enumeration. Every migrated module still emits its governed
+report via `script.write_report(...)`; the reclassified JSONs are the same
+domain-data payloads, unchanged in role (NOT-A-REPORT).
+
+**Removed from the direct-JSON classification (10 sites, NOT-A-REPORT):**
+
+| Site |
+|---|
+| `build_network.py::main::<inline:DictComp>#0` |
+| `build_network.py::main::<inline:feeder,homes_per_bus,...>#0` |
+| `build_study_report.py::main::results#0` |
+| `comfort_validation.py::main::results#0` |
+| `generate_agents.py::main::params#0` |
+| `imputer_comparison.py::main::results#0` |
+| `run_admm.py::main::convergence#0` |
+| `run_admm.py::main::kpis#0` |
+| `train_forecaster.py::main::cv#0` |
+| `uncertainty_sweep.py::main::<inline:band,...>#0` |
+
+All under `projects/admm_thermal_consensus/scripts/pipeline/`.
+
+**Added to the helper-routed classification (10 sites, NOT-A-REPORT):**
+
+| Site |
+|---|
+| `build_network.py::main::write_json#0` |
+| `build_network.py::main::write_json#1` |
+| `build_study_report.py::main::write_json#0` |
+| `comfort_validation.py::main::write_json#0` |
+| `generate_agents.py::main::write_json#0` |
+| `imputer_comparison.py::main::write_json#0` |
+| `run_admm.py::main::write_json#0` |
+| `run_admm.py::main::write_json#1` |
+| `train_forecaster.py::main::write_json#0` |
+| `uncertainty_sweep.py::main::write_json#0` |
+
+All under `projects/admm_thermal_consensus/scripts/pipeline/`, routed through
+`ProjectScript.write_json`.
+
+**Zero known violations is unaffected.** Every moved site was already
+classified NOT-A-REPORT as a direct write; the migration changes only *which*
+enumeration names it, not its class. `scripts/validate_convergence.py::out`
+remains the study's single direct-JSON write — it is a standalone operator
+script, not a workflow stage, and was deliberately left off the migration.
+
+**Reconciliation.** Direct: `0 + 58 + 1 = 59` ✔ (was `0 + 68 + 1 = 69`).
+Helper-routed: `0 + 26 + 2 = 28` ✔ (was `0 + 16 + 2 = 18`).
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_NOT_A_REPORT_BY_FILE`, `_HELPER_ROUTED_NOT_A_REPORT`, and both count
+guards), per §7's rule that a reclassification must update the audit and the
+gate in the same change.
