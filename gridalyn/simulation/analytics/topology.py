@@ -37,8 +37,37 @@ __all__ = [
 ]
 
 
+def _resolve_power_factor(pf: float | None, power_factor: float | None) -> float:
+    """Resolve the effective power factor from ``pf`` and its deprecated alias.
+
+    ``power_factor`` is the deprecated alias for ``pf``; either works alone,
+    and passing both that disagree is a conflict. Returns the default 0.95
+    when neither is given.
+
+    Args:
+        pf: Primary power factor, or ``None`` for the default.
+        power_factor: Deprecated alias, or ``None``.
+
+    Returns:
+        The resolved power factor as a float.
+
+    Raises:
+        ValueError: If both ``pf`` and ``power_factor`` are given and disagree.
+    """
+    if pf is not None and power_factor is not None and float(power_factor) != float(pf):
+        raise ValueError(
+            f"thermal_ratings_kw received conflicting pf={pf!r} and "
+            f"power_factor={power_factor!r}; pass only one of them."
+        )
+    if pf is not None:
+        return float(pf)
+    if power_factor is not None:
+        return float(power_factor)
+    return 0.95
+
+
 def thermal_ratings_kw(
-    net: Any, *, pf: float = 0.95, power_factor: float | None = None
+    net: Any, *, pf: float | None = None, power_factor: float | None = None
 ) -> dict[str, float]:
     """Return the per-line and per-transformer kW thermal ratings.
 
@@ -58,17 +87,11 @@ def thermal_ratings_kw(
         the net's ``line`` and ``trafo`` row order.
 
     Raises:
-        ValueError: If ``pf`` is not in ``(0, 1]``, or if a required net table
+        ValueError: If ``pf`` is not in ``(0, 1]``, if both ``pf`` and
+            ``power_factor`` are given and disagree, or if a required net table
             or column is absent.
     """
-    resolved_pf = float(pf)
-    if power_factor is not None:
-        if resolved_pf != float(power_factor):
-            raise ValueError(
-                f"thermal_ratings_kw received conflicting pf={pf!r} and "
-                f"power_factor={power_factor!r}; pass only pf=."
-            )
-        resolved_pf = float(power_factor)
+    resolved_pf = _resolve_power_factor(pf, power_factor)
     if not 0.0 < resolved_pf <= 1.0:
         raise ValueError(
             f"thermal_ratings_kw received pf={resolved_pf}, which is outside "

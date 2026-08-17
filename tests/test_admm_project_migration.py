@@ -81,22 +81,41 @@ def test_admm_sense_check_still_passes() -> None:
 
 def test_ev_hosting_flex_untouched() -> None:
     # 19-05 migrates admm only; the flagship is out of scope. This guards the
-    # R7 promise that 19-05's migration touched nothing under ev_hosting_flex:
-    # the phase's own commit range must NOT contain any ev_hosting_flex change.
-    # (19-04 legitimately added project.yaml + scripts/sense_checks.py — that
-    # commit predates this test and is not in the range checked here.)
+    # R7 promise that the 19-05 migration commit itself touched nothing under
+    # ev_hosting_flex. The range is pinned to the exact 19-05 commit
+    # (9cbc6ac3^..9cbc6ac3), NOT ..HEAD, so a later legitimate ev_hosting_flex
+    # change does not break this test; the assertion means exactly "the 19-05
+    # commit changed no flagship file". Skipped cleanly on a shallow clone or
+    # a history rewrite where the SHA is absent.
     import subprocess
 
-    base = "9cbc6ac3^"  # the commit before the 19-05 migration commit
+    commit = "9cbc6ac3"
+    present = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        capture_output=True,
+    )
+    if present.returncode != 0:
+        pytest.skip(
+            f"git commit {commit} not present (shallow clone or rewritten history)"
+        )
     changed = subprocess.run(
-        ["git", "diff", "--name-only", base, "HEAD", "--", "projects/ev_hosting_flex"],
+        [
+            "git",
+            "diff",
+            "--name-only",
+            f"{commit}^",
+            commit,
+            "--",
+            "projects/ev_hosting_flex",
+        ],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.split()
-    assert (
-        changed == []
-    ), f"19-05 must not modify projects/ev_hosting_flex; found changes: {changed}"
+    assert changed == [], (
+        f"19-05 commit {commit} must not modify projects/ev_hosting_flex; "
+        f"found changes: {changed}"
+    )
 
 
 def test_pipeline_scripts_use_read_write_json() -> None:

@@ -24,6 +24,9 @@ CACHE_DIR = OUTPUTS_DIR / "cache"
 FIGURES_DIR = OUTPUTS_DIR / "figures"
 
 
+_PROJECT_FILE = PROJECT_ROOT / "project.yaml"
+
+
 def _study_config() -> dict:
     """Load the declared ``spec.inputs.studyConfig`` block from project.yaml.
 
@@ -32,26 +35,44 @@ def _study_config() -> dict:
             when ``studyConfig`` is absent or not a mapping (never a bare
             ``KeyError``), so a dropped block is diagnosable from the message.
     """
-    project_file = PROJECT_ROOT / "project.yaml"
-    raw = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+    raw = yaml.safe_load(_PROJECT_FILE.read_text(encoding="utf-8"))
     inputs = (raw or {}).get("spec", {}).get("inputs", {})
     if not isinstance(inputs, dict) or "studyConfig" not in inputs:
         available = ", ".join(sorted(str(k) for k in inputs)) or "none declared"
         raise ValueError(
-            f"{project_file}: spec.inputs.studyConfig not found "
+            f"{_PROJECT_FILE}: spec.inputs.studyConfig not found "
             f"(available inputs: {available}). Remediation: declare the study "
             "knobs under spec.inputs.studyConfig in project.yaml."
         )
     config = inputs["studyConfig"]
     if not isinstance(config, dict):
         raise ValueError(
-            f"{project_file}: spec.inputs.studyConfig must be a mapping, "
+            f"{_PROJECT_FILE}: spec.inputs.studyConfig must be a mapping, "
             f"found {type(config).__name__}"
         )
     return config
 
 
-_CONFIG = _study_config()
+class _LocatedStudyConfig(dict):
+    """A ``studyConfig`` mapping whose missing-key errors are located.
+
+    A bare ``KeyError: 'seed'`` names neither the file nor the fix; every
+    ``_CONFIG[...]`` access through this mapping raises a ``ValueError`` that
+    does both, matching the repo's located-error convention.
+    """
+
+    def __getitem__(self, key: object) -> object:
+        if key not in self:
+            available = ", ".join(sorted(str(k) for k in self)) or "none declared"
+            raise ValueError(
+                f"{_PROJECT_FILE}: spec.inputs.studyConfig.{key} not found "
+                f"(available studyConfig keys: {available}). Remediation: add "
+                "the missing knob to spec.inputs.studyConfig in project.yaml."
+            )
+        return super().__getitem__(key)
+
+
+_CONFIG = _LocatedStudyConfig(_study_config())
 
 # ── Study dimensions ────────────────────────────────────────────────
 SEED = _CONFIG["seed"]

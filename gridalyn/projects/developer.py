@@ -44,8 +44,9 @@ class ProjectComponents:
         backend: The resolved power-flow backend, or ``None`` if the project
             declares none.
         registered: Explicit-ID components the project registered through the
-            per-role registries, keyed by their role name (``backend``,
-            ``observation_producer``, ``surrogate``, ``policy``, ``adapter``).
+            per-role registries, keyed by their role name (``backend`` today;
+            the platform's ``observation_producer`` / ``surrogate`` / ``policy``
+            roles are declared follow-up surface).
     """
 
     script: ProjectScript
@@ -153,16 +154,30 @@ def _declared_input_keys(script: ProjectScript) -> set[str]:
 
     Absence (a key not declared) is the *optional* case a bind may treat as
     ``None``; presence is the *contract* case, where the loader's located
-    ``ValueError`` must propagate rather than being swallowed.
+    ``ValueError`` must propagate rather than being swallowed. A ``spec.inputs``
+    that is present but NOT a mapping is itself declared-but-malformed and
+    raises a located error — it is not silently treated as "nothing declared".
 
     Args:
         script: The prepared ``ProjectScript`` for the running project.
 
     Returns:
         The set of declared ``spec.inputs`` keys (``set()`` when none).
+
+    Raises:
+        ValueError: If ``spec.inputs`` is present but not a mapping (a located
+            error naming the key and the found type, per the loader contract).
     """
-    inputs = script.project.raw.get("spec", {}).get("inputs", {})
-    return set(inputs) if isinstance(inputs, dict) else set()
+    inputs = script.project.raw.get("spec", {}).get("inputs")
+    if inputs is None:
+        return set()
+    if not isinstance(inputs, dict):
+        raise ValueError(
+            f"{script.project.path}: spec.inputs must be a mapping, "
+            f"found {type(inputs).__name__}. Remediation: fix spec.inputs in "
+            "project.yaml to a mapping of input-key -> declaration."
+        )
+    return set(inputs)
 
 
 def bind_project_components(script: ProjectScript) -> ProjectComponents:

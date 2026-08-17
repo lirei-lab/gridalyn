@@ -97,6 +97,22 @@ class TestBindProjectComponents(unittest.TestCase):
             # The loader's located error names the key, not a generic message.
             self.assertIn("sourceNetwork", str(ctx.exception))
 
+    def test_non_mapping_spec_inputs_raises_located(self) -> None:
+        # spec.inputs present but not a mapping is declared-but-malformed: it
+        # must raise, not silently bind every component to None.
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "bare"
+            init_project(target, name="bare")
+            project_yaml = target / "project.yaml"
+            raw = yaml.safe_load(project_yaml.read_text(encoding="utf-8"))
+            raw.setdefault("spec", {})["inputs"] = "not-a-mapping"
+            project_yaml.write_text(yaml.safe_dump(raw), encoding="utf-8")
+            script = project_script(target)
+
+            with self.assertRaises(ValueError) as ctx:
+                bind_project_components(script)
+            self.assertIn("spec.inputs", str(ctx.exception))
+
 
 class TestRegisteredComponents(unittest.TestCase):
     def test_consume_unknown_role_raises_located(self) -> None:

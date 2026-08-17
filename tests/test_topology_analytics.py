@@ -79,6 +79,21 @@ class TestThermalRatingsKw(unittest.TestCase):
         with self.assertRaises(ValueError):
             thermal_ratings_kw(net, pf=1.5)
 
+    def test_power_factor_alias_works_standalone(self) -> None:
+        net = _radial_with_transformer()
+        # The deprecated alias must work alone (no spurious "conflicting" when
+        # only power_factor is passed and pf stays at its default).
+        alias = thermal_ratings_kw(net, power_factor=0.9)
+        positional = thermal_ratings_kw(net, pf=0.9)
+        self.assertEqual(alias["line:0"], positional["line:0"])
+        self.assertEqual(alias["transformer:0"], positional["transformer:0"])
+
+    def test_pf_and_power_factor_conflict_raises(self) -> None:
+        net = _radial_with_transformer()
+        with self.assertRaises(ValueError) as ctx:
+            thermal_ratings_kw(net, pf=0.95, power_factor=0.9)
+        self.assertIn("conflicting", str(ctx.exception))
+
     def test_missing_net_table_raises_located(self) -> None:
         class BareNet:
             pass
@@ -161,20 +176,23 @@ class TestAssertRadialNoGeneration(unittest.TestCase):
 
 class TestSizeFeederSubtreeKw(unittest.TestCase):
     def test_resizes_to_downstream_nameplate(self) -> None:
-        # transformer:0 downstream = {2, 3} with nameplate 0.02 + 0.03 kW;
-        # line:0 downstream = {1, 2, 3} with nameplate 0.01 + 0.02 + 0.03.
+        # transformer:0 downstream = {2, 3} with nameplate 1.0 + 1.5 kW;
+        # line:0 downstream = {1, 2, 3} with nameplate 0.5 + 1.0 + 1.5 kW.
+        # The values are chosen so ceil does NOT collapse the outputs to one
+        # integer: distinct results prove the resize formula (and would catch a
+        # multiply-vs-divide margin bug or a wrong downstream sum).
         element_keys = {
             "transformer:0": frozenset({2, 3}),
             "line:0": frozenset({1, 2, 3}),
         }
-        nameplate = {1: 0.01, 2: 0.02, 3: 0.03}
+        nameplate = {1: 0.5, 2: 1.0, 3: 1.5}
         sized = size_feeder_subtree_kw(
-            element_keys, nameplate, peak_factor=2.0, utilization_margin=0.8
+            element_keys, nameplate, peak_factor=10.0, utilization_margin=0.5
         )
-        # ceil((0.05 * 2.0) / 0.8) = ceil(0.125) = 1.0
-        self.assertEqual(sized["transformer:0"], 1.0)
-        # ceil((0.06 * 2.0) / 0.8) = ceil(0.15) = 1.0
-        self.assertEqual(sized["line:0"], 1.0)
+        # ceil((2.5 * 10.0) / 0.5) = ceil(50.0) = 50.0
+        self.assertEqual(sized["transformer:0"], 50.0)
+        # ceil((3.0 * 10.0) / 0.5) = ceil(60.0) = 60.0
+        self.assertEqual(sized["line:0"], 60.0)
 
     def test_utilization_margin_out_of_range_raises(self) -> None:
         with self.assertRaises(ValueError) as ctx:
