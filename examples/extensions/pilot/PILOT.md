@@ -39,6 +39,19 @@ variant shows `source="host"`; the `--entry-point` variant shows
 `source="entry_point"` for the committed `hello_world` extension. Both name
 `pilot_native_backend` as the role-level extension.
 
+## A note on role entry points
+
+A backend extension is registered through the host API
+(`register_powerflow_backend_extension`) — the backend registry has **no
+entry-point discovery** (it resolves by explicit ID only), so
+`pilot_backend/pyproject.toml` deliberately declares **no**
+`gridalyn.extensions` entry point. A generic entry point would be rejected by
+the generic loader anyway, because a backend's `descriptor` is a
+`PowerFlowBackendDescriptor`, not the generic `ExtensionDescriptor`. The
+`gridalyn.extensions` entry-point path applies to generic/data-source
+components (see the committed `hello_world` example), not to power-flow
+backends.
+
 ## Why this matters
 
 Before Milestone 8, a solver or data source outside gridalyn could only run by

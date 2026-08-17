@@ -43,15 +43,17 @@ sys.path.insert(0, str(REPO_ROOT / "examples" / "extensions" / "hello_world"))
 import pilot_backend  # noqa: E402  - the example dir is added to sys.path above
 
 
-def _scaffold_study() -> Path:
-    """Scaffold a grid-study into a temp dir, declaring the pilot backend.
+def _scaffold_study(tmp: Path) -> Path:
+    """Scaffold a grid-study under ``tmp``, declaring the pilot backend.
+
+    Args:
+        tmp: The directory to scaffold into (the caller owns its lifetime).
 
     Returns:
         The study directory, with ``project.yaml`` declaring
         ``pilot_native_backend`` as its power-flow backend.
     """
-    tmp = tempfile.mkdtemp(prefix="pilot_run_")
-    target = Path(tmp) / "pilot_case"
+    target = tmp / "pilot_case"
     init_project(target, name="pilot_case", template="grid-study")
     project_file = target / "project.yaml"
     data = yaml.safe_load(project_file.read_text(encoding="utf-8"))
@@ -121,25 +123,28 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    target = _scaffold_study()
-    if args.entry_point:
-        _load_entry_point_extension()
-    else:
-        _register_generic_extension()
-    # The 18-01 external backend, registered through the declared host API.
-    pilot_backend.register(version="0.1.0")
+    # The study lives in a temp dir and is cleaned up after the run: the
+    # reproducible output is the printed JSON summary, not the on-disk study.
+    with tempfile.TemporaryDirectory(prefix="pilot_run_") as tmp:
+        target = _scaffold_study(Path(tmp))
+        if args.entry_point:
+            _load_entry_point_extension()
+        else:
+            _register_generic_extension()
+        # The 18-01 external backend, registered through the declared host API.
+        pilot_backend.register(version="0.1.0")
 
-    run_workflow(target, dry_run=True)
-    manifest_path = target / "outputs" / "manifests" / "project_run_manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    backend = manifest["provenance"]["powerflow_backend"]
-    summary = {
-        "extensions": manifest["provenance"]["extensions"],
-        "powerflow_backend": {
-            "extension_id": backend.get("extension_id"),
-            "extension_source": backend.get("extension_source"),
-        },
-    }
+        run_workflow(target, dry_run=True)
+        manifest_path = target / "outputs" / "manifests" / "project_run_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backend = manifest["provenance"]["powerflow_backend"]
+        summary = {
+            "extensions": manifest["provenance"]["extensions"],
+            "powerflow_backend": {
+                "extension_id": backend.get("extension_id"),
+                "extension_source": backend.get("extension_source"),
+            },
+        }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

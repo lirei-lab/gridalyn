@@ -132,8 +132,9 @@ class EndToEndPilotTest(unittest.TestCase):
         code, stdout, stderr = self._run()
         self.assertEqual(0, code, stderr[-2000:])
         summary = json.loads(stdout)
-        sources = [row["source"] for row in summary["extensions"]]
-        self.assertIn("host", sources)
+        extension_ids = {row["extension_id"] for row in summary["extensions"]}
+        self.assertEqual({"pilot_data_source"}, extension_ids)
+        self.assertEqual("host", summary["extensions"][0]["source"])
         backend = summary["powerflow_backend"]
         self.assertEqual("pilot_native_backend", backend["extension_id"])
         self.assertEqual("host", backend["extension_source"])
@@ -142,21 +143,27 @@ class EndToEndPilotTest(unittest.TestCase):
         code, stdout, stderr = self._run("--entry-point")
         self.assertEqual(0, code, stderr[-2000:])
         summary = json.loads(stdout)
-        sources = [row["source"] for row in summary["extensions"]]
-        self.assertIn("entry_point", sources)
+        extension_ids = {row["extension_id"] for row in summary["extensions"]}
+        self.assertEqual({"hello_world"}, extension_ids)
+        self.assertEqual("entry_point", summary["extensions"][0]["source"])
         backend = summary["powerflow_backend"]
         self.assertEqual("pilot_native_backend", backend["extension_id"])
         self.assertEqual("host", backend["extension_source"])
 
     def test_pilot_run_is_deterministic(self) -> None:
-        code1, out1, _ = self._run()
-        code2, out2, _ = self._run()
-        self.assertEqual(0, code1)
-        self.assertEqual(out1, out2)
+        # Both variants are deterministic — the host extension and the
+        # entry-point hello_world (content-hash module_hash is stable per
+        # checkout) must print byte-identical summaries across runs.
+        for extra in ((), ("--entry-point",)):
+            code1, out1, _ = self._run(*extra)
+            code2, out2, _ = self._run(*extra)
+            self.assertEqual(0, code1, extra)
+            self.assertEqual(out1, out2, extra)
 
     def test_pilot_does_not_touch_projects(self) -> None:
         # R7 guard: the pilot writes only to its system temp dir; projects/
-        # must remain untouched.
+        # must remain untouched. The git returncode is asserted so a git
+        # failure (not an empty status) cannot make the guard pass vacuously.
         code, _, stderr = self._run()
         self.assertEqual(0, code, stderr[-2000:])
         status = subprocess.run(
@@ -166,6 +173,7 @@ class EndToEndPilotTest(unittest.TestCase):
             cwd=REPO_ROOT,
             check=False,
         )
+        self.assertEqual(0, status.returncode)
         self.assertEqual("", status.stdout)
 
 
