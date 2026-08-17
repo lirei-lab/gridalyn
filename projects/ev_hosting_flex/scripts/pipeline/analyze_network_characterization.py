@@ -23,40 +23,29 @@ identical. GUARD-02: no module-scope pandapower (deferred in the solve loop).
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     day_mean_temps,
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import native_backend  # noqa: E402
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import native_backend
+from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     HEADROOM_PENETRATION_GRID,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SLACK_VM_PU,
     SUBSTATION_DYNAMIC_RATING_K,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -80,7 +69,9 @@ def _interp_crossing(pens: np.ndarray, loadings: np.ndarray, limit: float) -> fl
     return x0 + (limit - y0) * (x1 - x0) / (y1 - y0)
 
 
-def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_characterization(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Sweep EV adoption and compute the three network-characterization metrics.
 
     Args:
@@ -93,7 +84,7 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -254,10 +245,9 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "n_lv_lines_upsized": int(sizing["n_lv_lines_upsized"]),
         "design_day": design_day,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "network_characterization.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json(
+        "outputs/json/network_characterization.json", payload
+    )
 
     fig_paths = _figures(
         pens,
@@ -266,7 +256,7 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         sub_cfg,
         headroom_static,
         home_counts,
-        PROJECT_OUTPUTS_DIR / "figures",
+        script.figures_dir,
     )
 
     summary = {
@@ -286,7 +276,7 @@ def derive_characterization(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "headroom_p50": payload["headroom"]["crossing_penetration_p50"],
         "n_transformers_overloaded_at_0ev": n_at_0,
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _figures(
@@ -360,7 +350,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_characterization(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_characterization(script)
     warnings = [
         "LOW WINTER DIVERSITY: inter-cluster diversity at design cold is ~0 "
         "(verified factor 0.997) — all-electric heating is weather-driven and "
@@ -377,7 +367,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "network_characterization_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

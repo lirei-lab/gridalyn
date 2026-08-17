@@ -23,7 +23,7 @@ spec:
     # ── Stage 2: topology cache via the public facade (live, TWIN-01) ────
     - id: prepare_topology_cache
       needs: [prepare_workspace]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.prepare_topology_cache"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py
         - projects/ev_hosting_flex/scripts/config.py
@@ -41,7 +41,7 @@ spec:
     # migration.md).
     - id: generate_annual_mc
       needs: [prepare_topology_cache]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -59,7 +59,7 @@ spec:
     # ── Stage 4b: study-B annual firm hosting (live, F2 of the migration) ──
     - id: compute_congestion_annual
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.compute_congestion_annual"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -74,7 +74,7 @@ spec:
     # ── Stage 5b: study-B curtailment contracts (live, F3 of the migration) ─
     - id: apply_curtailment_contracts
       needs: [compute_congestion_annual]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.apply_curtailment_contracts"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -89,7 +89,7 @@ spec:
     # ── Stage 6b: study-B curtailment economics (live, F4 of the migration) ─
     - id: compute_curtailment_economics
       needs: [compute_congestion_annual]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -103,7 +103,7 @@ spec:
 
     - id: analyze_credibility
       needs: [generate_annual_mc, compute_congestion_annual, apply_curtailment_contracts]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_credibility"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -118,7 +118,7 @@ spec:
 
     - id: analyze_cold_insurance
       needs: [generate_annual_mc, analyze_credibility]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_cold_insurance"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
@@ -138,7 +138,7 @@ spec:
     # cold-coupled pool and quantifies the over-estimation.
     - id: analyze_cold_coupling
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_cold_coupling"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -155,7 +155,7 @@ spec:
     # the substation constraint, and the per-transformer hosting-headroom map.
     - id: analyze_network_characterization
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
         - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
@@ -173,7 +173,7 @@ spec:
 
     - id: analyze_clustered_adoption
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_clustered_adoption.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_clustered_adoption"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_clustered_adoption.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
@@ -192,7 +192,7 @@ spec:
 
     - id: analyze_flexibility_incentive
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py
         - projects/ev_hosting_flex/scripts/_annual.py
@@ -207,7 +207,7 @@ spec:
 
     - id: analyze_network_performance
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_network_performance.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_network_performance"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_network_performance.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py
@@ -226,7 +226,7 @@ spec:
 
     - id: analyze_congestion_risk
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
         - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
@@ -243,7 +243,7 @@ spec:
 
     - id: analyze_fleet_triage
       needs: [analyze_congestion_risk]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_fleet_triage.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_fleet_triage"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_fleet_triage.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
@@ -260,7 +260,7 @@ spec:
 
     - id: analyze_locational_contracts
       needs: [analyze_fleet_triage]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_locational_contracts"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
@@ -279,7 +279,7 @@ spec:
 
     - id: analyze_nonwires_value
       needs: [analyze_network_characterization, analyze_congestion_risk]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_nonwires_value"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
         - projects/ev_hosting_flex/scripts/_powerflow.py
@@ -295,7 +295,7 @@ spec:
 
     - id: analyze_phase_imbalance
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_phase_imbalance"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py
         - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
@@ -313,7 +313,7 @@ spec:
 
     - id: analyze_voltage_risk
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
         - projects/ev_hosting_flex/scripts/_powerflow.py
@@ -331,7 +331,7 @@ spec:
 
     - id: analyze_voltage_risk_network
       needs: [generate_annual_mc]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk_network.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk_network"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk_network.py
         - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
@@ -356,7 +356,7 @@ spec:
     # and thermal violations summary + before/after figures.
     - id: validate_powerflow
       needs: [compute_congestion_annual, apply_curtailment_contracts]
-      command: uv run python projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.validate_powerflow"
       inputs:
         - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
         - projects/ev_hosting_flex/scripts/_powerflow.py

@@ -15,24 +15,14 @@ the deep-feeder residual held by LTC/regulators.
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     annual_base_realization,
     day_mean_temps,
@@ -40,13 +30,10 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
-    network_min_voltage,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import network_min_voltage
+from projects.ev_hosting_flex.scripts.config import (
     COLD_DAY_TMEAN_C,
     DTYPE,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     VOLTAGE_EV_GRID,
@@ -55,8 +42,11 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     VOLTAGE_NET_MC_DRAWS,
     VOLTAGE_RISK_THRESHOLD,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk import (
     _interp_first_cross,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
+    size_network_to_load,
 )
 
 
@@ -85,7 +75,7 @@ def _adoption_network_voltage_stats(
     for evbar in evbar_pools:
         for d in cold_days:
             sl = slice(d * 24, (d + 1) * 24)
-            base_day = per_load_base_annual[:, sl]              # (n_load, 24)
+            base_day = per_load_base_annual[:, sl]  # (n_load, 24)
             ev_day = float(ev_per_home) * np.asarray(evbar[sl], dtype=DTYPE)
             total_by_hour = base_day.sum(axis=0) + n_homes_total * ev_day
             h = int(np.argmax(total_by_hour))
@@ -122,8 +112,13 @@ def _sweep_network(
     out["worst_bus"] = []
     for e in ev_grid:
         s = _adoption_network_voltage_stats(
-            net, per_load_base_annual, evbar_pools, cold_days,
-            n_homes_total, e, csa,
+            net,
+            per_load_base_annual,
+            evbar_pools,
+            cold_days,
+            n_homes_total,
+            e,
+            csa,
         )
         for k in keys:
             out[k].append(s[k])
@@ -131,18 +126,14 @@ def _sweep_network(
     return out
 
 
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
-)
-
-
-def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
+def derive_voltage_network(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
     """Size the full net, MC the EV fleet x cold days; per adoption level compute
     the network LV undervoltage probability + voltage tail."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -158,8 +149,9 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
 
     # ── Per-load base by cluster size (annual, one deterministic realization) ─
     load_bus = net.load["bus"].to_numpy()
-    sizes_present = sorted({int(size_by_loadbus[int(b)]) for b in load_bus
-                            if int(b) in size_by_loadbus})
+    sizes_present = sorted(
+        {int(size_by_loadbus[int(b)]) for b in load_bus if int(b) in size_by_loadbus}
+    )
     base_perhome: dict[int, np.ndarray] = {
         n: (
             aggregate_to_hourly(
@@ -173,9 +165,9 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
     size_of_load = np.array(
         [int(size_by_loadbus.get(int(b), fallback)) for b in load_bus]
     )
-    per_load_base_annual = np.stack(
-        [base_perhome[s] for s in size_of_load]
-    ).astype(DTYPE)                                        # (n_load, 8760)
+    per_load_base_annual = np.stack([base_perhome[s] for s in size_of_load]).astype(
+        DTYPE
+    )  # (n_load, 8760)
     n_homes_total = int(len(load_bus))
 
     # ── Uniform per-home EV overlay shape: draw's mean single-EV profile ──
@@ -183,9 +175,13 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
         aggregate_to_hourly(
             ev_fleet_annual(
                 np.random.default_rng(SEED + 811 * k),
-                int(VOLTAGE_NET_EV_POOL), tday, hod0,
+                int(VOLTAGE_NET_EV_POOL),
+                tday,
+                hod0,
             )
-        ).mean(axis=0).astype(DTYPE)
+        )
+        .mean(axis=0)
+        .astype(DTYPE)
         for k in range(int(VOLTAGE_NET_MC_DRAWS))
     ]
 
@@ -194,8 +190,13 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
     ev_grid = [float(e) for e in VOLTAGE_EV_GRID]
 
     swept = _sweep_network(
-        net, per_load_base_annual, evbar_pools, cold_days,
-        n_homes_total, ev_grid, csa,
+        net,
+        per_load_base_annual,
+        evbar_pools,
+        cold_days,
+        n_homes_total,
+        ev_grid,
+        csa,
     )
     p_undervolt = swept["p_undervolt"]
     min_v_p05 = swept["min_v_p05"]
@@ -210,7 +211,7 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
     # map from real LV clusters (size_by_trafo > 0); the MV substation
     # transformer's downstream covers every LV bus in its half with size 0 and
     # must not overwrite the unique pole-transformer size of each LV bus.
-    down_map = json.loads((cache_dir / "downstream_bus_map.json").read_text())
+    down_map = script.read_json("outputs/cache/downstream_bus_map.json")
     size_by_bus: dict[int, int] = {}
     for key, buses in down_map.items():
         if not key.startswith("transformer:"):
@@ -245,11 +246,8 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
         "first_risk_ev_per_home": first_risk,
         "binding_cluster_size_at_ref": binding_size,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "voltage_risk_network.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    out_path_ref = script.write_json("outputs/json/voltage_risk_network.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
 
     summary = {
         "n_homes_total": n_homes_total,
@@ -260,7 +258,7 @@ def derive_voltage_network(cache_dir: Path) -> dict[str, Any]:
         "first_risk_ev_per_home": first_risk,
         "binding_cluster_size_at_ref": binding_size,
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -282,21 +280,33 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     ax2.plot(evs, payload["min_v_p50_by_ev"], "o-", color="C0", label="median")
     ax2.plot(evs, payload["min_v_p05_by_ev"], "s--", color="C1", label="P5")
     ax2.plot(evs, payload["min_v_worst_by_ev"], "^:", color="C3", label="worst")
-    ax2.axhline(payload["csa_normal_low_pu"], color="k", ls="--", lw=1,
-                label="CSA 0.917")
-    ax2.axhline(payload["csa_extreme_low_pu"], color="0.5", ls=":", lw=1,
-                label="extreme 0.883")
+    ax2.axhline(
+        payload["csa_normal_low_pu"], color="k", ls="--", lw=1, label="CSA 0.917"
+    )
+    ax2.axhline(
+        payload["csa_extreme_low_pu"], color="0.5", ls=":", lw=1, label="extreme 0.883"
+    )
     ax2.set_xlabel("EV/home")
     ax2.set_ylabel("network min LV voltage (pu)")
     ax2.set_title("Voltage tail vs adoption")
     ax2.legend(fontsize=7)
 
     ax3.plot(evs, payload["p_undervolt_by_ev"], "o-", color="C3")
-    ax3.axhline(VOLTAGE_RISK_THRESHOLD, color="k", ls=":", lw=1,
-                label=f"risk {VOLTAGE_RISK_THRESHOLD:g}")
+    ax3.axhline(
+        VOLTAGE_RISK_THRESHOLD,
+        color="k",
+        ls=":",
+        lw=1,
+        label=f"risk {VOLTAGE_RISK_THRESHOLD:g}",
+    )
     if payload["first_risk_ev_per_home"] is not None:
-        ax3.axvline(payload["first_risk_ev_per_home"], color="C2", ls="--",
-                    lw=1.5, label=f"first-risk {payload['first_risk_ev_per_home']:g}")
+        ax3.axvline(
+            payload["first_risk_ev_per_home"],
+            color="C2",
+            ls="--",
+            lw=1.5,
+            label=f"first-risk {payload['first_risk_ev_per_home']:g}",
+        )
     ax3.set_xlabel("EV/home")
     ax3.set_ylabel("P(undervoltage)")
     ax3.set_title("First-risk adoption")
@@ -321,7 +331,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_voltage_network(script.cache_dir)
+    derived = derive_voltage_network(script)
     warnings = [
         "DIAGNOSTIC ONLY — no flexibility. Full-network LV undervoltage "
         "probability + severity under EV adoption, MC over the EV fleet x cold "
@@ -339,7 +349,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "voltage_risk_network_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

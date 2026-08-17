@@ -11,38 +11,29 @@ design-day congestion stage until F6 retires it; emits its own
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
-from pathlib import Path
 from typing import Any
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
-    firm_annual,
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     feeder_rating,
+    firm_annual,
     load_annual_tmy,
     p95_cold_evening_loading,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     DTYPE,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
 )
+
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (imported before this stage under `{python} -m`).
+
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 """Nameplate usable kW. The rating a load is JUDGED against comes from
@@ -50,7 +41,8 @@ _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 
-def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
+def derive_annual_congestion(script: ProjectScript) -> dict[str, Any]:
+    data_dir = script.data_dir
     """Compute the annual firm count + congestion diagnostics and persist them.
 
     Args:
@@ -114,9 +106,7 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "res_minutes": int(ANNUAL_RES_MINUTES),
         "rule": "p95_cold_evening_loading_le_limit",
     }
-    json_dir.mkdir(parents=True, exist_ok=True)
-    firm_path = json_dir / "firm_hosting_annual.json"
-    firm_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    firm_path_ref = script.write_json("outputs/json/firm_hosting_annual.json", payload)
 
     summary = {
         "firm_ev_count": firm_n,
@@ -142,7 +132,7 @@ def derive_annual_congestion(data_dir: Path, json_dir: Path) -> dict[str, Any]:
             ROUND_DECIMALS,
         ),
     }
-    return {"artifact_paths": [firm_path], "summary": summary}
+    return {"artifact_paths": [firm_path_ref], "summary": summary}
 
 
 def run_stage() -> dict[str, Any]:
@@ -154,12 +144,13 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_annual_congestion(
-        PROJECT_OUTPUTS_DIR / "data", PROJECT_OUTPUTS_DIR / "json"
-    )
+    derived = derive_annual_congestion(script)
     return script.write_report(
         "annual_congestion_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": []},
     )

@@ -22,19 +22,15 @@ Two corrections to the per-asset result are built in.
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
+import numpy as np
 
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     ANNUAL_RES_MINUTES,
     cold_capability_curve,
     day_mean_temps,
@@ -43,19 +39,16 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
-    draw_clustered_adoption,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
-    DISCOUNT_RATE,
-    LIFE_YEARS,
-    POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
-    ROUND_DECIMALS,
-    SEED,
+from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
+from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
+    DISCOUNT_RATE,
     EV_KWH_PER_YEAR,
+    LIFE_YEARS,
+    POWER_FACTOR,
+    ROUND_DECIMALS,
+    SEED,
     TRAFO_CAPEX_PER_KVA,
     TRANSFORMER_KVA_LADDER,
     TRIAGE_ADOPTION_GRID,
@@ -63,17 +56,17 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     TRIAGE_BASE_FLOOR_TOLERANCE_H,
     TRIAGE_CLUSTER_DRAWS,
     TRIAGE_CURTAIL_TOLERANCE,
-    TRIAGE_HOTSPOT_LIMIT_C,
-    TRIAGE_RATING_CONVENTIONS,
     TRIAGE_DISPERSION_GRID,
+    TRIAGE_HOTSPOT_LIMIT_C,
     TRIAGE_K_BASE,
     TRIAGE_POOL_PER_HOME,
+    TRIAGE_RATING_CONVENTIONS,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
     _ensure_base_mc_cache,
     _ev_pools,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -357,12 +350,14 @@ def triage_fleet(
     }
 
 
-def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Compute per-size hosting limits and triage the whole transformer fleet."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -458,10 +453,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "pool_limited_sizes": pool_limited,
         "reference_feeder": limits[feeder_homes],
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "fleet_triage.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json("outputs/json/fleet_triage.json", payload)
 
     ref = payload["reference_feeder"]
     at_ref = next(
@@ -484,7 +476,7 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         ),
         triage[0],
     )
-    payload["artifact_paths"] = [out_path] + _figures(payload)
+    payload["artifact_paths"] = [out_path_ref] + _figures(payload, script)
     payload["summary"] = {
         "n_transformers": payload["n_transformers"],
         "n_at_risk_at_1ev": at_ref["n_at_risk"],
@@ -504,14 +496,14 @@ def derive_fleet_triage(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     return payload
 
 
-def _figures(payload: dict[str, Any]) -> list[Path]:
+def _figures(payload: dict[str, Any], script: ProjectScript) -> list[Path]:
     """Emit the triage stack and the per-size hosting limits."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    figures_dir = PROJECT_OUTPUTS_DIR / "figures"
+    figures_dir = script.figures_dir
     figures_dir.mkdir(parents=True, exist_ok=True)
     base_delta = float(payload["base_dispersion"])
     conv0 = payload["rating_conventions"][0]
@@ -577,7 +569,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_fleet_triage(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_fleet_triage(script)
     warnings = [
         "FLEXIBLE COUNT IS GATED ON THE CURTAILMENT TOLERANCE, not on "
         "feasibility. Under full enrollment the backstop can always hold a "
@@ -612,7 +604,10 @@ def run_stage() -> dict[str, Any]:
         )
     return script.write_report(
         "fleet_triage_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

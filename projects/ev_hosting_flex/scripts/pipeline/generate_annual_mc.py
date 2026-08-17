@@ -20,25 +20,13 @@ deferred inside the kernel.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top, BEFORE any import
-# that pulls numpy transitively, so the annual chain stays deterministic.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     N_DAYS,
     annual_base_realization,
     day_mean_temps,
@@ -47,31 +35,34 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     DTYPE,
     FC_SIGMAS,
     K_ANNUAL,
     POOL_MAX_ANNUAL,
     POWER_FACTOR,
-    PROJECT_CACHE_DIR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     SEED_FC_OFFSETS,
     TRANSFORMER_KVA,
 )
 
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (this package is imported before the stage module under `{python} -m`).
+
+
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 
 
-def feeder_home_count(cache_dir: Path) -> int:
+def feeder_home_count(script: ProjectScript) -> int:
     """Return the study feeder's downstream home count from the topology cache.
 
     Args:
-        cache_dir: Stage-2 topology cache directory.
+        script: The project workspace handle (reads the cache JSONs through
+            ``script.read_json``, the ProjectScript fill).
 
     Returns:
         The number of homes downstream of the selected feeder transformer.
@@ -79,12 +70,12 @@ def feeder_home_count(cache_dir: Path) -> int:
     Raises:
         ValueError: If the cache reports zero downstream homes.
     """
-    feeder_sel = json.loads((cache_dir / "feeder_selection.json").read_text())
+    feeder_sel = script.read_json("outputs/cache/feeder_selection.json")
     feeder_idx = int(feeder_sel["feeder_transformer_idx"])
-    downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())[
+    downstream = script.read_json("outputs/cache/downstream_bus_map.json")[
         f"transformer:{feeder_idx}"
     ]
-    counts = json.loads((cache_dir / "node_building_count.json").read_text())
+    counts = script.read_json("outputs/cache/node_building_count.json")
     n_homes = sum(int(counts.get(str(int(bus)), 0)) for bus in downstream)
     if n_homes <= 0:
         raise ValueError(
@@ -94,18 +85,19 @@ def feeder_home_count(cache_dir: Path) -> int:
     return n_homes
 
 
-def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_annual_mc(script: ProjectScript) -> dict[str, Any]:
     """Build and persist the annual artifacts; return paths + summary.
 
     Args:
-        cache_dir: Stage-2 topology cache directory.
-        data_dir: Output data directory the ``.npy`` artifacts are written to.
+        script: The project workspace handle (cache/data dirs resolved through
+            ``script.cache_dir`` / ``script.data_dir``).
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     data_dir.mkdir(parents=True, exist_ok=True)
-    n_homes = feeder_home_count(cache_dir)
+    n_homes = feeder_home_count(script)
     temp_hourly = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp_hourly)
     tday = day_mean_temps(temp_hourly)
@@ -183,11 +175,8 @@ def derive_annual_mc(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     }
 
 
-def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
+def run_stage() -> dict[str, Any]:
     """Run the annual generation stage and emit the platform report.
-
-    Args:
-        cache_dir: Stage-2 topology cache directory (test override).
 
     Returns:
         The platform report payload written via ``script.write_report``.
@@ -195,11 +184,13 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    effective_cache = script.cache_dir if cache_dir == PROJECT_CACHE_DIR else cache_dir
-    derived = derive_annual_mc(effective_cache, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_annual_mc(script)
     return script.write_report(
         "annual_mc_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": []},
     )
@@ -207,11 +198,9 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
 
 def main() -> None:
     """CLI entry point for the study-B annual generation stage."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cache-dir", type=Path, default=PROJECT_CACHE_DIR)
-    args = parser.parse_args()
+    argparse.ArgumentParser(description=__doc__).parse_args()
 
-    report = run_stage(cache_dir=args.cache_dir)
+    report = run_stage()
     summary = report.get("summary", {})
     print(
         "Generated annual MC + report: "

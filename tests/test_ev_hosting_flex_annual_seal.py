@@ -99,10 +99,19 @@ def _hash_json(path: Path) -> str:
 
 
 def _run_annual_chain() -> None:
-    """Re-run the annual stages 3–6 in dependency order, one subprocess each."""
+    """Re-run the annual stages 3–6 in dependency order, one subprocess each.
+
+    Invoked as ``python -m projects.ev_hosting_flex.scripts.pipeline.<stage>``
+    from the repo root (Phase 20, plan 20-02) so the ``projects.*`` imports
+    resolve without the removed ``sys.path`` boilerplate — the same
+    interpreter-bound module invocation the workflow's ``{python} -m`` uses.
+    """
     for stage in _ANNUAL_STAGES:
+        module = (
+            f"projects.ev_hosting_flex.scripts.pipeline.{stage.removesuffix('.py')}"
+        )
         result = subprocess.run(
-            [sys.executable, str(_PIPELINE / stage)],
+            [sys.executable, "-m", module],
             capture_output=True,
             text=True,
             cwd=str(_REPO_ROOT),

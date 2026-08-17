@@ -17,23 +17,13 @@ kernels — only the EV model's cold slopes change.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     N_DAYS,
     ev_fleet_annual,
     feeder_rating,
@@ -42,13 +32,12 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
     DTYPE,
     POOL_MAX_ANNUAL,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     TRANSFORMER_KVA,
@@ -82,14 +71,20 @@ def _flex_and_curtailment(
     flexible = 0
     for n in range(1, pool_max + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, bool), _RATING_KW,
+            base,
+            pool[:n],
+            np.ones(n, bool),
+            _RATING_KW,
             res_minutes=ANNUAL_RES_MINUTES,
             rating_series=rating_series,
         )
         if out["residual_hours"] <= base_floor + 1e-9:
             flexible = n
     full = simulate_curtailment(
-        base, pool, np.ones(pool_max, bool), _RATING_KW,
+        base,
+        pool,
+        np.ones(pool_max, bool),
+        _RATING_KW,
         res_minutes=ANNUAL_RES_MINUTES,
         rating_series=rating_series,
     )
@@ -109,7 +104,8 @@ def _cold_day_ev_energy_per_ev(pool: np.ndarray, cold_days: np.ndarray) -> float
     return float(daily[:, cold_days, :].sum()) * _HOURS_PER_STEP / n_evs
 
 
-def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
+def derive_cold_coupling(script: ProjectScript) -> dict[str, Any]:
+    data_dir = script.data_dir
     """Compute the cold-coupled vs naive comparison and persist it.
 
     Args:
@@ -129,10 +125,16 @@ def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     cap, series = feeder_rating(temp)
     cold_days = np.where(tday < float(COLD_DAY_TMEAN_C))[0]
 
-    cold_pool = ev_fleet_annual(np.random.default_rng(SEED), POOL_MAX_ANNUAL, tday, hod0)
+    cold_pool = ev_fleet_annual(
+        np.random.default_rng(SEED), POOL_MAX_ANNUAL, tday, hod0
+    )
     naive_pool = ev_fleet_annual(
-        np.random.default_rng(SEED), POOL_MAX_ANNUAL, tday, hod0,
-        plugin_kcold=0.0, ev_kwh_kcold=0.0,
+        np.random.default_rng(SEED),
+        POOL_MAX_ANNUAL,
+        tday,
+        hod0,
+        plugin_kcold=0.0,
+        ev_kwh_kcold=0.0,
     )
 
     models: dict[str, Any] = {}
@@ -184,11 +186,11 @@ def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
             (e_cold - e_naive) / e_naive * 100.0, ROUND_DECIMALS
         ),
     }
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "cold_coupling_comparison.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json(
+        "outputs/json/cold_coupling_comparison.json", payload
+    )
 
-    fig_paths = _figure(payload, PROJECT_OUTPUTS_DIR / "figures")
+    fig_paths = _figure(payload, script.figures_dir)
 
     summary = {
         "firm_cold_coupled": firm_cold,
@@ -201,7 +203,7 @@ def derive_cold_coupling(data_dir: Path, json_dir: Path) -> dict[str, Any]:
             "cold_day_ev_energy_uplift_percent"
         ],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _figure(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -218,10 +220,20 @@ def _figure(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     fig, (axl, axr) = plt.subplots(1, 2, figsize=(11.0, 4.3))
 
     n = range(len(cold["p95_cold_evening_curve"]))
-    axl.plot(n, cold["p95_cold_evening_curve"], "o-", color="C3",
-             label=f"cold-coupled (firm {cold['firm_ev_count']})")
-    axl.plot(n, naive["p95_cold_evening_curve"], "s--", color="C0",
-             label=f"naive (firm {naive['firm_ev_count']})")
+    axl.plot(
+        n,
+        cold["p95_cold_evening_curve"],
+        "o-",
+        color="C3",
+        label=f"cold-coupled (firm {cold['firm_ev_count']})",
+    )
+    axl.plot(
+        n,
+        naive["p95_cold_evening_curve"],
+        "s--",
+        color="C0",
+        label=f"naive (firm {naive['firm_ev_count']})",
+    )
     axl.axhline(100.0, color="k", ls=":", lw=1.2, label="transformer rating")
     axl.set_xlabel("EVs on the 6-home feeder")
     axl.set_ylabel("P95 cold-evening loading (%)")
@@ -263,12 +275,13 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_cold_coupling(
-        PROJECT_OUTPUTS_DIR / "data", PROJECT_OUTPUTS_DIR / "json"
-    )
+    derived = derive_cold_coupling(script)
     return script.write_report(
         "cold_coupling_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": []},
     )

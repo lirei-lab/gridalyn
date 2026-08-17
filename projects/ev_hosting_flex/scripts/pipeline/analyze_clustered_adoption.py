@@ -22,51 +22,40 @@ pool. GUARD-02: no module-scope pandapower. Out of scope: phase imbalance
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     day_mean_temps,
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import (
     apply_local_curtailment,
     draw_clustered_adoption,
     gini,
     native_backend,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     CLUSTER_DISPERSION_GRID,
     CLUSTER_MC_DRAWS,
     CLUSTER_MEAN_RATE,
     CLUSTER_MU_GRID,
     DTYPE,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     SLACK_VM_PU,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization import (
     _interp_crossing,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -242,7 +231,9 @@ def _sweep_one_dispersion(
     }
 
 
-def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_clustered(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Sweep dispersion x mean-adoption; compute the penalty + recovery metrics.
 
     Args:
@@ -255,11 +246,11 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
-    downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())
+    downstream = script.read_json("outputs/cache/downstream_bus_map.json")
     temp = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp)
     design_day = int(np.argmin(day_mean_temps(temp)))
@@ -388,12 +379,9 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "recovery": recovery,
         "by_dispersion": payload_delta,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "clustered_adoption.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json("outputs/json/clustered_adoption.json", payload)
 
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    fig_paths = _figures(payload, script.figures_dir)
 
     summary = {
         "n_lv_transformers": payload["n_lv_transformers"],
@@ -405,7 +393,7 @@ def derive_clustered(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "burden_gini": recovery["burden_gini"],
         "gini_at_max_dispersion": d_hi["gini_at_mean_rate"],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -481,7 +469,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_clustered(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_clustered(script)
     warnings = [
         "SCOPE: transformer-overload characterization only. Phase imbalance "
         "within the split-phase secondary is out of scope (requires runpp_3ph); "
@@ -493,7 +481,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "clustered_adoption_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

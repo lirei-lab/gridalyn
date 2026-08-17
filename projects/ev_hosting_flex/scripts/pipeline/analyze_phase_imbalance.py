@@ -12,37 +12,21 @@ LV, full-net LV 3-phase.
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     day_mean_temps,
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
-    to_three_phase_mv,
-    vuf,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import to_three_phase_mv, vuf
+from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     PHASE_EV_GRID,
     PHASE_MC_DRAWS,
@@ -50,10 +34,12 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     PHASE_RISK_THRESHOLD,
     PHASE_X0_MULT,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     VOLTAGE_LIMITS_PU,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
+    size_network_to_load,
 )
 
 
@@ -80,8 +66,14 @@ def _solve_phase_min_v(
             p = [0.0, 0.0, 0.0]
             p[i % 3] = kw / 1000.0
         pp.create_asymmetric_load(
-            mv, bus=int(pole_to_mv[t]), p_a_mw=p[0], p_b_mw=p[1], p_c_mw=p[2],
-            q_a_mvar=p[0] * qf, q_b_mvar=p[1] * qf, q_c_mvar=p[2] * qf,
+            mv,
+            bus=int(pole_to_mv[t]),
+            p_a_mw=p[0],
+            p_b_mw=p[1],
+            p_c_mw=p[2],
+            q_a_mvar=p[0] * qf,
+            q_b_mvar=p[1] * qf,
+            q_c_mvar=p[2] * qf,
         )
     pp.runpp_3ph(mv)
     mv_buses = list(pole_to_mv.values())
@@ -111,12 +103,14 @@ def _coincident_peak(base_day: np.ndarray, ev_day: np.ndarray, n_evs: float) -> 
     return float((base_day + float(n_evs) * ev_day).max())
 
 
-def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_phase(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """MC EV adoption x adoption sweep; runpp_3ph unbalanced vs balanced."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -129,9 +123,7 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     size_by_trafo = sizing["size_by_trafo"]
 
     # per-EV design-day hourly profile (kW), local-hour aligned to the base
-    pool = aggregate_to_hourly(
-        np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
-    )
+    pool = aggregate_to_hourly(np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE))
     ev_day = np.roll(
         pool[:, design_day * 24 : (design_day + 1) * 24].mean(axis=0), int(hod0)
     )
@@ -153,7 +145,8 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     p_undervolt, worst_vuf, min_v_p50, min_v_worst, balanced_min_v = [], [], [], [], []
     for e in ev_grid:
         bal = _solve_phase_min_v(
-            mv, pole_to_mv,
+            mv,
+            pole_to_mv,
             {
                 t: _coincident_peak(base_day_by_size[homes[t]], ev_day, e * homes[t])
                 for t in trafos
@@ -191,11 +184,8 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "balanced_gap_pu": balanced_gap,
         "first_risk_ev_per_home": first_risk,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "phase_imbalance.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    out_path_ref = script.write_json("outputs/json/phase_imbalance.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
 
     summary = {
         "n_pole_trafos": len(trafos),
@@ -204,7 +194,7 @@ def derive_phase(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "balanced_gap_pu": balanced_gap,
         "first_risk_ev_per_home": first_risk,
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _scenario_stats(
@@ -247,8 +237,8 @@ def _interp_first_cross(
     for i in range(1, len(xs)):
         if ys[i - 1] < target <= ys[i]:
             return round(
-                xs[i - 1] + (target - ys[i - 1]) * (xs[i] - xs[i - 1])
-                / (ys[i] - ys[i - 1]),
+                xs[i - 1]
+                + (target - ys[i - 1]) * (xs[i] - xs[i - 1]) / (ys[i] - ys[i - 1]),
                 ROUND_DECIMALS,
             )
     if ys and ys[0] >= target:
@@ -278,10 +268,12 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     ax2.set_title("Voltage unbalance vs adoption")
 
     ax3.plot(evs, payload["balanced_min_v_by_ev"], "s--", color="C0", label="balanced")
-    ax3.plot(evs, payload["min_v_worst_by_ev"], "o-", color="C3",
-             label="unbalanced (worst)")
-    ax3.axhline(payload["csa_normal_low_pu"], color="k", ls=":", lw=1,
-                label="CSA 0.917")
+    ax3.plot(
+        evs, payload["min_v_worst_by_ev"], "o-", color="C3", label="unbalanced (worst)"
+    )
+    ax3.axhline(
+        payload["csa_normal_low_pu"], color="k", ls=":", lw=1, label="CSA 0.917"
+    )
     ax3.set_xlabel("EV/home")
     ax3.set_ylabel("min MV phase voltage (pu)")
     ax3.set_title("Balanced model hides the phase sag")
@@ -306,7 +298,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_phase(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_phase(script)
     warnings = [
         "DIAGNOSTIC ONLY — no flexibility. Models the 25 kV MV phase imbalance "
         "(single-phase pole transformers across 3 phases); stochastic EV adoption "
@@ -320,7 +312,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "phase_imbalance_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

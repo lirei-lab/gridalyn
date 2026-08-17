@@ -25,27 +25,15 @@ and the solver import is deferred inside the kernel.
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top, BEFORE any import
-# that pulls numpy transitively, so the power-flow chain stays deterministic.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
+import pandas as pd
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     cold_capability_curve,
     design_day_base_per_home,
@@ -54,7 +42,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import (
     N_DESIGN_HOURS,
     count_violations,
     extract_feeder_subnet,
@@ -62,7 +50,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
     run_feeder_mc,
     standard_kva_for_load,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
     DTYPE,
@@ -71,8 +59,6 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     LV_LINE_VDROP_BUDGET_PU,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
-    PROJECT_CACHE_DIR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     SLACK_VM_PU,
@@ -83,6 +69,10 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
 )
+
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (imported before this stage under `{python} -m`, before any numpy transitively).
+
 
 _FEEDER_RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 
@@ -95,7 +85,7 @@ def _load_net(cache_dir: Path) -> Any:
 
 def size_network_to_load(
     net: Any,
-    cache_dir: Path,
+    script: ProjectScript,
     temp_hourly: Any,
     design_day_idx: int,
     feeder_idx: int,
@@ -116,7 +106,7 @@ def size_network_to_load(
 
     Args:
         net: Loaded pandapower net (mutated in place).
-        cache_dir: Topology cache directory (downstream map).
+        script: The project workspace handle (cache JSON reads).
         temp_hourly: Committed annual TMY series.
         design_day_idx: Day-of-year index of the coldest design day.
         feeder_idx: Study feeder transformer index (kept at TRANSFORMER_KVA).
@@ -125,7 +115,7 @@ def size_network_to_load(
         Dict with the per-home design-day base per size, the size→bus map, the
         assigned kVA per size, and the LV-line upsizing count.
     """
-    downstream_map = json.loads((cache_dir / "downstream_bus_map.json").read_text())
+    downstream_map = script.read_json("outputs/cache/downstream_bus_map.json")
     homes_by_bus = net.load.groupby("bus").size()
     lv_trafos = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
 
@@ -141,12 +131,10 @@ def size_network_to_load(
 
     sizes = sorted({n for n in size_by_trafo.values() if n > 0})
     base_by_size = {
-        n: design_day_base_per_home(temp_hourly, n, SEED, design_day_idx)
-        for n in sizes
+        n: design_day_base_per_home(temp_hourly, n, SEED, design_day_idx) for n in sizes
     }
     kva_by_size = {
-        n: standard_kva_for_load(float(n) * float(base_by_size[n].max()))
-        for n in sizes
+        n: standard_kva_for_load(float(n) * float(base_by_size[n].max())) for n in sizes
     }
     for idx in lv_trafos:
         n = size_by_trafo[int(idx)]
@@ -300,45 +288,41 @@ def configure_substation_n1(
 
 
 def build_scenario_profiles(
-    net: Any, cache_dir: Path, data_dir: Path, json_dir: Path
+    net: Any, script: ProjectScript, cache_dir: Path
 ) -> tuple[dict[str, np.ndarray], dict[str, Any], dict[str, Any]]:
     """Assemble the ``(n_load, 24)`` kW profile per scenario from the annual seam.
 
     Args:
         net: Loaded pandapower net (read-only here).
+        script: The project workspace handle (JSON reads + data dir).
         cache_dir: Stage-2 topology cache directory.
-        data_dir: F1 annual artifact directory.
-        json_dir: Governed JSON directory (F2 firm + F3 curtailment headline).
 
     Returns:
         A tuple ``(profiles, meta, mc_inputs)``: scenario name → per-load
         profile matrix, a metadata dict, and the cold-day Monte-Carlo inputs
         (per-day variant aggregates + the feeder's downstream bus list).
     """
+    data_dir = script.data_dir
     base_annual = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
     firm = int(
-        json.loads((json_dir / "firm_hosting_annual.json").read_text())["firm_ev_count"]
+        script.read_json("outputs/json/firm_hosting_annual.json")["firm_ev_count"]
     )
     flexible = int(
-        json.loads((json_dir / "curtailment_hosting.json").read_text())[
-            "flexible_ev_count"
-        ]
+        script.read_json("outputs/json/curtailment_hosting.json")["flexible_ev_count"]
     )
     n_homes = int(
-        json.loads(
-            (PROJECT_OUTPUTS_DIR / "reports" / "annual_mc_report.json").read_text()
-        )["summary"]["n_homes"]
+        script.read_json("outputs/reports/annual_mc_report.json")["summary"]["n_homes"]
     )
 
     temp_hourly = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp_hourly)
     design_day = int(np.argmin(tday))
 
-    feeder_sel = json.loads((cache_dir / "feeder_selection.json").read_text())
+    feeder_sel = script.read_json("outputs/cache/feeder_selection.json")
     feeder_idx = int(feeder_sel["feeder_transformer_idx"])
-    downstream = json.loads((cache_dir / "downstream_bus_map.json").read_text())[
+    downstream = script.read_json("outputs/cache/downstream_bus_map.json")[
         f"transformer:{feeder_idx}"
     ]
     if not net.load["bus"].isin([int(b) for b in downstream]).any():
@@ -349,9 +333,7 @@ def build_scenario_profiles(
         )
 
     # ── HQ-style sizing: transformers AND LV conductors matched to load ────
-    sizing = size_network_to_load(
-        net, cache_dir, temp_hourly, design_day, feeder_idx
-    )
+    sizing = size_network_to_load(net, script, temp_hourly, design_day, feeder_idx)
     base_by_size = sizing["base_by_size"]
     size_by_loadbus = sizing["size_by_loadbus"]
 
@@ -396,7 +378,10 @@ def build_scenario_profiles(
         "lv_line_util_target": float(LV_LINE_UTIL_TARGET),
         "n_lv_lines_upsized": int(sizing["n_lv_lines_upsized"]),
         "substation": sizing["substation"],
-        "basis": "HQ load-matched LV fleet + N-1 substation bank + SDK per-size base + C57.91 dynamic rating",
+        "basis": (
+            "HQ load-matched LV fleet + N-1 substation bank + SDK per-size base "
+            "+ C57.91 dynamic rating"
+        ),
     }
 
     # ── Feeder-unit cold-day MC: the curtailment backstop runs at the GOVERNED
@@ -530,6 +515,7 @@ def _figures(
         for variant, color in zip(
             peaks_by_variant.index.get_level_values(0).unique(),
             (f"C{i}" for i in range(10)),
+            strict=True,
         ):
             peaks = np.sort(peaks_by_variant.loc[variant].to_numpy())
             ecdf = np.arange(1, len(peaks) + 1) / len(peaks)
@@ -551,11 +537,8 @@ def _figures(
     return paths
 
 
-def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
+def run_stage() -> dict[str, Any]:
     """Run the full AC validation stage: scenarios → artifacts → report.
-
-    Args:
-        cache_dir: Stage-2 topology cache directory (test override).
 
     Returns:
         The platform report payload written via ``script.write_report``.
@@ -563,15 +546,11 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    effective_cache = script.cache_dir if cache_dir == PROJECT_CACHE_DIR else cache_dir
-    data_dir = PROJECT_OUTPUTS_DIR / "data"
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
+    data_dir = script.data_dir
 
-    net = _load_net(effective_cache)
+    net = _load_net(script.cache_dir)
     lv_bus_ids = net.bus.index[net.bus["vn_kv"] < 1.0].to_numpy()
-    profiles, meta, mc_inputs = build_scenario_profiles(
-        net, effective_cache, data_dir, json_dir
-    )
+    profiles, meta, mc_inputs = build_scenario_profiles(net, script, script.cache_dir)
 
     scenario_results: dict[str, dict[str, pd.DataFrame]] = {}
     violations: dict[str, dict[str, Any]] = {}
@@ -603,9 +582,10 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     if k_cold is None:
         mc["trafo_loading_norm"] = mc["trafo_loading_percent"]
     else:
-        mc["trafo_loading_norm"] = mc["trafo_loading_percent"] / k_cold[
-            mc["realization"].to_numpy(), mc["hour"].to_numpy()
-        ]
+        mc["trafo_loading_norm"] = (
+            mc["trafo_loading_percent"]
+            / k_cold[mc["realization"].to_numpy(), mc["hour"].to_numpy()]
+        )
     mc_peaks = mc.groupby(["variant", "realization"])["trafo_loading_norm"].max()
     mc_line_peaks = mc.groupby(["variant", "realization"])[
         "max_line_loading_percent"
@@ -615,9 +595,7 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         peaks = mc_peaks.loc[variant]
         line_peaks = mc_line_peaks.loc[variant]
         min_v = (
-            mc[mc["variant"] == variant]
-            .groupby("realization")["min_home_vm_pu"]
-            .min()
+            mc[mc["variant"] == variant].groupby("realization")["min_home_vm_pu"].min()
         )
         mc_summary[variant] = {
             "p_overload_ac": round(float((peaks > 100.0).mean()), ROUND_DECIMALS),
@@ -644,9 +622,15 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         for key in ("bus_voltage", "line_loading", "trafo_loading")
     }
     artifact_paths = [
-        _write_parquet(long_frames["bus_voltage"], data_dir / "powerflow_bus_voltage.parquet"),
-        _write_parquet(long_frames["line_loading"], data_dir / "powerflow_line_loading.parquet"),
-        _write_parquet(long_frames["trafo_loading"], data_dir / "powerflow_trafo_loading.parquet"),
+        _write_parquet(
+            long_frames["bus_voltage"], data_dir / "powerflow_bus_voltage.parquet"
+        ),
+        _write_parquet(
+            long_frames["line_loading"], data_dir / "powerflow_line_loading.parquet"
+        ),
+        _write_parquet(
+            long_frames["trafo_loading"], data_dir / "powerflow_trafo_loading.parquet"
+        ),
         _write_parquet(mc, data_dir / "powerflow_feeder_mc.parquet"),
     ]
 
@@ -675,12 +659,9 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
         },
         **meta,
     }
-    violations_path = json_dir / "powerflow_violations.json"
-    violations_path.parent.mkdir(parents=True, exist_ok=True)
-    violations_path.write_text(
-        json.dumps(violations_payload, indent=2, sort_keys=True) + "\n"
+    artifact_paths.append(
+        script.write_json("outputs/json/powerflow_violations.json", violations_payload)
     )
-    artifact_paths.append(violations_path)
 
     artifact_paths.extend(
         _figures(scenario_results, lv_bus_ids, meta, script.figures_dir, mc=mc)
@@ -731,7 +712,10 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
     }
     return script.write_report(
         "powerflow_validation_report",
-        artifacts=[script.file_reference(p) for p in artifact_paths],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in artifact_paths
+        ],
         summary=summary,
         validation=validation,
     )
@@ -739,11 +723,9 @@ def run_stage(*, cache_dir: Path = PROJECT_CACHE_DIR) -> dict[str, Any]:
 
 def main() -> None:
     """CLI entry point for the AC power-flow validation stage."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cache-dir", type=Path, default=PROJECT_CACHE_DIR)
-    args = parser.parse_args()
+    argparse.ArgumentParser(description=__doc__).parse_args()
 
-    report = run_stage(cache_dir=args.cache_dir)
+    report = run_stage()
     summary = report.get("summary", {})
     print(
         "Validated AC power flow + report: "

@@ -25,19 +25,15 @@ reducing it. Only Hard CLS (EV curtailment) is offered here.
 from __future__ import annotations
 
 import argparse
-import json
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
+import numpy as np
+import pandas as pd
 
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     ANNUAL_RES_MINUTES,
     cold_capability_curve,
     day_mean_temps,
@@ -45,10 +41,8 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
-    draw_clustered_adoption,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
+from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
     CHARGER_MIX,
@@ -62,10 +56,10 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     TRIAGE_BASE_DISPERSION,
     TRIAGE_K_BASE,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
     _ensure_base_mc_cache,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -276,7 +270,9 @@ def clear_one_adoption(
     }
 
 
-def _persist_operational(result: dict[str, Any]) -> dict[str, Path]:
+def _persist_operational(
+    result: dict[str, Any], script: ProjectScript
+) -> dict[str, Path]:
     """Write the clearing into the twin, then materialise operational artifacts.
 
     The saturation case is the one persisted: it is the design point where the
@@ -292,9 +288,7 @@ def _persist_operational(result: dict[str, Any]) -> dict[str, Path]:
     from gridalyn.operations.artifacts import (
         materialize_flexibility_operation_artifacts,
     )
-    from gridalyn.operations.clearing.selection import (
-        write_locational_clearing_outputs,
-    )
+    from gridalyn.operations.clearing.selection import write_locational_clearing_outputs
 
     frames = result.pop("_frames")
     summary = result.pop("_summary")
@@ -319,7 +313,7 @@ def _persist_operational(result: dict[str, Any]) -> dict[str, Path]:
 
     written.update(
         materialize_flexibility_operation_artifacts(
-            root=ROOT,
+            root=script.root,
             project_id="ev_hosting_flex",
             scenario_id=scenario_id,
             flexibility_dir=flex_dir,
@@ -328,12 +322,14 @@ def _persist_operational(result: dict[str, Any]) -> dict[str, Path]:
     return written
 
 
-def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Clear locational contracts across the anchored adoption grid."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -386,7 +382,7 @@ def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, An
     # materialise the project-local operational artifacts. This is what makes
     # the twin and the dashboard consume THIS study: the SDK writers are
     # project-agnostic, they were simply never called from here.
-    operational = _persist_operational(results[-1])
+    operational = _persist_operational(results[-1], script)
     # Every other cell still carries its DataFrames; they exist to be persisted,
     # never to be serialised, and the payload is written as JSON.
     for cell in results:
@@ -403,13 +399,10 @@ def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, An
         "adoption_grid": [float(a) for a in TRIAGE_ADOPTION_GRID],
         "by_adoption": results,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out = json_dir / "locational_contracts.json"
-    out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_ref = script.write_json("outputs/json/locational_contracts.json", payload)
 
     at_sat = results[-1]
-    payload["artifact_paths"] = [out] + _figures(payload)
+    payload["artifact_paths"] = [out_ref] + _figures(payload, script)
     payload["summary"] = {
         "n_transformers": payload["n_transformers"],
         "n_constrained_assets_at_saturation": at_sat["n_constrained_assets"],
@@ -421,14 +414,14 @@ def derive_locational_contracts(cache_dir: Path, data_dir: Path) -> dict[str, An
     return payload
 
 
-def _figures(payload: dict[str, Any]) -> list[Path]:
+def _figures(payload: dict[str, Any], script: ProjectScript) -> list[Path]:
     """Constrained assets and contract cost across the adoption grid."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    figures_dir = PROJECT_OUTPUTS_DIR / "figures"
+    figures_dir = script.figures_dir
     figures_dir.mkdir(parents=True, exist_ok=True)
     rows = payload["by_adoption"]
     x = [r["adoption_ev_per_home"] for r in rows]
@@ -462,9 +455,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_locational_contracts(
-        script.cache_dir, PROJECT_OUTPUTS_DIR / "data"
-    )
+    derived = derive_locational_contracts(script)
     warnings = [
         "HARD CLS ONLY. Soft CLS (building thermal flexibility) is offered as "
         "zero everywhere: measured on this network, capping heating does not "
@@ -482,7 +473,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "locational_contracts_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

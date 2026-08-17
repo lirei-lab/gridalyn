@@ -13,24 +13,14 @@ base_mc_by_size cache. No SDK edit.
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     adoption_at_year,
     aggregate_to_hourly,
     day_mean_temps,
@@ -39,35 +29,32 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     tmy_hour_of_day,
     year_at_adoption,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
-    flex_deferral_curves,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
-    COLD_DAY_TMEAN_C,
-    CONGESTION_K_BASE,
+from projects.ev_hosting_flex.scripts._powerflow import flex_deferral_curves
+from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
+    COLD_DAY_TMEAN_C,
+    CONGESTION_K_BASE,
     DISCOUNT_RATE,
-    RAMP_HORIZON_YEARS,
     DTYPE,
     LIFE_YEARS,
     NONWIRES_ADOPTION_GRID,
     NONWIRES_CURTAIL_TOLERANCE,
     POOL_MAX_ANNUAL,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
+    RAMP_HORIZON_YEARS,
     ROUND_DECIMALS,
     SEED,
     SUBSTATION_CAPEX_PER_MVA,
     TRAFO_CAPEX_PER_KVA,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
     _ensure_base_mc_cache,
 )
-from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (
     capital_recovery_factor,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -101,10 +88,16 @@ def _size_deferral(
     # it defers nothing. Credit no deferral (an honest limit of EV flexibility).
     base_driven = bool(float(curves["peak_noflex"][0]) > 100.0)
     if base_driven:
-        return {"a0": a0, "a1": a0, "y0": year_at_adoption(a0 or 0.0),
-                "y1": year_at_adoption(a0 or 0.0), "defer_npv": 0.0,
-                "trafo_years": 0.0, "reinf_annual": reinf_annual,
-                "base_driven": True}
+        return {
+            "a0": a0,
+            "a1": a0,
+            "y0": year_at_adoption(a0 or 0.0),
+            "y1": year_at_adoption(a0 or 0.0),
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+            "reinf_annual": reinf_annual,
+            "base_driven": True,
+        }
     # A1 reliability side: curtailed fraction exceeds the tolerance
     a1_rel = _first_cross(
         grid, curves["curtailed_frac"], float(NONWIRES_CURTAIL_TOLERANCE)
@@ -123,16 +116,30 @@ def _size_deferral(
     a1 = min(a1_candidates) if a1_candidates else None
     if a0 is None:
         # never overloads in the grid -> no reinforcement, no deferral
-        return {"a0": None, "a1": a1, "y0": float("inf"), "y1": float("inf"),
-                "defer_npv": 0.0, "trafo_years": 0.0, "reinf_annual": reinf_annual}
+        return {
+            "a0": None,
+            "a1": a1,
+            "y0": float("inf"),
+            "y1": float("inf"),
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+            "reinf_annual": reinf_annual,
+        }
     if a1 is None or a1 <= a0:
         a1 = a0  # flex defers nothing
     y0 = year_at_adoption(a0)
     y1 = year_at_adoption(a1)
     if not np.isfinite(y0):
         # crosses only beyond the ramp ceiling -> never reinforced in horizon
-        return {"a0": a0, "a1": a1, "y0": y0, "y1": y1,
-                "defer_npv": 0.0, "trafo_years": 0.0, "reinf_annual": reinf_annual}
+        return {
+            "a0": a0,
+            "a1": a1,
+            "y0": y0,
+            "y1": y1,
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+            "reinf_annual": reinf_annual,
+        }
     r = float(DISCOUNT_RATE)
     disc0 = (1.0 + r) ** (-y0)
     disc1 = (1.0 + r) ** (-y1) if np.isfinite(y1) else 0.0
@@ -154,24 +161,37 @@ def _size_deferral(
     # positive value. This also reconciles the A1 gate (annuity crf) with the
     # lump-sum NPV benefit.
     if defer_npv <= 0.0:
-        return {"a0": a0, "a1": a1, "y0": y0, "y1": y1, "defer_npv": 0.0,
-                "trafo_years": 0.0, "reinf_annual": reinf_annual,
-                "base_driven": False}
+        return {
+            "a0": a0,
+            "a1": a1,
+            "y0": y0,
+            "y1": y1,
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+            "reinf_annual": reinf_annual,
+            "base_driven": False,
+        }
     ty = (y1 - y0) if np.isfinite(y1) else float("inf")
     return {
-        "a0": a0, "a1": a1, "y0": y0, "y1": y1,
+        "a0": a0,
+        "a1": a1,
+        "y0": y0,
+        "y1": y1,
         "defer_npv": round(defer_npv, ROUND_DECIMALS),
         "trafo_years": round(ty, ROUND_DECIMALS) if np.isfinite(ty) else None,
-        "reinf_annual": reinf_annual, "base_driven": False,
+        "reinf_annual": reinf_annual,
+        "base_driven": False,
     }
 
 
-def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Per-size deferral + network aggregate + substation + per-adoption snapshot."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -216,17 +236,27 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             aggregate_to_hourly(base_mc[h]).mean(axis=0)[dd], dtype=DTYPE
         ) / float(h)
         curves = flex_deferral_curves(
-            base_perhome_day, ev_perhome_day, h, float(rating_by_size[h]),
+            base_perhome_day,
+            ev_perhome_day,
+            h,
+            float(rating_by_size[h]),
             np.array(grid, dtype=DTYPE),
         )
         capex = float(TRAFO_CAPEX_PER_KVA) * float(kva_by_size[h])
         d = _size_deferral(curves, grid, h, capex, crf, n_cold_days)
-        d.update({"capex": round(capex, ROUND_DECIMALS), "count": count_by_size[h],
-                  "rating_kw": round(rating_by_size[h], ROUND_DECIMALS),
-                  "curtailed_frac": [round(float(x), ROUND_DECIMALS)
-                                     for x in curves["curtailed_frac"]],
-                  "peak_noflex": [round(float(x), ROUND_DECIMALS)
-                                  for x in curves["peak_noflex"]]})
+        d.update(
+            {
+                "capex": round(capex, ROUND_DECIMALS),
+                "count": count_by_size[h],
+                "rating_kw": round(rating_by_size[h], ROUND_DECIMALS),
+                "curtailed_frac": [
+                    round(float(x), ROUND_DECIMALS) for x in curves["curtailed_frac"]
+                ],
+                "peak_noflex": [
+                    round(float(x), ROUND_DECIMALS) for x in curves["peak_noflex"]
+                ],
+            }
+        )
         by_size[h] = d
 
     # network aggregates over the 540 LV transformers
@@ -244,19 +274,21 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         n_def = sum(
             by_size[h]["count"]
             for h in sizes
-            if by_size[h]["a0"] is not None and by_size[h]["a0"] <= a
+            if by_size[h]["a0"] is not None
+            and by_size[h]["a0"] <= a
             and (by_size[h]["a1"] is None or a < by_size[h]["a1"])
         )
         cap = sum(
             by_size[h]["capex"] * by_size[h]["count"]
             for h in sizes
-            if by_size[h]["a0"] is not None and by_size[h]["a0"] <= a
+            if by_size[h]["a0"] is not None
+            and by_size[h]["a0"] <= a
             and (by_size[h]["a1"] is None or a < by_size[h]["a1"])
         )
         snap_deferred.append(int(n_def))
         snap_capex.append(round(float(cap), ROUND_DECIMALS))
 
-    substation = _substation_deferral(cache_dir, sizing, crf)
+    substation = _substation_deferral(script, sizing, crf)
     total_defer += substation["defer_npv"]
 
     # the flexibility action concentrates at low adoption (the network binds
@@ -279,11 +311,8 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "peak_capex_deferred_adoption": round(grid[peak_i], 6) if snap_capex else None,
         "first_reinforcement_year": first_reinf_year,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "nonwires_value.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    out_path_ref = script.write_json("outputs/json/nonwires_value.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
     summary = {
         "total_deferral_npv": payload["total_deferral_npv"],
         "total_trafo_years_deferred": payload["total_trafo_years_deferred"],
@@ -291,32 +320,38 @@ def derive_nonwires_value(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "peak_capex_deferred": payload["peak_capex_deferred"],
         "first_reinforcement_year": payload["first_reinforcement_year"],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _substation_deferral(
-    cache_dir: Path, sizing: dict[str, Any], crf: float
+    script: ProjectScript, sizing: dict[str, Any], crf: float
 ) -> dict[str, Any]:
     """Substation N-1 reinforcement deferral (emergency-rating crossing)."""
-    char = json.loads(
-        (PROJECT_OUTPUTS_DIR / "json" / "network_characterization.json").read_text()
-    )
+    char = script.read_json("outputs/json/network_characterization.json")
     sub = char["substation"]
     a0 = sub.get("n1_reinforcement_penetration_emergency")
     n_tx = int(sub["n_transformers"])
     mva = float(sub["mva_per_transformer"])
     capex = float(SUBSTATION_CAPEX_PER_MVA) * mva * n_tx
     if a0 is None:
-        return {"a0": None, "capex": round(capex, ROUND_DECIMALS), "defer_npv": 0.0,
-                "trafo_years": 0.0}
+        return {
+            "a0": None,
+            "capex": round(capex, ROUND_DECIMALS),
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+        }
     # flex lifts the substation crossing by the same fractional margin the largest
     # feeder gets (aggregate-flex proxy): defer to a1 = a0 * (1 + margin).
     a1 = float(a0) * 1.5  # documented proxy: ~50% adoption headroom from flex
     y0 = year_at_adoption(float(a0))
     y1 = year_at_adoption(a1)
     if not np.isfinite(y0):
-        return {"a0": round(float(a0), 6), "capex": round(capex, ROUND_DECIMALS),
-                "defer_npv": 0.0, "trafo_years": 0.0}
+        return {
+            "a0": round(float(a0), 6),
+            "capex": round(capex, ROUND_DECIMALS),
+            "defer_npv": 0.0,
+            "trafo_years": 0.0,
+        }
     r = float(DISCOUNT_RATE)
     disc0 = (1.0 + r) ** (-y0)
     # If the deferred crossing falls outside the planning horizon the upgrade
@@ -330,7 +365,8 @@ def _substation_deferral(
     disc1 = (1.0 + r) ** (-y1_eff)
     defer = capex * (disc0 - disc1)
     return {
-        "a0": round(float(a0), 6), "a1": round(a1, 6),
+        "a0": round(float(a0), 6),
+        "a1": round(a1, 6),
         "capex": round(capex, ROUND_DECIMALS),
         "defer_npv": round(float(defer), ROUND_DECIMALS),
         "avoided_beyond_horizon": bool(beyond),
@@ -352,20 +388,24 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     ax1.set_xlabel("EV/home")
     ax1.set_ylabel("# transformers deferred")
     ax1.set_title("Reinforcements deferred by flexibility")
-    ax2.plot(grid, np.array(payload["snapshot_capex_deferred"]) / 1000.0, "s-",
-             color="C2")
+    ax2.plot(
+        grid, np.array(payload["snapshot_capex_deferred"]) / 1000.0, "s-", color="C2"
+    )
     ax2.set_xlabel("EV/home")
     ax2.set_ylabel("CAPEX deferred (k$)")
     ax2.set_title("Reinforcement CAPEX deferred")
     sizes = sorted(payload["by_size"], key=int)
-    npvs = [payload["by_size"][s]["defer_npv"] * payload["by_size"][s]["count"]
-            for s in sizes]
+    npvs = [
+        payload["by_size"][s]["defer_npv"] * payload["by_size"][s]["count"]
+        for s in sizes
+    ]
     ax3.bar([f"{s}h" for s in sizes], np.array(npvs) / 1000.0, color="C1")
     ax3.set_xlabel("cluster size")
     ax3.set_ylabel("deferral NPV (k$)")
     ax3.set_title(f"Network NPV {payload['total_deferral_npv'] / 1000:.0f} k$")
-    fig.suptitle("Pilar-2: network non-wires value (reinforcement deferral)",
-                 fontsize=10)
+    fig.suptitle(
+        "Pilar-2: network non-wires value (reinforcement deferral)", fontsize=10
+    )
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     paths = []
     for suffix in (".png", ".pdf"):
@@ -381,9 +421,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_nonwires_value(
-        script.cache_dir, PROJECT_OUTPUTS_DIR / "data"
-    )
+    derived = derive_nonwires_value(script)
     warnings = [
         "SOLUTION-side (pilar-2): network reinforcement deferral value from EV "
         "flexibility (valley-fill shift + local curtailment), aggregated over the "
@@ -400,7 +438,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "nonwires_value_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

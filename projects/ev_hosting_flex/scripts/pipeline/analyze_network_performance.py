@@ -13,49 +13,38 @@ governed firm/flex chain, AC, phase imbalance.
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     climate_bin_days,
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import (
     annual_performance_metrics,
     flexible_share,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive import (  # noqa: E402
-    _policy_ceiling_ev_per_home,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
-    size_network_to_load,
-)
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     CLIMATE_BIN_EDGES,
     DTYPE,
     LOAD_GROWTH_GRID,
     PERFORMANCE_REF_EV_PER_HOME,
     POOL_TILES,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
+)
+from projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive import (
+    _policy_ceiling_ev_per_home,
+)
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
+    size_network_to_load,
 )
 
 
@@ -140,9 +129,7 @@ def _g_at_ceiling(
     return round(g0 + (target - c0) * (g1 - g0) / (c1 - c0), ROUND_DECIMALS)
 
 
-def _peak_flexible_share(
-    base_annual_t: np.ndarray, ev_overlay: np.ndarray
-) -> float:
+def _peak_flexible_share(base_annual_t: np.ndarray, ev_overlay: np.ndarray) -> float:
     """Flexible (EV) share at the transformer's coincident annual peak."""
     total = base_annual_t + ev_overlay
     h = int(np.argmax(total))
@@ -167,16 +154,26 @@ def _feeder_window(
         base_g = base_feeder * g
         unc_ceiling.append(
             _policy_ceiling_ev_per_home(
-                base=base_g, pool=pool_ext, day_indices=cold["day_indices"],
-                policy="uncontrolled", rating_kw=rating_feeder, hod0=hod0,
-                charger_kw=charger_kw, n_max=n_max,
+                base=base_g,
+                pool=pool_ext,
+                day_indices=cold["day_indices"],
+                policy="uncontrolled",
+                rating_kw=rating_feeder,
+                hod0=hod0,
+                charger_kw=charger_kw,
+                n_max=n_max,
             )
         )
         shift_ceiling.append(
             _policy_ceiling_ev_per_home(
-                base=base_g, pool=pool_ext, day_indices=cold["day_indices"],
-                policy="shift", rating_kw=rating_feeder, hod0=hod0,
-                charger_kw=charger_kw, n_max=n_max,
+                base=base_g,
+                pool=pool_ext,
+                day_indices=cold["day_indices"],
+                policy="shift",
+                rating_kw=rating_feeder,
+                hod0=hod0,
+                charger_kw=charger_kw,
+                n_max=n_max,
             )
         )
     t_ref = float(PERFORMANCE_REF_EV_PER_HOME)
@@ -191,13 +188,15 @@ def _feeder_window(
     }
 
 
-def derive_performance(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_performance(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Size the net at G=1, build the panel, the flexible share, and the feeder
     flexibility window; assemble the payload + figure."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -257,11 +256,8 @@ def derive_performance(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "flexible_share_p50": flexible_share_p50,
         "feeder_window": feeder_window,
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "network_performance.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    out_path_ref = script.write_json("outputs/json/network_performance.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
 
     summary = {
         "n_trafos": panel["n_trafos"],
@@ -271,7 +267,7 @@ def derive_performance(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "flex_window_g_low": feeder_window["flex_window_g_low"],
         "flex_window_g_high": feeder_window["flex_window_g_high"],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -299,13 +295,27 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     ax2.axhline(100.0, color="k", ls=":", lw=1)
     ax2.set_xlabel("load-growth factor G")
     ax2.set_ylabel("transformer peak utilization (%)")
-    ax2.set_title(f"Utilization vs load (flex share p50 {payload['flexible_share_p50']:.2f})")
+    ax2.set_title(
+        f"Utilization vs load (flex share p50 {payload['flexible_share_p50']:.2f})"
+    )
     ax2.legend(fontsize=8)
 
-    ax3.plot(fw["growth_grid"], fw["uncontrolled_ceiling"], "s--", color="C0", label="uncontrolled")
-    ax3.plot(fw["growth_grid"], fw["shift_ceiling"], "o-", color="C2", label="optimal shift")
-    ax3.axhline(payload["reference_ev_per_home"], color="k", ls=":", lw=1, label="target")
-    ax3.axvspan(fw["flex_window_g_low"], fw["flex_window_g_high"], color="C2", alpha=0.12)
+    ax3.plot(
+        fw["growth_grid"],
+        fw["uncontrolled_ceiling"],
+        "s--",
+        color="C0",
+        label="uncontrolled",
+    )
+    ax3.plot(
+        fw["growth_grid"], fw["shift_ceiling"], "o-", color="C2", label="optimal shift"
+    )
+    ax3.axhline(
+        payload["reference_ev_per_home"], color="k", ls=":", lw=1, label="target"
+    )
+    ax3.axvspan(
+        fw["flex_window_g_low"], fw["flex_window_g_high"], color="C2", alpha=0.12
+    )
     ax3.set_xlabel("load-growth factor G")
     ax3.set_ylabel("feeder hosting ceiling (EV/home)")
     ax3.set_title("Flexibility window (shaded band)")
@@ -330,7 +340,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_performance(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_performance(script)
     warnings = [
         "HOMOGENEOUS-BASE APPROXIMATION: per-transformer annual load is the "
         "governed feeder's per-home profile broadcast to each transformer's home "
@@ -343,7 +353,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "network_performance_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

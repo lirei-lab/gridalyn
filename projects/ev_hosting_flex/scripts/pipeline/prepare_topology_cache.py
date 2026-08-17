@@ -23,24 +23,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import pickle
-import sys
 from pathlib import Path
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top, BEFORE any import
-# that pulls numpy transitively (``_topology`` / the simulation facade) spins up
-# its thread pool — defense-in-depth so cache derivation stays deterministic.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-from gridalyn.simulation import prepare_synthetic_topology_cache  # noqa: E402
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from gridalyn.simulation import prepare_synthetic_topology_cache
+from projects.ev_hosting_flex.scripts.config import (
     FEEDER_ID,
     GRID_CONFIG,
     POWER_FACTOR,
@@ -49,6 +36,10 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     ROUND_DECIMALS,
     TOPOLOGY_CACHE_MANIFEST,
 )
+
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (imported before this stage under `{python} -m`, before any numpy transitively)
+# its thread pool — defense-in-depth so cache derivation stays deterministic.
 
 
 def prepare_topology_cache(
@@ -141,11 +132,11 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
     ratings = {
         **{
             f"line:{int(idx)}": round(float(kw), ROUND_DECIMALS)
-            for idx, kw in zip(net.line.index, line_kw)
+            for idx, kw in zip(net.line.index, line_kw, strict=True)
         },
         **{
             f"transformer:{int(idx)}": round(float(kw), ROUND_DECIMALS)
-            for idx, kw in zip(net.trafo.index, trafo_kw)
+            for idx, kw in zip(net.trafo.index, trafo_kw, strict=True)
         },
     }
 

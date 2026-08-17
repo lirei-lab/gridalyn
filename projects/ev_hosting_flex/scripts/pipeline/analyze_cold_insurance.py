@@ -21,23 +21,13 @@ share one firm distribution (guarded by a consistency test). No SDK edit.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     N_DAYS,
     annual_base_realization,
     cold_capability_curve,
@@ -49,7 +39,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -67,7 +57,6 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     NONWIRES_CURTAIL_TOLERANCE,
     POOL_MAX_ANNUAL,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     TRAFO_CAPEX_PER_KVA,
@@ -75,13 +64,11 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     TRANSFORMER_KVA_LADDER,
     WEATHER_SIGMA_C,
 )
-from projects.ev_hosting_flex.scripts.pipeline.analyze_credibility import (  # noqa: E402
-    winter_offsets,
-)
-from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.analyze_credibility import winter_offsets
+from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (
     capital_recovery_factor,
 )
-from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
     feeder_home_count,
 )
 
@@ -317,9 +304,9 @@ def aggregate_insurance(
     }
 
 
-def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
+def derive_cold_insurance(script: ProjectScript) -> dict[str, Any]:
     """Run the K-realization MC (credibility seeds) and build both study parts."""
-    n_homes = feeder_home_count(cache_dir)
+    n_homes = feeder_home_count(script)
     temp = load_annual_tmy()
     hod0 = int(tmy_hour_of_day(temp))
     tday = day_mean_temps(temp)
@@ -424,7 +411,9 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
         "rung_kvas": rung_kvas,
         # Part 1
         "firm_samples": [int(v) for v in firm],
-        "firm_histogram": {str(int(v)): int(c) for v, c in zip(values, counts)},
+        "firm_histogram": {
+            str(int(v)): int(c) for v, c in zip(values, counts, strict=True)
+        },
         "firm_p05": round(p05, ROUND_DECIMALS),
         "firm_p50": round(p50, ROUND_DECIMALS),
         "firm_p95": round(p95, ROUND_DECIMALS),
@@ -443,11 +432,8 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
             agg["expected_cost_reinforce_by_adoption"][ref_i]
         ),
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "cold_insurance.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    json_ref = script.write_json("outputs/json/cold_insurance.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
     summary = {
         "p_short_at_ref": payload["p_short_at_ref"],
         "activation_frequency_at_ref": payload["activation_frequency_at_ref"],
@@ -458,7 +444,7 @@ def derive_cold_insurance(cache_dir: Path) -> dict[str, Any]:
         "flex_viability_limit_adoption": payload["flex_viability_limit_adoption"],
         "short_years_if_plan_p50": payload["short_years_if_plan_p50"],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [json_ref, *fig_paths], "summary": summary}
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -509,7 +495,7 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     cf = payload["expected_cost_flex_by_adoption"]
     cr = payload["expected_cost_reinforce_by_adoption"]
     ax2.plot(grid, cf, "o-", color="C2", label="flexibility insurance")
-    cr_x = [a for a, c in zip(grid, cr) if c is not None]
+    cr_x = [a for a, c in zip(grid, cr, strict=True) if c is not None]
     cr_y = [c for c in cr if c is not None]
     ax2.plot(cr_x, cr_y, "s--", color="C1", label="reinforce")
     lim = payload["flex_viability_limit_adoption"]
@@ -575,7 +561,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_cold_insurance(script.cache_dir)
+    derived = derive_cold_insurance(script)
     warnings = [
         "SOLUTION framing: the network is robust at the MEDIAN (validated against "
         "the real HQ 1000-home dataset), so this study prices flexibility where it "
@@ -593,7 +579,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "cold_insurance_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

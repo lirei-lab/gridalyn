@@ -261,62 +261,12 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
     "projects/admm_thermal_consensus/scripts/validate_convergence.py": ("main::out#0",),
     # -- ev_hosting_flex study data payloads. Every module below also emits its
     # governed report via script.write_report(...); these JSONs are the data it
-    # references.
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_clustered_adoption.py": (
-        "derive_clustered::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py": (
-        "derive_cold_coupling::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py": (
-        "derive_cold_insurance::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py": (
-        "derive_congestion::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py": (
-        "derive_credibility::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_fleet_triage.py": (
-        "derive_fleet_triage::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py": (
-        "derive_incentive::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py": (
-        "derive_locational_contracts::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/"
-    "analyze_network_characterization.py": ("derive_characterization::payload#0",),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_network_performance.py": (
-        "derive_performance::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py": (
-        "derive_nonwires_value::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py": (
-        "derive_phase::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py": (
-        "derive_voltage::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk_network.py": (
-        "derive_voltage_network::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py": (
-        "derive_curtailment::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py": (
-        "derive_annual_congestion::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py": (
-        "derive_curtailment_economics::payload#0",
-    ),
+    # references. The pipeline stage writes were migrated (Phase 20, plan 20-02)
+    # to script.write_json(...) and are now enumerated in the helper-routed set
+    # (§3.9); only prepare_topology_cache.py (the topology-cache seam, Plan
+    # 20-03) still serializes directly through its local _write_json helper.
     "projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py": (
         "_write_json::payload#0",
-    ),
-    "projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py": (
-        "run_stage::violations_payload#0",
     ),
     "projects/synthetic_geojson_feeder/scripts/generate_building_footprints.py": (
         "main::payload#0",
@@ -438,6 +388,46 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "main::write_json#0",
         "projects/admm_thermal_consensus/scripts/pipeline/uncertainty_sweep.py::"
         "main::write_json#0",
+        # ev_hosting_flex study-data payloads, migrated (Phase 20, plan 20-02,
+        # 2026-08-17) from direct json.dumps to script.write_json(...). Same
+        # class as their admm siblings: domain data the governed report
+        # references, not reports themselves (see §3.7 / §3.9).
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_clustered_adoption.py::"
+        "derive_clustered::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py::"
+        "derive_cold_coupling::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py::"
+        "derive_cold_insurance::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py::"
+        "derive_congestion::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py::"
+        "derive_credibility::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_fleet_triage.py::"
+        "derive_fleet_triage::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py::"
+        "derive_incentive::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py::"
+        "derive_locational_contracts::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py::"
+        "derive_characterization::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_network_performance.py::"
+        "derive_performance::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py::"
+        "derive_nonwires_value::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py::"
+        "derive_phase::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py::"
+        "derive_voltage::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk_network.py::"
+        "derive_voltage_network::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py::"
+        "derive_curtailment::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py::"
+        "derive_annual_congestion::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py::"
+        "derive_curtailment_economics::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py::"
+        "run_stage::write_json#0",
     }
 )
 
@@ -936,7 +926,7 @@ class ReportContractAuditTest(unittest.TestCase):
         # Guard against a vacuous pass if the scanner silently stops matching.
         self.assertEqual(
             examined,
-            59,
+            41,
             "The 02-03 audit examined 76 direct-JSON write sites; the "
             "duplicate-write removal brought it to 75, the 2026-08-06 wave "
             "applying audit sections 5.1-5.5 brought it to 70 with zero known "
@@ -945,7 +935,12 @@ class ReportContractAuditTest(unittest.TestCase):
             "leaving 69. The 2026-08-17 admm migration (Phase 19) routed the "
             "study's 10 pipeline JSON writes through script.write_json, "
             "moving them from this direct set to the helper-routed set, "
-            "leaving 59. A different number means the tree moved or the "
+            "leaving 59. The 2026-08-17 ev_hosting_flex migration (Phase 20, "
+            "plan 20-02) routed the flagship's 20 pipeline JSON writes "
+            "through script.write_json too, leaving 41 (only "
+            "prepare_topology_cache.py, the Plan 20-03 seam, still "
+            "serializes directly through its local _write_json helper). A "
+            "different number means the tree moved or the "
             "scanner no longer matches; reconcile before adjusting.",
         )
 
@@ -961,7 +956,7 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            28,
+            46,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
@@ -972,9 +967,13 @@ class ReportContractAuditTest(unittest.TestCase):
             "spec.simulation declaration leaves a manifest rather than only a "
             "traceback. That makes 18. The 2026-08-17 admm migration (Phase "
             "19) routed 10 pipeline study-data JSONs through "
-            "script.write_json, bringing the helper-routed total to 28. A "
-            "different number means the tree moved; reconcile before "
-            "adjusting this number.",
+            "script.write_json, bringing the helper-routed total to 28. The "
+            "2026-08-17 ev_hosting_flex migration (Phase 20, plan 20-02) "
+            "routed the flagship's 20 pipeline JSON writes through "
+            "script.write_json, bringing the helper-routed total to 46 (the "
+            "five prepare_topology_cache _write_json cache documents were "
+            "already counted there). A different number means the tree moved; "
+            "reconcile before adjusting this number.",
         )
 
 

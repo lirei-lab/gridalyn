@@ -11,29 +11,17 @@ break-even adoption. Runs ALONGSIDE the design-day economics stage until F6.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
-from pathlib import Path
 from typing import Any
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     feeder_rating,
     load_annual_tmy,
     simulate_curtailment,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -43,10 +31,13 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     DTYPE,
     LIFE_YEARS,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
 )
+
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (imported before this stage under `{python} -m`).
+
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 
@@ -73,7 +64,8 @@ def capital_recovery_factor(rate: float, years: int) -> float:
     return rate * growth / (growth - 1.0)
 
 
-def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, Any]:
+def derive_curtailment_economics(script: ProjectScript) -> dict[str, Any]:
+    data_dir = script.data_dir
     """Compute the contract-vs-reinforcement economics and persist them.
 
     Args:
@@ -90,12 +82,10 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
     # `series` is what a load is actually compared against.
     cap, series = feeder_rating(load_annual_tmy())
     firm = int(
-        json.loads((json_dir / "firm_hosting_annual.json").read_text())["firm_ev_count"]
+        script.read_json("outputs/json/firm_hosting_annual.json")["firm_ev_count"]
     )
     n_homes = int(
-        json.loads(
-            (PROJECT_OUTPUTS_DIR / "reports" / "annual_mc_report.json").read_text()
-        )["summary"]["n_homes"]
+        script.read_json("outputs/reports/annual_mc_report.json")["summary"]["n_homes"]
     )
     pool_max = pool.shape[0]
 
@@ -106,7 +96,10 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
     breakeven_n = pool_max  # last n where the contract still beats reinforcement
     for n in range(1, pool_max + 1):
         out = simulate_curtailment(
-            base, pool[:n], np.ones(n, bool), cap,
+            base,
+            pool[:n],
+            np.ones(n, bool),
+            cap,
             res_minutes=ANNUAL_RES_MINUTES,
             rating_series=series,
         )
@@ -144,9 +137,7 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
         ),
         "curve": rows,
     }
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "curtailment_economics.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json("outputs/json/curtailment_economics.json", payload)
 
     summary = {
         "reinforcement_annual_yr": payload["reinforcement_annual_yr"],
@@ -159,7 +150,7 @@ def derive_curtailment_economics(data_dir: Path, json_dir: Path) -> dict[str, An
         "pay_per_ev_at_pool_top_yr": rows[-1]["pay_per_ev_yr"],
         "n_homes": n_homes,
     }
-    return {"artifact_paths": [out_path], "summary": summary}
+    return {"artifact_paths": [out_path_ref], "summary": summary}
 
 
 def run_stage() -> dict[str, Any]:
@@ -171,12 +162,13 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_curtailment_economics(
-        PROJECT_OUTPUTS_DIR / "data", PROJECT_OUTPUTS_DIR / "json"
-    )
+    derived = derive_curtailment_economics(script)
     return script.write_report(
         "curtailment_economics_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": []},
     )

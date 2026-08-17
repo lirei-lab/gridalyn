@@ -22,37 +22,28 @@ Runs ALONGSIDE the design-day flexibility stage until F6 retires it.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
-from pathlib import Path
 from typing import Any
 
-# Pitfall 2 (SEAL-01): cap the BLAS thread pool at module top.
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     feeder_rating,
     load_annual_tmy,
     simulate_curtailment,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     DTYPE,
     FC_SIGMAS,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
 )
+
+# SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
+# (imported before this stage under `{python} -m`).
+
 
 _RATING_KW = float(TRANSFORMER_KVA) * float(POWER_FACTOR)
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
@@ -69,7 +60,8 @@ def _jain(x: np.ndarray) -> float:
     return float(x.sum() ** 2) / (len(x) * total_sq)
 
 
-def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
+def derive_curtailment(script: ProjectScript) -> dict[str, Any]:
+    data_dir = script.data_dir
     """Compute the curtailment-mechanism headlines and persist them.
 
     Args:
@@ -81,7 +73,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     """
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
-    firm_payload = json.loads((json_dir / "firm_hosting_annual.json").read_text())
+    firm_payload = script.read_json("outputs/json/firm_hosting_annual.json")
     firm = int(firm_payload["firm_ev_count"])
     # Each hour is judged against the capability its OWN ambient allows
     # (RATING_CONVENTION). `cap` is the nameplate scalar kept for reporting;
@@ -116,9 +108,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
     expansion = (flexible / firm - 1.0) if firm > 0 else None
 
     # ── Enrollment sweep at 1 EV/home (the binding lever, study-B Fig B) ────
-    annual_report = json.loads(
-        (PROJECT_OUTPUTS_DIR / "reports" / "annual_mc_report.json").read_text()
-    )
+    annual_report = script.read_json("outputs/reports/annual_mc_report.json")
     n_lever = min(int(annual_report["summary"]["n_homes"]), pool_max)
     enrollment = []
     for rho in ENROLLMENT_GRID:
@@ -224,9 +214,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "rating_kw": round(_RATING_KW, ROUND_DECIMALS),
         "mechanism": "dayahead_notice_realtime_backstop_fair_rotation",
     }
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "curtailment_hosting.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    out_path_ref = script.write_json("outputs/json/curtailment_hosting.json", payload)
 
     summary = {
         "firm_ev_count": firm,
@@ -239,7 +227,7 @@ def derive_curtailment(data_dir: Path, json_dir: Path) -> dict[str, Any]:
         "planned_percent_sigma_1.5": notice["1.5"]["planned_percent"],
         "surprise_percent_sigma_1.5": notice["1.5"]["surprise_percent"],
     }
-    return {"artifact_paths": [out_path], "summary": summary}
+    return {"artifact_paths": [out_path_ref], "summary": summary}
 
 
 def run_stage() -> dict[str, Any]:
@@ -251,12 +239,13 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_curtailment(
-        PROJECT_OUTPUTS_DIR / "data", PROJECT_OUTPUTS_DIR / "json"
-    )
+    derived = derive_curtailment(script)
     return script.write_report(
         "curtailment_contracts_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": []},
     )

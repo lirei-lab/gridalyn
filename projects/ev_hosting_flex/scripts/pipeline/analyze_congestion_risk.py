@@ -13,25 +13,15 @@ and mapped to the 540. Out of scope: flexibility, AC voltage, phase imbalance.
 from __future__ import annotations
 
 import argparse
-import json
 import math
-import os
 import pickle
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     annual_base_realization,
     cold_capability_curve,
     day_mean_temps,
@@ -40,11 +30,11 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     load_annual_tmy,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts._powerflow import (
     _cold_day_peaks,
     congestion_stats,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
     CONGESTION_AT_RISK_FRACTION,
@@ -55,11 +45,10 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     CONGESTION_RISK_THRESHOLD,
     DTYPE,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
 )
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
 )
 
@@ -75,10 +64,20 @@ def _base_mc_signature(k_base: int) -> str:
     from projects.ev_hosting_flex.scripts import config as _cfg
 
     parts = (
-        _cfg.R_STUDY_B, _cfg.P_HEAT_QUEBEC, _cfg.BG_SCALE, _cfg.DHW_ELEMENT_KW,
-        _cfg.DHW_DAILY_L_MEAN, _cfg.DHW_DAILY_L_STD, _cfg.DHW_TANK_L,
-        _cfg.DHW_T_SET, _cfg.DHW_T_LOW, _cfg.DHW_UA_KW_PER_K, _cfg.DHW_SEED_SALT,
-        int(SEED), int(ANNUAL_RES_MINUTES), int(k_base),
+        _cfg.R_STUDY_B,
+        _cfg.P_HEAT_QUEBEC,
+        _cfg.BG_SCALE,
+        _cfg.DHW_ELEMENT_KW,
+        _cfg.DHW_DAILY_L_MEAN,
+        _cfg.DHW_DAILY_L_STD,
+        _cfg.DHW_TANK_L,
+        _cfg.DHW_T_SET,
+        _cfg.DHW_T_LOW,
+        _cfg.DHW_UA_KW_PER_K,
+        _cfg.DHW_SEED_SALT,
+        int(SEED),
+        int(ANNUAL_RES_MINUTES),
+        int(k_base),
     )
     return hashlib.sha256(repr(parts).encode()).hexdigest()[:16]
 
@@ -111,9 +110,7 @@ def _ensure_base_mc_cache(
     return out
 
 
-def _ev_pools(
-    n_max: int, tday: np.ndarray, hod0: int, k_ev: int
-) -> list[np.ndarray]:
+def _ev_pools(n_max: int, tday: np.ndarray, hod0: int, k_ev: int) -> list[np.ndarray]:
     """K EV-fleet draws of ``n_max`` EVs each; per-scenario counts use prefixes."""
     return [
         ev_fleet_annual(
@@ -144,9 +141,7 @@ def _size_congestion(
     for kb in range(base_mc.shape[0]):
         base_g = base_mc[kb] * float(g)
         if n_evs <= 0:
-            peaks.append(
-                _cold_day_peaks(base_g / limit, cold_mask, steps_per_day)
-            )
+            peaks.append(_cold_day_peaks(base_g / limit, cold_mask, steps_per_day))
             continue
         for pool in ev_pools:
             total = base_g + pool[:n_evs].sum(axis=0)
@@ -156,12 +151,14 @@ def _size_congestion(
     return congestion_stats(np.concatenate(peaks), 1.0)
 
 
-def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
+def derive_congestion(script: ProjectScript) -> dict[str, Any]:
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     """Size at G=1, MC both generators per size, assemble the risk surface."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(
-        json.loads((cache_dir / "feeder_selection.json").read_text())[
+        script.read_json("outputs/cache/feeder_selection.json")[
             "feeder_transformer_idx"
         ]
     )
@@ -212,8 +209,14 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
             for e in ev_grid:
                 row.append(
                     _size_congestion(
-                        base_mc[h], ev_pools, cold_mask, _STEPS_PER_DAY,
-                        homes=h, rating_kw=rating_by_size[h], g=g, ev_per_home=e,
+                        base_mc[h],
+                        ev_pools,
+                        cold_mask,
+                        _STEPS_PER_DAY,
+                        homes=h,
+                        rating_kw=rating_by_size[h],
+                        g=g,
+                        ev_per_home=e,
                         k_curve=k_curve,
                     )
                 )
@@ -239,15 +242,16 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
     g1 = g_grid.index(1.0) if 1.0 in g_grid else 0
     ev0 = ev_grid.index(0.0) if 0.0 in ev_grid else 0
     at_risk_frac_thr = float(CONGESTION_AT_RISK_FRACTION)
-    first_risk = _interp_first_cross(
-        ev_grid, at_risk_frac[g1], at_risk_frac_thr
-    )
+    first_risk = _interp_first_cross(ev_grid, at_risk_frac[g1], at_risk_frac_thr)
     first_risk_g = _interp_first_cross(
         g_grid, [at_risk_frac[gi][ev0] for gi in range(len(g_grid))], at_risk_frac_thr
     )
 
-    ref = size_stats[feeder_homes][g1][ev_grid.index(1.0)] if 1.0 in ev_grid else \
-        size_stats[feeder_homes][g1][0]
+    ref = (
+        size_stats[feeder_homes][g1][ev_grid.index(1.0)]
+        if 1.0 in ev_grid
+        else size_stats[feeder_homes][g1][0]
+    )
     ref_ei = ev_grid.index(1.0) if 1.0 in ev_grid else 0
 
     payload = {
@@ -279,24 +283,25 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
                 "rating_kw": round(rating_by_size[h], ROUND_DECIMALS),
                 "n_trafos": int(trafo_sizes.count(h)),
                 "p_cong": [
-                    [round(size_stats[h][gi][ei]["p_cong"], ROUND_DECIMALS)
-                     for ei in range(len(ev_grid))]
+                    [
+                        round(size_stats[h][gi][ei]["p_cong"], ROUND_DECIMALS)
+                        for ei in range(len(ev_grid))
+                    ]
                     for gi in range(len(g_grid))
                 ],
                 "peak_max": [
-                    [round(size_stats[h][gi][ei]["peak_max"], ROUND_DECIMALS)
-                     for ei in range(len(ev_grid))]
+                    [
+                        round(size_stats[h][gi][ei]["peak_max"], ROUND_DECIMALS)
+                        for ei in range(len(ev_grid))
+                    ]
                     for gi in range(len(g_grid))
                 ],
             }
             for h in sizes
         },
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "congestion_risk.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    out_path_ref = script.write_json("outputs/json/congestion_risk.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
 
     summary = {
         "n_trafos": n_trafos,
@@ -308,7 +313,7 @@ def derive_congestion(cache_dir: Path, data_dir: Path) -> dict[str, Any]:
         "first_risk_g": first_risk_g,
     }
     npz_path = data_dir / "base_mc_by_size.npz"
-    artifacts = [out_path, *fig_paths]
+    artifacts = [out_path_ref, *fig_paths]
     if npz_path.is_file():
         artifacts.append(npz_path)
     return {"artifact_paths": artifacts, "summary": summary}
@@ -342,8 +347,8 @@ def _interp_first_cross(
         # the guard forces ys[i-1] < ys[i], so the denominator is never zero
         if ys[i - 1] < target <= ys[i]:
             return round(
-                xs[i - 1] + (target - ys[i - 1]) * (xs[i] - xs[i - 1])
-                / (ys[i] - ys[i - 1]),
+                xs[i - 1]
+                + (target - ys[i - 1]) * (xs[i] - xs[i - 1]) / (ys[i] - ys[i - 1]),
                 ROUND_DECIMALS,
             )
     if ys and ys[0] >= target:
@@ -362,13 +367,14 @@ def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
     gs = payload["g_grid"]
     evs = payload["ev_per_home_grid"]
     feeder = str(payload["feeder_homes"])
-    pcong = np.array(payload["by_size"][feeder]["p_cong"])         # (G, ev)
+    pcong = np.array(payload["by_size"][feeder]["p_cong"])  # (G, ev)
     peakmax = np.array(payload["by_size"][feeder]["peak_max"])
     n_at_risk = np.array(payload["n_at_risk_by_scenario"])
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14.5, 4.3))
 
-    im = ax1.imshow(pcong, origin="lower", aspect="auto", cmap="Reds",
-                    vmin=0.0, vmax=1.0)
+    im = ax1.imshow(
+        pcong, origin="lower", aspect="auto", cmap="Reds", vmin=0.0, vmax=1.0
+    )
     ax1.set_xticks(range(len(evs)))
     ax1.set_xticklabels([f"{e:g}" for e in evs])
     ax1.set_yticks(range(len(gs)))
@@ -412,7 +418,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_congestion(script.cache_dir, PROJECT_OUTPUTS_DIR / "data")
+    derived = derive_congestion(script)
     warnings = [
         "DIAGNOSTIC ONLY — no flexibility. Characterizes the congestion problem "
         "(probability + peak severity) to inform reinforcement decisions.",
@@ -427,7 +433,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "congestion_risk_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

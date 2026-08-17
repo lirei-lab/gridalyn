@@ -11,23 +11,13 @@ SDK edit; the heavy K-realization base generation runs in the main session.
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+import numpy as np
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
-import numpy as np  # noqa: E402
-
-from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
+from gridalyn.projects.scripting import ProjectScript
+from projects.ev_hosting_flex.scripts._annual import (
     N_DAYS,
     annual_base_realization,
     day_mean_temps,
@@ -38,7 +28,7 @@ from projects.ev_hosting_flex.scripts._annual import (  # noqa: E402
     simulate_curtailment,
     tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -51,16 +41,15 @@ from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
     LIFE_YEARS,
     POOL_MAX_ANNUAL,
     POWER_FACTOR,
-    PROJECT_OUTPUTS_DIR,
     ROUND_DECIMALS,
     SEED,
     TRANSFORMER_KVA,
     WEATHER_SIGMA_C,
 )
-from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (
     capital_recovery_factor,
 )
-from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (  # noqa: E402
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
     feeder_home_count,
 )
 
@@ -231,9 +220,9 @@ def _stats(samples: list[float], point: float | None = None) -> dict[str, Any]:
     return out
 
 
-def derive_credibility(cache_dir: Path) -> dict[str, Any]:
+def derive_credibility(script: ProjectScript) -> dict[str, Any]:
     """Run the K-realization headline chain and summarize the distributions."""
-    n_homes = feeder_home_count(cache_dir)
+    n_homes = feeder_home_count(script)
     temp = load_annual_tmy()
     hod0 = int(tmy_hour_of_day(temp))
     tday = day_mean_temps(temp)
@@ -291,11 +280,8 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
         "curtailed_pct": _stats(samples["curtailed_pct"]),
         "point_realization_0": {k2: samples[k2][0] for k2 in samples},
     }
-    json_dir = PROJECT_OUTPUTS_DIR / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    out_path = json_dir / "credibility.json"
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    fig_paths = _figures(payload, PROJECT_OUTPUTS_DIR / "figures")
+    json_ref = script.write_json("outputs/json/credibility.json", payload)
+    fig_paths = _figures(payload, script.figures_dir)
     summary = {
         "firm_p05": firm_stats["p05"],
         "firm_p50": firm_stats["p50"],
@@ -306,7 +292,7 @@ def derive_credibility(cache_dir: Path) -> dict[str, Any]:
         "breakeven_p50": be_stats["p50"],
         "base_peak_p50": payload["base_peak"]["p50"],
     }
-    return {"artifact_paths": [out_path, *fig_paths], "summary": summary}
+    return {"artifact_paths": [json_ref, *fig_paths], "summary": summary}
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -350,7 +336,7 @@ def run_stage() -> dict[str, Any]:
     from gridalyn.projects.scripting import project_script
 
     script = project_script()
-    derived = derive_credibility(script.cache_dir)
+    derived = derive_credibility(script)
     warnings = [
         "CREDIBILITY layer: confidence intervals on the pilar-1 headlines "
         "(firm/flex/breakeven) over K realizations varying the building/EV seeds "
@@ -363,7 +349,10 @@ def run_stage() -> dict[str, Any]:
     ]
     return script.write_report(
         "credibility_report",
-        artifacts=[script.file_reference(p) for p in derived["artifact_paths"]],
+        artifacts=[
+            p if isinstance(p, dict) else script.file_reference(p)
+            for p in derived["artifact_paths"]
+        ],
         summary=derived["summary"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )

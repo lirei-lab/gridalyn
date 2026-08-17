@@ -308,7 +308,7 @@ governed report is emitted separately, and these JSONs are the data it reference
 from `projects/admm_thermal_consensus/workflow.yaml`), so R3's "artifact-producing run"
 obligation does not attach. Noted as advisory in §6.
 
-### 3.8 `projects/ev_hosting_flex/` and `projects/synthetic_geojson_feeder/` — 20 sites, all NOT-A-REPORT
+### 3.8 `projects/ev_hosting_flex/` and `projects/synthetic_geojson_feeder/` — 2 sites, all NOT-A-REPORT
 
 All are study data payloads written to `outputs/json/`, keyed entirely by domain
 quantities, **0/8** on `REQUIRED_REPORT_FIELDS`, failing both role and destination.
@@ -317,19 +317,15 @@ so each stage does emit its governed report; these JSON files are the data artif
 report references. Sixteen of them are the `source` files the `ev_hosting_flex` regression
 baseline pins (§5, sequencing).
 
-`analyze_clustered_adoption`, `analyze_cold_coupling`, `analyze_cold_insurance`,
-`analyze_congestion_risk`, `analyze_credibility`, `analyze_fleet_triage`,
-`analyze_flexibility_incentive`, `analyze_locational_contracts`,
-`analyze_network_characterization`, `analyze_network_performance`,
-`analyze_nonwires_value`, `analyze_phase_imbalance`, `analyze_voltage_risk`,
-`analyze_voltage_risk_network`, `apply_curtailment_contracts`,
-`compute_congestion_annual`, `compute_curtailment_economics`,
-`prepare_topology_cache::_write_json` (the helper; its 5 call sites are enumerated in §3.9),
-`validate_powerflow::violations_payload`, and
+The flagship's pipeline stage writes were migrated (Phase 20, plan 20-02,
+2026-08-17) from direct `json.dumps` onto `script.write_json(...)` — see §3.9
+and §13 — so the only remaining direct sites here are
+`prepare_topology_cache::_write_json` (the helper; its 5 call sites are enumerated in §3.9;
+the topology-cache seam is owned by Plan 20-03), and
 `synthetic_geojson_feeder/scripts/generate_building_footprints.py::payload` (a GeoJSON
 FeatureCollection; the module emits its governed report at `:25`).
 
-### 3.9 Helper-routed writes — 22 sites
+### 3.9 Helper-routed writes — 46 sites
 
 | Helper | Call sites | Class | Rationale |
 |---|---|---|---|
@@ -350,6 +346,7 @@ FeatureCollection; the module emits its governed report at `:25`).
 | `operations/verification.py::write_shadow_report` | `generate_provider_selection_shadow_report.py:129` | NOT-A-REPORT | Shadow comparison. |
 | `twin/semantic/validation.py::write_validation_report` | `validate_digital_twin_semantics.py:62` | NOT-A-REPORT | Re-wrapped downstream. |
 | `.../prepare_topology_cache.py::_write_json` | `:190, :191, :201, :202, :205` | NOT-A-REPORT | Five cache documents (ratings, downstream topology, feeder selection, nameplate, building counts) behind one direct-scan site. |
+| `.../pipeline/*.py::script.write_json` (20 sites, Phase 20) | 18 stage derives + `validate_powerflow::run_stage` | NOT-A-REPORT | The flagship's study-data payloads, migrated 2026-08-17 (plan 20-02) from direct `json.dumps` to `ProjectScript.write_json`. Same class as the admm siblings above (§13). |
 
 ---
 
@@ -359,26 +356,27 @@ FeatureCollection; the module emits its governed report at `:25`).
 
 | Classification | Count |
 |---|---|
-| `GOVERNED-VIOLATION` | **6** |
-| `NOT-A-REPORT` | **69** |
+| `GOVERNED-VIOLATION` | **0** |
+| `NOT-A-REPORT` | **40** |
 | `ALREADY-GOVERNED` | **1** |
-| **Sites examined** | **76** |
+| **Sites examined** | **41** |
 
-`6 + 69 + 1 = 76` ✔
+`0 + 40 + 1 = 41` ✔
 
-By subtree: `gridalyn/` 45 sites (6 violations, 38 not-a-report, 1 already-governed);
-`projects/` 31 sites (0 violations, 31 not-a-report).
+By subtree: `gridalyn/` 40 sites (0 violations, 39 not-a-report, 1 already-governed);
+`projects/` 1 site (0 violations, 1 not-a-report — `prepare_topology_cache::_write_json`;
+the flagship's 20 stage writes moved to the helper-routed set in §13).
 
 ### Helper-routed writes
 
 | Classification | Count |
 |---|---|
 | `GOVERNED-VIOLATION` | **0** |
-| `NOT-A-REPORT` | **20** |
+| `NOT-A-REPORT` | **44** |
 | `ALREADY-GOVERNED` | **2** |
-| **Sites examined** | **22** (across 15 helpers) |
+| **Sites examined** | **46** (across 16 helpers) |
 
-`0 + 20 + 2 = 22` ✔
+`0 + 44 + 2 = 46` ✔
 
 The six violations are unchanged from the first revision, but four of the six now rest on a
 different and caller-independent argument, and `operations/clearing/selection.py:639`'s
@@ -930,6 +928,92 @@ script, not a workflow stage, and was deliberately left off the migration.
 
 **Reconciliation.** Direct: `0 + 58 + 1 = 59` ✔ (was `0 + 68 + 1 = 69`).
 Helper-routed: `0 + 26 + 2 = 28` ✔ (was `0 + 16 + 2 = 18`).
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_NOT_A_REPORT_BY_FILE`, `_HELPER_ROUTED_NOT_A_REPORT`, and both count
+guards), per §7's rule that a reclassification must update the audit and the
+gate in the same change.
+
+## 13. Amendment — 2026-08-17: ev_hosting_flex migration onto the Project Developer API
+
+**Counts move: direct-JSON sites 59 → 41, helper-routed sites 28 → 46.**
+`tests/test_report_contract.py` pins both numbers and both classified sets; it
+caught every one of these reclassifications before this section was written,
+which is what the vanished-site assertions exist for.
+
+**Why.** Phase 20 (Flagship Migration) plan 20-02 migrated the
+`ev_hosting_flex` pipeline's 20 study-data JSON writes off raw `json.dumps`
+onto the `script.write_json(...)` surface — the same Project Developer API
+pattern the admm study adopted in §12. A direct write site becomes invisible
+to the direct scan once the payload is serialized inside a helper — the direct
+scan attributes it to the helper instead — so those 20 documents moved from
+the §3.8 direct enumeration to the §3.9 helper-routed enumeration. Every
+migrated module still emits its governed report via
+`script.write_report(...)`; the reclassified JSONs are the same domain-data
+payloads, unchanged in role (NOT-A-REPORT). The reads moved to
+`script.read_json(...)` too; only `prepare_topology_cache.py` (the topology
+cache seam, owned by Plan 20-03) still serializes directly through its local
+`_write_json` helper, and `synthetic_geojson_feeder` is untouched.
+
+**Removed from the direct-JSON classification (20 sites, NOT-A-REPORT):**
+
+| Site |
+|---|
+| `analyze_clustered_adoption.py::derive_clustered::payload#0` |
+| `analyze_cold_coupling.py::derive_cold_coupling::payload#0` |
+| `analyze_cold_insurance.py::derive_cold_insurance::payload#0` |
+| `analyze_congestion_risk.py::derive_congestion::payload#0` |
+| `analyze_credibility.py::derive_credibility::payload#0` |
+| `analyze_fleet_triage.py::derive_fleet_triage::payload#0` |
+| `analyze_flexibility_incentive.py::derive_incentive::payload#0` |
+| `analyze_locational_contracts.py::derive_locational_contracts::payload#0` |
+| `analyze_network_characterization.py::derive_characterization::payload#0` |
+| `analyze_network_performance.py::derive_performance::payload#0` |
+| `analyze_nonwires_value.py::derive_nonwires_value::payload#0` |
+| `analyze_phase_imbalance.py::derive_phase::payload#0` |
+| `analyze_voltage_risk.py::derive_voltage::payload#0` |
+| `analyze_voltage_risk_network.py::derive_voltage_network::payload#0` |
+| `apply_curtailment_contracts.py::derive_curtailment::payload#0` |
+| `compute_congestion_annual.py::derive_annual_congestion::payload#0` |
+| `compute_curtailment_economics.py::derive_curtailment_economics::payload#0` |
+| `validate_powerflow.py::run_stage::violations_payload#0` |
+
+All under `projects/ev_hosting_flex/scripts/pipeline/`.
+
+**Added to the helper-routed classification (20 sites, NOT-A-REPORT):**
+
+| Site |
+|---|
+| `analyze_clustered_adoption.py::derive_clustered::write_json#0` |
+| `analyze_cold_coupling.py::derive_cold_coupling::write_json#0` |
+| `analyze_cold_insurance.py::derive_cold_insurance::write_json#0` |
+| `analyze_congestion_risk.py::derive_congestion::write_json#0` |
+| `analyze_credibility.py::derive_credibility::write_json#0` |
+| `analyze_fleet_triage.py::derive_fleet_triage::write_json#0` |
+| `analyze_flexibility_incentive.py::derive_incentive::write_json#0` |
+| `analyze_locational_contracts.py::derive_locational_contracts::write_json#0` |
+| `analyze_network_characterization.py::derive_characterization::write_json#0` |
+| `analyze_network_performance.py::derive_performance::write_json#0` |
+| `analyze_nonwires_value.py::derive_nonwires_value::write_json#0` |
+| `analyze_phase_imbalance.py::derive_phase::write_json#0` |
+| `analyze_voltage_risk.py::derive_voltage::write_json#0` |
+| `analyze_voltage_risk_network.py::derive_voltage_network::write_json#0` |
+| `apply_curtailment_contracts.py::derive_curtailment::write_json#0` |
+| `compute_congestion_annual.py::derive_annual_congestion::write_json#0` |
+| `compute_curtailment_economics.py::derive_curtailment_economics::write_json#0` |
+| `validate_powerflow.py::run_stage::write_json#0` |
+
+All under `projects/ev_hosting_flex/scripts/pipeline/`, routed through
+`ProjectScript.write_json`.
+
+**Zero known violations is unaffected.** Every moved site was already
+classified NOT-A-REPORT as a direct write; the migration changes only *which*
+enumeration names it, not its class. `prepare_topology_cache.py::_write_json`
+remains the study's single direct-JSON write (its five call sites were already
+helper-routed in §3.9), awaiting the Plan 20-03 topology-cache migration.
+
+**Reconciliation.** Direct: `0 + 40 + 1 = 41` ✔ (was `0 + 58 + 1 = 59`).
+Helper-routed: `0 + 44 + 2 = 46` ✔ (was `0 + 26 + 2 = 28`).
 
 Pins updated together with this amendment in `tests/test_report_contract.py`
 (`_NOT_A_REPORT_BY_FILE`, `_HELPER_ROUTED_NOT_A_REPORT`, and both count
