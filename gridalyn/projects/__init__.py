@@ -18,6 +18,11 @@ from gridalyn.projects.validation import validate_project_file
 
 _LAZY_EXPORTS = {
     "CreatedProject": ("gridalyn.projects.api", "CreatedProject"),
+    "ProjectComponents": ("gridalyn.projects.developer", "ProjectComponents"),
+    "bind_project_components": (
+        "gridalyn.projects.developer",
+        "bind_project_components",
+    ),
     "init_project": ("gridalyn.projects.api", "init_project"),
     "list_projects": ("gridalyn.projects.api", "list_projects"),
     "load_project": ("gridalyn.projects.api", "load_project"),
@@ -72,12 +77,14 @@ __all__ = [
     "CreatedProject",
     "ExperimentSpec",
     "ProblemSpec",
+    "ProjectComponents",
     "ProjectScript",
     "ScenarioSpec",
     "StudyProject",
     "ValidationReport",
     "WorkflowSpec",
     "WorkflowStage",
+    "bind_project_components",
     "init_project",
     "list_projects",
     "load_project",
