@@ -187,6 +187,22 @@ class CliCommandStructureTest(unittest.TestCase):
         self.assertTrue(callable(project.main))
         self.assertTrue(callable(extension.main))
 
+    def test_extension_parser_exposes_list_validate_and_new(self):
+        # Phase 17, plan 17-01: authoring is first-class only when the full
+        # surface is wired — list (awareness), validate (declared-only
+        # resolution), new (scaffolding). Seen red first: this fails until
+        # the `new` subcommand exists.
+        parser = extension.build_parser()
+        cases = {
+            "list": ["list"],
+            "validate": ["validate"],
+            "new": ["new", "probe"],
+        }
+        for command, argv in cases.items():
+            args = parser.parse_args(argv)
+            self.assertEqual(args.command, command)
+            self.assertTrue(callable(args.handler))
+
     def test_gridalyn_parser_exposes_product_domains_and_aliases(self):
         # Routing is asserted through parse_args below, so no parser handle is
         # needed here; test_gridalyn_parser_exposes_same_product_domains keeps

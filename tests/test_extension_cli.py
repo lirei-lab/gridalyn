@@ -10,6 +10,7 @@ unready (missing-capability) ID.
 
 from __future__ import annotations
 
+import importlib
 import io
 import json
 import sys
@@ -21,6 +22,7 @@ from unittest import mock
 
 from gridalyn.foundation.platform.extensions import (
     DEFAULT_REGISTRY,
+    SUPPORTED_CONTRACT_VERSIONS,
     EntryPointMetadata,
     ExtensionDescriptor,
     UnknownExtensionError,
@@ -219,3 +221,56 @@ def factory():
         self.assertEqual(0, code)
         after = [d.extension_id for d in DEFAULT_REGISTRY.list_descriptors()]
         self.assertEqual(before, after)
+
+
+class ScaffoldCliTest(unittest.TestCase):
+    """``gridalyn extension new`` writes a conformant extension package (17-01)."""
+
+    def test_new_scaffolds_expected_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = extension.main(["new", "hello_world", "--target", tmp])
+            self.assertEqual(0, code, stderr.getvalue())
+            pkg = Path(tmp) / "hello_world"
+            self.assertTrue((pkg / "pyproject.toml").is_file())
+            self.assertTrue((pkg / "hello_world.py").is_file())
+            self.assertTrue((pkg / "test_hello_world.py").is_file())
+            self.assertIn("scaffolded extension", stdout.getvalue())
+
+    def test_new_scaffolded_module_is_conformant(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            code = extension.main(["new", "hello_world", "--target", tmp])
+            self.assertEqual(0, code)
+            module_dir = Path(tmp) / "hello_world"
+            sys.path.insert(0, str(module_dir))
+            self.addCleanup(sys.path.remove, str(module_dir))
+            module = importlib.import_module("hello_world")
+        descriptor = module.descriptor
+        self.assertIsInstance(descriptor, ExtensionDescriptor)
+        self.assertEqual("hello_world", descriptor.extension_id)
+        self.assertEqual("powerflow_backend", descriptor.role)
+        self.assertIn(descriptor.contract_version, SUPPORTED_CONTRACT_VERSIONS)
+        self.assertTrue(callable(module.factory))
+
+    def test_new_rejects_bad_name_with_located_error(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            code = extension.main(["new", "../evil", "--target", tempfile.mkdtemp()])
+        self.assertEqual(1, code)
+        self.assertIn("extension new", stderr.getvalue())
+
+    def test_new_refuses_existing_directory_without_force(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "hello_world").mkdir()
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                code = extension.main(["new", "hello_world", "--target", tmp])
+            self.assertEqual(1, code)
+            self.assertIn("already exists", stderr.getvalue())
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                code = extension.main(
+                    ["new", "hello_world", "--target", tmp, "--force"]
+                )
+            self.assertEqual(0, code)
