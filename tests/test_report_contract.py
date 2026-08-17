@@ -253,39 +253,11 @@ _NOT_A_REPORT_BY_FILE: dict[str, tuple[str, ...]] = {
     "gridalyn/twin/semantic/profile.py": ("write_profile::profile#0",),
     # Re-wrapped downstream by interfaces/reporting/digital_twin.py.
     "gridalyn/twin/semantic/validation.py": ("write_validation_report::report#0",),
-    "projects/admm_thermal_consensus/scripts/pipeline/build_network.py": (
-        "main::<inline:DictComp>#0",
-        (
-            "main::<inline:feeder,homes_per_bus,lv_kv,mv_kv,n_homes,n_load_buses,po"
-            "wer_factor,transformer_kva,uncoordinated_min_lv_voltage_pu,uncoordinat"
-            "ed_peak_kw,uncoordinated_transformer_loading_pct>#0"
-        ),
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/build_study_report.py": (
-        "main::results#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/comfort_validation.py": (
-        "main::results#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/generate_agents.py": (
-        "main::params#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/imputer_comparison.py": (
-        "main::results#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/run_admm.py": (
-        "main::convergence#0",
-        "main::kpis#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/train_forecaster.py": (
-        "main::cv#0",
-    ),
-    "projects/admm_thermal_consensus/scripts/pipeline/uncertainty_sweep.py": (
-        (
-            "main::<inline:band,by_fraction,curve_check,forecast_residual_std_kw,n_"
-            "draws>#0"
-        ),
-    ),
+    # The admm pipeline's study-data JSONs are now helper-routed: the
+    # migration (Phase 19, 2026-08-17) replaced their direct json.dumps with
+    # script.write_json(...), so they are enumerated in the helper-routed set
+    # (§3.9) instead of here. Only validate_convergence.py (a standalone
+    # operator script, not a workflow stage) still serializes directly.
     "projects/admm_thermal_consensus/scripts/validate_convergence.py": ("main::out#0",),
     # -- ev_hosting_flex study data payloads. Every module below also emits its
     # governed report via script.write_report(...); these JSONs are the data it
@@ -442,6 +414,30 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "derive_topology_artifacts::_write_json#3",
         "projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py::"
         "derive_topology_artifacts::_write_json#4",
+        # admm_thermal_consensus study-data payloads, migrated (Phase 19,
+        # 2026-08-17) from direct json.dumps to script.write_json(...). Same
+        # class as their ev_hosting_flex siblings: domain data the governed
+        # report references, not reports themselves (see §3.7 / §3.9).
+        "projects/admm_thermal_consensus/scripts/pipeline/build_network.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/build_network.py::"
+        "main::write_json#1",
+        "projects/admm_thermal_consensus/scripts/pipeline/build_study_report.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/comfort_validation.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/generate_agents.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/imputer_comparison.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/run_admm.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/run_admm.py::"
+        "main::write_json#1",
+        "projects/admm_thermal_consensus/scripts/pipeline/train_forecaster.py::"
+        "main::write_json#0",
+        "projects/admm_thermal_consensus/scripts/pipeline/uncertainty_sweep.py::"
+        "main::write_json#0",
     }
 )
 
@@ -940,13 +936,16 @@ class ReportContractAuditTest(unittest.TestCase):
         # Guard against a vacuous pass if the scanner silently stops matching.
         self.assertEqual(
             examined,
-            69,
+            59,
             "The 02-03 audit examined 76 direct-JSON write sites; the "
             "duplicate-write removal brought it to 75, the 2026-08-06 wave "
             "applying audit sections 5.1-5.5 brought it to 70 with zero known "
             "violations, and retiring the orphaned-input commands "
             "the same day removed one more (spatial_powerflow_validation.py), "
-            "leaving 69. A different number means the tree moved or the "
+            "leaving 69. The 2026-08-17 admm migration (Phase 19) routed the "
+            "study's 10 pipeline JSON writes through script.write_json, "
+            "moving them from this direct set to the helper-routed set, "
+            "leaving 59. A different number means the tree moved or the "
             "scanner no longer matches; reconcile before adjusting.",
         )
 
@@ -962,7 +961,7 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            18,
+            28,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
@@ -971,8 +970,11 @@ class ReportContractAuditTest(unittest.TestCase):
             "leaving 17. 2026-08-14 added one back: the run manifest is now "
             "also written from runner._attach_provenance, so a malformed "
             "spec.simulation declaration leaves a manifest rather than only a "
-            "traceback. That makes 18. A different number "
-            "means the tree moved; reconcile before adjusting this number.",
+            "traceback. That makes 18. The 2026-08-17 admm migration (Phase "
+            "19) routed 10 pipeline study-data JSONs through "
+            "script.write_json, bringing the helper-routed total to 28. A "
+            "different number means the tree moved; reconcile before "
+            "adjusting this number.",
         )
 
 

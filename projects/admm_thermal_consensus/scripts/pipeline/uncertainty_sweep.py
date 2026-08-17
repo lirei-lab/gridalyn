@@ -16,24 +16,17 @@ P(loading > 100%).
 
 from __future__ import annotations
 
-import json
-import math
 import pickle
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import project_script
-from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts import comfort
-from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
+from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts import lv_feeder
+from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 
 
 def main() -> None:
@@ -44,9 +37,9 @@ def main() -> None:
     bg = pd.read_parquet(C.DATA_DIR / "agents_background.parquet").to_numpy()
     bg_total = bg.sum(axis=0)
     levels = heat.mean(axis=1)
-    params = json.loads((C.JSON_DIR / "agent_params.json").read_text())
+    params = script.read_json("outputs/json/agent_params.json")
     temp = np.asarray(params["temperature_c"], dtype=float)
-    cv = json.loads((C.JSON_DIR / "forecast_cv.json").read_text())
+    cv = script.read_json("outputs/json/forecast_cv.json")
     sigma = float(cv["cv_rmse_kw_mean"])  # forecast residual std
 
     with open(C.CACHE_DIR / "imputer.pkl", "rb") as fh:
@@ -85,10 +78,17 @@ def main() -> None:
                 noise = rng.normal(0.0, sigma, size=(n_down, C.N_STEPS))
                 fc[down] = np.maximum(0.0, forecast[down] + noise)
             res = solve_sharing_admm(
-                heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-                rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-                max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
-                responsive=responsive, forecast=fc,
+                heating=heat,
+                background=bg,
+                alpha=C.DEFERRABILITY_ALPHA,
+                rho=C.ADMM_RHO,
+                lam=C.ADMM_LAMBDA,
+                mu=C.ADMM_MU,
+                relax=C.ADMM_RELAX,
+                max_iters=C.ADMM_MAX_ITERS,
+                tol=C.ADMM_TOL,
+                responsive=responsive,
+                forecast=fc,
                 comfort_prox_inverse=prox,
             )
             total = res.x.sum(axis=0) + bg_total
@@ -96,8 +96,13 @@ def main() -> None:
             vmn, ld = map_peak_kw(pk)
             peak_kw[d], vmin_arr[d], load_arr[d] = pk, vmn, ld
             per_draw.append(
-                {"rho": rho_frac, "draw": d, "peak_kw": pk,
-                 "min_voltage_pu": vmn, "line_loading_pct": ld}
+                {
+                    "rho": rho_frac,
+                    "draw": d,
+                    "peak_kw": pk,
+                    "min_voltage_pu": vmn,
+                    "line_loading_pct": ld,
+                }
             )
 
         records.append(
@@ -110,10 +115,16 @@ def main() -> None:
                 "peak_kw_p95": float(np.percentile(peak_kw, C.UQ_BAND_HIGH_PCT)),
                 "min_voltage_pu_mean": float(vmin_arr.mean()),
                 "min_voltage_pu_p05": float(np.percentile(vmin_arr, C.UQ_BAND_LOW_PCT)),
-                "min_voltage_pu_p95": float(np.percentile(vmin_arr, C.UQ_BAND_HIGH_PCT)),
+                "min_voltage_pu_p95": float(
+                    np.percentile(vmin_arr, C.UQ_BAND_HIGH_PCT)
+                ),
                 "line_loading_pct_mean": float(load_arr.mean()),
-                "line_loading_pct_p05": float(np.percentile(load_arr, C.UQ_BAND_LOW_PCT)),
-                "line_loading_pct_p95": float(np.percentile(load_arr, C.UQ_BAND_HIGH_PCT)),
+                "line_loading_pct_p05": float(
+                    np.percentile(load_arr, C.UQ_BAND_LOW_PCT)
+                ),
+                "line_loading_pct_p95": float(
+                    np.percentile(load_arr, C.UQ_BAND_HIGH_PCT)
+                ),
                 "prob_line_violation": float(
                     np.mean(load_arr > C.LINE_LOADING_LIMIT_PCT)
                 ),
@@ -135,19 +146,15 @@ def main() -> None:
         "curve_vmin_at_uncoordinated": val_vmin,
         "curve_loading_at_uncoordinated": val_load,
     }
-    uq_path = C.JSON_DIR / "uncertainty_results.json"
-    uq_path.write_text(
-        json.dumps(
-            {
-                "forecast_residual_std_kw": sigma,
-                "n_draws": C.UQ_N_DRAWS,
-                "band": [C.UQ_BAND_LOW_PCT, C.UQ_BAND_HIGH_PCT],
-                "by_fraction": records,
-                "curve_check": curve_check,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
+    uq_path = script.write_json(
+        "outputs/json/uncertainty_results.json",
+        {
+            "forecast_residual_std_kw": sigma,
+            "n_draws": C.UQ_N_DRAWS,
+            "band": [C.UQ_BAND_LOW_PCT, C.UQ_BAND_HIGH_PCT],
+            "by_fraction": records,
+            "curve_check": curve_check,
+        },
     )
 
     script.write_report(
@@ -155,7 +162,7 @@ def main() -> None:
         artifacts=[
             script.file_reference(summary_path),
             script.file_reference(draws_path),
-            script.file_reference(uq_path),
+            uq_path,
         ],
         summary={
             "n_draws": C.UQ_N_DRAWS,

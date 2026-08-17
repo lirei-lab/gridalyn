@@ -2,13 +2,7 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pandas as pd
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
 
 from gridalyn.projects.scripting import project_script  # configures headless Agg
 from projects.admm_thermal_consensus.scripts import config as C
@@ -32,17 +26,33 @@ def main() -> None:
         alpha=0.2,
         label="Transformer loading P5-P95",
     )
-    ax1.plot(rho, d["line_loading_pct_mean"], "o-", color="tab:red", label="Transformer loading mean")
+    ax1.plot(
+        rho,
+        d["line_loading_pct_mean"],
+        "o-",
+        color="tab:red",
+        label="Transformer loading mean",
+    )
     ax1.axhline(
-        C.LINE_LOADING_LIMIT_PCT, ls="--", color="black", alpha=0.6,
+        C.LINE_LOADING_LIMIT_PCT,
+        ls="--",
+        color="black",
+        alpha=0.6,
         label=f"{C.LINE_LOADING_LIMIT_PCT:.0f}% limit",
     )
     ax1.set_xlabel(r"Non-responsive fraction $\varrho$ (forecast-imputed)")
     ax1.set_ylabel("Worst transformer loading [%]")
 
     ax2 = ax1.twinx()
-    ax2.plot(rho, d["prob_line_violation"], "s--", color="tab:blue", alpha=0.85,
-             markersize=5, label="P(transformer violation)")
+    ax2.plot(
+        rho,
+        d["prob_line_violation"],
+        "s--",
+        color="tab:blue",
+        alpha=0.85,
+        markersize=5,
+        label="P(transformer violation)",
+    )
     ax2.set_ylabel("P(transformer violation)")
     ax2.set_ylim(-0.02, 1.05)
 

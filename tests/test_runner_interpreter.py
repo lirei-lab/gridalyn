@@ -223,7 +223,7 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
             for path in _WORKFLOWS
         )
 
-        self.assertEqual(20, declared)
+        self.assertEqual(32, declared)
 
 
 if __name__ == "__main__":

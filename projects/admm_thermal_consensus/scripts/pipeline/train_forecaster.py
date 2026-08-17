@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import pickle
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
 
 from gridalyn.projects.scripting import project_script
 from projects.admm_thermal_consensus.scripts import config as C
@@ -21,7 +15,7 @@ from projects.admm_thermal_consensus.scripts.forecast.imputer import HeatingImpu
 def main() -> None:
     script = project_script()
     heat = pd.read_parquet(C.DATA_DIR / "agents_heating.parquet").to_numpy()
-    params = json.loads((C.JSON_DIR / "agent_params.json").read_text())
+    params = script.read_json("outputs/json/agent_params.json")
     temp = np.asarray(params["temperature_c"], dtype=float)
     levels = heat.mean(axis=1)
 
@@ -53,12 +47,11 @@ def main() -> None:
         "cv_mae_kw_mean": float(np.mean(maes)),
         "heating_std_kw": float(heat.std()),
     }
-    cv_path = C.JSON_DIR / "forecast_cv.json"
-    cv_path.write_text(json.dumps(cv, indent=2), encoding="utf-8")
+    cv_path = script.write_json("outputs/json/forecast_cv.json", cv)
 
     script.write_report(
         "forecast_report",
-        artifacts=[script.file_reference(model_path), script.file_reference(cv_path)],
+        artifacts=[script.file_reference(model_path), cv_path],
         summary=cv,
     )
     print(f"train_forecaster: CV RMSE {cv['cv_rmse_kw_mean']:.3f} kW")

@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import pickle
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
 from gridalyn.projects.scripting import project_script
-from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts import comfort
+from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 
 
@@ -36,7 +30,7 @@ def main() -> None:
     bg = pd.read_parquet(C.DATA_DIR / "agents_background.parquet").to_numpy()
     bg_total = bg.sum(axis=0)
     levels = heat.mean(axis=1)
-    params = json.loads((C.JSON_DIR / "agent_params.json").read_text())
+    params = script.read_json("outputs/json/agent_params.json")
     temp = np.asarray(params["temperature_c"], dtype=float)
     with open(C.CACHE_DIR / "imputer.pkl", "rb") as fh:
         imputer = pickle.load(fh)
@@ -59,9 +53,15 @@ def main() -> None:
 
     # 2) coordinated ideal
     res = solve_sharing_admm(
-        heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-        max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
+        heating=heat,
+        background=bg,
+        alpha=C.DEFERRABILITY_ALPHA,
+        rho=C.ADMM_RHO,
+        lam=C.ADMM_LAMBDA,
+        mu=C.ADMM_MU,
+        relax=C.ADMM_RELAX,
+        max_iters=C.ADMM_MAX_ITERS,
+        tol=C.ADMM_TOL,
         comfort_prox_inverse=prox,
     )
     total_ideal = res.x.sum(axis=0) + bg_total
@@ -81,16 +81,25 @@ def main() -> None:
     # 3) coordinated + imputation sweep
     rng = np.random.default_rng(C.SEED)
     drop_order = rng.permutation(C.N_AGENTS)
-    forecast = np.vstack([imputer.predict_agent(temp, float(levels[i])) for i in range(C.N_AGENTS)])
+    forecast = np.vstack(
+        [imputer.predict_agent(temp, float(levels[i])) for i in range(C.N_AGENTS)]
+    )
     for rho_frac in C.RHO_SWEEP:
         n_down = int(round(rho_frac * C.N_AGENTS))
         responsive = np.ones(C.N_AGENTS, dtype=bool)
         responsive[drop_order[:n_down]] = False
         res = solve_sharing_admm(
-            heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-            rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-            max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
-            responsive=responsive, forecast=forecast,
+            heating=heat,
+            background=bg,
+            alpha=C.DEFERRABILITY_ALPHA,
+            rho=C.ADMM_RHO,
+            lam=C.ADMM_LAMBDA,
+            mu=C.ADMM_MU,
+            relax=C.ADMM_RELAX,
+            max_iters=C.ADMM_MAX_ITERS,
+            tol=C.ADMM_TOL,
+            responsive=responsive,
+            forecast=forecast,
             comfort_prox_inverse=prox,
         )
         total = res.x.sum(axis=0) + bg_total
@@ -120,10 +129,8 @@ def main() -> None:
     agg_df = pd.DataFrame(profiles)
     agg_path = C.DATA_DIR / "aggregate_profiles.parquet"
     agg_df.to_parquet(agg_path)
-    kpis_path = C.JSON_DIR / "aggregate_kpis.json"
-    conv_path = C.JSON_DIR / "admm_convergence.json"
-    kpis_path.write_text(json.dumps(kpis, indent=2), encoding="utf-8")
-    conv_path.write_text(json.dumps(convergence, indent=2), encoding="utf-8")
+    kpis_path = script.write_json("outputs/json/aggregate_kpis.json", kpis)
+    conv_path = script.write_json("outputs/json/admm_convergence.json", convergence)
 
     peak_reduction = (
         1 - kpis["coordinated_ideal"]["peak_kw"] / kpis["uncoordinated"]["peak_kw"]
@@ -132,8 +139,8 @@ def main() -> None:
         "admm_report",
         artifacts=[
             script.file_reference(agg_path),
-            script.file_reference(kpis_path),
-            script.file_reference(conv_path),
+            kpis_path,
+            conv_path,
         ],
         summary={
             "uncoordinated_peak_kw": kpis["uncoordinated"]["peak_kw"],

@@ -10,19 +10,12 @@ feeder overload.
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
-
 from gridalyn.projects.scripting import project_script  # configures headless Agg
-from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts import comfort
+from projects.admm_thermal_consensus.scripts import config as C
 from projects.admm_thermal_consensus.scripts.admm.consensus import solve_sharing_admm
 
 
@@ -44,9 +37,15 @@ def main() -> None:
     bg_total = bg.sum(axis=0)
 
     base_kwargs = dict(
-        heating=heat, background=bg, alpha=C.DEFERRABILITY_ALPHA,
-        rho=C.ADMM_RHO, lam=C.ADMM_LAMBDA, mu=C.ADMM_MU, relax=C.ADMM_RELAX,
-        max_iters=C.ADMM_MAX_ITERS, tol=C.ADMM_TOL,
+        heating=heat,
+        background=bg,
+        alpha=C.DEFERRABILITY_ALPHA,
+        rho=C.ADMM_RHO,
+        lam=C.ADMM_LAMBDA,
+        mu=C.ADMM_MU,
+        relax=C.ADMM_RELAX,
+        max_iters=C.ADMM_MAX_ITERS,
+        tol=C.ADMM_TOL,
     )
     prox = comfort.prox_inverse()
     x_comfort = solve_sharing_admm(**base_kwargs, comfort_prox_inverse=prox).x
@@ -68,17 +67,29 @@ def main() -> None:
         },
     }
     C.JSON_DIR.mkdir(parents=True, exist_ok=True)
-    res_path = C.JSON_DIR / "comfort_validation.json"
-    res_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    res_path = script.write_json("outputs/json/comfort_validation.json", results)
 
     # figure: sorted per-home worst indoor-temperature excursion
     fig, ax = plt.subplots(figsize=(7, 4))
-    ax.plot(np.sort(dt_naive)[::-1], "o-", color="tab:red",
-            label=f"Naive flatten (worst {dt_naive.max():.2f} C)")
-    ax.plot(np.sort(dt_comfort)[::-1], "s-", color="tab:blue",
-            label=f"Comfort-aware (worst {dt_comfort.max():.2f} C)")
-    ax.axhline(C.COMFORT_BAND_C, ls="--", color="black", alpha=0.6,
-               label=f"{C.COMFORT_BAND_C:.0f} C comfort band")
+    ax.plot(
+        np.sort(dt_naive)[::-1],
+        "o-",
+        color="tab:red",
+        label=f"Naive flatten (worst {dt_naive.max():.2f} C)",
+    )
+    ax.plot(
+        np.sort(dt_comfort)[::-1],
+        "s-",
+        color="tab:blue",
+        label=f"Comfort-aware (worst {dt_comfort.max():.2f} C)",
+    )
+    ax.axhline(
+        C.COMFORT_BAND_C,
+        ls="--",
+        color="black",
+        alpha=0.6,
+        label=f"{C.COMFORT_BAND_C:.0f} C comfort band",
+    )
     ax.axhline(0.4, ls=":", color="gray", alpha=0.6, label="0.4 C thermostat deadband")
     ax.set_xlabel("Home (sorted by excursion)")
     ax.set_ylabel("Worst indoor-temperature excursion [C]")
@@ -92,15 +103,17 @@ def main() -> None:
     for p in fig_paths:
         fig.savefig(p, bbox_inches="tight", dpi=200)
     plt.close(fig)
-    pd.DataFrame({
-        "home": np.arange(C.N_AGENTS),
-        "naive_dT_c": dt_naive, "comfort_dT_c": dt_comfort,
-    }).to_csv(C.FIGURES_DIR / "comfort_excursion.csv", index=False)
+    pd.DataFrame(
+        {
+            "home": np.arange(C.N_AGENTS),
+            "naive_dT_c": dt_naive,
+            "comfort_dT_c": dt_comfort,
+        }
+    ).to_csv(C.FIGURES_DIR / "comfort_excursion.csv", index=False)
 
     script.write_report(
         "comfort_report",
-        artifacts=[script.file_reference(res_path),
-                   *[script.file_reference(p) for p in fig_paths]],
+        artifacts=[res_path, *[script.file_reference(p) for p in fig_paths]],
         summary={
             "comfort_gamma": C.COMFORT_GAMMA,
             "comfort_aware_worst_dT_c": results["comfort_aware"]["worst_peak_dT_c"],

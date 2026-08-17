@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from typing import Any
 
 _LAZY_EXPORTS = {
     "BatteryAsset": ("gridalyn.assets.modeling.energy_assets", "BatteryAsset"),
@@ -18,6 +19,7 @@ _LAZY_EXPORTS = {
     "PVAsset": ("gridalyn.assets.modeling.energy_assets", "PVAsset"),
     "ProsumerAsset": ("gridalyn.assets.modeling.energy_assets", "ProsumerAsset"),
     "RadialFeederSpec": ("gridalyn.assets.modeling.feeders", "RadialFeederSpec"),
+    "lv_feeder_spec": ("gridalyn.assets.modeling.feeders", "lv_feeder_spec"),
     "ThermalForecast": ("gridalyn.assets.modeling.thermal", "ThermalForecast"),
     "TransformerThermalModel": (
         "gridalyn.assets.modeling.transformers",
@@ -86,7 +88,7 @@ _LAZY_EXPORTS = {
 __all__ = sorted(_LAZY_EXPORTS)
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name in _LAZY_EXPORTS:
         module_name, attr_name = _LAZY_EXPORTS[name]
         value = getattr(import_module(module_name), attr_name)

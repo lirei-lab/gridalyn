@@ -2,15 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
-
-ROOT = Path(__file__).parents[4]
-sys.path.insert(0, str(ROOT))
 
 from gridalyn.assets.datagen.data.weather import download_tmy, select_cold_day
 from gridalyn.projects.scripting import project_script
@@ -65,7 +58,9 @@ def main() -> None:
     ).T[:, : C.N_STEPS]
     bg = background + dhw[:, : background.shape[1]]
     temp = (
-        temperature.resample(f"{C.RESOLUTION_MINUTES}min").mean().to_numpy()[: C.N_STEPS]
+        temperature.resample(f"{C.RESOLUTION_MINUTES}min")
+        .mean()
+        .to_numpy()[: C.N_STEPS]
     )
 
     cols = [f"t{j:03d}" for j in range(C.N_STEPS)]
@@ -98,15 +93,14 @@ def main() -> None:
         "total_heating_kwh": float(heat.sum() * C.STEP_HOURS),
         "uncoordinated_peak_kw": float((heat.sum(axis=0) + bg.sum(axis=0)).max()),
     }
-    params_path = C.JSON_DIR / "agent_params.json"
-    params_path.write_text(json.dumps(params, indent=2), encoding="utf-8")
+    params_path = script.write_json("outputs/json/agent_params.json", params)
 
     script.write_report(
         "agents_report",
         artifacts=[
             script.file_reference(heat_path),
             script.file_reference(bg_path),
-            script.file_reference(params_path),
+            params_path,
         ],
         summary={
             "n_agents": C.N_AGENTS,
@@ -116,7 +110,9 @@ def main() -> None:
             "total_heating_kwh": params["total_heating_kwh"],
         },
     )
-    print(f"generate_agents: {C.N_AGENTS} agents, peak {params['uncoordinated_peak_kw']:.1f} kW")
+    print(
+        f"generate_agents: {C.N_AGENTS} agents, peak {params['uncoordinated_peak_kw']:.1f} kW"
+    )
 
 
 if __name__ == "__main__":

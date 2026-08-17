@@ -10,23 +10,17 @@ convex QP. Produces ``fig_convergence`` and a small JSON. Standalone (needs the
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
-
-ROOT = Path(__file__).parents[3]
-sys.path.insert(0, str(ROOT))
 
 import matplotlib
+import numpy as np
+import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from projects.admm_thermal_consensus.scripts import config as C
-from projects.admm_thermal_consensus.scripts import comfort
-from projects.admm_thermal_consensus.scripts.admm.consensus import (
+from projects.admm_thermal_consensus.scripts import comfort  # noqa: E402
+from projects.admm_thermal_consensus.scripts import config as C  # noqa: E402
+from projects.admm_thermal_consensus.scripts.admm.consensus import (  # noqa: E402
     build_comfort_prox_inverse,
     project_capped_energy_batch,
     rc_response_matrix,
@@ -41,15 +35,23 @@ def main() -> None:
     resistance, capacitance = comfort.thermal_params()
     n, t = heat.shape
     lam, mu, rho, alpha, gamma, step_h = (
-        C.ADMM_LAMBDA, C.ADMM_MU, C.ADMM_RHO, C.DEFERRABILITY_ALPHA,
-        C.COMFORT_GAMMA, C.STEP_HOURS,
+        C.ADMM_LAMBDA,
+        C.ADMM_MU,
+        C.ADMM_RHO,
+        C.DEFERRABILITY_ALPHA,
+        C.COMFORT_GAMMA,
+        C.STEP_HOURS,
     )
     lo, hi = (1 - alpha) * heat, (1 + alpha) * heat
     energy = heat.sum(axis=1)
     bg_total = bg.sum(axis=0)
     c = (energy.sum() + bg_total.sum()) / t
-    g_mats = [rc_response_matrix(resistance[i], capacitance[i], step_h, t) for i in range(n)]
-    prox = build_comfort_prox_inverse(resistance, capacitance, step_h, t, gamma, lam, rho)
+    g_mats = [
+        rc_response_matrix(resistance[i], capacitance[i], step_h, t) for i in range(n)
+    ]
+    prox = build_comfort_prox_inverse(
+        resistance, capacitance, step_h, t, gamma, lam, rho
+    )
 
     def full_objective(x):
         comf = sum(
@@ -105,7 +107,10 @@ def main() -> None:
     ax.grid(alpha=0.3, which="both")
     ax.set_title(f"Final relative gap: {gap * 100:.2f}%")
     C.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    for p in (C.FIGURES_DIR / "fig_convergence.png", C.FIGURES_DIR / "fig_convergence.pdf"):
+    for p in (
+        C.FIGURES_DIR / "fig_convergence.png",
+        C.FIGURES_DIR / "fig_convergence.pdf",
+    ):
         fig.savefig(p, bbox_inches="tight", dpi=200)
     plt.close(fig)
 
