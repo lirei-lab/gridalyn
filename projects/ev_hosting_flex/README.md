@@ -276,20 +276,55 @@ are the multi-hour core of the roughly six-hour full regeneration, so it is
 **not** executed in CI. Its regression baseline is **operator-verified** (a
 shape-covering subset runs the non-heavy stages via
 `tools/flagship_verify.py`; the full regeneration is scheduled and recorded in
-the verification receipts):
+the verification receipts). Since Phase 20 the stages are invoked as
+interpreter-bound modules (module identity for the pickled caches):
 
 ```bash
-# run a stage
-uv run python projects/ev_hosting_flex/scripts/pipeline/<stage>.py
+# run a stage (Phase 20: {python} -m, the workflow's own invocation mode)
+python -m projects.ev_hosting_flex.scripts.pipeline.<stage>
 
 # verify the governed baseline
-uv run python projects/ev_hosting_flex/scripts/verify_regression.py
+python projects/ev_hosting_flex/scripts/verify_regression.py
 ```
 
 The reproduce-and-pin tests in `tests/test_ev_hosting_flex_*.py` `skipif` their
 (gitignored) outputs are absent, so they **skip in CI**. After touching any
 generator or kernel, re-run the affected stages locally and re-verify the baseline
 before trusting a green test run.
+
+## Phase 20 migration (2026-08-17)
+
+The flagship was migrated onto the Project Developer API surface (R22 wave-2),
+mirroring the `admm_thermal_consensus` migration in Phase 19. The migration is
+**identity-preserving** — every governed pin and cache artifact has the same
+value as before; nothing was re-calibrated (see `CALIBRATION.md`).
+
+- **config-as-contract (20-01):** the ~177 study knobs (seeds, thresholds,
+  calibration constants) moved from `scripts/config.py` into
+  `project.yaml` under `spec.inputs.studyConfig`. `config.py` now reads that
+  block through located errors; `project.yaml` is the single source of truth.
+- **`{python} -m` + boilerplate removal (20-02):** the 20 pipeline stage
+  commands in `workflow.yaml` are now
+  `"{python} -m projects.ev_hosting_flex.scripts.pipeline.X"`, and every stage
+  dropped its `sys.path`/`parents[N]`/`noqa: E402`/`os.environ` boilerplate.
+  JSON IO routes through `script.read_json`/`script.write_json` (the SEAL-01
+  BLAS thread cap moved to `scripts/__init__.py`, which executes before the
+  stage under `-m`).
+- **SDK topology closure (20-03):** the private `scripts/_topology.py` was
+  deleted; its 5 SDK-duplicated functions now resolve from
+  `gridalyn.simulation.analytics.topology` (GAP-1/GAP-2 closure). The
+  flagship-specific helpers (`select_feeder`, `annual_peak_base_factor`, the
+  seasonal factor curves) were re-homed into `scripts/_topology_helpers.py`.
+- **R7 proof (20-04):** `tests/test_ev_hosting_flex_project.py` pins the 81
+  baselines as **value-identical** post-migration (json_path + tolerance against
+  each metric's declared source report), asserts zero `sys.path`/`parents[N]`/
+  `noqa: E402` in the migrated scripts, and asserts the runtime `studyConfig`
+  read. The annual byte-stability seal re-ran in fresh `python -m` subprocesses
+  and confirmed byte-stable artifacts.
+
+The migration's R7 guarantees are enforced by `tests/test_ev_hosting_flex_project.py`
+(81-pin value-identity, zero-sys.path guard, runtime studyConfig read) and the
+annual byte-stability seal in `tests/test_ev_hosting_flex_annual_seal.py`.
 
 ## Related
 

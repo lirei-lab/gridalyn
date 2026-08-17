@@ -783,3 +783,19 @@ band. Any future work on this base should start there.
 
 Determinism verified: the recalibrated base hashes identically across repeat
 invocations and across `PYTHONHASHSEED`. Regression: 81/81.
+
+## Config-as-contract re-base (Phase 20, 2026-08-17) — NO value change
+
+Phase 20 (Flagship Migration, R22 wave-2) moved the study knobs from
+`scripts/config.py` into `project.yaml` under `spec.inputs.studyConfig`
+(config-as-contract, the same pattern `admm_thermal_consensus` adopted in Phase
+19). This is a **location change, not a calibration change**: every value was
+migrated identity-preserving (same value, new source of truth), so no headline,
+pin, or cache artifact moved. The 81-pin baseline is proven value-identical by
+`tests/test_ev_hosting_flex_project.py` (json_path + tolerance against each
+metric's declared source report), and the annual byte-stability seal re-ran in
+fresh `python -m` subprocesses on the migrated surface.
+
+This entry exists so a future reader does not mistake the config→contract move
+for a deliberate re-calibration — there is none here. Any future re-base must
+still be recorded in this file with its rationale, per repo discipline.
