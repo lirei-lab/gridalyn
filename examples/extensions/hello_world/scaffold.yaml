@@ -1,0 +1,13 @@
+# Provenance note for the committed example extension (Phase 17, plan 17-03).
+#
+# This package was generated verbatim by the authoring scaffold, so it doubles
+# as the "authoring is first-class" evidence: a reader can compare what
+# `gridalyn extension new` writes against what the engine resolves, and re-run
+# the command to reproduce the package.
+
+command: gridalyn extension new hello_world --role data_source --target examples/extensions
+role: data_source
+date: 2026-08-17
+gridalyn_version: 0.1.0
+contract_version: "1"
+source: scaffold (entry_point when resolved)

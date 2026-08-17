@@ -152,6 +152,12 @@ The engine is not modified by any of this: `scaffold_extension` only writes
 files that already conform to the module convention, and the loader is the
 same one that resolves hand-written extensions.
 
+A complete, committed example is shipped at
+`examples/extensions/hello_world/` (scaffolded with
+`gridalyn extension new hello_world --role data_source`); its provenance note
+(`scaffold.yaml`) records the exact command that produced it, so the example
+is auditable and reproducible.
+
 ## Validating an extension
 
 After installing the package (so its entry point is visible to

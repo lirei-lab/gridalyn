@@ -241,16 +241,20 @@ class ScaffoldCliTest(unittest.TestCase):
             self.assertIn("scaffolded extension", stdout.getvalue())
 
     def test_new_scaffolded_module_is_conformant(self) -> None:
+        # A module name distinct from the committed example (hello_world), so
+        # a previously imported example cannot shadow this scaffolded module
+        # in sys.modules (17-03 isolation fix).
+        name = "scaff_conform_ext"
         with tempfile.TemporaryDirectory() as tmp:
-            code = extension.main(["new", "hello_world", "--target", tmp])
+            code = extension.main(["new", name, "--target", tmp])
             self.assertEqual(0, code)
-            module_dir = Path(tmp) / "hello_world"
+            module_dir = Path(tmp) / name
             sys.path.insert(0, str(module_dir))
             self.addCleanup(sys.path.remove, str(module_dir))
-            module = importlib.import_module("hello_world")
+            module = importlib.import_module(name)
         descriptor = module.descriptor
         self.assertIsInstance(descriptor, ExtensionDescriptor)
-        self.assertEqual("hello_world", descriptor.extension_id)
+        self.assertEqual(name, descriptor.extension_id)
         self.assertEqual("powerflow_backend", descriptor.role)
         self.assertIn(descriptor.contract_version, SUPPORTED_CONTRACT_VERSIONS)
         self.assertTrue(callable(module.factory))
@@ -341,3 +345,54 @@ class ScaffoldResolvesTest(unittest.TestCase):
                     code = extension.main(["validate", "scaff_cli_ext"])
         self.assertEqual(0, code, stderr.getvalue())
         self.assertIn("scaff_cli_ext: OK", stdout.getvalue())
+
+
+class CommittedExampleTest(unittest.TestCase):
+    """The committed example under ``examples/extensions/`` validates (17-03).
+
+    The authoring path is proven on a shipped, tracked artifact: the module a
+    reader opens at ``examples/extensions/hello_world/`` resolves through the
+    declared-only loader and passes the capability-readiness gate — the same
+    two steps ``gridalyn extension validate`` performs. A fresh registry and
+    monkeypatched metadata keep the process-global ``DEFAULT_REGISTRY``
+    untouched.
+    """
+
+    REPO_ROOT = Path(__file__).resolve().parents[1]
+
+    def _records(self, name: str) -> list[EntryPointMetadata]:
+        return [
+            EntryPointMetadata(
+                name=name,
+                value=name,
+                module=name,
+                attr=None,
+                distribution="gridalyn-example-hello-world",
+                version="0.1.0",
+            )
+        ]
+
+    def test_committed_example_resolves_and_passes_readiness(self) -> None:
+        from gridalyn.foundation.platform.capabilities import (
+            require_extension_capabilities,
+        )
+
+        example_dir = self.REPO_ROOT / "examples" / "extensions" / "hello_world"
+        self.assertTrue((example_dir / "hello_world.py").is_file())
+        sys.path.insert(0, str(example_dir))
+        self.addCleanup(sys.path.remove, str(example_dir))
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+            return_value=self._records("hello_world"),
+        ):
+            resolved = load_entry_point_extensions(
+                "gridalyn.extensions",
+                ["hello_world"],
+                registry=ExtensionRegistry(),
+            )
+            require_extension_capabilities("hello_world", "gridalyn.extensions")
+        descriptor = resolved[0]
+        self.assertEqual("hello_world", descriptor.extension_id)
+        self.assertEqual("data_source", descriptor.role)
+        self.assertEqual("entry_point", descriptor.source)
+        self.assertEqual("1", descriptor.contract_version)
