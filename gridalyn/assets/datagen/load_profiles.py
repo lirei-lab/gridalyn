@@ -11,12 +11,7 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-
-DEFAULT_MODEL_DIR = (
-    Path(__file__).resolve().parent
-    / "models"
-    / "weights"
-)
+DEFAULT_MODEL_DIR = Path(__file__).resolve().parent / "models" / "weights"
 
 
 class _AnalyticalMacroModel:
@@ -75,67 +70,71 @@ class ParametricArxGenerator:
         self.mean_preserving_diversity = mean_preserving_diversity
         self.model_provenance: str | None = None
 
-    def fit(self, df_meteo: pd.DataFrame, df_heating: pd.DataFrame, df_bg: pd.DataFrame):
+    def fit(
+        self, df_meteo: pd.DataFrame, df_heating: pd.DataFrame, df_bg: pd.DataFrame
+    ):
         """Train and serialize the packaged macro-shape models."""
         import lightgbm as lgb
 
         print("Training Parametric ARX macro models...")
         os.makedirs(self.model_dir, exist_ok=True)
 
-        unique_days = df_meteo.resample('D').mean().index
+        unique_days = df_meteo.resample("D").mean().index
 
         X_list, y_heat_list, y_bg_list = [], [], []
 
         avg_heat_kw = df_heating.mean(axis=1)
         avg_bg_kw = df_bg.mean(axis=1)
-        
+
         for d in unique_days:
-            day_str = d.strftime('%Y-%m-%d')
+            day_str = d.strftime("%Y-%m-%d")
             try:
-                temp_day = df_meteo.loc[day_str, 'DryBulb'].resample('15min').mean()
-                h_day = avg_heat_kw.loc[day_str][:len(temp_day)]
-                b_day = avg_bg_kw.loc[day_str][:len(temp_day)]
-                
+                temp_day = df_meteo.loc[day_str, "DryBulb"].resample("15min").mean()
+                h_day = avg_heat_kw.loc[day_str][: len(temp_day)]
+                b_day = avg_bg_kw.loc[day_str][: len(temp_day)]
+
                 # Features: Exact Temperature, Hour, and Sinusoidal time of day
                 hours = temp_day.index.hour + temp_day.index.minute / 60.0
                 hour_sin = np.sin(2 * np.pi * hours / 24.0)
                 hour_cos = np.cos(2 * np.pi * hours / 24.0)
-                
-                X = pd.DataFrame({
-                    'temperature': temp_day.values,
-                    'hour_sin': hour_sin,
-                    'hour_cos': hour_cos,
-                    'hour': hours
-                })
-                
+
+                X = pd.DataFrame(
+                    {
+                        "temperature": temp_day.values,
+                        "hour_sin": hour_sin,
+                        "hour_cos": hour_cos,
+                        "hour": hours,
+                    }
+                )
+
                 X_list.append(X)
                 y_heat_list.append(h_day.values)
                 y_bg_list.append(b_day.values)
             except Exception:
                 pass
-                
+
         X_train = pd.concat(X_list, ignore_index=True)
         y_heat_train = np.concatenate(y_heat_list)
         y_bg_train = np.concatenate(y_bg_list)
-        
+
         params = {
-            'objective': 'regression',
-            'metric': 'rmse',
-            'num_leaves': 128,
-            'learning_rate': 0.05,
-            'n_estimators': 300,
-            'verbose': -1
+            "objective": "regression",
+            "metric": "rmse",
+            "num_leaves": 128,
+            "learning_rate": 0.05,
+            "n_estimators": 300,
+            "verbose": -1,
         }
-        
+
         self.heat_model = lgb.LGBMRegressor(**params)
         self.heat_model.fit(X_train, y_heat_train)
-        
+
         self.bg_model = lgb.LGBMRegressor(**params)
         self.bg_model.fit(X_train, y_bg_train)
-        
-        with open(self.heat_model_path, 'wb') as f:
+
+        with open(self.heat_model_path, "wb") as f:
             pickle.dump(self.heat_model, f)
-        with open(self.bg_model_path, 'wb') as f:
+        with open(self.bg_model_path, "wb") as f:
             pickle.dump(self.bg_model, f)
 
         print(f"Models serialized to {self.model_dir}")
@@ -175,16 +174,16 @@ class ParametricArxGenerator:
             return
 
         try:
-            with open(self.heat_model_path, 'rb') as f:
+            with open(self.heat_model_path, "rb") as f:
                 self.heat_model = pickle.load(f)
-            with open(self.bg_model_path, 'rb') as f:
+            with open(self.bg_model_path, "rb") as f:
                 self.bg_model = pickle.load(f)
             self.model_provenance = "lgbm"
         except ModuleNotFoundError:
             self._load_analytical_fallback()
             self.model_provenance = "analytical"
             self._warn_silent_fallback("optional 'lightgbm' runtime not installed")
-            
+
     def _rng(self, stream_offset: int = 0) -> np.random.Generator:
         if self.random_seed is None:
             return np.random.default_rng()
@@ -202,50 +201,56 @@ class ParametricArxGenerator:
         noise = np.zeros((steps, n_houses), dtype=np.float32)
         # Seed first step
         noise[0, :] = rng.normal(0, sigma, size=n_houses)
-        
+
         # The true variance of the injected shock
         shock_std = sigma * np.sqrt(1 - rho**2)
-        
+
         for t in range(1, steps):
             shock = rng.normal(0, shock_std, size=n_houses)
-            noise[t, :] = rho * noise[t-1, :] + shock
-            
+            noise[t, :] = rho * noise[t - 1, :] + shock
+
         return noise
 
-    def generate(self, temp_out_series: pd.Series, n_houses: int) -> Tuple[np.ndarray, np.ndarray]:
+    def generate(
+        self, temp_out_series: pd.Series, n_houses: int
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Generate heating and background-load matrices in kilowatts."""
         if self.heat_model is None or self.bg_model is None:
             self.load()
-            
+
         steps = len(temp_out_series)
-        
+
         # 1. Feature Engineering
         hours = temp_out_series.index.hour + temp_out_series.index.minute / 60.0
-        X_infer = pd.DataFrame({
-            'temperature': temp_out_series.values,
-            'hour_sin': np.sin(2 * np.pi * hours / 24.0),
-            'hour_cos': np.cos(2 * np.pi * hours / 24.0),
-            'hour': hours
-        })
-        
+        X_infer = pd.DataFrame(
+            {
+                "temperature": temp_out_series.values,
+                "hour_sin": np.sin(2 * np.pi * hours / 24.0),
+                "hour_cos": np.cos(2 * np.pi * hours / 24.0),
+                "hour": hours,
+            }
+        )
+
         # 2. Extract aggregate macro shapes.
         macro_heat = self.heat_model.predict(X_infer)
         macro_bg = self.bg_model.predict(X_infer)
-        
+
         # Prevent negative macro predictions
         macro_heat = np.maximum(macro_heat, 0.0)
         macro_bg = np.maximum(macro_bg, 0.0)
-        
+
         # 3. Resolution-aware AR(1) coefficients.
         try:
-            # Detect delta_t in hours exactly 
-            dt_hours = (temp_out_series.index[1] - temp_out_series.index[0]).total_seconds() / 3600.0
+            # Detect delta_t in hours exactly
+            dt_hours = (
+                temp_out_series.index[1] - temp_out_series.index[0]
+            ).total_seconds() / 3600.0
         except IndexError:
-            dt_hours = 0.25 # Default fallback (15 min)
-            
+            dt_hours = 0.25  # Default fallback (15 min)
+
         tau_heat = 2.5
         tau_bg = 1.0
-        
+
         # Transform continuous time constants to discrete Markov coefficients.
         rho_heat = np.exp(-dt_hours / tau_heat)
         rho_bg = np.exp(-dt_hours / tau_bg)
@@ -260,30 +265,37 @@ class ParametricArxGenerator:
         ar_bg = self._generate_ar1_noise(
             steps, n_houses, rho=rho_bg, sigma=sigma_bg, rng=self._rng(1)
         )
-        
+
         # 4. Preserve per-household structural consistency across calls.
-        if getattr(self, '_n_houses_initialized', None) != n_houses:
+        if getattr(self, "_n_houses_initialized", None) != n_houses:
             # Seeded structural multipliers make each house reproducible across runs.
             s_rng = self._rng(2)
-            self._multiplier_heat = np.maximum(s_rng.normal(1.0, 0.25, size=n_houses), 0.1)
-            self._multiplier_bg = np.maximum(s_rng.normal(1.0, 0.35, size=n_houses), 0.1)
+            self._multiplier_heat = np.maximum(
+                s_rng.normal(1.0, 0.25, size=n_houses), 0.1
+            )
+            self._multiplier_bg = np.maximum(
+                s_rng.normal(1.0, 0.35, size=n_houses), 0.1
+            )
             # Phase shifts add individual peak diversity.
             self._phase_shift_min = s_rng.normal(0, 60, size=n_houses).astype(int)
             self._n_houses_initialized = n_houses
-            
+
         try:
-            dt_min = int((temp_out_series.index[1] - temp_out_series.index[0]).total_seconds() / 60.0)
+            dt_min = int(
+                (temp_out_series.index[1] - temp_out_series.index[0]).total_seconds()
+                / 60.0
+            )
         except IndexError:
             dt_min = 15
-            
+
         shifted_macro_heat = np.zeros((steps, n_houses))
         shifted_macro_bg = np.zeros((steps, n_houses))
-        
+
         for i in range(n_houses):
             shift_steps = self._phase_shift_min[i] // dt_min
             shifted_macro_heat[:, i] = np.roll(macro_heat, shift_steps)
             shifted_macro_bg[:, i] = np.roll(macro_bg, shift_steps)
-            
+
         # 5. Apply positive log-normal diversity around the aggregate shape.
         # When mean_preserving_diversity is enabled, subtract sigma**2/2 from the
         # AR(1) term so E[exp(ar - sigma**2/2)] ~ 1 and the multiplicative noise
@@ -296,8 +308,10 @@ class ParametricArxGenerator:
             factor_heat = np.exp(ar_heat)
             factor_bg = np.exp(ar_bg)
 
-        raw_heat = (shifted_macro_heat * self._multiplier_heat[np.newaxis, :]) * factor_heat
-        raw_bg   = (shifted_macro_bg   * self._multiplier_bg[np.newaxis, :])   * factor_bg
+        raw_heat = (
+            shifted_macro_heat * self._multiplier_heat[np.newaxis, :]
+        ) * factor_heat
+        raw_bg = (shifted_macro_bg * self._multiplier_bg[np.newaxis, :]) * factor_bg
 
         # Preserve a small background standby floor.
         raw_bg = np.maximum(raw_bg, 0.05)
