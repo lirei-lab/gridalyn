@@ -291,7 +291,10 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
     # additive-only: a study using only the shipped backends keeps
     # byte-identical manifest bytes (R7). The other roles will reach the
     # manifest in a later phase and should record the same extension_id /
-    # extension_source keys when they do.
+    # extension_source keys when they do. For the backend role extension_id IS
+    # the backend_id -- the extension serves the role directly, so there is no
+    # separate identity space (a role served by an ExtensionDescriptor would
+    # record that descriptor's extension_id instead).
     registration_source = registry.registration_source(backend_id)
     if registration_source != "core":
         provenance["extension_id"] = backend_id
@@ -299,11 +302,23 @@ def _powerflow_backend_provenance(project: StudyProject) -> dict[str, Any]:
         extension_version = registry.registration_version(backend_id)
         if extension_version is not None:
             provenance["extension_version"] = extension_version
+    # The same "never silent" rule applies per stage: a stage override served
+    # by an extension records its identity beside the descriptor. Review cycle
+    # 2 closed this gap (W1) -- before, a by_stage extension was silent; the
+    # gate test test_by_stage_extension_is_never_silent is mutation-verified.
     overrides = load_powerflow_backend_by_stage(project)
-    provenance["by_stage"] = {
-        stage_id: registry.get_descriptor(stage_backend_id).as_dict()
-        for stage_id, stage_backend_id in sorted(overrides.items())
-    }
+    by_stage: dict[str, Any] = {}
+    for stage_id, stage_backend_id in sorted(overrides.items()):
+        stage_record = registry.get_descriptor(stage_backend_id).as_dict()
+        stage_source = registry.registration_source(stage_backend_id)
+        if stage_source != "core":
+            stage_record["extension_id"] = stage_backend_id
+            stage_record["extension_source"] = stage_source
+            stage_version = registry.registration_version(stage_backend_id)
+            if stage_version is not None:
+                stage_record["extension_version"] = stage_version
+        by_stage[stage_id] = stage_record
+    provenance["by_stage"] = by_stage
     provenance["declared_source"] = (
         "spec.simulation.powerflowBackend"
         if _declares_powerflow_backend(project)
@@ -357,8 +372,11 @@ def _extensions_provenance() -> list[dict[str, Any]]:
     ``DEFAULT_REGISTRY`` — host registrations via ``register_extension`` and
     entry-point-sourced extensions loaded via ``load_entry_point_extensions`` —
     as a JSON-native list sorted by ``extension_id``. A study that declares and
-    uses no extension produces an empty list, so shipped manifest bytes stay
-    identical (R7). Side-effect free: it only reads the registry.
+    uses no extension produces an empty list. The always-present empty
+    ``extensions: []`` is a deliberate one-time manifest-schema re-base (R7
+    additive-key interpretation): extension presence never perturbs bytes and
+    core studies gain no conditional keys, but every manifest now carries the
+    key. Side-effect free: it only reads the registry.
 
     Returns:
         One plain dict per registered extension (``extension_id``, ``role``,

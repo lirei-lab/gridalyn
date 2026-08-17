@@ -407,6 +407,11 @@ class RegistrationSourceTrackingTest(unittest.TestCase):
         self.assertEqual("2.0.0", registry.registration_version("host_probe_backend"))
 
     def test_default_registry_ships_everything_as_core(self) -> None:
+        # Reads the process-global default backend registry. Green today only
+        # because no in-process test registers into it (phase-16 tests use
+        # subprocess probes / fresh registries); this assertion doubles as a
+        # residue detector -- a future in-process write to the default would
+        # surface here.
         registry = default_powerflow_backend_registry()
         for descriptor in registry.list_descriptors():
             with self.subTest(backend_id=descriptor.backend_id):
@@ -414,6 +419,17 @@ class RegistrationSourceTrackingTest(unittest.TestCase):
                     "core", registry.registration_source(descriptor.backend_id)
                 )
                 self.assertIsNone(registry.registration_version(descriptor.backend_id))
+
+    def test_unknown_source_is_rejected_with_located_error(self) -> None:
+        # Review cycle 2 (W2): the registry mirrors the generic engine's
+        # enumerated-source rule -- a typo'd source must not silently brand a
+        # core backend as an extension in the governed manifest.
+        registry = PowerFlowBackendRegistry()
+        with self.assertRaisesRegex(ValueError, "unknown source"):
+            registry.register(
+                _RegisteredProbeBackend,
+                source="core-ish",  # type: ignore[arg-type]
+            )
 
 
 class SolveSiteReconciliationTest(unittest.TestCase):

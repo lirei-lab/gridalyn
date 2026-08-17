@@ -417,16 +417,24 @@ def _grid_study_declaring_backend(tmp: str, backend_id: str) -> Path:
 def _registry_with_host_backend() -> PowerFlowBackendRegistry:
     from gridalyn.simulation.backends.contract import PowerFlowBackendDescriptor
     from gridalyn.simulation.backends.pandapower_native import PandapowerNativeBackend
+    from gridalyn.simulation.backends.registry import (
+        PowerFlowBackendRegistry,
+        register_powerflow_backend_extension,
+    )
 
     registry = PowerFlowBackendRegistry()
     registry.register(PandapowerNativeBackend, source="core", version="3.1.2")
-    registry.register(
+    # The host slot goes through the PUBLIC host API so the gate exercises the
+    # same source-marking path a real embedder uses. The factory is never
+    # invoked by provenance -- create() is never called here -- it only
+    # satisfies the registration shape.
+    register_powerflow_backend_extension(
         PandapowerNativeBackend,
         descriptor=PowerFlowBackendDescriptor(
             backend_id="host_backend_probe",
             name="Probe host backend",
         ),
-        source="host",
+        registry=registry,
         version="2.0.0",
     )
     return registry
@@ -470,6 +478,97 @@ class TestExtensionCompletenessGate(unittest.TestCase):
             backend = _run_manifest(tmp)["provenance"]["powerflow_backend"]
         self.assertNotIn("extension_id", backend)
         self.assertNotIn("extension_source", backend)
+
+    def test_by_stage_extension_is_never_silent(self) -> None:
+        # Review cycle 2 (W1): a stage override served by an extension must
+        # record its identity in by_stage, not only the study default path.
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _grid_study_declaring_backend(tmp, "host_backend_probe")
+            project_file = target / "project.yaml"
+            data = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+            data["spec"]["simulation"]["powerflowBackendByStage"] = {
+                "prepare_workspace": "host_backend_probe"
+            }
+            project_file.write_text(
+                yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
+            )
+            with mock.patch(
+                "gridalyn.simulation.backends.registry"
+                ".default_powerflow_backend_registry",
+                return_value=_registry_with_host_backend(),
+            ):
+                run_workflow(target, dry_run=True)
+                manifest_path = (
+                    target / "outputs" / "manifests" / "project_run_manifest.json"
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backend = manifest["provenance"]["powerflow_backend"]
+        stage = backend["by_stage"]["prepare_workspace"]
+        self.assertEqual("host_backend_probe", stage["extension_id"])
+        self.assertEqual("host", stage["extension_source"])
+        self.assertEqual("2.0.0", stage["extension_version"])
+
+    def test_host_backend_without_version_has_no_extension_version_key(self) -> None:
+        # Review cycle 2 (S8): extension_id/extension_source are recorded even
+        # when the host registration carries no version; the version key is
+        # absent, not null.
+        from gridalyn.simulation.backends.contract import PowerFlowBackendDescriptor
+        from gridalyn.simulation.backends.pandapower_native import (
+            PandapowerNativeBackend,
+        )
+        from gridalyn.simulation.backends.registry import (
+            PowerFlowBackendRegistry,
+            register_powerflow_backend_extension,
+        )
+
+        registry = PowerFlowBackendRegistry()
+        registry.register(PandapowerNativeBackend, source="core")
+        register_powerflow_backend_extension(
+            PandapowerNativeBackend,
+            descriptor=PowerFlowBackendDescriptor(
+                backend_id="host_no_version_probe",
+                name="Host backend without a version",
+            ),
+            registry=registry,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _grid_study_declaring_backend(tmp, "host_no_version_probe")
+            with mock.patch(
+                "gridalyn.simulation.backends.registry"
+                ".default_powerflow_backend_registry",
+                return_value=registry,
+            ):
+                run_workflow(target, dry_run=True)
+                manifest_path = (
+                    target / "outputs" / "manifests" / "project_run_manifest.json"
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backend = manifest["provenance"]["powerflow_backend"]
+        self.assertEqual("host_no_version_probe", backend["extension_id"])
+        self.assertEqual("host", backend["extension_source"])
+        self.assertNotIn("extension_version", backend)
+
+    def test_manifest_extensions_block_reflects_the_registered_extension(self) -> None:
+        # Review cycle 2 (S4): pins the composition _build_provenance ->
+        # _extensions_provenance -> extension_provenance. Hardcoding
+        # "extensions": [] in the runner (dropping the real call) turns this
+        # red. The process-global DEFAULT_REGISTRY is not mutated -- the
+        # source snapshot is patched, matching the empty-case test.
+        row = {
+            "extension_id": "manifest_probe_ext",
+            "role": "data_source",
+            "source": "host",
+            "contract_version": "1",
+        }
+        with mock.patch(
+            "gridalyn.foundation.platform.extensions.extension_provenance",
+            return_value=[row],
+        ):
+            with tempfile.TemporaryDirectory() as tmp:
+                extensions = _run_manifest(tmp)["provenance"]["extensions"]
+        self.assertEqual([row], extensions)
 
 
 class TestBackendExtensionProvenance(unittest.TestCase):

@@ -19,6 +19,7 @@ from typing import Any
 
 from gridalyn.foundation.platform.extensions import (
     SUPPORTED_CONTRACT_VERSIONS,
+    ExtensionSource,
     UnsupportedContractVersionError,
 )
 from gridalyn.simulation.backends.contract import (
@@ -55,7 +56,7 @@ class PowerFlowBackendRegistration:
 
     descriptor: PowerFlowBackendDescriptor
     factory: Callable[..., PowerFlowBackend]
-    source: str = "core"
+    source: ExtensionSource = "core"
     version: str | None = None
 
 
@@ -72,7 +73,7 @@ class PowerFlowBackendRegistry:
         *,
         descriptor: PowerFlowBackendDescriptor | None = None,
         replace: bool = False,
-        source: str = "core",
+        source: ExtensionSource = "core",
         version: str | None = None,
     ) -> None:
         """Register a backend factory under its descriptor's ID.
@@ -83,12 +84,18 @@ class PowerFlowBackendRegistry:
                 factory declares.
             replace: Allow overwriting an already-registered ID.
             source: Registration source -- ``"core"`` for the shipped
-                defaults, ``"host"`` when a host extension registers.
+                defaults, ``"host"`` when a host extension registers. Only
+                the enumerated :data:`ExtensionSource` values are accepted,
+                mirroring ``ExtensionDescriptor.__post_init__`` -- a typo'd
+                source must not silently brand a core backend as an extension
+                in the governed manifest.
             version: Optional semantic version when an extension supplies one.
 
         Raises:
             ValueError: If the ID is taken and ``replace`` is false. The
                 message names the ID and the flag that would permit it.
+            ValueError: If ``source`` is not one of the declared
+                :data:`ExtensionSource` values.
         """
         backend_descriptor = descriptor or describe_powerflow_backend(factory)
         backend_id = backend_descriptor.backend_id
@@ -99,6 +106,17 @@ class PowerFlowBackendRegistry:
                 f"{backend_descriptor.contract_version!r}, but this engine "
                 f"supports only: {supported}; upgrade or pin the extension to "
                 "a supported contract version"
+            )
+        valid_sources: tuple[ExtensionSource, ...] = (
+            "core",
+            "host",
+            "entry_point",
+        )
+        if source not in valid_sources:
+            raise ValueError(
+                f"power-flow backend {backend_id!r} declares unknown source "
+                f"{source!r} (expected one of: "
+                f"{', '.join(valid_sources)})"
             )
         if backend_id in self._registrations and not replace:
             raise ValueError(
@@ -123,7 +141,7 @@ class PowerFlowBackendRegistry:
         """
         return self._registration(backend_id).descriptor
 
-    def registration_source(self, backend_id: str) -> str:
+    def registration_source(self, backend_id: str) -> ExtensionSource:
         """Return the source a backend was registered under.
 
         Args:
