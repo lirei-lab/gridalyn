@@ -1,34 +1,15 @@
-"""Project-local radial-feeder topology helpers for ev_hosting_flex.
+"""Flagship-specific feeder-selection + annual-envelope topology helpers.
 
-Closes the two SDK gaps over the cached pandapower ``net`` that the
-downstream-sum congestion proxy depends on:
+Plan 20-03 re-homed these out of the deleted ``_topology.py``: the generic
+radial-feeder analytics (thermal ratings, downstream map, subtree sizing,
+radiality assertion) now resolve from the SDK
+``gridalyn.simulation.analytics.topology``; the helpers below are study-local
+because they encode ev_hosting_flex's own calibration (``TARGET_HOMES``,
+``FEEDER_ID``, the seasonal envelope constants) and have no SDK equivalent.
 
-* **GAP-1 (TWIN-02):** per-line / per-transformer kW thermal rating
-  (``kW = max_i_ka * vn_kv * √3 * 1000 * pf`` for lines; ``sn_mva * 1000 * pf``
-  for transformers).
-* **GAP-2 (TWIN-03):** a radial downstream-bus map reconstructed by BFS over the
-  ``net.line`` *and* ``net.trafo`` integer-index edges rooted at the ext_grid bus
-  — traversing transformer hops so a feeder-head transformer's downstream set
-  includes the LV subtree below it (D-04).
-
-Plus the radiality + no-embedded-generation assertion (TWIN-04) and the
-deterministic single-feeder selection rule (D-01/D-02).
-
-Dict keys follow the ``gridalyn/operations/constraints.py`` convention
-(``line:{idx}`` → ``cim:ACLineSegment``, ``transformer:{idx}`` →
-``cim:PowerTransformer``) so Phase 9's ``build_network_constraint_set`` plugs in
-cleanly.
-
-GUARD-02: this module operates ONLY on the already-loaded ``net`` object (an
-attribute-bag of pandas DataFrames). It must NOT ``import pandapower`` /
-``geopandas`` / ``lightsim2grid`` at module scope; ``networkx`` and ``numpy``
-are graph/numeric helpers, not in the heavy denylist.
-
-Numeric anchors verified against the real cached net (RESEARCH.md Code Examples
-263-359): line0 ≈ 230.363 kW, trafo0 = 199.50 kW at pf=0.95, ext_grid root bus
-3561. Phase-10.1 re-points :func:`select_feeder` to the closest-to-``TARGET_HOMES``
-small MV/LV transformer (D-01/D-03) — in the current twin ``trafo_idx=62`` (7
-downstream homes, the closest to ``TARGET_HOMES=6``).
+GUARD-02: operates ONLY on an already-loaded ``net`` object (attribute-bag of
+pandas DataFrames). No ``import pandapower`` / ``geopandas`` / ``lightsim2grid``
+at module scope; ``networkx`` and ``numpy`` are graph/numeric helpers.
 """
 
 from __future__ import annotations
@@ -45,7 +26,6 @@ from projects.ev_hosting_flex.scripts.config import (
     DAILY_PATTERN,
     FEEDER_ID,
     GRID_CONFIG,
-    POWER_FACTOR,
     SUMMER_TROUGH_FACTOR,
     TARGET_HOMES,
     TRANSFORMER_UTILIZATION_MARGIN,
@@ -55,11 +35,23 @@ from projects.ev_hosting_flex.scripts.config import (
 
 # Annual-envelope factor arrays built ONCE for the inlined factor helpers below
 # (Phase 15 RETIRE-02: severed from the retired annual-profiles module — the
-# three deterministic, RNG-free factor functions are inlined here so this module
-# no longer imports that retired module before it is deleted in Plan 03).
+# three deterministic, RNG-free factor functions are inlined here).
 _DAILY = np.asarray(DAILY_PATTERN, dtype="float64")
 _WEEKLY = np.asarray(WEEKLY_PATTERN, dtype="float64")
 _HOURS_PER_DAY = 24  # CALENDAR_HOURS / 24 == 365 (non-leap).
+
+# Re-pointing tolerance (D-03): the selected MV/LV transformer's downstream home
+# count must land within this many homes of TARGET_HOMES, else the twin lacks a
+# representative small LV unit and selection fails loudly (Pitfall 4).
+_TARGET_HOMES_TOLERANCE = 2
+
+# MV/LV distribution-transformer voltage signature (kV) used for feeder ranking.
+# Derived from the project grid config (single source of truth) so a nominal-
+# voltage change (e.g. the 2026-07-06 Québec 240 V secondary) cannot drift it.
+_MV_LV_VOLTAGE = (
+    float(GRID_CONFIG["buses"]["mv"]["voltage_kv"]),
+    float(GRID_CONFIG["buses"]["lv"]["voltage_kv"]),
+)
 
 
 def _winter_factor(hour_of_year: np.ndarray) -> np.ndarray:
@@ -118,67 +110,16 @@ def _weekly_factor(hour_of_year: np.ndarray) -> np.ndarray:
     return _WEEKLY[weekday]
 
 
-# Re-pointing tolerance (D-03): the selected MV/LV transformer's downstream home
-# count must land within this many homes of TARGET_HOMES, else the twin lacks a
-# representative small LV unit and selection fails loudly (Pitfall 4).
-_TARGET_HOMES_TOLERANCE = 2
-
-# MV/LV distribution-transformer voltage signature (kV) used for feeder ranking.
-# Derived from the project grid config (single source of truth) so a nominal-
-# voltage change (e.g. the 2026-07-06 Québec 240 V secondary) cannot drift it.
-_MV_LV_VOLTAGE = (
-    float(GRID_CONFIG["buses"]["mv"]["voltage_kv"]),
-    float(GRID_CONFIG["buses"]["lv"]["voltage_kv"]),
-)
-
-
-def line_rating_kw(net: Any, pf: float = POWER_FACTOR) -> np.ndarray:
-    """Return the per-line apparent-power kW rating in float64.
-
-    ``kW = max_i_ka * vn_kv(from_bus) * √3 * 1000 * pf``.
-
-    Args:
-        net: Loaded pandapower-style net (attribute-bag of pandas DataFrames).
-        pf: Power factor for the kW conversion (D-05; default ``POWER_FACTOR``).
-
-    Returns:
-        A float64 ``numpy`` array aligned to ``net.line`` row order.
-    """
-    vn = net.bus["vn_kv"].to_numpy(dtype="float64")
-    from_bus = net.line["from_bus"].to_numpy()
-    vn_from = vn[from_bus]
-    max_i_ka = net.line["max_i_ka"].to_numpy(dtype="float64")
-    return max_i_ka * vn_from * np.sqrt(3.0) * 1000.0 * float(pf)
-
-
-def trafo_rating_kw(net: Any, pf: float = POWER_FACTOR) -> np.ndarray:
-    """Return the per-transformer kW rating in float64.
-
-    ``kW = sn_mva * 1000 * pf``.
-
-    Args:
-        net: Loaded pandapower-style net.
-        pf: Power factor for the kW conversion (D-05; default ``POWER_FACTOR``).
-
-    Returns:
-        A float64 ``numpy`` array aligned to ``net.trafo`` row order.
-    """
-    sn_mva = net.trafo["sn_mva"].to_numpy(dtype="float64")
-    return sn_mva * 1000.0 * float(pf)
-
-
 def annual_peak_base_factor() -> float:
     """Return the annual winter-peak base-envelope multiplier (float64).
 
     The maximum over the 8760h of ``winter(h) * daily(h) * weekly(h)`` — the
     multiplier that turns a per-bus nameplate sum into the annual winter-peak
-    downstream base demand. Reuses the INLINED factor helpers (Phase 15
-    RETIRE-02: severed from the retired annual-profiles module) so the envelope stays
-    byte-identical (D-01, ~1.76); deterministic, no RNG.
+    downstream base demand. Deterministic, no RNG (~1.76 for the pinned
+    winter-peaked envelope).
 
     Returns:
-        The float64 maximum hour-of-year envelope multiplier (``> 1.0`` for the
-        pinned winter-peaked envelope, ~1.76).
+        The float64 maximum hour-of-year envelope multiplier (``> 1.0``).
     """
     hours = np.arange(CALENDAR_HOURS)
     return float(
@@ -199,13 +140,11 @@ def size_feeder_transformer_kw(
     (``downstream_nameplate_kw * peak_factor``) divided by ``utilization_margin``
     reserves headroom so that at 0 EVs the binding feeder element sits at or below
     the margin (~80%, the D-08 calibration target). Rounds UP to the next whole
-    kVA so the transformer is never undersized. Mirrors the line-sizing precedent
-    (``line_sizing_select.py``: required rating = design load / margin).
+    kVA so the transformer is never undersized.
 
     Args:
         downstream_nameplate_kw: Per-bus nameplate-load sum of the feeder subtree
-            in kW (the static nameplate, NOT the annual peak; the peak is
-            ``downstream_nameplate_kw * peak_factor``). Must be ``> 0``.
+            in kW (the static nameplate, NOT the annual peak). Must be ``> 0``.
         peak_factor: The annual winter-peak envelope multiplier from
             :func:`annual_peak_base_factor` (``> 0``).
         utilization_margin: Headroom margin in ``(0, 1]`` (default
@@ -240,52 +179,6 @@ def size_feeder_transformer_kw(
     return float(math.ceil(required))
 
 
-def size_feeder_subtree_kw(
-    element_keys: Mapping[str, frozenset[int]],
-    nameplate_kw_by_bus: Mapping[int, float],
-    *,
-    peak_factor: float,
-    utilization_margin: float = TRANSFORMER_UTILIZATION_MARGIN,
-) -> dict[str, float]:
-    """Load-aware size every feeder-subtree element to its annual winter peak.
-
-    For each element (the feeder transformer AND every interior line in the
-    feeder subtree), the downstream nameplate sum is taken over the element's
-    downstream buses and resized via :func:`size_feeder_transformer_kw`. Applying
-    the SAME annual-peak / 0.8-margin rule to the interior lines (not only the
-    transformer) is required because the binding feeder element at 0 EVs is an
-    interior line, not the head transformer — the SDK ``load_aware`` line sizing
-    has no concept of the project's winter-peak envelope (the same mismatch the
-    transformer resize addresses). Only elements present in ``element_keys`` are
-    sized; every other ``line:*`` / ``transformer:*`` rating is left untouched by
-    the caller.
-
-    Args:
-        element_keys: Mapping ``element_key -> downstream-bus frozenset`` for the
-            feeder-subtree elements to resize (transformer + interior lines).
-        nameplate_kw_by_bus: Per-bus nameplate kW (the static nameplate sum, NOT
-            the annual peak).
-        peak_factor: The annual winter-peak multiplier from
-            :func:`annual_peak_base_factor`.
-        utilization_margin: Headroom margin in ``(0, 1]``
-            (default ``TRANSFORMER_UTILIZATION_MARGIN``).
-
-    Returns:
-        Mapping ``element_key -> resized kW rating`` (float64, rounded up).
-    """
-    resized: dict[str, float] = {}
-    for key, downstream_buses in element_keys.items():
-        downstream_nameplate_kw = float(
-            sum(float(nameplate_kw_by_bus.get(int(b), 0.0)) for b in downstream_buses)
-        )
-        resized[key] = size_feeder_transformer_kw(
-            downstream_nameplate_kw,
-            peak_factor=peak_factor,
-            utilization_margin=utilization_margin,
-        )
-    return resized
-
-
 def _network_graph(net: Any) -> nx.Graph:
     """Build the undirected line+transformer connectivity graph (integer buses)."""
     graph = nx.Graph()
@@ -295,86 +188,6 @@ def _network_graph(net: Any) -> nx.Graph:
     for a, b in net.trafo[["hv_bus", "lv_bus"]].itertuples(index=False):
         graph.add_edge(int(a), int(b))
     return graph
-
-
-def build_downstream_map(net: Any) -> dict[str, frozenset[int]]:
-    """Return per-element downstream-bus frozensets keyed ``line:``/``transformer:``.
-
-    Reconstructs a directed radial tree rooted at the ext_grid bus from the
-    ``net.line`` and ``net.trafo`` integer-index edges (transformer-hop aware,
-    TWIN-03/D-04). For each line and transformer, the value is the frozenset of
-    buses strictly on the far-from-root side of that edge (including the far
-    endpoint itself).
-
-    Args:
-        net: Loaded pandapower-style net.
-
-    Returns:
-        Mapping ``{f"line:{idx}" | f"transformer:{idx}": frozenset[bus_idx]}``.
-    """
-    root = int(net.ext_grid["bus"].iloc[0])
-    graph = _network_graph(net)
-
-    line_edges = [
-        (int(a), int(b))
-        for a, b in net.line[["from_bus", "to_bus"]].itertuples(index=False)
-    ]
-    trafo_edges = [
-        (int(a), int(b))
-        for a, b in net.trafo[["hv_bus", "lv_bus"]].itertuples(index=False)
-    ]
-
-    # Orient edges away from the root → directed tree for descendant queries.
-    parent = {child: par for child, par in nx.bfs_predecessors(graph, root)}
-    directed = nx.DiGraph((par, child) for child, par in parent.items())
-    directed.add_node(root)
-
-    downstream: dict[str, frozenset[int]] = {}
-    for idx, (a, b) in zip(net.line.index, line_edges):
-        # The far-from-root endpoint is the child of the other endpoint.
-        far = b if parent.get(b) == a else a
-        downstream[f"line:{int(idx)}"] = frozenset(
-            nx.descendants(directed, far) | {far}
-        )
-    for idx, (hv, lv) in zip(net.trafo.index, trafo_edges):
-        far = lv if parent.get(lv) == hv else hv
-        downstream[f"transformer:{int(idx)}"] = frozenset(
-            nx.descendants(directed, far) | {far}
-        )
-    return downstream
-
-
-def assert_radial_no_generation(net: Any) -> None:
-    """Assert the modeled net is a single radial tree with no embedded generation.
-
-    Precondition for the downstream-sum congestion proxy (TWIN-04). Fails loudly
-    with a located, remediating :class:`ValueError` when the line+transformer
-    graph is not a tree, or when ``net.gen`` / ``net.sgen`` is non-empty.
-
-    Args:
-        net: Loaded pandapower-style net.
-
-    Raises:
-        ValueError: If the network is non-radial or carries embedded generation.
-    """
-    graph = _network_graph(net)
-    if not nx.is_tree(graph):
-        raise ValueError(
-            "ev_hosting_flex topology is not radial: the line+transformer graph "
-            f"has {nx.number_connected_components(graph)} component(s) and "
-            f"{graph.number_of_edges()} edges for {graph.number_of_nodes()} buses "
-            "(a radial tree needs edges == buses-1). The downstream-sum congestion "
-            "proxy requires a single loop-free feeder. Remediation: rebuild the "
-            "topology cache, or restrict the study to the extracted single feeder "
-            "subtree."
-        )
-    if len(net.gen) or len(net.sgen):
-        raise ValueError(
-            "ev_hosting_flex topology has embedded generation "
-            f"(gen={len(net.gen)}, sgen={len(net.sgen)}); the downstream-sum proxy "
-            "assumes load-only radial flow. Remediation: exclude the generation or "
-            "extend the proxy to net injection."
-        )
 
 
 def select_feeder(
@@ -399,7 +212,8 @@ def select_feeder(
 
     Args:
         net: Loaded pandapower-style net.
-        downstream_map: Output of :func:`build_downstream_map`.
+        downstream_map: Output of the SDK ``downstream_bus_map`` (or the former
+            ``build_downstream_map``).
         config: Optional mapping; ``feeder_id`` (if not ``None``) overrides the
             ranking and is returned verbatim.
 

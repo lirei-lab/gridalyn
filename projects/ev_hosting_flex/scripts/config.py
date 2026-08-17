@@ -2,8 +2,10 @@
 
 Locks the reproducibility and threshold conventions every later stage of the
 ``ev_hosting_flex`` pipeline inherits (decisions D-02, D-05, D-06, D-07). The
-flattened module-level constants below are the contract: ``_topology.py`` and
-the stage scripts import them directly.
+flattened module-level constants below are the contract: ``_topology_helpers.py``
+(the study-local feeder-selection/envelope helpers) and the stage scripts import
+them directly; the generic radial-feeder analytics resolve from the SDK
+``gridalyn.simulation.analytics.topology`` (Plan 20-03).
 """
 
 import json
@@ -261,8 +263,10 @@ The D-08 calibration target follows directly: with the feeder transformer sized
 to ``peak_downstream_base_kW / 0.8``, the binding feeder element sits at or below
 ~80% loading at 0 EVs, so ``firm_ev_count`` is a positive, non-degenerate
 denominator before Phase 10 builds the flexible leg. ONLY the selected feeder
-transformer is resized (project-local in ``_topology.py`` /
-``prepare_topology_cache.py``); the SDK transformer builder and the shared
+transformer is resized (project-local in ``prepare_topology_cache.py``, using the
+SDK ``gridalyn.simulation.analytics.topology`` sizing + the study-local
+``_topology_helpers`` — the former ``_topology.py`` copy was deleted in Plan
+20-03); the SDK transformer builder and the shared
 ``configs/grid/config.json`` stay byte-identical (LINESIZE-01)."""
 
 # ─── Phase-10 (FLEX-03): flexible-sweep acceptability tolerance ──────────

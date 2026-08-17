@@ -1,9 +1,15 @@
-"""Unit tests for ``projects/ev_hosting_flex/scripts/_topology.py``.
+"""Unit tests for the ev_hosting_flex topology helpers + the SDK closure.
 
-Exercises the four project-local critical-path helpers (TWIN-02/03/04, D-02)
-against a hand-computed tiny radial fixture with known kW ratings and known
-downstream-bus sets, plus the real-net numeric anchors verified in RESEARCH.md
-Code Examples (line0 ≈ 230.363 kW, trafo0 = 199.50 kW at pf=0.95).
+Plan 20-03 (Flagship Migration) deleted the project-local ``_topology.py`` in
+favor of the SDK ``gridalyn.simulation.analytics.topology`` (Phase 19 GAP-1/
+GAP-2 closure). The generic analytics (thermal ratings, downstream map,
+radiality assertion, subtree sizing) now resolve from the SDK — their canonical
+coverage lives in ``tests/test_topology_analytics.py``; this file keeps the
+flagship-specific fixtures (feeder selection, annual-peak factor, sizing
+rounding) and re-checks the SDK functions against the same hand-computed tiny
+radial fixture with known kW ratings and known downstream-bus sets, plus the
+real-net numeric anchors verified in RESEARCH.md Code Examples (line0 ≈
+230.363 kW, trafo0 = 199.50 kW at pf=0.95).
 
 The fixture mirrors a loaded pandapower ``net`` as a lightweight attribute-bag
 of pandas DataFrames (``net.bus``, ``net.line``, ``net.trafo``, ``net.load``,
@@ -18,14 +24,16 @@ from dataclasses import dataclass
 import pandas as pd
 import pytest
 
-from projects.ev_hosting_flex.scripts._topology import (
-    annual_peak_base_factor,
+from gridalyn.simulation.analytics.topology import (
     assert_radial_no_generation,
-    build_downstream_map,
-    line_rating_kw,
+    downstream_bus_map,
+    size_feeder_subtree_kw,
+    thermal_ratings_kw,
+)
+from projects.ev_hosting_flex.scripts._topology_helpers import (
+    annual_peak_base_factor,
     select_feeder,
     size_feeder_transformer_kw,
-    trafo_rating_kw,
 )
 from projects.ev_hosting_flex.scripts.config import (
     DAILY_PATTERN,
@@ -199,26 +207,26 @@ def _no_near_target_fixture() -> _FakeNet:
 
 def test_line_rating_kw() -> None:
     net = _radial_fixture()
-    ratings = line_rating_kw(net, pf=0.95)
+    ratings = thermal_ratings_kw(net, pf=0.95)
     # kW = max_i_ka * vn_from * √3 * 1000 * pf, vn_from = vn_kv(from_bus=1)=0.4
     expected0 = 0.35 * 0.4 * math.sqrt(3.0) * 1000.0 * 0.95
     expected1 = 0.47 * 0.4 * math.sqrt(3.0) * 1000.0 * 0.95
-    assert ratings[0] == pytest.approx(expected0, rel=1e-9)
-    assert ratings[1] == pytest.approx(expected1, rel=1e-9)
+    assert ratings["line:0"] == pytest.approx(expected0, rel=1e-9)
+    assert ratings["line:1"] == pytest.approx(expected1, rel=1e-9)
 
 
 def test_line_rating_kw_real_net_anchor() -> None:
     # Real-net anchor: max_i_ka=0.35, vn_from=0.4 → 230.363 kW at pf=0.95.
     net = _radial_fixture()
-    ratings = line_rating_kw(net, pf=0.95)
-    assert ratings[0] == pytest.approx(230.363, rel=1e-3)
+    ratings = thermal_ratings_kw(net, pf=0.95)
+    assert ratings["line:0"] == pytest.approx(230.363, rel=1e-3)
 
 
 def test_trafo_rating_kw() -> None:
     net = _radial_fixture()
-    ratings = trafo_rating_kw(net, pf=0.95)
+    ratings = thermal_ratings_kw(net, pf=0.95)
     # kW = sn_mva * 1000 * pf = 0.21 * 1000 * 0.95 = 199.50 (real-net anchor).
-    assert ratings[0] == pytest.approx(199.50, rel=1e-9)
+    assert ratings["transformer:0"] == pytest.approx(199.50, rel=1e-9)
 
 
 # ─── TWIN-03: downstream map over transformer hops ──────────────────────
@@ -226,7 +234,7 @@ def test_trafo_rating_kw() -> None:
 
 def test_downstream_map() -> None:
     net = _radial_fixture()
-    dmap = build_downstream_map(net)
+    dmap = downstream_bus_map(net)
 
     # Keys follow the gridalyn/operations/constraints.py convention.
     assert "line:0" in dmap
@@ -267,8 +275,9 @@ def test_radiality_assert_fail_loop() -> None:
         assert_radial_no_generation(net)
     msg = str(excinfo.value)
     assert "radial" in msg.lower()
-    # Located: names the project + the component/edge count.
-    assert "ev_hosting_flex" in msg
+    # Located: names the component/edge count (SDK message; the study-local
+    # "ev_hosting_flex" prefix moved out with the _topology.py deletion).
+    assert "component" in msg.lower() or "edges" in msg.lower()
     # Remediating hint.
     assert "remediation" in msg.lower() or "rebuild" in msg.lower()
 
@@ -295,14 +304,14 @@ def test_select_feeder_picks_closest_to_target_homes() -> None:
     idx 2 — so this asserts the new mechanism, not the deprecated one.
     """
     net = _closest_homes_fixture()
-    dmap = build_downstream_map(net)
+    dmap = downstream_bus_map(net)
     assert select_feeder(net, dmap, None) == 1
 
 
 def test_select_feeder_raises_when_no_near_target_candidate() -> None:
     """No transformer near TARGET_HOMES → located+remediating ValueError (Pitfall 4)."""
     net = _no_near_target_fixture()
-    dmap = build_downstream_map(net)
+    dmap = downstream_bus_map(net)
     with pytest.raises(ValueError) as excinfo:
         select_feeder(net, dmap, None)
     msg = str(excinfo.value)
@@ -313,7 +322,7 @@ def test_select_feeder_raises_when_no_near_target_candidate() -> None:
 
 def test_select_feeder_config_override() -> None:
     net = _closest_homes_fixture()
-    dmap = build_downstream_map(net)
+    dmap = downstream_bus_map(net)
     # Explicit feeder_id override returns that index verbatim (bypasses ranking).
     assert select_feeder(net, dmap, {"feeder_id": 2}) == 2
 
@@ -335,9 +344,7 @@ def test_size_feeder_transformer_kw_hand_computed() -> None:
     # For the real envelope multiplier and a 260 kW nameplate sum, the resized
     # rating divided into the annual winter-peak demand is <= the 80% margin.
     factor = annual_peak_base_factor()
-    kw = size_feeder_transformer_kw(
-        260.0, peak_factor=factor, utilization_margin=0.8
-    )
+    kw = size_feeder_transformer_kw(260.0, peak_factor=factor, utilization_margin=0.8)
     assert 260.0 * factor / kw * 100.0 <= 80.0 + 1e-9
 
 
@@ -370,8 +377,6 @@ def test_size_feeder_subtree_kw_resizes_every_element() -> None:
     lines (not only the head transformer) is what makes the binding 0-EV element
     sit <= the margin (the GAP-1 root cause: an interior line binds first).
     """
-    from projects.ev_hosting_flex.scripts._topology import size_feeder_subtree_kw
-
     element_keys = {
         "transformer:0": frozenset({1, 2}),
         "line:0": frozenset({2}),

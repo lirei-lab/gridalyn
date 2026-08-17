@@ -108,13 +108,12 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
     Returns:
         A summary dict (counts + selected feeder + selected-feeder load).
     """
-    from projects.ev_hosting_flex.scripts._topology import (
+    from gridalyn.simulation.analytics.topology import (
         assert_radial_no_generation,
-        build_downstream_map,
-        line_rating_kw,
-        select_feeder,
-        trafo_rating_kw,
+        downstream_bus_map,
+        thermal_ratings_kw,
     )
+    from projects.ev_hosting_flex.scripts._topology_helpers import select_feeder
 
     net_path = cache_dir / "pp_net_cache.pkl"
     with open(net_path, "rb") as handle:
@@ -123,22 +122,15 @@ def derive_topology_artifacts(cache_dir: Path) -> dict[str, object]:
     # TWIN-04: fail loudly on silent topology drift BEFORE deriving anything.
     assert_radial_no_generation(net)
 
-    line_kw = line_rating_kw(net, POWER_FACTOR)
-    trafo_kw = trafo_rating_kw(net, POWER_FACTOR)
-    downstream_map = build_downstream_map(net)
-    feeder_idx = select_feeder(net, downstream_map, {"feeder_id": FEEDER_ID})
-
-    # Ratings keyed line:{idx} / transformer:{idx} (matches constraints.py).
+    # SDK GAP-1/GAP-2 closure (Phase 19): the SDK returns the dict of kW ratings
+    # and the downstream-bus map directly; the project-local _topology.py copy
+    # was deleted in Plan 20-03.
+    ratings_raw = thermal_ratings_kw(net, pf=POWER_FACTOR)
     ratings = {
-        **{
-            f"line:{int(idx)}": round(float(kw), ROUND_DECIMALS)
-            for idx, kw in zip(net.line.index, line_kw, strict=True)
-        },
-        **{
-            f"transformer:{int(idx)}": round(float(kw), ROUND_DECIMALS)
-            for idx, kw in zip(net.trafo.index, trafo_kw, strict=True)
-        },
+        key: round(float(value), ROUND_DECIMALS) for key, value in ratings_raw.items()
     }
+    downstream_map = downstream_bus_map(net)
+    feeder_idx = select_feeder(net, downstream_map, {"feeder_id": FEEDER_ID})
 
     # Downstream map: frozensets serialized to SORTED lists (D-07 determinism).
     downstream_serialized = {
