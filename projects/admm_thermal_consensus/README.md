@@ -118,9 +118,10 @@ not move (R7):
   import, exposing the same names and values.
 - **Boilerplate removed**: the `ROOT = Path(__file__).parents[N]` +
   `sys.path.insert` pattern is gone from every script. Stages now run as modules
-  (`uv run python -m projects.admm_thermal_consensus.scripts.pipeline.<stage>`),
-  which puts the repo root on `sys.path` natively and preserves the module
-  identities the imputer pickle depends on.
+  (`{python} -m projects.admm_thermal_consensus.scripts.pipeline.<stage>`),
+  which binds the interpreter via the runner's `{python}` placeholder, puts the
+  repo root on `sys.path` natively, and preserves the module identities the
+  imputer pickle depends on.
 - **Governed JSON IO**: stage scripts read/write JSON through
   `script.read_json` / `script.write_json` (ProjectScript fills) instead of
   hand-rolled `json.dumps`/`json.loads` + path arithmetic.
