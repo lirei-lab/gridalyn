@@ -18,6 +18,7 @@ _LAZY_EXPORTS = {
     "PVAsset": ("gridalyn.assets.modeling.energy_assets", "PVAsset"),
     "ProsumerAsset": ("gridalyn.assets.modeling.energy_assets", "ProsumerAsset"),
     "RadialFeederSpec": ("gridalyn.assets.modeling.feeders", "RadialFeederSpec"),
+    "build_lv_feeder": ("gridalyn.assets.modeling.feeders", "build_lv_feeder"),
     "ThermalForecast": ("gridalyn.assets.modeling.thermal", "ThermalForecast"),
     "TransformerThermalModel": (
         "gridalyn.assets.modeling.transformers",
