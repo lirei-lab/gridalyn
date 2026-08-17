@@ -261,11 +261,21 @@ class ScaffoldCliTest(unittest.TestCase):
         self.assertTrue(callable(module.factory))
 
     def test_new_rejects_bad_name_with_located_error(self) -> None:
-        # Review cycle 2: names outside the PEP 508/bare-key charset (spaces,
-        # '=', non-ASCII, '#' — or path traversal) must be a located CLI error,
-        # never a silently-uninstallable package.
+        # Review cycles 1-2: names outside the bare-key charset (spaces, '=',
+        # non-ASCII, '#', dots — which TOML would parse as a nested table —
+        # or path traversal) must be a located CLI error, never a
+        # silently-uninstallable package.
         with tempfile.TemporaryDirectory() as tmp:
-            for bad_name in ["../evil", "hello world", "a=b", "héllo", "x#y"]:
+            for bad_name in [
+                "../evil",
+                "hello world",
+                "a=b",
+                "héllo",
+                "x#y",
+                "foo.bar",
+                "a..b",
+                "1.2",
+            ]:
                 with self.subTest(name=bad_name):
                     stderr = io.StringIO()
                     with redirect_stderr(stderr):
@@ -326,7 +336,17 @@ class ScaffoldCliTest(unittest.TestCase):
         # _module_name are pinned, not left implicit.
         from gridalyn.interfaces.cli.scaffold import _module_name, _validate_name
 
-        for bad in ["", "   ", ".", "..", "hello world", "a=b", "héllo"]:
+        for bad in [
+            "",
+            "   ",
+            ".",
+            "..",
+            "hello world",
+            "a=b",
+            "héllo",
+            "foo.bar",
+            "a..b",
+        ]:
             with self.subTest(name=bad):
                 with self.assertRaises(ValueError):
                     _validate_name(bad)

@@ -1,4 +1,4 @@
-"""Extension 'hello_world' (role: 'data_source'), scaffolded by gridalyn extension new.
+"""Extension "hello_world" (role: "data_source"), scaffolded by gridalyn extension new.
 
 A conformant extension module: the engine reads ``descriptor`` (an
 :class:`gridalyn.foundation.platform.extensions.ExtensionDescriptor`) and

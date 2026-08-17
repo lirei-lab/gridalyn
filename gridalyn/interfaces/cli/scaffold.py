@@ -32,10 +32,12 @@ DEFAULT_EXTENSION_ROLE = "powerflow_backend"
 DEFAULT_EXTENSION_VERSION = "0.1.0"
 
 #: Names safe to use as a package name AND as a bare key in the pyproject
-#: entry-point table (PEP 508 package-name charset, which is also the TOML
-#: bare-key charset): ASCII alphanumerics, dots, underscores, hyphens, never
-#: starting or ending with a separator.
-_NAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
+#: entry-point table. The bare-key charset (ASCII alphanumerics, underscores,
+#: hyphens; never starting or ending with a separator) deliberately EXCLUDES
+#: dots: a dotted name would be written as a bare dotted key, which TOML
+#: parses as a nested table (e.g. ``foo.bar`` -> ``{foo: {bar: ...}}``),
+#: silently producing an uninstallable package.
+_NAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9_-]*[A-Za-z0-9])?$")
 
 
 def _py_literal(value: str) -> str:
@@ -55,7 +57,7 @@ def _py_literal(value: str) -> str:
 
 
 _MODULE_TEMPLATE = '''\
-"""Extension {name!r} (role: {role!r}), scaffolded by gridalyn extension new.
+"""Extension {name_literal} (role: {role_literal}), scaffolded by gridalyn extension new.
 
 A conformant extension module: the engine reads ``descriptor`` (an
 :class:`gridalyn.foundation.platform.extensions.ExtensionDescriptor`) and
@@ -169,8 +171,9 @@ def _validate_name(name: str) -> None:
     if not _NAME_RE.match(name):
         raise ValueError(
             f"extension name {name!r} is not a valid package name (only "
-            "ASCII letters, digits, dots, underscores and hyphens, not "
-            "starting or ending with a separator)"
+            "ASCII letters, digits, underscores and hyphens, not starting or "
+            "ending with a separator, and no dots — a dotted name would parse "
+            "as a nested TOML table in the entry-point table)"
         )
     _module_name(name)
 
