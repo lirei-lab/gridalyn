@@ -25,7 +25,9 @@ from gridalyn.foundation.platform.extensions import (
     SUPPORTED_CONTRACT_VERSIONS,
     EntryPointMetadata,
     ExtensionDescriptor,
+    ExtensionRegistry,
     UnknownExtensionError,
+    load_entry_point_extensions,
 )
 from gridalyn.interfaces.cli import extension
 
@@ -274,3 +276,68 @@ class ScaffoldCliTest(unittest.TestCase):
                     ["new", "hello_world", "--target", tmp, "--force"]
                 )
             self.assertEqual(0, code)
+
+
+class ScaffoldResolvesTest(unittest.TestCase):
+    """A scaffolded extension resolves through the validate path (17-02).
+
+    The ROADMAP success criterion — "scaffolded extension passes validate" —
+    pinned end-to-end: scaffold -> module on path -> declared-only resolution
+    via load_entry_point_extensions (the exact path the validate CLI runs)
+    -> descriptor provenance facts. A fresh registry and a monkeypatched
+    entry-point metadata keep the process-global DEFAULT_REGISTRY untouched.
+    """
+
+    def _records(self, name: str) -> list[EntryPointMetadata]:
+        return [
+            EntryPointMetadata(
+                name=name,
+                value=name,
+                module=name,
+                attr=None,
+                distribution="scaff-fixture",
+                version="0.1.0",
+            )
+        ]
+
+    def test_scaffolded_extension_resolves_through_loader(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            code = extension.main(["new", "scaff_resolve_ext", "--target", tmp])
+            self.assertEqual(0, code)
+            module_dir = Path(tmp) / "scaff_resolve_ext"
+            sys.path.insert(0, str(module_dir))
+            self.addCleanup(sys.path.remove, str(module_dir))
+            with mock.patch(
+                "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+                return_value=self._records("scaff_resolve_ext"),
+            ):
+                resolved = load_entry_point_extensions(
+                    "gridalyn.extensions",
+                    ["scaff_resolve_ext"],
+                    registry=ExtensionRegistry(),
+                )
+        descriptor = resolved[0]
+        self.assertEqual("scaff_resolve_ext", descriptor.extension_id)
+        self.assertEqual("entry_point", descriptor.source)
+        self.assertEqual("1", descriptor.contract_version)
+        self.assertEqual("powerflow_backend", descriptor.role)
+
+    def test_scaffolded_extension_passes_cli_validate(self) -> None:
+        # The CLI validate path end-to-end: the scaffolded module on the path
+        # is resolved (declared-only) and reported OK, with a fresh registry
+        # so the process-global default is never mutated.
+        with tempfile.TemporaryDirectory() as tmp:
+            code = extension.main(["new", "scaff_cli_ext", "--target", tmp])
+            self.assertEqual(0, code)
+            module_dir = Path(tmp) / "scaff_cli_ext"
+            sys.path.insert(0, str(module_dir))
+            self.addCleanup(sys.path.remove, str(module_dir))
+            with mock.patch(
+                "gridalyn.foundation.platform.extensions.list_entry_point_metadata",
+                return_value=self._records("scaff_cli_ext"),
+            ):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    code = extension.main(["validate", "scaff_cli_ext"])
+        self.assertEqual(0, code, stderr.getvalue())
+        self.assertIn("scaff_cli_ext: OK", stdout.getvalue())

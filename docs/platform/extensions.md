@@ -122,6 +122,50 @@ merges those declarations additively — an extra may only add new capabilities,
 never redefine the core set, and never an empty (always-green) one. The
 capability contract test validates this external format.
 
+## Authoring an extension
+
+Authoring is first-class: `gridalyn extension new <name> [--role ROLE]
+[--target DIR]` scaffolds a conformant extension package into `DIR/<name>/`
+(defaulting to the current directory). The scaffold writes three files:
+
+- `<name>.py` — the extension module. It exposes the two attributes the
+  loader requires: `descriptor`, an `ExtensionDescriptor` instance declaring
+  `extension_id`, `role`, `name`, `version` and `contract_version`; and
+  `factory`, a callable returning the role's component. When the extension
+  needs optional capabilities, the module also declares `REQUIRED_CAPABILITIES`
+  (a tuple of capability names such as `("sim",)`).
+- `pyproject.toml` — wires the entry point: under
+  `[project.entry-points."gridalyn.extensions"]`, the line
+  `<name> = "<module>"` (module-only value; the loader reads the module and
+  finds `factory`/`descriptor` inside it).
+- `test_<name>.py` — a smoke test asserting the descriptor is conformant
+  (`contract_version` in `SUPPORTED_CONTRACT_VERSIONS`, factory callable).
+
+For example, `gridalyn extension new acme_backend --role powerflow_backend`
+produces a module whose `descriptor` has `extension_id="acme_backend"`,
+`role="powerflow_backend"`, `contract_version="1"`, and a `factory` returning
+a placeholder the author replaces with a real component. `--force` overwrites
+an existing directory; a name containing path separators is refused with a
+located error.
+
+The engine is not modified by any of this: `scaffold_extension` only writes
+files that already conform to the module convention, and the loader is the
+same one that resolves hand-written extensions.
+
+## Validating an extension
+
+After installing the package (so its entry point is visible to
+`importlib.metadata`), check the two sides of the loop:
+
+- `gridalyn extension list` — awareness: reports the installed extension
+  (`extension_id`, version, contract version, source) without importing it.
+- `gridalyn extension validate <id>` — resolution: loads exactly that ID
+  through the declared-only path, reports its provenance facts, and exits
+  non-zero if the ID is undeclared, unimportable, or **registered but not
+  ready** (its `REQUIRED_CAPABILITIES` cannot be met on the current install —
+  surfaced as `MissingCapabilityError`). Registered but not ready is never
+  silent.
+
 ## Provenance
 
 `extension_provenance()` returns a JSON-native snapshot of the extensions in
