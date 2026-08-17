@@ -109,7 +109,9 @@ A project declares which extensions its runs resolve through
 `gridalyn.extensions` group, or `{id, group}` mappings. `load_declared_extensions`
 and `resolve_declared_extensions` (in `gridalyn.projects.model_inputs`) read
 and resolve that declaration on demand. A project that declares nothing loads
-nothing, so its runs stay byte-identical (R7).
+nothing, so its governed behavior stays unchanged (R7); the only manifest
+change any run sees is the always-present empty `extensions: []` entry
+(a deliberate additive-key re-base — see the run-provenance docs).
 
 **Extensible capabilities.** The core capability set (`geo`, `sim`, `ops` —
 truly-optional modules in `OPTIONAL_CAPABILITY_MODULES`) stays fixed. An

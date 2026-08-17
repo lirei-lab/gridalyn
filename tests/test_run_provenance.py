@@ -510,6 +510,35 @@ class TestExtensionCompletenessGate(unittest.TestCase):
         self.assertEqual("host", stage["extension_source"])
         self.assertEqual("2.0.0", stage["extension_version"])
 
+    def test_core_by_stage_override_stays_silent(self) -> None:
+        # Review cycle 2 (inverse of the by_stage gate): a stage override that
+        # names a SHIPPED backend records no extension keys, so R7 holds on
+        # the by_stage path too.
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _grid_study_declaring_backend(tmp, PANDAPOWER_NATIVE_BACKEND_ID)
+            project_file = target / "project.yaml"
+            data = yaml.safe_load(project_file.read_text(encoding="utf-8"))
+            data["spec"]["simulation"]["powerflowBackendByStage"] = {
+                "prepare_workspace": PANDAPOWER_NATIVE_BACKEND_ID
+            }
+            project_file.write_text(
+                yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
+            )
+            run_workflow(target, dry_run=True)
+            manifest_path = (
+                target / "outputs" / "manifests" / "project_run_manifest.json"
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        stage = manifest["provenance"]["powerflow_backend"]["by_stage"][
+            "prepare_workspace"
+        ]
+        self.assertEqual(PANDAPOWER_NATIVE_BACKEND_ID, stage["backend_id"])
+        self.assertNotIn("extension_id", stage)
+        self.assertNotIn("extension_source", stage)
+        self.assertNotIn("extension_version", stage)
+
     def test_host_backend_without_version_has_no_extension_version_key(self) -> None:
         # Review cycle 2 (S8): extension_id/extension_source are recorded even
         # when the host registration carries no version; the version key is
