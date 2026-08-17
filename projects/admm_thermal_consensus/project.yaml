@@ -54,6 +54,13 @@ spec:
   workflow:
     file: projects/admm_thermal_consensus/workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/agents_report.json
+      - outputs/reports/network_report.json
+      - outputs/reports/forecast_report.json
+      - outputs/reports/admm_report.json
+      - outputs/reports/powerflow_report.json
     requiredReports:
       - projects/admm_thermal_consensus/outputs/reports/agents_report.json
       - projects/admm_thermal_consensus/outputs/reports/network_report.json

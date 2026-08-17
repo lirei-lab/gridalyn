@@ -91,6 +91,13 @@ spec:
   workflow:
     file: projects/ev_hosting_flex/workflow.yaml
   validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/topology_cache_report.json
+      - outputs/reports/annual_mc_report.json
+      - outputs/reports/fleet_triage_report.json
+      - outputs/reports/annual_congestion_report.json
+      - outputs/reports/curtailment_contracts_report.json
     requiredReports:
       - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
       - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
