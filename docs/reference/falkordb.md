@@ -1,6 +1,6 @@
 # FalkorDB and the gridalyn Semantic Graph
 
-> **Current state (2026-08-07, Phase 9).** gridalyn does **not** connect to,
+> **Current state (2026-08-07).** gridalyn does **not** connect to,
 > load, or query a FalkorDB server today. The only FalkorDB-facing surface is
 > `FederatedGraphAdapter.to_falkor_batches`
 > (`gridalyn/twin/db/federated_graph_adapter.py`), which exports the semantic

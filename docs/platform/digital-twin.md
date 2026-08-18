@@ -567,10 +567,10 @@ Each canonical report records input file hashes, source artifacts, metrics, and 
 
 ## Regeneration
 
-Generate semantic graph artifacts (Phase 21 model-first re-layering — the
-`--semantic-capabilities` flag is optional; omitting it preserves the full
-legacy graph, passing an empty list builds the model-first core only, and
-`flexibility` adds the market-management layer):
+Generate semantic graph artifacts (model-first — the `--semantic-capabilities`
+flag is optional; omitting it preserves the full legacy graph, passing an empty
+list builds the model-first core only, and `flexibility` adds the
+market-management layer):
 
 ```bash
 uv run gridalyn semantic build \
@@ -592,7 +592,7 @@ aggregators, portfolios, providers, offers, and constraint zones. This lets
 FalkorDB/DuckDB consumers ask which providers belong to an aggregator, which
 contract each provider implements, and which transformer constraint an offer
 targets without embedding heavy time-series data in the graph. See
-`docs/platform/digital-twin-layering.md` for the re-layering contract.
+`docs/platform/digital-twin-layering.md` for the model-first layering model.
 
 Validate semantic graph:
 

@@ -317,11 +317,11 @@ so each stage does emit its governed report; these JSON files are the data artif
 report references. Sixteen of them are the `source` files the `ev_hosting_flex` regression
 baseline pins (§5, sequencing).
 
-The flagship's pipeline stage writes were migrated (Phase 20, plan 20-02,
-2026-08-17) from direct `json.dumps` onto `script.write_json(...)` — see §3.9
+The flagship's pipeline stage writes were migrated (2026-08-17) from direct
+`json.dumps` onto `script.write_json(...)` — see §3.9
 and §13 — so the only remaining direct sites here are
 `prepare_topology_cache::_write_json` (the helper; its 5 call sites are enumerated in §3.9;
-the topology-cache seam is owned by Plan 20-03), and
+the topology-cache seam is owned by that helper), and
 `synthetic_geojson_feeder/scripts/generate_building_footprints.py::payload` (a GeoJSON
 FeatureCollection; the module emits its governed report at `:25`).
 
@@ -346,7 +346,7 @@ FeatureCollection; the module emits its governed report at `:25`).
 | `operations/verification.py::write_shadow_report` | `generate_provider_selection_shadow_report.py:129` | NOT-A-REPORT | Shadow comparison. |
 | `twin/semantic/validation.py::write_validation_report` | `validate_digital_twin_semantics.py:62` | NOT-A-REPORT | Re-wrapped downstream. |
 | `.../prepare_topology_cache.py::_write_json` | `:190, :191, :201, :202, :205` | NOT-A-REPORT | Five cache documents (ratings, downstream topology, feeder selection, nameplate, building counts) behind one direct-scan site. |
-| `.../pipeline/*.py::script.write_json` (20 sites, Phase 20) | 18 stage derives + `validate_powerflow::run_stage` | NOT-A-REPORT | The flagship's study-data payloads, migrated 2026-08-17 (plan 20-02) from direct `json.dumps` to `ProjectScript.write_json`. Same class as the admm siblings above (§13). |
+| `.../pipeline/*.py::script.write_json` (20 sites) | 18 stage derives + `validate_powerflow::run_stage` | NOT-A-REPORT | The flagship's study-data payloads, migrated 2026-08-17 from direct `json.dumps` to `ProjectScript.write_json`. Same class as the admm siblings above (§13). |
 
 ---
 
@@ -874,7 +874,7 @@ module is ever reinstated, the hazard returns with it.
 caught every one of these reclassifications before this section was written,
 which is what the vanished-site assertions exist for.
 
-**Why.** Phase 19 (Project Developer API) migrated the
+**Why.** The Project Developer API migrated the
 `admm_thermal_consensus` pipeline's study-data JSON writes off raw
 `json.dumps` onto the new `script.write_json(...)` surface
 (`gridalyn/projects/scripting.py::ProjectScript.write_json`). A direct write
@@ -941,8 +941,8 @@ gate in the same change.
 caught every one of these reclassifications before this section was written,
 which is what the vanished-site assertions exist for.
 
-**Why.** Phase 20 (Flagship Migration) plan 20-02 migrated the
-`ev_hosting_flex` pipeline's 20 study-data JSON writes off raw `json.dumps`
+**Why.** The `ev_hosting_flex` pipeline's 20 study-data JSON writes were
+migrated (2026-08-17) off raw `json.dumps`
 onto the `script.write_json(...)` surface — the same Project Developer API
 pattern the admm study adopted in §12. A direct write site becomes invisible
 to the direct scan once the payload is serialized inside a helper — the direct

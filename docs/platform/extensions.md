@@ -6,7 +6,7 @@ the SDK. The governing principle is *discoverable but never silent* — an
 extension that participates in a run is declared, versioned and recorded in
 provenance.
 
-This page documents the foundation (Milestone 8). The generic engine lives in
+This page documents the foundation. The generic engine lives in
 `gridalyn/foundation/platform/extensions.py`; the five per-role registries
 (power-flow backend, surrogate, policy, observation producer, network adapter)
 are open to external registration, each through a public
@@ -42,7 +42,7 @@ errors.
 |--------|-----|-----------|
 | `core` | gridalyn's own shipped defaults (unchanged behaviour) | `source: "core"` |
 | `host` | `register_extension(factory, descriptor=...)` from the embedding application's entry script or notebook | `source: "host"` |
-| `entry_point` | declared `gridalyn.extensions` entry-point group / namespace walk, loaded on demand (Phase 15) | `source: "entry_point"`, `version`, `module_hash` |
+| `entry_point` | declared `gridalyn.extensions` entry-point group / namespace walk, loaded on demand | `source: "entry_point"`, `version`, `module_hash` |
 
 `register_extension` is the public host API: a third-party component conforms
 to a role contract, builds an `ExtensionDescriptor`, and registers it — no edit
@@ -81,7 +81,7 @@ JSON-native shape that includes `contract_version`; the twin descriptors
 
 ## Discovery & Capabilities
 
-Since Phase 15 the `entry_point` source is wired: a package ships an extension
+The `entry_point` source is wired: a package ships an extension
 by declaring an entry point in the `gridalyn.extensions` group, and gridalyn
 sees it **without loading it**. Awareness and resolution are deliberately
 separate operations:
@@ -109,7 +109,7 @@ A project declares which extensions its runs resolve through
 `gridalyn.extensions` group, or `{id, group}` mappings. `load_declared_extensions`
 and `resolve_declared_extensions` (in `gridalyn.projects.model_inputs`) read
 and resolve that declaration on demand. A project that declares nothing loads
-nothing, so its governed behavior stays unchanged (R7); the only manifest
+nothing, so its governed behavior stays unchanged; the only manifest
 change any run sees is the always-present empty `extensions: []` entry
 (a deliberate additive-key re-base — see the run-provenance docs).
 
@@ -174,7 +174,7 @@ After installing the package (so its entry point is visible to
 
 ## Provenance
 
-`provenance.extensions` (Phase 16) is a JSON-native snapshot of the extensions
+`provenance.extensions` is a JSON-native snapshot of the extensions
 in the generic engine's `DEFAULT_REGISTRY` (id, role, name, version, contract
 version, source, entry-point group, module hash), sorted by `extension_id` —
 populated whenever an extension is registered (host) or loaded (entry point)
@@ -182,7 +182,7 @@ into the runner's process before the manifest is written. Role-level provenance
 records which extension served a role: `provenance.powerflow_backend` carries
 `extension_id`/`extension_source`/`extension_version` when the resolved backend
 is an external extension (`source != "core"`); the other four roles will reach
-the manifest the same way in a later phase. A plugin may be discoverable, but
+the manifest the same way in a future release. A plugin may be discoverable, but
 it is never silent.
 
 ## Compatibility

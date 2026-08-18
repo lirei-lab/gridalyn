@@ -135,11 +135,6 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
     (
-        "docs/platform/digital-twin-layering.md",
-        "cls:FlexibilityProvider/Aggregator/Portfolio/Offer/ConstraintZone",
-    ): "an ontology qname list, not a path; the 'cls:' prefix reads as a "
-    "Windows drive to the path scanner",
-    (
         "docs/development/report-contract-audit.md",
         "out_dir/locational_clearing_summary.json",
     ): "`out_dir` is the caller-supplied output-directory argument, not a tracked "

@@ -180,7 +180,7 @@ This is not hypothetical. It is recorded here because it happened:
 > `uv sync --extra semantic   # RDF / graph database tooling`. Its entry was
 > executed on **2026-08-06** and its recorded evidence reads *"All six `uv sync
 > --extra X` lines -> exit 0, 0.99 s, so the commands are valid."* That was
-> true when it was written. **Phase 9 removed the `semantic` extra the next
+> true when it was written. **The `semantic` extra was removed the next
 > day, 2026-08-07**, along with the dead RDF/XML exporter and `rdflib`.
 >
 > The block's content never changed, so its `sha1` still matched, so the entry
@@ -190,7 +190,7 @@ This is not hypothetical. It is recorded here because it happened:
 > existed. It was found by a human reading the README against `pyproject.toml`,
 > not by the gate.
 >
-> Attribution matters: **the defect is Phase 9's**, which deleted an extra
+> Attribution matters: **the defect is the deletion**, which removed an extra
 > without sweeping the documentation for references to it. The ledger did not
 > cause the rot and did not hide it — it just had no mechanism to notice it.
 >
@@ -228,8 +228,8 @@ named trigger, not a background hope:
 
 **What would actually close it** is a gate that resolves each block's referenced
 extras, subcommands and paths against the current `pyproject.toml`, CLI parsers
-and filesystem — a semantic check rather than a textual one. That is Milestone 2
-territory (R14/R15, "every documented instruction verified by execution") and is
+and filesystem — a semantic check rather than a textual one. That is future
+territory ("every documented instruction verified by execution") and is
 deliberately **not** attempted here: recording the limitation accurately is
 worth more than a partial gate that would imply the hole is covered.
 

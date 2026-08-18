@@ -29,16 +29,16 @@ The architecture takes lessons from several platform families:
 The consensus is: **Gridalyn should be model-centered, operation-aware, and
 application-friendly.**
 
-**HELICS precondition update (Phase 10, Milestone 5, 2026-08-10).** The row
+**HELICS precondition update (2026-08-10).** The row
 above records that co-simulation should wait for "stable local model
-contracts." Phase 10 built those: an explicit-ID `PowerFlowBackend` registry,
-a `Surrogate` registry, an observation contract, and a `Policy` registry, each
-resolved by name and recorded in run provenance rather than discovered
-ambiently. The precondition is therefore satisfied. This is **not** a decision
-to adopt HELICS, mosaik, or any external co-simulation framework — the user's
-Milestone 5 strategy was in-repo contracts with no new external dependency,
-and that stands. What changes is only that adopting co-simulation later is now
-a separately-decidable option with a real foundation under it, not a
+contracts." Those were built in 2026-08-10: an explicit-ID `PowerFlowBackend`
+registry, a `Surrogate` registry, an observation contract, and a `Policy`
+registry, each resolved by name and recorded in run provenance rather than
+discovered ambiently. The precondition is therefore satisfied. This is **not**
+a decision to adopt HELICS, mosaik, or any external co-simulation framework —
+the strategy was in-repo contracts with no new external dependency, and that
+stands. What changes is only that adopting co-simulation later is now a
+separately-decidable option with a real foundation under it, not a
 prerequisite still unmet.
 
 ## Layer Stack
@@ -236,7 +236,7 @@ This layer answers the physical question: what happens to the grid?
 claims must be explainable against physical validation or a calibrated surrogate
 with known error.
 
-### Network Control Registries (Phase 10, Milestone 5, 2026-08-10)
+### Network Control Registries (2026-08-10)
 
 Four network-control roles resolve by explicit ID rather than a hardcoded
 choice: which physical solver runs, which surrogate stands in for it, what a

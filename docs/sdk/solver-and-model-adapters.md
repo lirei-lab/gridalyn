@@ -13,7 +13,7 @@ engine that matches the study. Since the network control framework landed
 every power-flow call in the SDK resolves a backend by explicit ID, and the
 resolved backend is recorded in the run manifest under
 `provenance.powerflow_backend`. See
-[Platform Layer Model](../platform/platform-layer-model.md#network-control-registries-phase-10-milestone-5-2026-08-10).
+[Platform Layer Model](../platform/platform-layer-model.md#network-control-registries-2026-08-10).
 
 ## Current Adapter Surface
 
@@ -23,7 +23,7 @@ resolved backend is recorded in the run manifest under
 | Synthetic network builder | `gridalyn.simulation.build_synthetic_network_from_geojson` | Builds a graph, pandapower model, validation report, and cache bundle. |
 | Pandapower builder | `gridalyn.simulation.PandapowerGridBuilder` | Converts Gridalyn topology bundles into pandapower networks. |
 | **Power-flow backend registry** | `gridalyn.simulation.resolve_powerflow_backend` | Resolves the solver by explicit ID (`pandapower_native` default, `lightsim2grid`). The single place a power flow is solved. |
-| Observation contract | `gridalyn.twin.observation.observe_network` | One definition of what a solved network shows, independent of which backend solved it. Phase 11 moved it down to the twin: what a network shows is a property of the network, not of the solver. The `gridalyn.simulation` path still resolves, via a deprecation shim. |
+| Observation contract | `gridalyn.twin.observation.observe_network` | One definition of what a solved network shows, independent of which backend solved it. It was moved down to the twin: what a network shows is a property of the network, not of the solver. The `gridalyn.simulation` path still resolves, via a deprecation shim. |
 | Surrogate registry | `gridalyn.simulation.resolve_surrogate` | Resolves a surrogate by explicit ID; every registered surrogate carries a stated error bound. |
 | Policy registry | `gridalyn.simulation.policies.default_policy_registry` | Resolves a control policy by explicit ID (tabular RL, sensitivity dispatch). |
 | Voltage-control environment | `gridalyn.simulation.VoltageControlEnvironment` | Composes a backend, an observation, and a policy into a learning-control surface. |

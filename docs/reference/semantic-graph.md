@@ -13,11 +13,10 @@ The active profile is:
 instances/default/digital_twin/semantic/profile_north_america.json
 ```
 
-The profile is North America-first and **model-first** (Phase 21 re-layering,
-2026-08-17): the core profile carries the generic grid model, and the
-flexibility/market ontology is an **on-demand capability** a project declares
-through its semantic profile (`build_semantic_graph(capabilities=...)` /
-`--semantic-capabilities` — see
+The profile is North America-first and **model-first**: the core profile
+carries the generic grid model, and the flexibility/market ontology is an
+**on-demand capability** a project declares through its semantic profile
+(`build_semantic_graph(capabilities=...)` / `--semantic-capabilities` — see
 `docs/platform/digital-twin-layering.md`).
 
 Core (always emitted):
@@ -40,7 +39,7 @@ Flexibility capability (`capabilities={"flexibility"}`, on-demand):
 
 SAREF is not a primary ontology in this profile. It can be added later as a
 crosswalk if an integration requires it. With the capability ON the emitted
-profile is byte-identical to the pre-re-layering profile (R7).
+profile is byte-identical to the model-first core plus its declared extensions.
 
 ## Generated Artifacts
 
@@ -226,7 +225,7 @@ Migration rule of thumb:
 2. Pass validation.
 3. Dry-run Cypher batches from the adapter (`to_falkor_batches`).
 4. Load FalkorDB — **not implemented in-repo**: gridalyn has no FalkorDB
-   connection or loader (Phase 9, 2026-08-07); loading the exported batches is
+   connection or loader (2026-08-07); loading the exported batches is
    a manual, out-of-repo step.
 5. Compare counts and relationship integrity against the Parquet manifest —
    **not implemented**: no in-repo reader exists to perform the comparison.

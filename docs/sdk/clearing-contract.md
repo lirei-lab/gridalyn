@@ -129,7 +129,7 @@ them as a stable surface — reach the clearing path only through
 ## Determinism Promises
 
 The canonical clearing contract **promises** a deterministic, unique clearing
-result, and these guarantees are **enforced** — CLEAR-03 landed in Phase 3:
+result, and these guarantees are **enforced** — the CLEAR-03 guarantee:
 
 - a **total sort with an explicit tie-break** so provider selection ordering is
   unique and reproducible;

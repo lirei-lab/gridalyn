@@ -64,7 +64,7 @@ equipment = repo.get_connected_equipment("bus:17")
 integrity = repo.validate_integrity()
 ```
 
-Four things about that snippet changed in Phase 11 (2026-08-12) and are worth
+Four things about that snippet changed in 2026-08-12 and are worth
 knowing before you build on it:
 
 - **`load_model()` now carries identity.** The returned `NetworkModel` exposes
@@ -97,10 +97,10 @@ keyword-only, caller-supplied `as_of`. Every `NetworkObservation` now carries a
 required `provenance` field (`ObservationProvenance =
 Literal["simulated", "measured"]`) — `observe_network` stamps `"simulated"`
 unconditionally, and construction without a provenance is a `TypeError` (a
-documented Phase-12 breaking change). `gridalyn.simulation.observation` still
+documented breaking change). `gridalyn.simulation.observation` still
 resolves as a deprecated re-export.
 
-Phase 12 (2026-08-13) extended the same facade with the measured-state ingest
+In 2026-08-13 the same facade was extended with the measured-state ingest
 path and the observation producer registry. New stable `gridalyn.twin` imports:
 
 | Symbol | Purpose |

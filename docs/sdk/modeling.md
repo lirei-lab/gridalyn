@@ -40,8 +40,8 @@ other layers consume.
 
 **This is layer ownership, not role separation.** The table above answers
 "which of the seven packages owns this kind of code" — a different question
-from "which swappable role does a network-control component play." Phase 10
-(Milestone 5, 2026-08-10) built that second separation for **four** roles:
+from "which swappable role does a network-control component play." In
+2026-08-10 a second separation was built for **four** roles:
 physical power-flow backend, surrogate, observation, and control policy.
 
 **Three of the four are registries; observation is not.** Say "four roles,
@@ -58,19 +58,19 @@ Observation has one implementation because nothing in this repository yet needs
 a second; a registry ahead of that need would be the speculative abstraction the
 platform's own conventions warn against, and its absence is asserted by a test
 rather than left to look like an oversight. It also no longer lives in
-`gridalyn.simulation`: Phase 11 (Milestone 6, 2026-08-12) moved it down to
+`gridalyn.simulation`: in 2026-08-12 it moved down to
 `gridalyn.twin.observation`, because what a network currently shows is a
 property of the model, not of the solver. `gridalyn.simulation.observation`
 still resolves as a deprecated re-export that emits a `DeprecationWarning`.
 
 Each registry resolves by name rather than being fused into one class, with the
-choice recorded in `provenance.powerflow_backend`. Before Phase 10,
+choice recorded in `provenance.powerflow_backend`. Earlier,
 `VoltageControlEnvironment` fused all four roles into one 138-line class — a
 layer-ownership violation the table above never flagged, because "solver
 modelers" already correctly described where the code lived; it just did not
-separate the roles *within* that one home. Both claims are true after Phase 10,
-and they are about different axes: the first table is package boundaries, this
-one is role boundaries.
+separate the roles *within* that one home. Both claims are true now, and they
+are about different axes: the first table is package boundaries, this one is
+role boundaries.
 
 See [Building Models](building-models.md).
 

@@ -2768,11 +2768,11 @@
       "family": "platform",
       "file": "docs/platform/digital-twin-layering.md",
       "language": "python",
-      "line": 177,
+      "line": 80,
       "ordinal": 0,
       "rationale": "example API snippet with ellipses and placeholders, not executable as written; documents the declared-capability contract",
       "sequence": null,
-      "sha1": "74d888b62cc26559f4af1a974aed6a4c825146b2",
+      "sha1": "3138a4eab54aa889ccf3c7819094cdb69f21665b",
       "verdict": "DOCUMENTED"
     },
     "docs/platform/digital-twin-layering.md#1": {
@@ -2783,11 +2783,11 @@
       "family": "platform",
       "file": "docs/platform/digital-twin-layering.md",
       "language": "bash",
-      "line": 195,
+      "line": 98,
       "ordinal": 1,
       "rationale": "example API snippet with ellipses and placeholders, not executable as written; documents the declared-capability contract",
       "sequence": null,
-      "sha1": "e526ad2579ad4ace0b46a6b2c4d5b492df6a71bb",
+      "sha1": "b3c788d249fe73168f4666c8b447d4f6333e8ead",
       "verdict": "DOCUMENTED"
     },
     "docs/platform/digital-twin-layering.md#2": {
@@ -2798,7 +2798,7 @@
       "family": "platform",
       "file": "docs/platform/digital-twin-layering.md",
       "language": "python",
-      "line": 205,
+      "line": 108,
       "ordinal": 2,
       "rationale": "example API snippet with ellipses and placeholders, not executable as written; documents the declared-capability contract",
       "sequence": null,

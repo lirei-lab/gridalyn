@@ -18,7 +18,7 @@ are separated by *automated data flow*, not by fidelity:
 | Digital **twin** | Automated flow in **both** directions. |
 
 Measured against that, `gridalyn.twin` is a **canonical, identified,
-schema-declared digital model** — and, since Phase 12 (2026-08-13), the SDK
+schema-declared digital model** — and, since 2026-08-13, the SDK
 ships the **measured-state ingest path**: automated one-way physical → digital
 flow. A *deployment* becomes a digital shadow when a user feeds that path
 their own measured data. The layer itself, as shipped, is not a shadow
@@ -44,9 +44,9 @@ Specifically:
 
 ### The ingest path that makes a deployment a shadow
 
-Phase 11 identified exactly one missing thing: an ingest path that stamps
-`as_of` from a real producer's own timestamp and joins its readings to the
-model's declared bus namespace. Phase 12 built it, in
+The ingest design identified exactly one missing thing: an ingest path that
+stamps `as_of` from a real producer's own timestamp and joins its readings to
+the model's declared bus namespace. It was built in
 `gridalyn.twin.observation.ingest`:
 
 - **A declared measurement schema** — `(timestamp, entity_id, quantity,
@@ -63,8 +63,8 @@ model's declared bus namespace. Phase 12 built it, in
   in the reader.
 - **A producer registry** (`ObservationProducerRegistry`,
   `default_observation_producer_registry()`) with the two producers above —
-  explicit IDs, no `entry_points`. Phase 11 correctly declined a registry for
-  a single implementation; Phase 12 did not decline one for two.
+  explicit IDs, no `entry_points`. A registry was correctly declined for
+  a single implementation; with two producers one became warranted.
 
 The honest boundary: CI proves value-level correctness of the ingest on
 fixtures (`tests/test_measured_ingest.py`); the at-scale run over real
@@ -93,7 +93,7 @@ dependency.
 Bidirectional flow — writing control actions back to physical equipment —
 remains a recorded **non-goal**, not an omission.
 
-### Provenance (breaking change, Phase 12)
+### Provenance (breaking change)
 
 `NetworkObservation` now **requires** a `provenance` field —
 `ObservationProvenance = Literal["simulated", "measured"]` — so a consumer
@@ -104,7 +104,7 @@ directly must now pass one; construction without it is a `TypeError`.
 `observe_network` stamps `"simulated"` unconditionally, because it reads solver
 results, and `drop_missing` carries the value through unchanged. The precedent
 for shipping a required-field addition documented rather than slipped in is
-`NetworkExportResult.identity` (Phase 11).
+`NetworkExportResult.identity`.
 
 ## Core Objects
 

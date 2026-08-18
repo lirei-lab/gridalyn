@@ -72,9 +72,9 @@ gridalyn project run projects/ev_hosting_flex
 Equivalently, pass `--frozen` / `--no-sync` to the stage invocations
 (`uv run --frozen ...`) so no stage can silently re-resolve the lock.
 
-### Fresh-venv Definition-of-Done recipe
+### Fresh-venv clean-room recipe
 
-The Phase-5 DoD (REPRO-05) is a clean-room rebuild from a fresh virtual
+This is a clean-room rebuild from a fresh virtual
 environment that a stranger can copy-paste verbatim from the repo root. Run the
 whole block top-to-bottom; every step must be green and the committed baseline
 must reproduce bit-for-bit.

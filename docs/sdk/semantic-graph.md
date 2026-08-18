@@ -44,6 +44,6 @@ network zone.
 
 `SemanticGraphRepository` is an external-facing public read API for researchers
 and applications that consume the materialized graph directly; it has no
-in-repo application consumer today (recorded decision, Phase 9 finding G9).
+in-repo application consumer today (a recorded decision).
 
 See [Semantic Model And Graph](../reference/semantic-graph.md).

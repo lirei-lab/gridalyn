@@ -202,7 +202,7 @@ be, because isolation always reaches for an index.
 The flagship `ev_hosting_flex` study is verified **by protocol** rather than by
 a single opaque run: a shape-covering subset (`python tools/flagship_verify.py`)
 executes the pipeline's non-heavy stages end to end against the study workspace,
-skips the hours-long heavy stages with a recorded reason, and reports the R7
+skips the hours-long heavy stages with a recorded reason, and reports the
 baseline check. Per-stage records — name, status, duration, and a reason when a
 stage is skipped — are captured so a partial regeneration is auditable, and the
 verification-receipt ledger accepts an optional per-stage record list on any
@@ -229,21 +229,22 @@ keeps the study source-proven between those runs.
 The shape-covering subset was executed and its receipts recorded: 22 stages,
 2 ran OK (`prepare_workspace` 0.4 s, `prepare_topology_cache` 3.1 s, topology
 cache 4320 buses), 20 skipped (the heavy `generate_annual_mc` plus its
-downstream dependents), and the R7 baseline check returned **PASS — baselines
+downstream dependents), and the baseline check returned **PASS — baselines
 byte-identical**. Per-stage records are embedded on the `flagship-subset`
 receipt; the `flagship-reproduce` receipt is now `recorded` (source-proven by
 protocol). The full ~6 h regeneration remains operator-scheduled.
 
-## 7. R7 Twin Consumer Identity
+## 7. Twin Consumer Identity
 
 `r7-twin-consumer-identity` is the second operator protocol in the receipt
 ledger. It answers a question the flagship subset cannot: **did restructuring
 `gridalyn/twin` change what a consumer of the twin sees?** No study reads the
-twin, so no baseline can move and the usual R7 guardrail has nothing to grip.
+twin, so no baseline can move and the usual baseline guardrail has nothing to
+grip.
 This protocol supplies the missing evidence directly.
 
 Run it with `python tools/r7_twin_consumer_identity.py <before-ref> <after-ref>`
-— for the Phase 11 record, `python tools/r7_twin_consumer_identity.py d6aa606e
+— for the 2026-08-12 record, `python tools/r7_twin_consumer_identity.py d6aa606e
 6ed179c0`. It takes about 40 seconds.
 
 **What it does.** It checks out each ref into its own git worktree, and from
@@ -259,8 +260,8 @@ and the comparison would measure the regeneration instead of the code.
 field, and a content SHA-256 of each of the five canonical tables (columns,
 dtypes, rows); `validate_integrity()`'s `valid`/`errors`/`warnings`/`summary`;
 and the whole `build_dashboard_catalog()` mapping minus `created_at`. Stating
-the field set is not a formality — two earlier hand-rolled comparisons of this
-same phase disagreed purely because they hashed different fields.
+the field set is not a formality — two earlier hand-rolled comparisons
+disagreed purely because they hashed different fields.
 
 **Two controls make a green result mean something.** A *determinism* control
 captures the same ref twice in two independent worktrees and requires an
