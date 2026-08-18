@@ -115,6 +115,21 @@ build_digital_twin_steps(capabilities=set())
 build_digital_twin_steps()
 ```
 
+The CLI exposes the same selection for *any* project's twin: `--instance`
+names which twin under `instances/<name>/digital_twin/` to build, and
+`--capabilities` declares the layers (an empty value is the generic
+model-first build; omitting it keeps the legacy `ev-hosting,flexibility`
+default):
+
+```bash
+uv run gridalyn twin build --instance <name> --capabilities "" --dry-run
+uv run gridalyn twin build --instance <name> --capabilities flexibility
+```
+
+Layer scripts resolve the instance through `GRIDALYN_INSTANCE` /
+`GRIDALYN_WORKSPACE_ROOT`, so the same general scripts materialize on any
+declared twin without knowing its path.
+
 ### Profile
 
 `profile_with_capabilities({"flexibility"})` returns the merged profile (core +

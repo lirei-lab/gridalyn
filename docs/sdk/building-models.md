@@ -55,6 +55,14 @@ The main tables are:
 uv run gridalyn twin building-models
 ```
 
+These are general layer commands: `--instance <name>` (and `--root`) select
+which twin instance under `instances/<name>/digital_twin/` to regenerate, so
+the same command works for any project's twin:
+
+```bash
+uv run gridalyn twin building-models --instance <name>
+```
+
 Generate scenario overlays after the scenario asset registry:
 
 ```bash

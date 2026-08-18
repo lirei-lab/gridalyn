@@ -6,16 +6,19 @@ import argparse
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 
-from gridalyn.assets.modeling import load_base_inputs, write_building_model_artifacts
-from gridalyn.assets.modeling.archetypes import NORTH_AMERICA_RESIDENTIAL_PROFILE
-
+from gridalyn.assets.modeling import (  # noqa: E402
+    load_base_inputs,
+    write_building_model_artifacts,
+)
+from gridalyn.assets.modeling.archetypes import (  # noqa: E402
+    NORTH_AMERICA_RESIDENTIAL_PROFILE,
+)
 
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_OUT_DIR = DEFAULT_LAYOUT.models
@@ -49,7 +52,12 @@ def main(argv: list[str] | None = None) -> None:
         out_dir=args.out_dir,
         profile=args.profile,
     )
-    print(json.dumps({"manifest": manifest["manifest_path"], "counts": manifest["counts"]}, indent=2))
+    print(
+        json.dumps(
+            {"manifest": manifest["manifest_path"], "counts": manifest["counts"]},
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

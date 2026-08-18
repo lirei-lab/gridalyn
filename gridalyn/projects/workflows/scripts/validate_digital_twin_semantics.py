@@ -9,7 +9,7 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.foundation import ArtifactLayout, find_workspace_root
+from gridalyn.foundation import find_workspace_root, layout_from_environment
 from gridalyn.twin.semantic.mappings import north_america_profile
 from gridalyn.twin.semantic.validation import (
     validate_semantic_graph,
@@ -20,7 +20,7 @@ from gridalyn.twin.semantic.validation import (
 # derive the root from __file__ (Phase 9, finding G7).
 _DEFAULT_ROOT = Path(".")
 
-DEFAULT_LAYOUT = ArtifactLayout(_DEFAULT_ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=_DEFAULT_ROOT)
 
 DEFAULT_SEMANTIC_DIR = DEFAULT_LAYOUT.semantic
 DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios

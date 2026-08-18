@@ -10,11 +10,11 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 
-from gridalyn.assets.modeling.assets import (
+from gridalyn.assets.modeling.assets import (  # noqa: E402
     build_asset_registry,
     summarize_asset_registry,
 )

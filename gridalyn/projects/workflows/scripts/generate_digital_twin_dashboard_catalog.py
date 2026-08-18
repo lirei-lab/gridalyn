@@ -9,9 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout  # noqa: E402
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 
 from gridalyn.projects.dashboard_catalog import (  # noqa: E402
     build_dashboard_catalog,

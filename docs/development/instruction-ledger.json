@@ -2805,6 +2805,21 @@
       "sha1": "5815ba1268043513c6cfcdf9e69b981665bc2bd8",
       "verdict": "DOCUMENTED"
     },
+    "docs/platform/digital-twin-layering.md#3": {
+      "auto": "RUNNABLE-INDEPENDENT",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "platform",
+      "file": "docs/platform/digital-twin-layering.md",
+      "language": "bash",
+      "line": 124,
+      "ordinal": 3,
+      "rationale": "CLI capability/instance examples with <name> placeholders, not runnable verbatim",
+      "sequence": null,
+      "sha1": "f676dfcd824758724f382a7cb5f92e2374997d0e",
+      "verdict": "DOCUMENTED"
+    },
     "docs/platform/digital-twin.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
@@ -2881,8 +2896,8 @@
       "verdict": null
     },
     "docs/platform/digital-twin.md#13": {
-      "auto": "RUNNABLE-INDEPENDENT",
-      "class": "RUNNABLE-SEQUENCE",
+      "auto": "ILLUSTRATIVE",
+      "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
       "family": "platform",
@@ -2890,10 +2905,10 @@
       "language": "bash",
       "line": 545,
       "ordinal": 13,
-      "rationale": "",
-      "sequence": "docs/platform/digital-twin.md#seq0",
-      "sha1": "a545da46155ce69a328defd51b49ad72d344dd94",
-      "verdict": null
+      "rationale": "preview example with <name> placeholder args, not runnable verbatim",
+      "sequence": null,
+      "sha1": "491530b438f33fabee52fdbcc58a06861f15c6e9",
+      "verdict": "DOCUMENTED"
     },
     "docs/platform/digital-twin.md#14": {
       "auto": "ILLUSTRATIVE",
@@ -2902,9 +2917,54 @@
       "evidence": null,
       "family": "platform",
       "file": "docs/platform/digital-twin.md",
-      "language": "text",
-      "line": 575,
+      "language": "bash",
+      "line": 554,
       "ordinal": 14,
+      "rationale": "capability-declaration example with <name> placeholder, not runnable verbatim",
+      "sequence": null,
+      "sha1": "82ec1c926b91715006986aca2ca358bef4e5ecb9",
+      "verdict": "DOCUMENTED"
+    },
+    "docs/platform/digital-twin.md#15": {
+      "auto": "RUNNABLE-INDEPENDENT",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "platform",
+      "file": "docs/platform/digital-twin.md",
+      "language": "bash",
+      "line": 561,
+      "ordinal": 15,
+      "rationale": "per-layer regeneration examples with <name> placeholders, not runnable verbatim",
+      "sequence": null,
+      "sha1": "4f9fd43d11bd760c777ef99126bc842ab3b1524f",
+      "verdict": "DOCUMENTED"
+    },
+    "docs/platform/digital-twin.md#16": {
+      "auto": "RUNNABLE-INDEPENDENT",
+      "class": "RUNNABLE-SEQUENCE",
+      "date": null,
+      "evidence": null,
+      "family": "platform",
+      "file": "docs/platform/digital-twin.md",
+      "language": "bash",
+      "line": 581,
+      "ordinal": 16,
+      "rationale": "",
+      "sequence": "docs/platform/digital-twin.md#seq0",
+      "sha1": "a545da46155ce69a328defd51b49ad72d344dd94",
+      "verdict": null
+    },
+    "docs/platform/digital-twin.md#17": {
+      "auto": "ILLUSTRATIVE",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "platform",
+      "file": "docs/platform/digital-twin.md",
+      "language": "text",
+      "line": 613,
+      "ordinal": 17,
       "rationale": "fence language text is not executable as written",
       "sequence": null,
       "sha1": "15fb9e7aad649208e99318c70d0b34a6c6c3e49a",
@@ -3616,7 +3676,7 @@
       "verdict": "DOCUMENTED"
     },
     "docs/reference/cli.md#3": {
-      "auto": "RUNNABLE-INDEPENDENT",
+      "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",
       "date": null,
       "evidence": null,
@@ -3625,9 +3685,9 @@
       "language": "bash",
       "line": 49,
       "ordinal": 3,
-      "rationale": "the clip-buildings and prepare-microsoft-buildings lines name input files (`buildings.geojson`, `polygon.json`, `partition.geojsonl.gz`) the repo does not carry; the block is a command tour, not a recipe",
+      "rationale": "command catalogue mixing runnable and <name>-placeholder examples; the placeholder lines are not runnable verbatim",
       "sequence": null,
-      "sha1": "e5702c6c5c5c87ca4f9e6513f28b96943cbbeff0",
+      "sha1": "154af982e10437208d7c7a45731a900369dbb5eb",
       "verdict": "DOCUMENTED"
     },
     "docs/reference/cli.md#4": {
@@ -3638,7 +3698,7 @@
       "family": "getting-started",
       "file": "docs/reference/cli.md",
       "language": "bash",
-      "line": 62,
+      "line": 70,
       "ordinal": 4,
       "rationale": "the flagship study run is ~6 h",
       "sequence": null,
@@ -3653,7 +3713,7 @@
       "family": "getting-started",
       "file": "docs/reference/cli.md",
       "language": "bash",
-      "line": 75,
+      "line": 83,
       "ordinal": 5,
       "rationale": "",
       "sequence": null,
@@ -3668,7 +3728,7 @@
       "family": "getting-started",
       "file": "docs/reference/cli.md",
       "language": "bash",
-      "line": 84,
+      "line": 92,
       "ordinal": 6,
       "rationale": "",
       "sequence": null,
@@ -3683,7 +3743,7 @@
       "family": "getting-started",
       "file": "docs/reference/cli.md",
       "language": "bash",
-      "line": 101,
+      "line": 109,
       "ordinal": 7,
       "rationale": "",
       "sequence": null,
@@ -4036,6 +4096,21 @@
       "verdict": null
     },
     "docs/sdk/building-models.md#2": {
+      "auto": "ILLUSTRATIVE",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "platform",
+      "file": "docs/sdk/building-models.md",
+      "language": "bash",
+      "line": 62,
+      "ordinal": 2,
+      "rationale": "instance-selecting example with <name> placeholder, not runnable verbatim",
+      "sequence": null,
+      "sha1": "a3e1a95b9691fc83734e11606855ffc5a3aeca9b",
+      "verdict": "DOCUMENTED"
+    },
+    "docs/sdk/building-models.md#3": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
       "date": "2026-08-06",
@@ -4043,14 +4118,14 @@
       "family": "platform",
       "file": "docs/sdk/building-models.md",
       "language": "bash",
-      "line": 60,
-      "ordinal": 2,
+      "line": 68,
+      "ordinal": 3,
       "rationale": "",
       "sequence": "docs/sdk/building-models.md#seq0",
       "sha1": "35d9323018862edc09c3d72ce98fd9f25328b279",
       "verdict": null
     },
-    "docs/sdk/building-models.md#3": {
+    "docs/sdk/building-models.md#4": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
@@ -4058,27 +4133,12 @@
       "family": "platform",
       "file": "docs/sdk/building-models.md",
       "language": "bash",
-      "line": 66,
-      "ordinal": 3,
+      "line": 74,
+      "ordinal": 4,
       "rationale": "",
       "sequence": null,
       "sha1": "ffbb8bf34225f298935ce731fec965acef7c4680",
       "verdict": "PASS-AS-WRITTEN"
-    },
-    "docs/sdk/building-models.md#4": {
-      "auto": "RUNNABLE-INDEPENDENT",
-      "class": "RUNNABLE-SEQUENCE",
-      "date": "2026-08-06",
-      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq1",
-      "family": "platform",
-      "file": "docs/sdk/building-models.md",
-      "language": "python",
-      "line": 72,
-      "ordinal": 4,
-      "rationale": "precondition: `instances/default/digital_twin/base` must have been built",
-      "sequence": "docs/sdk/building-models.md#seq1",
-      "sha1": "4078a90e5f9a1bd8a29303b918270f7a1b12c11d",
-      "verdict": null
     },
     "docs/sdk/building-models.md#5": {
       "auto": "RUNNABLE-INDEPENDENT",
@@ -4088,14 +4148,29 @@
       "family": "platform",
       "file": "docs/sdk/building-models.md",
       "language": "python",
-      "line": 92,
+      "line": 80,
       "ordinal": 5,
+      "rationale": "precondition: `instances/default/digital_twin/base` must have been built",
+      "sequence": "docs/sdk/building-models.md#seq1",
+      "sha1": "4078a90e5f9a1bd8a29303b918270f7a1b12c11d",
+      "verdict": null
+    },
+    "docs/sdk/building-models.md#6": {
+      "auto": "RUNNABLE-INDEPENDENT",
+      "class": "RUNNABLE-SEQUENCE",
+      "date": "2026-08-06",
+      "evidence": "chain member; the verdict and its evidence are owned by sequence docs/sdk/building-models.md#seq1",
+      "family": "platform",
+      "file": "docs/sdk/building-models.md",
+      "language": "python",
+      "line": 100,
+      "ordinal": 6,
       "rationale": "",
       "sequence": "docs/sdk/building-models.md#seq1",
       "sha1": "fc344b8b37f7ffb3c015ff5d44dd8395f562328e",
       "verdict": null
     },
-    "docs/sdk/building-models.md#6": {
+    "docs/sdk/building-models.md#7": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-INDEPENDENT",
       "date": "2026-08-06",
@@ -4103,8 +4178,8 @@
       "family": "platform",
       "file": "docs/sdk/building-models.md",
       "language": "python",
-      "line": 116,
-      "ordinal": 6,
+      "line": 124,
+      "ordinal": 7,
       "rationale": "",
       "sequence": null,
       "sha1": "10dd653cd4a93c35e4265d12db148f815e46ae3f",
@@ -5388,7 +5463,7 @@
         10,
         11,
         12,
-        13
+        16
       ],
       "rationale": "",
       "verdict": "PASS-AS-WRITTEN",
@@ -5452,7 +5527,7 @@
       "file": "docs/sdk/building-models.md",
       "members": [
         1,
-        2
+        3
       ],
       "rationale": "",
       "verdict": "PASS-AS-WRITTEN",
@@ -5463,8 +5538,8 @@
       "evidence": "Members [4,5] concatenated and run as one script in WS (block 5 is undefined without block 4's `buildings`/`connectivity`). Exit 0. manifest keys [artifacts, counts, created_at, environment, inputs, manifest_path]; tables [building_models, device_registry, end_use_loads, thermal_zones]; scenario_tables {scenario_device_registry: 12935 rows, scenario_summary: 5 rows}. The 12935/5 counts equal what the CLI path (seq0) produced, so the Python API and CLI agree.",
       "file": "docs/sdk/building-models.md",
       "members": [
-        4,
-        5
+        5,
+        6
       ],
       "rationale": "",
       "verdict": "PASS-AS-WRITTEN",

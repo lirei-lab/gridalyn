@@ -21,11 +21,19 @@ _LAZY_EXPORTS = {
     "check_artifact_policy": ("gridalyn.foundation.platform", "check_artifact_policy"),
     "file_reference": ("gridalyn.foundation.platform", "file_reference"),
     "find_workspace_root": ("gridalyn.foundation.platform", "find_workspace_root"),
+    "layout_from_environment": (
+        "gridalyn.foundation.platform",
+        "layout_from_environment",
+    ),
     "read_json_report": ("gridalyn.foundation.platform", "read_json_report"),
     "validate_report": ("gridalyn.foundation.platform", "validate_report"),
     "validate_workspace": ("gridalyn.foundation.platform", "validate_workspace"),
     "workspace_from_path": ("gridalyn.foundation.platform", "workspace_from_path"),
     "workspace_from_root": ("gridalyn.foundation.platform", "workspace_from_root"),
+    "workspace_from_environment": (
+        "gridalyn.foundation.platform",
+        "workspace_from_environment",
+    ),
     "write_manifest": ("gridalyn.foundation.platform", "write_manifest"),
     "write_report": ("gridalyn.foundation.platform", "write_report"),
 }

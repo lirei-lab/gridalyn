@@ -24,6 +24,14 @@ def test_artifact_layout_defines_platform_roots(tmp_path: Path) -> None:
     assert layout.project_outputs("demo") == tmp_path / "projects" / "demo" / "outputs"
 
 
+def test_artifact_layout_selects_named_twin_instance(tmp_path: Path) -> None:
+    layout = ArtifactLayout(tmp_path, instance="proj_x")
+
+    assert layout.digital_twin == tmp_path / "instances" / "proj_x" / "digital_twin"
+    assert layout.base == tmp_path / "instances" / "proj_x" / "digital_twin" / "base"
+    assert layout.default_instance == tmp_path / "instances" / "default"
+
+
 def test_workspace_discovers_project_manifests(tmp_path: Path) -> None:
     (tmp_path / "projects" / "alpha").mkdir(parents=True)
     (tmp_path / "projects" / "alpha" / "project.yaml").write_text("metadata: {}\n")
@@ -39,7 +47,7 @@ def test_workspace_discovers_root_from_nested_project_archive(tmp_path: Path) ->
     workspace_root = tmp_path / "archive"
     project_root = workspace_root / "projects" / "demo" / "scripts"
     project_root.mkdir(parents=True)
-    (workspace_root / "pyproject.toml").write_text("[project]\nname = \"gridalyn\"\n")
+    (workspace_root / "pyproject.toml").write_text('[project]\nname = "gridalyn"\n')
     (workspace_root / "gridalyn").mkdir()
     (workspace_root / "projects" / "demo" / "project.yaml").write_text("metadata: {}\n")
 

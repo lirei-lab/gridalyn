@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -167,6 +168,7 @@ def build_manifest(
     root: Path,
     dry_run: bool,
     results: list[dict[str, Any]],
+    instance: str = "default",
 ) -> dict[str, Any]:
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -176,22 +178,24 @@ def build_manifest(
         "step_count": len(steps),
         "steps": steps,
         "results": results,
+        "instance": instance,
         "artifacts": {
             "dashboard_catalog": (
-                "instances/default/digital_twin/dashboard/catalog.json"
+                f"instances/{instance}/digital_twin/dashboard/catalog.json"
             ),
             "building_model_manifest": (
-                "instances/default/digital_twin/models/building_model_manifest.json"
+                f"instances/{instance}/digital_twin/models/"
+                "building_model_manifest.json"
             ),
             "scenario_model_manifest": (
-                "instances/default/digital_twin/models/scenarios/"
+                f"instances/{instance}/digital_twin/models/scenarios/"
                 "scenario_model_manifest.json"
             ),
             "semantic_manifest": (
-                "instances/default/digital_twin/semantic/graph_manifest.json"
+                f"instances/{instance}/digital_twin/semantic/graph_manifest.json"
             ),
             "canonical_report_manifest": (
-                "instances/default/digital_twin/reports/canonical/"
+                f"instances/{instance}/digital_twin/reports/canonical/"
                 "digital_twin_report_manifest.json"
             ),
         },
@@ -213,24 +217,39 @@ def run_digital_twin_build(
     dry_run: bool = False,
     continue_on_error: bool = False,
     manifest_path: Path | None = None,
+    instance: str = "default",
+    capabilities: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Execute or describe the digital-twin build plan."""
+    """Execute or describe the digital-twin build plan.
+
+    ``instance`` selects the named twin under ``<root>/instances/<instance>``
+    to build; ``capabilities`` declares which capability layers to include
+    (``None`` keeps the legacy ``ev-hosting`` + ``flexibility`` build, an
+    explicit set builds the model-first core plus exactly those layers). Both
+    are threaded into the layer scripts via ``GRIDALYN_INSTANCE`` and
+    ``GRIDALYN_WORKSPACE_ROOT`` so every step materializes on the selected
+    instance.
+    """
     steps = build_digital_twin_steps(
         skip_heavy=skip_heavy,
         include_network_impact=include_network_impact,
+        capabilities=capabilities,
     )
-    layout = ArtifactLayout(root)
+    layout = ArtifactLayout(root, instance=instance)
     results: list[dict[str, Any]] = []
     for step in steps:
         display_command = ["python", *step["command"]]
         command = [sys.executable, *step["command"]]
+        env = os.environ.copy()
+        env["GRIDALYN_INSTANCE"] = instance
+        env["GRIDALYN_WORKSPACE_ROOT"] = str(root)
         if dry_run:
             results.append(
                 {"name": step["name"], "status": "planned", "command": display_command}
             )
             continue
 
-        completed = subprocess.run(command, cwd=root, check=False)
+        completed = subprocess.run(command, cwd=root, env=env, check=False)
         result = {
             "name": step["name"],
             "status": "ok" if completed.returncode == 0 else "failed",
@@ -240,7 +259,11 @@ def run_digital_twin_build(
         results.append(result)
         if completed.returncode != 0 and not continue_on_error:
             manifest = build_manifest(
-                steps, root=root, dry_run=dry_run, results=results
+                steps,
+                root=root,
+                dry_run=dry_run,
+                results=results,
+                instance=instance,
             )
             write_build_manifest(
                 manifest_path or layout.reports / "digital_twin_build_manifest.json",
@@ -250,7 +273,9 @@ def run_digital_twin_build(
                 f"Digital twin build step failed: {step['name']} ({completed.returncode})"
             )
 
-    manifest = build_manifest(steps, root=root, dry_run=dry_run, results=results)
+    manifest = build_manifest(
+        steps, root=root, dry_run=dry_run, results=results, instance=instance
+    )
     write_build_manifest(
         manifest_path or layout.reports / "digital_twin_build_manifest.json",
         manifest,

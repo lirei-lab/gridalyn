@@ -530,6 +530,42 @@ Rebuild the core digital twin:
 uv run gridalyn twin build
 ```
 
+### A general mechanism: any project's twin
+
+`gridalyn twin` is not a single hard-wired build for the `default` instance
+and the flexibility/EV study. It is a **general mechanism**: every command
+selects a named **instance** (which twin to operate on) and the build declares
+which **capability layers** to include. A project's twin materializes under
+`instances/<name>/digital_twin/`, and the layer scripts resolve that selection
+through `GRIDALYN_INSTANCE` / `GRIDALYN_WORKSPACE_ROOT`, so the same general
+commands build, regenerate, and inspect *any* twin.
+
+Select the instance and declare the capabilities explicitly:
+
+```bash
+uv run gridalyn twin build --instance <name> --capabilities "" --dry-run
+```
+
+`--capabilities` is a comma-separated set of on-demand layers. An empty value
+declares **none** — a generic model-first build (base + building models +
+semantic core + reports, no EV or flexibility stages). `flexibility`,
+`ev-hosting`, or both reproduce the layer content of the legacy build:
+
+```bash
+uv run gridalyn twin build --instance <name> --capabilities flexibility
+```
+
+The per-layer regeneration commands accept the same `--instance` and `--root`
+flags, so a single layer can be rebuilt on any twin:
+
+```bash
+uv run gridalyn twin building-models --instance <name>
+uv run gridalyn twin dashboard-catalog --instance <name>
+```
+
+Omitting `--instance` and `--capabilities` keeps the canonical default twin
+exactly as before: instance `default`, legacy `ev-hosting,flexibility` layers.
+
 The first step, `export_base`, reads the topology caches
 `pp_net_cache.pkl` and `pg_graph_cache.pkl` from
 `instances/default/digital_twin/cache/`. That directory is git-ignored and is
@@ -551,8 +587,10 @@ For fast CI or local checks, combine `--skip-heavy` with
 planning the semantic, dashboard, report, and surrogate metadata steps.
 
 Every run writes
-`instances/default/digital_twin/reports/digital_twin_build_manifest.json` with
-the planned/executed steps and canonical downstream artifacts.
+`instances/<instance>/digital_twin/reports/digital_twin_build_manifest.json`
+(the default instance writes `instances/default/...`) with the planned/executed
+steps and canonical downstream artifacts, including the selected `instance`
+and the declared capability steps.
 
 ## Operational reports
 

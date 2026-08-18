@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,12 +17,18 @@ FILE_KINDS = {
     "transformers": "powerflow_transformers",
 }
 
-#: Workspace-relative root of the default digital-twin instance. Summaries
-#: written before the 2026-05-19 instance-path unification declared their
-#: parquet locations relative to the *instance* (``digital_twin/...``) rather
-#: than to the workspace, so paths in that older form need re-anchoring here.
-_INSTANCE_ROOT = "instances/default"
 _TWIN_PREFIX = "digital_twin/"
+
+
+def _instance_root() -> str:
+    """Workspace-relative root of the selected digital-twin instance.
+
+    The twin CLI threads the selected instance via ``GRIDALYN_INSTANCE``, so
+    the catalog generated for *any* named instance re-anchors its declared
+    paths onto that instance rather than always onto ``instances/default``.
+    """
+    instance = os.environ.get("GRIDALYN_INSTANCE", "default")
+    return f"instances/{instance}"
 
 
 def _anchor(declared: str) -> str:
@@ -38,7 +45,7 @@ def _anchor(declared: str) -> str:
     """
     text = str(declared).replace("\\", "/")
     if text.startswith(_TWIN_PREFIX):
-        return f"{_INSTANCE_ROOT}/{text}"
+        return f"{_instance_root()}/{text}"
     return text
 
 
@@ -64,7 +71,7 @@ def _paths(scenario_id: str, summary: dict[str, Any], root: Path) -> dict[str, s
     paths = {}
     for kind, suffix in FILE_KINDS.items():
         fallback = (
-            f"{_INSTANCE_ROOT}/{_TWIN_PREFIX}timeseries/"
+            f"{_instance_root()}/{_TWIN_PREFIX}timeseries/"
             f"{scenario_id}_{suffix}.parquet"
         )
         paths[kind] = _web_path(_anchor(declared.get(kind) or fallback), root)

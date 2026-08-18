@@ -23,7 +23,7 @@ uv run gridalyn market --help
 | `gridalyn doctor` | Inspect the local install, workspace, projects, and optional capabilities. |
 | `gridalyn validate` | Run the unified workspace validation ladder. |
 | `gridalyn project` | Initialize, validate, plan, run, inspect, and regression-test governed projects. |
-| `gridalyn twin` | Build and inspect digital twin artifacts. |
+| `gridalyn twin` | Build and inspect digital twin artifacts — any named instance, with declared capability layers. |
 | `gridalyn market` | Generate providers, score network impact, clear flexibility, dispatch, settle, and verify operations. |
 | `gridalyn semantic` | Build and validate ontology-aligned graph artifacts. |
 | `gridalyn dashboard` | Generate dashboard catalogs and related metadata. |
@@ -48,6 +48,8 @@ uv run gridalyn project verify-all
 
 ```bash
 uv run gridalyn twin build --dry-run --skip-heavy
+uv run gridalyn twin build --instance <name> --capabilities "" --dry-run
+uv run gridalyn twin building-models --instance <name>
 uv run gridalyn twin clip-buildings --buildings-file buildings.geojson --polygon-file polygon.json --output-file clipped.geojson
 uv run gridalyn twin prepare-microsoft-buildings --input-file partition.geojsonl.gz --polygon-file polygon.json --output-file buildings.geojson
 uv run gridalyn semantic build --profile north_america
@@ -55,6 +57,12 @@ uv run gridalyn semantic validate
 uv run gridalyn dashboard catalog
 uv run gridalyn platform check-artifacts --summary-only
 ```
+
+`gridalyn twin` is a general mechanism for any project's twin: `--instance`
+selects which named twin under `instances/<name>/digital_twin/` to operate on
+(default `default`), and `build --capabilities` declares which on-demand
+layers to include (an empty value is a generic model-first build; the legacy
+`ev-hosting,flexibility` layers are the default when the flag is omitted).
 
 Use the stricter validation path when you want project artifacts and the
 configured flexibility regression:

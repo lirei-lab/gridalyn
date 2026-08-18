@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment
 from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
@@ -18,7 +18,7 @@ from gridalyn.twin.network import NetworkModelRepository
 
 ROOT = Path(__file__).resolve().parents[4]
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
@@ -50,9 +50,13 @@ def generate_flexibility_provider_artifacts(
         )
     connectivity = network_repository.load_model().connectivity
     scenario_model_dir = models_dir / "scenarios"
-    scenario_device_paths = sorted(scenario_model_dir.glob("S*_device_registry.parquet"))
+    scenario_device_paths = sorted(
+        scenario_model_dir.glob("S*_device_registry.parquet")
+    )
     scenario_devices = (
-        pd.concat([pd.read_parquet(path) for path in scenario_device_paths], ignore_index=True)
+        pd.concat(
+            [pd.read_parquet(path) for path in scenario_device_paths], ignore_index=True
+        )
         if scenario_device_paths
         else None
     )
@@ -81,7 +85,9 @@ def generate_flexibility_provider_artifacts(
             },
             "inputs": {
                 "asset_registry": _relpath(scenario_dir / "asset_registry.parquet"),
-                "building_grid_connectivity": _relpath(base_dir / "building_grid_connectivity.parquet"),
+                "building_grid_connectivity": _relpath(
+                    base_dir / "building_grid_connectivity.parquet"
+                ),
                 "scenario_model_devices": [
                     _relpath(path) for path in scenario_device_paths
                 ],

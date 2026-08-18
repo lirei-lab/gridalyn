@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Any
 
@@ -30,14 +31,17 @@ def build_digital_twin_reports(
     *,
     root: Path = _DEFAULT_ROOT,
     out_dir: Path | None = None,
+    instance: str = "default",
 ) -> dict[str, Any]:
     """Build the canonical digital-twin reports for a workspace root.
 
     Args:
-        root: Workspace root containing ``instances/default/digital_twin``.
-            Defaults to the current directory, matching ``ArtifactLayout``.
+        root: Workspace root containing
+            ``instances/<instance>/digital_twin``. Defaults to the current
+            directory, matching ``ArtifactLayout``.
         out_dir: Destination directory for the canonical reports; defaults to
-            ``<root>/instances/default/digital_twin/reports/canonical``.
+            ``<root>/instances/<instance>/digital_twin/reports/canonical``.
+        instance: Named twin instance to report on (default: ``default``).
 
     Returns:
         The canonical report manifest, mapping report ids to written paths.
@@ -48,13 +52,13 @@ def build_digital_twin_reports(
             inputs and writing degenerate reports outside a workspace.
     """
     root = root.resolve()
-    layout = ArtifactLayout(root)
+    layout = ArtifactLayout(root, instance=instance)
     if not layout.digital_twin.is_dir():
         raise FileNotFoundError(
             f"{layout.digital_twin}: no digital-twin artifact tree under root "
             f"{root}; canonical reports would be built from empty inputs and "
             "written outside a workspace. Run from a workspace root containing "
-            "instances/default/digital_twin, or pass root=<workspace> "
+            "instances/<instance>/digital_twin, or pass root=<workspace> "
             "(--root on the command line)."
         )
     out_dir = (out_dir or (layout.reports / "canonical")).resolve()
@@ -177,13 +181,20 @@ def main() -> None:
         type=Path,
         default=_DEFAULT_ROOT,
         help=(
-            "Workspace root containing instances/default/digital_twin "
+            "Workspace root containing instances/<instance>/digital_twin "
             "(default: current directory)."
         ),
     )
+    parser.add_argument(
+        "--instance",
+        default=os.environ.get("GRIDALYN_INSTANCE", "default"),
+        help="Named twin instance (default: GRIDALYN_INSTANCE or 'default').",
+    )
     parser.add_argument("--out-dir", type=Path, default=None)
     args = parser.parse_args()
-    manifest = build_digital_twin_reports(root=args.root, out_dir=args.out_dir)
+    manifest = build_digital_twin_reports(
+        root=args.root, out_dir=args.out_dir, instance=args.instance
+    )
     print(f"Built digital-twin canonical reports: {len(manifest['reports'])} reports")
 
 

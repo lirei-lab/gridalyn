@@ -11,11 +11,11 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 
-from gridalyn.simulation.analytics.network_impact.surrogate import (
+from gridalyn.simulation.analytics.network_impact.surrogate import (  # noqa: E402
     build_edge_features,
     build_graph_snapshot,
     build_node_features,
@@ -24,7 +24,6 @@ from gridalyn.simulation.analytics.network_impact.surrogate import (
     build_training_dataset,
     write_surrogate_artifacts,
 )
-
 
 DEFAULT_PROVIDER_REGISTRY = DEFAULT_LAYOUT.flexibility / "provider_registry.parquet"
 DEFAULT_SENSITIVITY = DEFAULT_LAYOUT.flexibility / "network_sensitivity.parquet"
@@ -41,7 +40,9 @@ def _relpath(path: Path) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario-id", default="S4")
-    parser.add_argument("--provider-registry", type=Path, default=DEFAULT_PROVIDER_REGISTRY)
+    parser.add_argument(
+        "--provider-registry", type=Path, default=DEFAULT_PROVIDER_REGISTRY
+    )
     parser.add_argument("--sensitivity", type=Path, default=DEFAULT_SENSITIVITY)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     return parser.parse_args()
@@ -52,10 +53,14 @@ def main() -> int:
     providers = pd.read_parquet(args.provider_registry)
     sensitivity = pd.read_parquet(args.sensitivity)
 
-    nodes, edges = build_graph_snapshot(providers, sensitivity, scenario_id=args.scenario_id)
+    nodes, edges = build_graph_snapshot(
+        providers, sensitivity, scenario_id=args.scenario_id
+    )
     node_features = build_node_features(nodes)
     edge_features = build_edge_features(edges)
-    training = build_training_dataset(providers, sensitivity, scenario_id=args.scenario_id)
+    training = build_training_dataset(
+        providers, sensitivity, scenario_id=args.scenario_id
+    )
     predictions = build_provider_impact_predictions(training)
     report = build_surrogate_report(
         nodes,

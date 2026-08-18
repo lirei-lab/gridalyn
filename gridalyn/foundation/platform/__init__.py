@@ -34,6 +34,10 @@ _LAZY_EXPORTS = {
         "gridalyn.foundation.platform.workspace",
         "find_workspace_root",
     ),
+    "layout_from_environment": (
+        "gridalyn.foundation.platform.workspace",
+        "layout_from_environment",
+    ),
     "workspace_from_path": (
         "gridalyn.foundation.platform.workspace",
         "workspace_from_path",
@@ -41,6 +45,10 @@ _LAZY_EXPORTS = {
     "workspace_from_root": (
         "gridalyn.foundation.platform.workspace",
         "workspace_from_root",
+    ),
+    "workspace_from_environment": (
+        "gridalyn.foundation.platform.workspace",
+        "workspace_from_environment",
     ),
     "ReportMetadata": ("gridalyn.foundation.platform.reports", "ReportMetadata"),
     "build_report": ("gridalyn.foundation.platform.reports", "build_report"),

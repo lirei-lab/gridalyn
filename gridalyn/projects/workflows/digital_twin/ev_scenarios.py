@@ -12,15 +12,14 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.assets.datagen.agents import L2_MID_KW
-
+from gridalyn.twin.network import NetworkModelRepository
 
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_OUT_DIR = DEFAULT_LAYOUT.scenarios
 DEFAULT_CONFIG_PATH = ROOT / "configs" / "grid" / "config.json"
@@ -169,7 +168,9 @@ def generate_ev_scenarios(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate EV scenario overlays for the digital twin.")
+    parser = argparse.ArgumentParser(
+        description="Generate EV scenario overlays for the digital twin."
+    )
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)

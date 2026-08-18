@@ -16,12 +16,11 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 DEFAULT_TIMESERIES_DIR = DEFAULT_LAYOUT.timeseries
 DEFAULT_OUT = DEFAULT_LAYOUT.reports / "mv_lv_transformer_overload_report.json"
 DEFAULT_SCENARIOS = ["S0", "S1", "S2", "S3", "S4"]
@@ -55,8 +54,7 @@ def _record_from_row(row: pd.Series) -> dict[str, Any]:
 def _scenario_report(path: Path, scenario_id: str, top_n: int) -> dict[str, Any]:
     df = pd.read_parquet(path)
     mv_lv = df[
-        (df["vn_hv_kv"].round(6) == 25.0)
-        & (df["vn_lv_kv"].round(6) == 0.4)
+        (df["vn_hv_kv"].round(6) == 25.0) & (df["vn_lv_kv"].round(6) == 0.4)
     ].copy()
     if mv_lv.empty:
         raise RuntimeError(f"{scenario_id}: no MV/LV 25/0.4 kV transformers found.")
@@ -64,7 +62,12 @@ def _scenario_report(path: Path, scenario_id: str, top_n: int) -> dict[str, Any]
     idx = mv_lv.groupby("trafo_idx")["loading_percent"].idxmax()
     peaks = (
         mv_lv.loc[idx]
-        .rename(columns={"timestamp": "peak_timestamp", "loading_percent": "peak_loading_percent"})
+        .rename(
+            columns={
+                "timestamp": "peak_timestamp",
+                "loading_percent": "peak_loading_percent",
+            }
+        )
         .sort_values("peak_loading_percent", ascending=False)
         .reset_index(drop=True)
     )
@@ -88,30 +91,52 @@ def _scenario_report(path: Path, scenario_id: str, top_n: int) -> dict[str, Any]
         "n_mv_lv_transformers": int(peaks["trafo_idx"].nunique()),
         "n_timestamps": int(mv_lv["timestamp"].nunique()),
         "time_transformer_points": total_points,
-        "overloaded_transformers_count": int((peaks["peak_loading_percent"] > 100.0).sum()),
-        "near_overload_transformers_over_90_count": int((peaks["peak_loading_percent"] > 90.0).sum()),
-        "warning_transformers_over_80_count": int((peaks["peak_loading_percent"] > 80.0).sum()),
+        "overloaded_transformers_count": int(
+            (peaks["peak_loading_percent"] > 100.0).sum()
+        ),
+        "near_overload_transformers_over_90_count": int(
+            (peaks["peak_loading_percent"] > 90.0).sum()
+        ),
+        "warning_transformers_over_80_count": int(
+            (peaks["peak_loading_percent"] > 80.0).sum()
+        ),
         "overloaded_time_transformer_points": overloaded_points,
         "near_overload_time_transformer_points_over_90": over_90_points,
         "warning_time_transformer_points_over_80": over_80_points,
-        "overloaded_time_transformer_share": _round(overloaded_points / total_points, 8),
-        "near_overload_time_transformer_share_over_90": _round(over_90_points / total_points, 8),
-        "warning_time_transformer_share_over_80": _round(over_80_points / total_points, 8),
+        "overloaded_time_transformer_share": _round(
+            overloaded_points / total_points, 8
+        ),
+        "near_overload_time_transformer_share_over_90": _round(
+            over_90_points / total_points, 8
+        ),
+        "warning_time_transformer_share_over_80": _round(
+            over_80_points / total_points, 8
+        ),
         "max_loading_percent": _round(worst["peak_loading_percent"], 4),
-        "max_overload_percent_points": _round(max(0.0, float(worst["peak_loading_percent"]) - 100.0), 4),
-        "min_headroom_to_100_percent_points": _round(100.0 - float(worst["peak_loading_percent"]), 4),
+        "max_overload_percent_points": _round(
+            max(0.0, float(worst["peak_loading_percent"]) - 100.0), 4
+        ),
+        "min_headroom_to_100_percent_points": _round(
+            100.0 - float(worst["peak_loading_percent"]), 4
+        ),
         "worst_transformer": _record_from_row(worst),
-        "top_transformers": [_record_from_row(row) for _, row in peaks.head(top_n).iterrows()],
+        "top_transformers": [
+            _record_from_row(row) for _, row in peaks.head(top_n).iterrows()
+        ],
     }
 
 
-def build_report(timeseries_dir: Path, scenarios: list[str], out_path: Path, top_n: int) -> None:
+def build_report(
+    timeseries_dir: Path, scenarios: list[str], out_path: Path, top_n: int
+) -> None:
     scenario_reports = []
     for scenario_id in scenarios:
         path = timeseries_dir / f"{scenario_id}_powerflow_transformers.parquet"
         scenario_reports.append(_scenario_report(path, scenario_id, top_n))
 
-    any_overloaded = any(item["overloaded_transformers_count"] > 0 for item in scenario_reports)
+    any_overloaded = any(
+        item["overloaded_transformers_count"] > 0 for item in scenario_reports
+    )
     max_item = max(scenario_reports, key=lambda item: item["max_loading_percent"])
     report = {
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -128,11 +153,15 @@ def build_report(timeseries_dir: Path, scenarios: list[str], out_path: Path, top
             "max_loading_percent": max_item["max_loading_percent"],
             "max_loading_scenario": max_item["scenario_id"],
             "max_overload_percent_points": max_item["max_overload_percent_points"],
-            "min_headroom_to_100_percent_points": max_item["min_headroom_to_100_percent_points"],
+            "min_headroom_to_100_percent_points": max_item[
+                "min_headroom_to_100_percent_points"
+            ],
             "interpretation": (
-                "No MV/LV transformer exceeds 100% loading in the simulated S0-S4 scenarios."
+                "No MV/LV transformer exceeds 100% loading in the simulated "
+                "S0-S4 scenarios."
                 if not any_overloaded
-                else "At least one MV/LV transformer exceeds 100% loading in the simulated scenarios."
+                else "At least one MV/LV transformer exceeds 100% loading in "
+                "the simulated scenarios."
             ),
         },
         "scenarios": scenario_reports,

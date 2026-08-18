@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from gridalyn.interfaces.cli.environment import configure_cli_environment
@@ -72,6 +73,37 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def _parse_capabilities(value: str | None) -> set[str] | None:
+    """Parse a comma-separated ``--capabilities`` value into a declared set.
+
+    ``None`` keeps the legacy build (``ev-hosting`` + ``flexibility`` assumed);
+    an empty string declares an explicit empty set, i.e. a generic model-first
+    build with no capability layers.
+    """
+
+    if value is None:
+        return None
+    return {cap.strip() for cap in value.split(",") if cap.strip()}
+
+
+def _set_instance_environment(args: argparse.Namespace) -> None:
+    """Thread the selected twin instance into a dispatched layer script.
+
+    Layer scripts resolve their artifact layout from
+    ``GRIDALYN_INSTANCE``/``GRIDALYN_WORKSPACE_ROOT`` via
+    ``layout_from_environment``, so a single general script can materialize on
+    any named twin instance of any workspace root. Both variables default to
+    the canonical ``default`` instance and current directory when unset, so
+    running a script directly resolves exactly what it did before these
+    variables existed.
+    """
+
+    root = getattr(args, "root", None)
+    if root is not None:
+        os.environ["GRIDALYN_WORKSPACE_ROOT"] = str(Path(root).resolve())
+    os.environ["GRIDALYN_INSTANCE"] = getattr(args, "instance", "default")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -82,8 +114,26 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=_DEFAULT_ROOT,
         help=(
-            "Workspace root containing instances/default/digital_twin "
+            "Workspace root containing instances/<instance>/digital_twin "
             "(default: current directory)."
+        ),
+    )
+    build.add_argument(
+        "--instance",
+        default="default",
+        help=(
+            "Named twin instance under <root>/instances/<instance>/digital_twin "
+            "(default: default). Build any project's twin by selecting its "
+            "instance."
+        ),
+    )
+    build.add_argument(
+        "--capabilities",
+        default=None,
+        help=(
+            "Comma-separated capability layers to include (default: the legacy "
+            "ev-hosting,flexibility build). Pass an empty value for a generic "
+            "model-first build with no capability layers."
         ),
     )
     build.add_argument("--skip-heavy", action="store_true")
@@ -96,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Destination for the build manifest (default: "
-            "<root>/instances/default/digital_twin/reports/"
+            "<root>/instances/<instance>/digital_twin/reports/"
             "digital_twin_build_manifest.json)."
         ),
     )
@@ -133,6 +183,17 @@ def build_parser() -> argparse.ArgumentParser:
     }
     for command, main_func in workflow_commands.items():
         subcommand = subparsers.add_parser(command)
+        subcommand.add_argument(
+            "--root",
+            type=Path,
+            default=_DEFAULT_ROOT,
+            help="Workspace root (default: current directory).",
+        )
+        subcommand.add_argument(
+            "--instance",
+            default="default",
+            help="Named twin instance (default: default).",
+        )
         subcommand.set_defaults(handler=_workflow_handler(main_func))
 
     scripts = {
@@ -149,12 +210,24 @@ def build_parser() -> argparse.ArgumentParser:
     }
     for command, script_name in scripts.items():
         subcommand = subparsers.add_parser(command)
+        subcommand.add_argument(
+            "--root",
+            type=Path,
+            default=_DEFAULT_ROOT,
+            help="Workspace root (default: current directory).",
+        )
+        subcommand.add_argument(
+            "--instance",
+            default="default",
+            help="Named twin instance (default: default).",
+        )
         subcommand.set_defaults(handler=_script_handler(script_name))
     return parser
 
 
 def _workflow_handler(main_func):
     def handler(args: argparse.Namespace) -> int:
+        _set_instance_environment(args)
         return main_func(getattr(args, "script_args", []))
 
     return handler
@@ -162,6 +235,7 @@ def _workflow_handler(main_func):
 
 def _script_handler(script_name: str):
     def handler(args: argparse.Namespace) -> int:
+        _set_instance_environment(args)
         module_name = (
             f"gridalyn.projects.workflows.scripts.{script_name.removesuffix('.py')}"
         )
@@ -172,7 +246,7 @@ def _script_handler(script_name: str):
 
 def handle_build(args: argparse.Namespace) -> int:
     root = _require_workspace_root(args.root)
-    layout = ArtifactLayout(root)
+    layout = ArtifactLayout(root, instance=args.instance)
     manifest_path = args.manifest or (
         layout.reports / "digital_twin_build_manifest.json"
     )
@@ -183,11 +257,14 @@ def handle_build(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
         continue_on_error=args.continue_on_error,
         manifest_path=manifest_path,
+        instance=args.instance,
+        capabilities=_parse_capabilities(args.capabilities),
     )
     print(
         json.dumps(
             {
                 "dry_run": manifest["dry_run"],
+                "instance": manifest.get("instance", "default"),
                 "step_count": manifest["step_count"],
                 "manifest": _display_path(manifest_path),
                 "steps": [step["name"] for step in manifest["steps"]],

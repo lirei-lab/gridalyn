@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -75,16 +76,32 @@ def find_workspace_root(start: Path | str = ".") -> Path:
 
 @dataclass(frozen=True)
 class ArtifactLayout:
-    """Canonical artifact paths for a Gridalyn workspace."""
+    """Canonical artifact paths for a Gridalyn workspace.
+
+    A workspace can materialize more than one digital twin. The ``instance``
+    field selects which named twin under ``<root>/instances/`` the layout
+    points at; ``"default"`` is the canonical workspace twin and the
+    unchanged default for existing callers. Commands, scripts, tests,
+    documentation, and dashboard mounts resolve through
+    ``ArtifactLayout(root, instance=...)`` so that ``gridalyn twin`` is a
+    general mechanism for *any* twin of *any* project, not a single
+    hard-wired instance.
+    """
 
     root: Path | str = "."
+    instance: str = "default"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root", Path(self.root).resolve())
+        if not isinstance(self.instance, str) or not self.instance.strip():
+            raise ValueError(
+                f"instance must be a non-empty name, got {self.instance!r}"
+            )
+        object.__setattr__(self, "instance", self.instance)
 
     @property
     def digital_twin(self) -> Path:
-        return self.default_instance / "digital_twin"
+        return self.instance_dir / "digital_twin"
 
     @property
     def cache(self) -> Path:
@@ -135,7 +152,15 @@ class ArtifactLayout:
         return self.root / "instances"
 
     @property
+    def instance_dir(self) -> Path:
+        """Directory of the selected named twin instance."""
+
+        return self.instances / self.instance
+
+    @property
     def default_instance(self) -> Path:
+        """Legacy alias for the canonical ``default`` instance directory."""
+
         return self.instances / "default"
 
     @property
@@ -158,16 +183,20 @@ class GridalynWorkspace:
     """A repository or application workspace using Gridalyn artifact contracts."""
 
     root: Path | str = "."
+    instance: str = "default"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root", Path(self.root).resolve())
-        object.__setattr__(self, "layout", ArtifactLayout(self.root))
+        object.__setattr__(self, "instance", self.instance or "default")
+        object.__setattr__(self, "layout", ArtifactLayout(self.root, self.instance))
 
     layout: ArtifactLayout = field(init=False)
 
     @classmethod
-    def discover(cls, start: Path | str = ".") -> GridalynWorkspace:
-        return cls(find_workspace_root(start))
+    def discover(
+        cls, start: Path | str = ".", *, instance: str = "default"
+    ) -> GridalynWorkspace:
+        return cls(find_workspace_root(start), instance=instance)
 
     def project_paths(self) -> list[Path]:
         projects_root = self.layout.projects
@@ -183,22 +212,70 @@ class GridalynWorkspace:
         return self.layout.project(name)
 
 
-def workspace_from_root(root: Path | str = ".") -> GridalynWorkspace:
+def layout_from_environment(
+    *,
+    default_root: Path | str = ".",
+    instance_env: str = "GRIDALYN_INSTANCE",
+    root_env: str = "GRIDALYN_WORKSPACE_ROOT",
+) -> ArtifactLayout:
+    """Resolve a twin layout from CLI-threaded environment variables.
+
+    ``gridalyn twin`` sets ``GRIDALYN_WORKSPACE_ROOT`` and
+    ``GRIDALYN_INSTANCE`` before dispatching a layer script, so every twin
+    layer script can materialize on *any* named instance of *any* workspace
+    without knowing the workspace root or instance itself. When the variables
+    are unset (scripts run directly), the layout falls back to the script's
+    own default root and the canonical ``default`` instance — unchanged from
+    pre-generalization behaviour.
+    """
+
+    instance = os.environ.get(instance_env) or "default"
+    root = os.environ.get(root_env) or str(default_root)
+    return ArtifactLayout(root, instance=instance)
+
+
+def workspace_from_root(
+    root: Path | str = ".", *, instance: str = "default"
+) -> GridalynWorkspace:
     """Create a workspace object from a repository root."""
 
-    return GridalynWorkspace(root)
+    return GridalynWorkspace(root, instance=instance)
 
 
-def workspace_from_path(start: Path | str = ".") -> GridalynWorkspace:
+def workspace_from_environment(
+    *,
+    default_root: Path | str = ".",
+    instance_env: str = "GRIDALYN_INSTANCE",
+    root_env: str = "GRIDALYN_WORKSPACE_ROOT",
+) -> GridalynWorkspace:
+    """Resolve a twin workspace from CLI-threaded environment variables.
+
+    Companion to :func:`layout_from_environment` for scripts that bind a
+    ``GridalynWorkspace`` instead of a bare layout (e.g. the base exporter).
+    """
+
+    layout = layout_from_environment(
+        default_root=default_root,
+        instance_env=instance_env,
+        root_env=root_env,
+    )
+    return GridalynWorkspace(layout.root, instance=layout.instance)
+
+
+def workspace_from_path(
+    start: Path | str = ".", *, instance: str = "default"
+) -> GridalynWorkspace:
     """Create a workspace object by discovering the nearest Gridalyn root."""
 
-    return GridalynWorkspace.discover(start)
+    return GridalynWorkspace.discover(start, instance=instance)
 
 
 __all__ = [
     "ArtifactLayout",
     "GridalynWorkspace",
     "find_workspace_root",
+    "layout_from_environment",
+    "workspace_from_environment",
     "workspace_from_path",
     "workspace_from_root",
 ]

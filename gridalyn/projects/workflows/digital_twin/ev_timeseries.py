@@ -14,12 +14,11 @@ import pandas as pd
 
 from gridalyn.assets.datagen.agents import EVCharger
 
-
 ROOT = Path(__file__).resolve().parents[4]
 
-from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation import layout_from_environment  # noqa: E402
 
-DEFAULT_LAYOUT = ArtifactLayout(ROOT)
+DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
 DEFAULT_OUT_DIR = DEFAULT_LAYOUT.timeseries
@@ -87,7 +86,9 @@ def generate_ev_timeseries(
     scenario_index = _load_json(scenario_dir / "index.json")
     config = _load_json(config_path)
 
-    dt_min = int(resolution_minutes or config.get("simulation", {}).get("resolution_minutes", 5))
+    dt_min = int(
+        resolution_minutes or config.get("simulation", {}).get("resolution_minutes", 5)
+    )
     steps_per_day = int(24 * 60 / dt_min)
     minutes = np.arange(0, 24 * 60, dt_min, dtype=np.int32)
     if len(minutes) != steps_per_day:
@@ -98,7 +99,9 @@ def generate_ev_timeseries(
     building_ids = buildings["building_id"].to_numpy()
     load_ids = buildings["load_id"].to_numpy()
     pandapower_loads = buildings["pandapower_load"].astype(np.int64).to_numpy()
-    timestamps = pd.date_range(start_timestamp, periods=steps_per_day, freq=f"{dt_min}min").astype(str)
+    timestamps = pd.date_range(
+        start_timestamp, periods=steps_per_day, freq=f"{dt_min}min"
+    ).astype(str)
 
     assignment_seed = int(scenario_index["assignment_seed"])
     scenario_ids = sorted(assignments["scenario_id"].unique(), key=_scenario_sort_key)
@@ -111,9 +114,15 @@ def generate_ev_timeseries(
             .sort_values("pandapower_load")
             .reset_index(drop=True)
         )
-        ordered_buildings = buildings.sort_values("pandapower_load").reset_index(drop=True)
-        if not scenario_assignments["building_id"].equals(ordered_buildings["building_id"]):
-            raise RuntimeError(f"{scenario_id}: assignment rows do not align with building order.")
+        ordered_buildings = buildings.sort_values("pandapower_load").reset_index(
+            drop=True
+        )
+        if not scenario_assignments["building_id"].equals(
+            ordered_buildings["building_id"]
+        ):
+            raise RuntimeError(
+                f"{scenario_id}: assignment rows do not align with building order."
+            )
 
         matrix = np.zeros((steps_per_day, len(ordered_buildings)), dtype=np.float32)
         active = scenario_assignments.loc[scenario_assignments["has_ev"]]
@@ -187,7 +196,9 @@ def generate_ev_timeseries(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate digital-twin EV load time series.")
+    parser = argparse.ArgumentParser(
+        description="Generate digital-twin EV load time series."
+    )
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--scenario-dir", type=Path, default=DEFAULT_SCENARIO_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
