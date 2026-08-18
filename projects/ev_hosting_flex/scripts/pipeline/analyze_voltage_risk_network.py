@@ -144,7 +144,7 @@ def derive_voltage_network(script: ProjectScript) -> dict[str, Any]:
     cold_days = [int(d) for d in np.where(tday < float(COLD_DAY_TMEAN_C))[0]]
 
     # ── HQ-style sizing (mutates net trafo/lines/substation in place) ──────
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_loadbus = sizing["size_by_loadbus"]
 
     # ── Per-load base by cluster size (annual, one deterministic realization) ─

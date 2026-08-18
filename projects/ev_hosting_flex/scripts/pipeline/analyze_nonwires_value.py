@@ -201,7 +201,7 @@ def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
     design_day = int(np.argmin(tday))
     n_cold_days = int((tday < float(COLD_DAY_TMEAN_C)).sum())
 
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_trafo = sizing["size_by_trafo"]
     kva_by_size = sizing["kva_by_size"]
     pf = float(POWER_FACTOR)

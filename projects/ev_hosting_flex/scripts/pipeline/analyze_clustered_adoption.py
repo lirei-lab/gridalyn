@@ -255,7 +255,7 @@ def derive_clustered(script: ProjectScript) -> dict[str, Any]:
     hod0 = tmy_hour_of_day(temp)
     design_day = int(np.argmin(day_mean_temps(temp)))
 
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     base_by_size = sizing["base_by_size"]
     size_by_trafo = sizing["size_by_trafo"]
 

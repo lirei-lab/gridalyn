@@ -93,7 +93,7 @@ def derive_characterization(script: ProjectScript) -> dict[str, Any]:
     tday = day_mean_temps(temp)
     design_day = int(np.argmin(tday))
 
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     base_by_size = sizing["base_by_size"]
     size_by_loadbus = sizing["size_by_loadbus"]
     size_by_trafo = sizing["size_by_trafo"]

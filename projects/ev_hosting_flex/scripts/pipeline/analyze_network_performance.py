@@ -205,7 +205,7 @@ def derive_performance(script: ProjectScript) -> dict[str, Any]:
     from projects.ev_hosting_flex.scripts._annual import day_mean_temps
 
     design_day = int(np.argmin(day_mean_temps(temp)))
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_trafo = sizing["size_by_trafo"]
 
     pf = float(POWER_FACTOR)

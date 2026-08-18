@@ -365,7 +365,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
     hod0 = int(tmy_hour_of_day(temp))
     tday = day_mean_temps(temp)
     design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, cache_dir, temp, design_day, feeder_idx)
+    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_trafo = sizing["size_by_trafo"]
 
     pf = float(POWER_FACTOR)
