@@ -168,7 +168,7 @@ The semantic graph needs no extra — it is Parquet and pandas, both base
 dependencies — so `uv sync` alone is enough to build and validate it.
 
 Synthetic load and weather generation is documented in
-`docs/sdk/data-generation.md`; treat its output as a synthetic baseline unless
+`docs/components/assets.md`; treat its output as a synthetic baseline unless
 a project explicitly documents calibration.
 
 ## Quickstart
@@ -231,7 +231,7 @@ uv run --extra docs mkdocs serve -f docs/mkdocs.yml
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the architectural rules the
 tests enforce, and what to do when a change moves a study's pinned baseline;
-the operator verification protocol is in `docs/development/verification.md`.
+the operator verification protocol is in `docs/contributing/verification.md`.
 Participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md), and
 [SECURITY.md](SECURITY.md) covers how to report a vulnerability.
 

@@ -14,6 +14,7 @@ Domain help is delegated to the domain parser:
 uv run gridalyn project --help
 uv run gridalyn twin --help
 uv run gridalyn market --help
+uv run gridalyn extension --help
 ```
 
 ## Main Command Groups
@@ -28,6 +29,7 @@ uv run gridalyn market --help
 | `gridalyn semantic` | Build and validate ontology-aligned graph artifacts. |
 | `gridalyn dashboard` | Generate dashboard catalogs and related metadata. |
 | `gridalyn platform` | Run platform hygiene and artifact-policy checks. |
+| `gridalyn extension` | List, validate, and scaffold extensions that register against a role without editing `gridalyn`. |
 
 ## Common Commands
 
@@ -56,7 +58,16 @@ uv run gridalyn semantic build --profile north_america
 uv run gridalyn semantic validate
 uv run gridalyn dashboard catalog
 uv run gridalyn platform check-artifacts --summary-only
+uv run gridalyn extension list
+uv run gridalyn extension new my_backend --role powerflow_backend --target /tmp/my-extensions
 ```
+
+`extension validate <id>` only resolves an **installed** extension — running
+it against a freshly scaffolded, not-yet-installed package exits 1 with a
+located error naming what is actually registered. Install the scaffolded
+package first (`pip install -e /tmp/my-extensions/my_backend`), then
+`gridalyn extension validate my_backend` succeeds. See
+[Write An Extension](../guides/write-an-extension.md) for the full loop.
 
 `gridalyn twin` is a general mechanism for any project's twin: `--instance`
 selects which named twin under `instances/<name>/digital_twin/` to operate on

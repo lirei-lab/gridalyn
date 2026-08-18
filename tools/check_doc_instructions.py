@@ -221,18 +221,26 @@ UNASSIGNED = "UNASSIGNED"
 FAMILY_PREFIXES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "getting-started",
-        ("docs/getting-started/", "docs/reference/", "README.md"),
+        ("docs/start/", "docs/reference/", "README.md"),
     ),
     (
         "platform",
         (
-            "docs/platform/",
-            "docs/tutorials/",
-            "docs/flexibility/",
-            "docs/workflows/",
-            "docs/projects/",
-            "docs/sdk/",
-            "docs/concepts/",
+            "docs/components/",
+            "docs/guides/",
+            # The Phase-22 restructure (2026-08-18) renamed the directories
+            # this family owns; the family itself -- a verification-ownership
+            # group, not a directory -- is unchanged, and so are its floors.
+            # ``getting-started/`` became ``start/``; ``platform/``,
+            # ``sdk/``, ``concepts/``, ``flexibility/`` and ``projects/``
+            # merged into ``components/`` (staged under ``components/_merge/``
+            # until wave 2 consumes them); ``tutorials/`` and ``workflows/``
+            # became ``guides/``; ``development/`` became ``contributing/``,
+            # with ``development/`` retained for the unpublished internal
+            # pages that tests still cite. Two pages changed family as a
+            # consequence -- ``build-your-own-project`` and ``reproducibility``
+            # moved from ``getting-started/`` into ``guides/`` -- and their
+            # ledger entries were re-filed to match, verdicts untouched.
             # Assigned to this family by orchestrator ruling during Phase 7:
             # the original three-family split left it unowned, and its
             # runnable blocks were executed under the platform family. Keeping
@@ -247,7 +255,7 @@ FAMILY_PREFIXES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "docs/index.md",
         ),
     ),
-    ("development", ("docs/development/",)),
+    ("development", ("docs/contributing/", "docs/development/")),
 )
 
 FAMILIES: tuple[str, ...] = tuple(name for name, _ in FAMILY_PREFIXES) + (UNASSIGNED,)

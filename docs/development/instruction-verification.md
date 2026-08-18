@@ -5,7 +5,7 @@ records how the documentation's runnable instructions were verified, what the
 gate enforces afterwards, what runs in CI, and — just as importantly — which
 instructions were deliberately **not** run and why.
 
-The sibling page `development/verification.md` covers verification of the *code*.
+The sibling page `contributing/verification.md` covers verification of the *code*.
 This one covers verification of the *documentation's instructions*: the commands
 a reader is told to type.
 
@@ -196,7 +196,7 @@ This is not hypothetical. It is recorded here because it happened:
 >
 > **And there were two, which is the part worth remembering.** The `README.md#4`
 > fix and this note were written together; the identical block at
-> `docs/getting-started/installation.md#2` — same removed extra, same
+> `docs/start/installation.md#2` — same removed extra, same
 > `RUNNABLE-INDEPENDENT` / `FIXED-DOC` verdict, same exit 2 — was missed at that
 > moment and found later, before shipping, by comparing **every** `--extra X`
 > named anywhere in `docs/` and `README.md` against
@@ -279,7 +279,7 @@ gate. The pin is derived from the corpus, so a new block instructing the study
 is red until the decision is extended to cover it.
 
 What was verified instead is every instruction that reads the study's contract
-without running it — `docs/sdk/public-contract.md#0` loads its YAML and passes.
+without running it — `docs/components/foundation.md#0` loads its YAML and passes.
 The operator command that would close the gap is:
 
 ```bash
@@ -314,7 +314,7 @@ gains them, not only when it already has some).
 The restructure moved the semantic-graph and falkordb pages to
 `docs/reference/`, which already owns a natural prefix under the
 `getting-started` family, and merged the reports page's one section into
-`docs/reference/reports.md` (same reasoning). Both ruled entries are now
+`docs/reference/report-schema.md` (same reasoning). Both ruled entries are now
 dead code and were removed from `FAMILY_PREFIXES`. Only `docs/index.md`
 remains — a single file at the docs root with no directory prefix to match,
 which is why it is the one entry that cannot fold away by a move.

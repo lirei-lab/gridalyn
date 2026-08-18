@@ -134,18 +134,44 @@ checker = _load_checker()
 # and the same 354 blocks. Each floor sits below the measured figure but far
 # above a token 1: a partially blind extractor -- one that only recognised ```
 # and not ~~~, say -- also reports "everything is classified".
-_MIN_BLOCKS = 300
-_MIN_FILES = 70
+# Phase 22 (2026-08-18) consolidated 39 pages that separately re-explained the
+# architecture, the twin and the semantic graph into 8 canonical component
+# pages, each holding one focused, verified example instead of several
+# overlapping ones. Measured after consolidation: 244 blocks (was 354), 49
+# files scanned (was 78), 114 runnable blocks (was 149) -- fewer, not thinner:
+# every runnable block in the 8 new pages was executed and its exact output
+# recorded (see docs/components/*.md#0-#5 entries below, verdict
+# PASS-AS-WRITTEN, dated 2026-08-18). Floors follow the measured reduction,
+# set safely below it rather than at it, same discipline as the family floors
+# below.
+_MIN_BLOCKS = 220
+_MIN_FILES = 45
 _MIN_RUNNABLE = 100
 _MIN_SEQUENCES = 10
 # Per-family runnable floors. Wave 2 splits execution three ways and sizes each
 # leg against these numbers, so a family that silently emptied would hand an
 # executor nothing to do while still passing the total floor above.
 _MIN_RUNNABLE_PER_FAMILY: dict[str, int] = {
-    "getting-started": 30,
-    "platform": 50,
-    "development": 20,
+    "getting-started": 31,
+    "platform": 40,
+    "development": 15,
 }
+# Phase 22-wave-1 (the scaffold): the restructure moved documents between
+# families without changing runnable-block count -- measured 149 before and
+# after -- so floors moved with their documents (development 20-5=15,
+# platform 50+4=54, getting-started 30+1=31).
+#
+# Phase 22-wave-2 (this pass, 2026-08-18): merging 8 platform-family pages'
+# worth of prose into one canonical page per component is a genuine rewrite,
+# not a move -- old runnable blocks describing prose that no longer exists
+# were retired, not relabeled, and each new page's runnable blocks were
+# individually executed and verified (verdict PASS-AS-WRITTEN, dated
+# 2026-08-18) rather than carried over. Measured: platform family now carries
+# 45 runnable blocks (down from 80, the direct effect of 8 unfocused pages
+# becoming 8 pages each holding exactly the examples its prose needs). The
+# floor moves to 40 -- safely below the measured 45, following the reduction
+# rather than papering over it. getting-started (51) and development (18)
+# both still clear their unchanged floors (31, 15) without adjustment.
 # The structural suggester is a first pass. If the ledger agreed with it
 # everywhere, nobody read the blocks -- measured 124 of 354 disagree.
 _MIN_REVIEW_OVERRIDES = 60
@@ -192,7 +218,7 @@ uv run gridalyn doctor
 
 def _build_synthetic_corpus(root: Path) -> Path:
     """Create a minimal corpus of one document, and return its path."""
-    docs = root / "docs" / "getting-started"
+    docs = root / "docs" / "start"
     docs.mkdir(parents=True, exist_ok=True)
     document = docs / "note.md"
     document.write_text(_SYNTHETIC_DOC, encoding="utf-8")
@@ -447,7 +473,7 @@ class InstructionLedgerTests(unittest.TestCase):
             added = checker.audit(root, ledger_path)
             self.assertEqual(3, len(added.blocks))
             self.assertEqual(
-                ["docs/getting-started/note.md#2"],
+                ["docs/start/note.md#2"],
                 [finding.key for finding in added.unclassified],
                 [f.located() for f in added.findings],
             )
@@ -464,7 +490,7 @@ class InstructionLedgerTests(unittest.TestCase):
             self.assertEqual(2, len(edited.blocks))
             self.assertEqual((), edited.unclassified, "mutation B must not add a block")
             self.assertEqual(
-                ["docs/getting-started/note.md#0"],
+                ["docs/start/note.md#0"],
                 [finding.key for finding in edited.stale],
                 [f.located() for f in edited.findings],
             )
@@ -476,7 +502,7 @@ class InstructionLedgerTests(unittest.TestCase):
             document.write_text("# Synthetic\n\nNo blocks at all.\n", encoding="utf-8")
             emptied = checker.audit(root, ledger_path)
             self.assertEqual(
-                ["docs/getting-started/note.md#0", "docs/getting-started/note.md#1"],
+                ["docs/start/note.md#0", "docs/start/note.md#1"],
                 sorted(finding.key for finding in emptied.orphaned),
                 [f.located() for f in emptied.findings],
             )
@@ -669,7 +695,7 @@ class InstructionLedgerTests(unittest.TestCase):
         ledger = copy.deepcopy(self.result.ledger)
         self.assertEqual([], _unverified_instructions(ledger))
 
-        block_key = "docs/development/artifact-policy.md#0"
+        block_key = "docs/reference/artifact-policy.md#0"
         ledger["blocks"][block_key]["verdict"] = checker.UNVERIFIED
         self.assertIn(
             f"{block_key}: block verdict 'UNVERIFIED'",
@@ -677,7 +703,7 @@ class InstructionLedgerTests(unittest.TestCase):
         )
 
         ledger = copy.deepcopy(self.result.ledger)
-        sequence_key = "docs/getting-started/quickstart.md#seq0"
+        sequence_key = "docs/start/quickstart.md#seq0"
         members = ledger["sequences"][sequence_key]["members"]
         ledger["sequences"][sequence_key]["verdict"] = checker.UNVERIFIED
         offenders = _unverified_instructions(ledger)
@@ -685,8 +711,7 @@ class InstructionLedgerTests(unittest.TestCase):
         for ordinal in members:
             with self.subTest(member=ordinal):
                 self.assertIn(
-                    f"docs/getting-started/quickstart.md#{ordinal}: "
-                    f"verdict 'UNVERIFIED'",
+                    f"docs/start/quickstart.md#{ordinal}: " f"verdict 'UNVERIFIED'",
                     offenders,
                     "a chain member must inherit its sequence's UNVERIFIED "
                     "rather than pass on a null",
@@ -715,15 +740,16 @@ class InstructionLedgerTests(unittest.TestCase):
         ledger = copy.deepcopy(self.result.ledger)
         self.assertEqual([], _unjustified_documented(ledger))
 
-        block_key = "docs/getting-started/reproducibility.md#2"
+        block_key = "docs/guides/reproducibility.md#2"
         self.assertEqual(checker.DOCUMENTED, ledger["blocks"][block_key]["verdict"])
         ledger["blocks"][block_key]["rationale"] = "   "
         self.assertEqual([f"blocks/{block_key}"], _unjustified_documented(ledger))
 
         ledger = copy.deepcopy(self.result.ledger)
-        # docs/development/public-api.md -> docs/sdk/public-api.md, 2026-08-13
+        # docs/development/public-api.md -> docs/sdk/public-api.md, 2026-08-13;
+        # -> docs/reference/public-api.md in the Phase-22 restructure, 2026-08-18
         # information-architecture restructure.
-        sequence_key = "docs/sdk/public-api.md#seq1"
+        sequence_key = "docs/reference/public-api.md#seq1"
         self.assertEqual(
             checker.DOCUMENTED, ledger["sequences"][sequence_key]["verdict"]
         )
@@ -766,7 +792,7 @@ class InstructionLedgerTests(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            owned = root / "docs" / "getting-started"
+            owned = root / "docs" / "start"
             owned.mkdir(parents=True)
             (owned / "note.md").write_text(_SYNTHETIC_DOC, encoding="utf-8")
             unowned = root / "docs" / "unclaimed-area"

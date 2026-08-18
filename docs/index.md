@@ -1,112 +1,38 @@
-<section class="home-hero">
-  <p class="home-kicker">Distribution grid digital twin platform</p>
-  <h1>Gridalyn</h1>
-  <p class="home-lead">
-    Build distribution-grid digital twins, run reproducible project workflows,
-    validate grid operations, and publish traceable reports from one governed
-    Python platform.
-  </p>
-  <div class="home-actions">
-    <a class="md-button md-button--primary" href="getting-started/quickstart/">Quickstart</a>
-    <a class="md-button" href="projects/overview/">Explore demos</a>
-  </div>
-</section>
+# Gridalyn
 
-Gridalyn combines a reusable Python SDK, governed project workflows, network
-simulation, semantic artifacts, flexibility operations, and dashboard-ready
-reports. The documentation is organized by what a user is trying to do, not by
-repository folders.
+Gridalyn is an open-source Python SDK for modeling, simulating and optimizing
+multi-scale electric distribution systems and their distributed energy
+resources — flexible building loads, EV chargers and energy storage.
 
-## Choose A Path
+It is built for researchers and academics who need **reproducible, citable
+studies**: a declarative `StudyProject` and `Workflow` contract drives synthetic
+data generation, a canonical network model, power flow, and flexibility-market
+operations, emitting governed report artifacts with regression baselines. A
+study is data, not code — two YAML files describe it, and re-running them
+reproduces the numbers.
 
-<div class="home-grid home-grid--triplet">
-  <a class="home-card" href="getting-started/quickstart/">
-    <span class="home-card__title">Run Gridalyn</span>
-    <span class="home-card__text">Install the workspace, check the CLI, run a compact demo, and inspect generated outputs.</span>
-  </a>
-  <a class="home-card" href="platform/overview/">
-    <span class="home-card__title">Understand The Platform</span>
-    <span class="home-card__text">Learn the digital twin core, platform layers, project model, operations layer, and application surfaces.</span>
-  </a>
-  <a class="home-card" href="concepts/overview/">
-    <span class="home-card__title">Learn Core Concepts</span>
-    <span class="home-card__text">Understand network models, scenarios, artifacts, model states, and semantic graph relationships.</span>
-  </a>
-  <a class="home-card" href="sdk/overview/">
-    <span class="home-card__title">Build With The SDK</span>
-    <span class="home-card__text">Use the <code>gridalyn</code> Python package for models, simulation, operations, reports, semantics, and automation.</span>
-  </a>
-  <a class="home-card" href="projects/overview/">
-    <span class="home-card__title">Explore Demos</span>
-    <span class="home-card__text">Run benchmark feeders, synthetic GeoJSON networks, prosumer markets, optimization demos, and RL voltage control.</span>
-  </a>
-  <a class="home-card" href="platform/operations/">
-    <span class="home-card__title">Design Operations</span>
-    <span class="home-card__text">Study providers, aggregators, locational clearing, dispatch, settlement, network-impact verification, and KPIs.</span>
-  </a>
-</div>
+## Where to start
 
-## Platform Model
+**[Start](start/what-is-gridalyn.md)** — install the workspace, run a compact
+demo study, and read the artifacts it wrote. Five pages, ending at real output
+on disk. In a hurry: go straight to the
+[Quickstart](start/quickstart.md).
 
-<div class="platform-diagram">
-  <div class="platform-flow">
-    <div class="platform-step">
-      <span class="platform-step__number">01</span>
-      <div>
-        <span class="platform-step__eyebrow">Foundation</span>
-        <strong>Governance</strong>
-        <p>IDs, units, lineage, validation rules, artifact policy, and run manifests.</p>
-      </div>
-    </div>
-    <div class="platform-arrow">
-      <span>defines trusted contracts</span>
-    </div>
-    <div class="platform-step platform-step--primary">
-      <span class="platform-step__number">02</span>
-      <div>
-        <span class="platform-step__eyebrow">Core</span>
-        <strong>Network Model</strong>
-        <p>Identified network model, assets, scenarios, model states, and semantic graph. A digital <em>model</em> with provenance, shipping the measured-state ingest path — a deployment becomes a digital <em>shadow</em> when fed real measured data.</p>
-      </div>
-    </div>
-    <div class="platform-arrow">
-      <span>feeds reusable capabilities</span>
-    </div>
-    <div class="platform-step">
-      <span class="platform-step__number">03</span>
-      <div>
-        <span class="platform-step__eyebrow">Execution</span>
-        <strong>Projects, Simulation, Operations</strong>
-        <p>Workflow stages, synthetic network generation, powerflow checks, markets, clearing, and dispatch.</p>
-      </div>
-    </div>
-    <div class="platform-arrow">
-      <span>publishes evidence</span>
-    </div>
-    <div class="platform-step">
-      <span class="platform-step__number">04</span>
-      <div>
-        <span class="platform-step__eyebrow">Outputs</span>
-        <strong>Reports And Verification</strong>
-        <p>Canonical JSON reports, figures, manifests, project status, and sense checks.</p>
-      </div>
-    </div>
-  </div>
-  <div class="platform-interface">
-    <div>
-      <span class="platform-step__eyebrow">Interfaces</span>
-      <strong>SDK, CLI, Dashboard</strong>
-      <p>Build, run, inspect, and consume the same governed artifacts without duplicating platform logic.</p>
-    </div>
-    <div class="platform-interface__chips">
-      <span>reads model</span>
-      <span>runs workflows</span>
-      <span>serves outputs</span>
-    </div>
-  </div>
-</div>
+**[Components](components/overview.md)** — understand the platform itself, read
+in one pass: seven layers, one page each, in the same order their own imports
+run — `foundation → twin → assets → simulation → operations → projects →
+interfaces`. Start here if you want to understand before you run.
 
-## First Commands
+**[Guides](guides/overview.md)** — task-shaped how-tos: build your own project,
+author a workflow, generate reports and figures, open the dashboard.
+
+**[Reference](reference/overview.md)** — the CLI, the Python API, the project
+and workflow YAML contracts, the report schema and the artifact policy.
+
+**[Contributing](contributing/overview.md)** — module boundaries, conventions,
+testing and release, for extending the platform itself.
+
+## First commands
 
 ```bash
 uv sync --extra dev
@@ -115,41 +41,26 @@ uv run gridalyn project validate projects/minimal_grid_project
 uv run gridalyn project run projects/minimal_grid_project
 ```
 
-For the research study — the full arc, calibrated inputs, pinned headlines:
+For the flagship research study — the full arc, calibrated inputs, pinned
+headlines — budget time before running it: a full source regeneration is
+roughly **six hours** across 22 stages, verified by an operator rather than in
+CI via a pinned verification receipt. Warm runs against an existing cache take
+minutes.
 
 ```bash
 uv run gridalyn project run projects/ev_hosting_flex
 uv run gridalyn project verify projects/ev_hosting_flex
 ```
 
-That study also exercises the locational clearing API — provider registry,
-constraint events and contract selection. It is long-running (a full source
-regeneration is roughly six hours across 22 stages) and is verified by an
-operator rather than in CI, via a pinned verification receipt; warm runs
-against an existing cache take minutes.
+## Where things live
 
-## Documentation Map
-
-| Section | Purpose |
+| Path | What it holds |
 | --- | --- |
-| [Start](getting-started/quickstart.md) | Installation, quickstart, first-hour path, demo execution, dashboard, and reproducibility. |
-| [Platform](platform/overview.md) | Architecture, digital twin core, concepts, applications, and roadmap. |
-| [Platform, SDK, And Projects](platform/platform-sdk-projects.md) | Boundaries for reusable code, governed artifacts, executable demos, and applications. |
-| [Core Concepts](concepts/overview.md) | Durable vocabulary for network models, artifacts, scenarios, states, and semantics. |
-| [SDK](sdk/overview.md) | Public Python surfaces for models, adapters, simulation, operations, reporting, and semantics. |
-| [Operations](platform/operations.md) | Flexibility providers, market clearing, dispatch, settlement, verification, and KPIs. |
-| [Projects](projects/overview.md) | Executable projects that demonstrate platform capabilities at different levels of complexity. |
-| [Reference](reference/overview.md) | CLI, YAML, report schemas, semantic graph, artifact policy, and validation rules. |
-| [Development](development/overview.md) | Repository structure, contribution workflow, testing, release readiness, and AI-agent guidance. |
+| `gridalyn/` | The Python SDK — the canonical package and import namespace. |
+| `projects/` | Executable demo and study projects using the same contract. |
+| `instances/default/digital_twin/` | The default materialized twin instance. |
+| `dashboard/` | Browser application consuming generated catalogs and reports. |
+| `examples/` | Tutorial material, not project runtime logic. |
 
-## Public Boundary
-
-- `gridalyn/`: canonical Python SDK package and import namespace.
-- `projects/`: executable demo and study projects using the same contract.
-- `instances/default/digital_twin/`: default materialized twin instance.
-- `dashboard/`: browser application consuming generated catalogs and reports.
-- `examples/`: tutorial material, not project runtime logic.
-
-Generated caches, large data, PDFs, and derived artifacts should stay out of Git
-unless the [Artifact Policy](development/artifact-policy.md) explicitly allows
-them.
+Generated caches, large data and derived artifacts stay out of git unless the
+[Artifact Policy](reference/artifact-policy.md) explicitly allows them.

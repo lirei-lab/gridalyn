@@ -17,7 +17,7 @@ The profile is North America-first and **model-first**: the core profile
 carries the generic grid model, and the flexibility/market ontology is an
 **on-demand capability** a project declares through its semantic profile
 (`build_semantic_graph(capabilities=...)` / `--semantic-capabilities` — see
-`docs/platform/digital-twin-layering.md`).
+`docs/components/twin.md`).
 
 Core (always emitted):
 
@@ -229,3 +229,33 @@ Migration rule of thumb:
    a manual, out-of-repo step.
 5. Compare counts and relationship integrity against the Parquet manifest —
    **not implemented**: no in-repo reader exists to perform the comparison.
+
+## Query Repository
+
+Use `SemanticGraphRepository` when application or workflow code needs graph
+answers instead of raw node and edge tables. It is an external-facing public
+read API for researchers and applications that consume the materialized graph
+directly; it has no in-repo application consumer today (a recorded decision).
+
+```python
+from gridalyn.twin import SemanticGraphRepository
+
+repo = SemanticGraphRepository.from_parquet("instances/default/digital_twin/semantic")
+node = repo.get_node("aggregator:S0:soft_cls")
+print(node["semantic_type"], node["scenario_id"])
+assets = repo.assets_in_scenario("S0", semantic_type="cls:FlexibilityAggregator")
+print(len(assets), "aggregators in scenario S0")
+```
+```text
+cls:FlexibilityAggregator S0
+1 aggregators in scenario S0
+```
+
+The full read surface: `get_node(node_id)`, `neighbors(node_id,
+relationship_type=None, *, direction="out", scenario_id=None)`,
+`get_asset_context(node_id)`, `assets_in_scenario(scenario_id,
+semantic_type=None)`, `timeseries_for_asset(asset_id, *, scenario_id=None)`.
+The repository keeps the semantic graph useful without making it the numerical
+source of truth — Parquet reports and time-series remain the analytical layer;
+the graph answers relationship questions such as which assets belong to a
+scenario, or a node's immediate neighbors.

@@ -91,8 +91,17 @@ checker = _load_checker()
 # been bitten by before. Each floor sits below the clean-checkout figure but
 # far above a token 1: a partially blind extractor -- one that read code spans
 # but not link targets, say -- also reports zero stale references.
-_MIN_FILES_SCANNED = 60
-_MIN_FILES_WITH_REFERENCES = 50
+# Phase 22 (2026-08-18) consolidated ~39 pages that separately re-explained the
+# architecture, twin and semantic-graph concepts into 8 canonical component
+# pages. Re-measured the same way as the comment above -- `git stash create`
+# + `git archive` of the working tree, so the number matches what CI's
+# checkout would scan, not the local working tree's untracked extras: 50 files
+# scanned (was 76), 48 carrying references (was ~65), 578 total references
+# (was 519 -- more, not fewer: the 8 new pages are denser with real,
+# individually-verified paths than the 39 they replaced). Floors follow the
+# scanned/carrying reduction, set below the measured figures.
+_MIN_FILES_SCANNED = 45
+_MIN_FILES_WITH_REFERENCES = 40
 _MIN_TOTAL_REFERENCES = 400
 _MIN_PER_CLASS: dict[str, int] = {
     checker.SOURCE: 200,
@@ -120,17 +129,17 @@ _MAX_UNCLASSIFIED = 30
 # plan deliberately did not fix.
 _ALLOWLIST: dict[tuple[str, str], str] = {
     (
-        "docs/sdk/clearing-contract.md",
+        "docs/components/_merge/clearing-contract.md",
         "archive/engine-mode-clearing",
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
     (
-        "docs/flexibility/clearing.md",
+        "docs/components/_merge/flexibility-clearing.md",
         "archive/engine-mode-clearing",
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
     (
-        "docs/platform/operations.md",
+        "docs/components/_merge/platform-operations.md",
         "archive/engine-mode-clearing",
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
@@ -150,8 +159,16 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "extensionless module reference; the file is gridalyn/operations/settlement.py",
     (
         "CLAUDE.md",
-        "market/",
+        "gridalyn/operations/market/",
     ): "gridalyn/operations/market/ was retired; the successor is clearing/",
+    (
+        "CLAUDE.md",
+        "gridalyn/operations/flexibility/",
+    ): "retired alongside operations/market/, same successor. Until the "
+    "2026-08-18 docs restructure this was written bare as `flexibility/` and "
+    "resolved by accident against `docs/flexibility/`, which no longer exists; "
+    "the sentence always meant the retired subpackage, so the reference was "
+    "qualified and waived here rather than left resolving to the wrong thing",
     (
         "CLAUDE.md",
         "archive/flexibility_cls",
@@ -255,11 +272,11 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     "was removed from the direct-JSON classification, so being absent is the "
     "claim",
     (
-        "docs/getting-started/what-is-gridalyn.md",
+        "docs/start/what-is-gridalyn.md",
         "lirei-lab/gridalyn",
     ): "a GitHub owner/repo slug, not a path",
     (
-        "docs/projects/project-model.md",
+        "docs/components/_merge/project-model.md",
         "scripts/write_summary_report.py",
     ): "not stale: templates.py declares it for the grid-study template and "
     "`gridalyn project init` generates it; the path exists only in a generated "

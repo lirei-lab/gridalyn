@@ -157,6 +157,7 @@ docs = [
     "mkdocs-bootswatch>=1.1",
     "mkdocs-gen-files>=0.5.0",
     "mkdocs-material>=9.6.17",
+    "mkdocs-redirects>=1.2.2",
     "mkdocstrings[python]>=0.30.0",
 ]
 # What it takes to RUN the suite, and nothing else. CI installs ".[all,test]"

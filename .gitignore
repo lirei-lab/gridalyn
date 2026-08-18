@@ -143,6 +143,8 @@ cython_debug/
 CLAUDE.md
 AGENTS.md
 .planning/
+.legion/
+.legion/var/
 docs/development/ai-agent-guide.md
 docs/development/agent-task-templates/
 docs/development/cleanup-inventory.md

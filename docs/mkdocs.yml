@@ -12,116 +12,65 @@ docs_dir: .
 # in a clean checkout, which is why it is silent rather than an error there.
 exclude_docs: |
   superpowers/
-  development/ai-agent-guide.md
-  development/agent-task-templates/
-  development/cleanup-inventory.md
-  development/release-cleanup-audit.md
-not_in_nav: |
-  development/code-structure-audit.md
-  development/report-contract-audit.md
+  components/_merge/
+  reference/_merge/
+  development/
 nav:
   - Home: index.md
   - Start:
-      - What Is Gridalyn?: getting-started/what-is-gridalyn.md
-      - Installation: getting-started/installation.md
-      - Quickstart: getting-started/quickstart.md
-      - First Hour With Gridalyn: getting-started/first-hour.md
-      - Run Demo Projects: getting-started/run-demo-projects.md
-      - Build Your Own Project: getting-started/build-your-own-project.md
-      - Open The Dashboard: tutorials/open-dashboard.md
-      - Reproducibility Checklist: getting-started/reproducibility.md
-      - Documentation Map: getting-started/documentation-map.md
-      - Tutorials:
-          - Tutorial Overview: tutorials/overview.md
-          - Synthetic Networks From GeoJSON: tutorials/synthetic-network-from-geojson.md
-          - Build A Minimal Digital Twin: tutorials/build-minimal-digital-twin.md
-          - Generate Reports And Figures: tutorials/generate-reports-and-figures.md
-  - Platform:
-      - Platform Overview: platform/overview.md
-      - Platform, SDK, And Projects: platform/platform-sdk-projects.md
-      - Artifact Lifecycle: platform/artifact-lifecycle.md
-      - Extension Framework: platform/extensions.md
-      - Project Development: platform/project-development.md
-      - Architecture:
-          - Architecture Map: platform/capability-architecture.md
-          - Platform Layer Model: platform/platform-layer-model.md
-          - System Architecture: platform/architecture.md
-      - Core Concepts:
-          - Concept Overview: concepts/overview.md
-          - Digital Twin Core: platform/digital-twin.md
-          - Digital Twin Layering: platform/digital-twin-layering.md
-          - Network Model: concepts/network-model.md
-          - Artifacts: concepts/data-and-artifact-model.md
-          - Scenarios: concepts/scenarios.md
-          - Model States: concepts/model-states.md
-          - Naming Conventions: concepts/naming-conventions.md
-      - Applications:
-          - Applications And Interfaces: platform/applications-and-interfaces.md
-          - Dashboard: platform/dashboard.md
-      - Roadmap: platform/utility-platform-roadmap.md
-  - SDK:
-      - Overview:
-          - Python SDK Overview: sdk/overview.md
-          - Stability Policy: sdk/public-contract.md
-      - Contracts:
-          - Clearing Contract: sdk/clearing-contract.md
-          - Public API Index: sdk/public-api.md
-      - Model And Data:
-          - Network Repository: sdk/network-repository.md
-          - Ingest Adapters: sdk/adapters.md
-          - Solver Adapters: sdk/solver-and-model-adapters.md
-          - Modeling: sdk/modeling.md
-          - Building Models: sdk/building-models.md
-          - Data Generation: sdk/data-generation.md
-      - Run And Report:
-          - Simulation: sdk/simulation.md
-          - Reporting: sdk/reporting.md
-          - Semantic Graph: sdk/semantic-graph.md
-          - Market And Operations: sdk/market-operations.md
-  - Operations:
-      - Utility Operations: platform/operations.md
-      - Operational Functions: flexibility/overview.md
-      - Providers And Aggregators: flexibility/providers-and-aggregators.md
-      - Markets And Transactions: flexibility/clearing.md
-      - Control And Optimization: flexibility/control.md
-      - Network Impact Verification: flexibility/network-impact-surrogate.md
-      - Operational KPIs: flexibility/economic-validation.md
-  - Projects:
-      - Projects Overview: projects/overview.md
-      - Project Model: projects/project-model.md
-      - Project Problem Contract: projects/problem-contract.md
-      - Project Template Guide: projects/template-guide.md
-      - Project Workflows:
-          - Project Workflow Model: projects/projects-and-workflows.md
-          - Workflow YAML: workflows/workflow-yaml-reference.md
-          - Create A New Project: workflows/creating-new-workflow.md
+      - What Is Gridalyn?: start/what-is-gridalyn.md
+      - Installation: start/installation.md
+      - Quickstart: start/quickstart.md
+      - Your First Study: start/first-study.md
+      - Reading The Outputs: start/reading-the-outputs.md
+      - Run The Demo Projects: start/run-demo-projects.md
+  - Components:
+      - Component Overview: components/overview.md
+      - Foundation: components/foundation.md
+      - Twin: components/twin.md
+      - Assets: components/assets.md
+      - Simulation: components/simulation.md
+      - Operations: components/operations.md
+      - Projects: components/projects.md
+      - Interfaces: components/interfaces.md
+  - Guides:
+      - Guide Overview: guides/overview.md
+      - Build Your Own Project: guides/build-your-own-project.md
+      - Author A Workflow: guides/author-a-workflow.md
+      - Project Template: guides/project-template.md
+      - Build A Twin: guides/build-a-twin.md
+      - Synthetic Networks From GeoJSON: guides/synthetic-network-from-geojson.md
+      - Reports And Figures: guides/reports-and-figures.md
+      - Open The Dashboard: guides/open-the-dashboard.md
+      - Write An Extension: guides/write-an-extension.md
+      - Reproducibility: guides/reproducibility.md
   - Reference:
       - Reference Overview: reference/overview.md
-      - Python API Reference: reference/api.md
-      - CLI Reference: reference/cli.md
-      - Report Schemas: reference/reports.md
-      - Semantic Model And Graph: reference/semantic-graph.md
+      - CLI: reference/cli.md
+      - Python API: reference/python-api.md
+      - Public API Index: reference/public-api.md
+      - Workflow YAML: reference/workflow-yaml.md
+      - Report Schema: reference/report-schema.md
+      - Semantic Graph: reference/semantic-graph.md
       - FalkorDB Path: reference/falkordb.md
-      - Artifact Policy: development/artifact-policy.md
-  - Development:
-      - Development Overview: development/overview.md
-      - Repository Layout: development/core-package-architecture.md
-      - Module Boundaries: development/module-boundaries.md
-      - Contribution Workflow: development/developer-workflow.md
-      - Project Hygiene: development/project-hygiene.md
-      - Testing And Validation: development/testing-and-validation.md
-      - Operator Verification: development/verification.md
-      - Instruction Verification: development/instruction-verification.md
-      - Release Readiness: development/release-readiness.md
+      - Artifact Policy: reference/artifact-policy.md
+      - Glossary: reference/glossary.md
+  - Contributing:
+      - Contributing Overview: contributing/overview.md
+      - Module Boundaries: contributing/module-boundaries.md
+      - Conventions: contributing/conventions.md
+      - Developer Workflow: contributing/developer-workflow.md
+      - Project Hygiene: contributing/project-hygiene.md
+      - Testing And Validation: contributing/testing-and-validation.md
+      - Operator Verification: contributing/verification.md
+      - Releasing: contributing/releasing.md
 theme:
   name: material
   logo: _static/logo.png
   favicon: _static/logo.png
   features:
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
     - navigation.top
+    - navigation.indexes
     - search.suggest
     - search.highlight
     - content.code.copy
@@ -134,12 +83,9 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-extra_css:
-  - stylesheets/extra.css
 extra_javascript:
   - javascripts/mathjax.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-  - stylesheets/extra.js
 extra:
   social:
     - icon: fontawesome/brands/github
@@ -164,6 +110,79 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 plugins:
   - search
+  - redirects:
+      redirect_maps:
+        concepts/data-and-artifact-model.md: components/foundation.md
+        concepts/model-states.md: components/twin.md
+        concepts/naming-conventions.md: contributing/conventions.md
+        concepts/network-model.md: components/twin.md
+        concepts/overview.md: components/overview.md
+        concepts/scenarios.md: components/assets.md
+        development/artifact-policy.md: reference/artifact-policy.md
+        development/core-package-architecture.md: components/overview.md
+        development/developer-workflow.md: contributing/developer-workflow.md
+        development/module-boundaries.md: contributing/module-boundaries.md
+        development/overview.md: contributing/overview.md
+        development/project-hygiene.md: contributing/project-hygiene.md
+        development/release-readiness.md: contributing/releasing.md
+        development/testing-and-validation.md: contributing/testing-and-validation.md
+        development/verification.md: contributing/verification.md
+        flexibility/clearing.md: components/operations.md
+        flexibility/control.md: components/operations.md
+        flexibility/economic-validation.md: components/operations.md
+        flexibility/network-impact-surrogate.md: components/simulation.md
+        flexibility/overview.md: components/operations.md
+        flexibility/providers-and-aggregators.md: components/operations.md
+        getting-started/build-your-own-project.md: guides/build-your-own-project.md
+        getting-started/documentation-map.md: index.md
+        getting-started/first-hour.md: start/first-study.md
+        getting-started/installation.md: start/installation.md
+        getting-started/quickstart.md: start/quickstart.md
+        getting-started/reproducibility.md: guides/reproducibility.md
+        getting-started/run-demo-projects.md: start/run-demo-projects.md
+        getting-started/what-is-gridalyn.md: start/what-is-gridalyn.md
+        platform/applications-and-interfaces.md: components/interfaces.md
+        platform/architecture.md: components/overview.md
+        platform/artifact-lifecycle.md: components/foundation.md
+        platform/capability-architecture.md: components/overview.md
+        platform/dashboard.md: components/interfaces.md
+        platform/digital-twin-layering.md: components/twin.md
+        platform/digital-twin.md: components/twin.md
+        platform/extensions.md: guides/write-an-extension.md
+        platform/operations.md: components/operations.md
+        platform/overview.md: components/overview.md
+        platform/platform-layer-model.md: components/overview.md
+        platform/platform-sdk-projects.md: components/overview.md
+        platform/project-development.md: components/projects.md
+        platform/utility-platform-roadmap.md: index.md
+        projects/overview.md: components/projects.md
+        projects/problem-contract.md: components/projects.md
+        projects/project-model.md: components/projects.md
+        projects/projects-and-workflows.md: components/projects.md
+        projects/template-guide.md: guides/project-template.md
+        reference/api.md: reference/python-api.md
+        reference/reports.md: reference/report-schema.md
+        sdk/adapters.md: components/twin.md
+        sdk/building-models.md: components/assets.md
+        sdk/clearing-contract.md: components/operations.md
+        sdk/data-generation.md: components/assets.md
+        sdk/market-operations.md: components/operations.md
+        sdk/modeling.md: components/assets.md
+        sdk/network-repository.md: components/twin.md
+        sdk/overview.md: components/overview.md
+        sdk/public-api.md: reference/public-api.md
+        sdk/public-contract.md: components/foundation.md
+        sdk/reporting.md: components/foundation.md
+        sdk/semantic-graph.md: index.md
+        sdk/simulation.md: components/simulation.md
+        sdk/solver-and-model-adapters.md: components/simulation.md
+        tutorials/build-minimal-digital-twin.md: guides/build-a-twin.md
+        tutorials/generate-reports-and-figures.md: guides/reports-and-figures.md
+        tutorials/open-dashboard.md: guides/open-the-dashboard.md
+        tutorials/overview.md: guides/overview.md
+        tutorials/synthetic-network-from-geojson.md: guides/synthetic-network-from-geojson.md
+        workflows/creating-new-workflow.md: guides/author-a-workflow.md
+        workflows/workflow-yaml-reference.md: reference/workflow-yaml.md
   - mkdocstrings:
       default_handler: python
       handlers:

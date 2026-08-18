@@ -1,0 +1,89 @@
+# Documentation Map
+
+Use this page when you are unsure where to go next. Gridalyn documentation is
+organized around platform surfaces and user roles rather than repository
+folders.
+
+## Fast Paths
+
+| Goal | Start here | Then read |
+| --- | --- | --- |
+| Understand the product | [Platform Overview](../components/overview.md) | [Architecture Map](../components/overview.md) |
+| Run it locally | [Installation](../start/installation.md) | [Quickstart](../start/quickstart.md) |
+| Reproduce demo projects | [Run Demo Projects](../start/run-demo-projects.md) | [Reproducibility Checklist](../guides/reproducibility.md) |
+| Learn the model concepts | [Core Concepts](../components/overview.md) | [Network Model](../components/twin.md) |
+| Build with Python | [Python SDK Overview](../components/overview.md) | [Public Python API](../reference/public-api.md) |
+| Design an operation | [Utility Operations](../components/operations.md) | [Locational Clearing](../components/operations.md) |
+| Create a study | [Project Model](../components/projects.md) | [Project Problem Contract](../components/projects.md) |
+| Publish or release | [Testing And Validation](../contributing/testing-and-validation.md) | [Release Readiness](../contributing/releasing.md) |
+
+## Section Meaning
+
+This page indexes fast paths and roles, not every page — the nav sidebar does
+that. Every section below links to its own landing page, which lists every
+page filed under it; a lost reader is one hop from the map, two from any page
+on the site.
+
+| Section | What belongs there |
+| --- | --- |
+| [Start](../start/what-is-gridalyn.md) | Step-by-step commands for installing, running, viewing, and reproducing. |
+| [Platform](../components/overview.md) | Product identity, architecture, digital twin core, application surfaces, roadmap. |
+| [Platform → Core Concepts](../components/overview.md) | Durable vocabulary for network models, scenarios, states, artifacts, and semantic relationships. |
+| [SDK](../components/overview.md) | Python package surfaces and reusable development interfaces. |
+| [Operations](../components/operations.md) | Flexibility and utility operations: providers, clearing, dispatch, validation, KPIs. |
+| [Projects](../components/projects.md) | Executable project examples plus the project/workflow contract. |
+| [Reference](../reference/overview.md) | Commands, schemas, semantic graph, artifact rules, and validation. |
+| [Development](../contributing/overview.md) | Repository structure, contribution workflow, tests, release checks, and AI-agent guidance. |
+
+## Source Of Truth
+
+Gridalyn has three durable source-of-truth layers:
+
+| Layer | Owns | Do not use it for |
+| --- | --- | --- |
+| `configs/` | reusable grid and geography configuration | generated outputs |
+| `projects/<name>/` | reproducible workflow contracts, scripts, outputs, reports, figures | reusable library logic or dashboard application code |
+| `instances/default/digital_twin/` | default materialized twin instance consumed by dashboards, semantics, reports, and applications | ad hoc notebooks, drafts, or project-only experiments |
+
+`examples/` is tutorial material. It is not the runtime backend for governed
+projects.
+
+## Native Module Map
+
+Use this table when a doc, script, or issue is ambiguous about ownership:
+
+| Need | Native module |
+| --- | --- |
+| Reports, manifests, workspace layout, artifact policy | `gridalyn.foundation` |
+| Network snapshots, adapters, topology, semantic graph | `gridalyn.twin` |
+| Building, device, DER, thermal, load, and asset models | `gridalyn.assets` |
+| Synthetic-network construction and physical validation | `gridalyn.simulation` |
+| Providers, clearing, dispatch, settlement, KPIs | `gridalyn.operations` |
+| Project contracts, workflow execution, sense checks | `gridalyn.projects` |
+| CLI, dashboard/catalog, reporting, visualization | `gridalyn.interfaces` |
+
+Use the native modules above as public entry points. If a note or script points
+to a retired path, migrate it to the owning native module instead of adding
+another facade.
+
+## Verification Ladder
+
+```bash
+uv run gridalyn platform check-artifacts --summary-only
+uv run gridalyn project validate projects/minimal_grid_project --check-artifacts
+uv run gridalyn project run projects/minimal_grid_project
+uv run gridalyn project verify projects/minimal_grid_project
+uv run gridalyn project regression projects/minimal_grid_project
+uv run --with pytest python -m pytest -q
+uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml
+```
+
+If one command fails, fix that layer before moving to the next command.
+
+The ladder uses `minimal_grid_project` because it runs in seconds. `verify` and
+`regression` read a project's emitted reports, and `outputs/` is not committed —
+so they fail on a fresh clone until that project has been run. Substituting the
+flagship `ev_hosting_flex` study here means budgeting about six hours for a full
+source regeneration (operator-verified, receipt-pinned); the six CI fixture
+studies run end-to-end in ~78 s, and warm runs against an existing cache take
+minutes.

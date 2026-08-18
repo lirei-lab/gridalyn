@@ -589,11 +589,14 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         mkdocs = (repo_root / "docs" / "mkdocs.yml").read_text(encoding="utf-8")
 
-        # docs/platform/release-readiness.md -> docs/development/release-readiness.md,
-        # 2026-08-13 information-architecture restructure (directory now
-        # matches the section it's filed under).
-        self.assertIn("Release Readiness: development/release-readiness.md", mkdocs)
-        self.assertIn("Architecture Map: platform/capability-architecture.md", mkdocs)
+        # docs/platform/release-readiness.md -> docs/development/release-readiness.md
+        # (2026-08-13 restructure) -> "Releasing: contributing/releasing.md"
+        # (2026-08-18, Phase 22: the directory now names its nav section).
+        self.assertIn("Releasing: contributing/releasing.md", mkdocs)
+        # The architecture anchor moved with its page: capability-architecture.md
+        # is staged under components/_merge/ until the component walk merges it
+        # into components/overview.md, at which point this asserts that entry.
+        self.assertIn("Contributing Overview: contributing/overview.md", mkdocs)
         self.assertNotIn("Manuscripts:", mkdocs)
         self.assertNotIn("workflows/manuscripts.md", mkdocs)
 
@@ -601,25 +604,27 @@ class ProjectHygieneTest(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         mkdocs = (repo_root / "docs" / "mkdocs.yml").read_text(encoding="utf-8")
         index = (repo_root / "docs" / "index.md").read_text(encoding="utf-8")
-        reproducibility = repo_root / "docs" / "getting-started" / "reproducibility.md"
+        reproducibility = repo_root / "docs" / "guides" / "reproducibility.md"
 
+        # The sections this asserts are the ones that carry the two paths named
+        # in this test's own name: Start (reproduce it) and Contributing
+        # (develop it). The 2026-08-18 restructure folded the former Platform,
+        # SDK, Operations and Projects sections into one Components walk and
+        # dropped the separate Documentation Map, whose job index.md now does.
         required_nav = [
-            "Documentation Map: getting-started/documentation-map.md",
-            "Reproducibility Checklist: getting-started/reproducibility.md",
+            "Reproducibility: guides/reproducibility.md",
             "Start:",
-            "Platform:",
-            "SDK:",
-            "Operations:",
-            "Projects:",
+            "Guides:",
             "Reference:",
+            "Contributing:",
         ]
         missing_nav = [item for item in required_nav if item not in mkdocs]
 
         required_index_terms = [
-            "Choose A Path",
+            "Where to start",
             "Quickstart",
-            "Build With The SDK",
-            "Explore Demos",
+            "Guides",
+            "Contributing",
         ]
         missing_index_terms = [
             item for item in required_index_terms if item not in index
@@ -656,17 +661,23 @@ class ProjectHygieneTest(unittest.TestCase):
 
     def test_capability_architecture_names_utility_layers(self):
         repo_root = Path(__file__).resolve().parents[1]
-        path = repo_root / "docs" / "platform" / "capability-architecture.md"
+        # docs/platform/capability-architecture.md (2026-08-13 restructure) was
+        # one of seven pages the Phase-22 restructure (2026-08-18) merged into
+        # the single canonical components/overview.md, which names each layer
+        # with its own short name and one-sentence responsibility rather than
+        # the old page's longer titles -- the invariant this test protects
+        # (every layer named somewhere) is unchanged; the exact wording is not.
+        path = repo_root / "docs" / "components" / "overview.md"
         text = path.read_text(encoding="utf-8")
 
         required_layers = [
-            "Foundation And Governance",
-            "Digital Twin Core",
-            "Asset And Flexibility Modeling",
-            "Simulation And Validation",
-            "Flexibility Market And Operations",
-            "Problems And Experiments",
-            "Applications And Interfaces",
+            "Foundation",
+            "Twin",
+            "Assets",
+            "Simulation",
+            "Operations",
+            "Projects",
+            "Interfaces",
         ]
         missing = [layer for layer in required_layers if layer not in text]
 
