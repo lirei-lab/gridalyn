@@ -49,6 +49,62 @@ RELATIONSHIP_TYPES = [
     "PRODUCED",
 ]
 
+# Canonical FULL ordering (the pre-Phase-21 insertion order), kept so the
+# merged profile with the ``flexibility`` capability reproduces the committed
+# artifact byte-for-byte (R7). The core-only profile uses the generic subset
+# (``RELATIONSHIP_TYPES`` / the core ``allowed_semantic_types``).
+_ALLOWED_SEMANTIC_TYPES_FULL: list[str] = [
+    "brick:Building",
+    "cim:ACLineSegment",
+    "cim:ConnectivityNode",
+    "cim:EnergyConsumer",
+    "cim:PowerTransformer",
+    "cls:ConstraintZone",
+    "cls:FlexibilityAggregator",
+    "cls:FlexibilityOffer",
+    "cls:FlexibilityPortfolio",
+    "cls:FlexibilityProvider",
+    "cls:HardCLSContract",
+    "cls:SoftCLSContract",
+    "dt:Scenario",
+    "dt:ScenarioDevice",
+    "dt:SimulationRun",
+    "dt:TimeSeriesDataset",
+    "efont:EnergyFlexibility",
+    "efont:EnergyFlexibilityKPI",
+    # Aspirational — declared but not currently emitted by any generator.
+    "efont:FlexibleLoadCharacteristic",
+    "efont:FlexibleOperation",
+    "efont:ThermallyActivatedBuildingSystem",
+    "ieee2030_5:EVSE",
+]
+
+_RELATIONSHIP_TYPES_FULL: list[str] = [
+    "AGGREGATES",
+    "ALLOWS",
+    "CHARACTERIZES",
+    "CONNECTS",
+    "CONNECTED_TO",
+    "CONSTRAINT_ZONE_FOR",
+    "DESCRIBES_FLEXIBILITY",
+    "ENABLES",
+    "FEEDS",
+    "HAS_EVSE",
+    "HAS_FLEXIBILITY_RESOURCE",
+    "HAS_LOAD",
+    "IMPLEMENTS_CONTRACT",
+    "INCLUDES_ASSET",
+    "INCLUDES_PROVIDER",
+    "LOCATED_IN_CONSTRAINT_ZONE",
+    "MANAGES_PORTFOLIO",
+    "OBSERVES",
+    "OFFERS",
+    "PARTICIPATES_IN",
+    "PRODUCED",
+    "QUANTIFIES",
+    "TARGETS_CONSTRAINT",
+]
+
 
 # Canonical semantic-type vocabulary shared by every generator (the semantic
 # graph in mappings.py and the network-impact surrogate). A concept's one
@@ -161,13 +217,11 @@ def profile_with_capabilities(
             **profile["primary_standards"],
             **extensions["primary_standards"],
         }
-        profile["allowed_semantic_types"] = sorted(
-            set(profile["allowed_semantic_types"])
-            | set(extensions["allowed_semantic_types"])
-        )
-        profile["relationship_types"] = sorted(
-            set(profile["relationship_types"]) | set(extensions["relationship_types"])
-        )
+        # Preserve the canonical FULL ordering (pre-Phase-21 insertion order)
+        # so the merged profile is byte-identical to the committed artifact
+        # when the capability is on (R7) — do not re-sort.
+        profile["allowed_semantic_types"] = list(_ALLOWED_SEMANTIC_TYPES_FULL)
+        profile["relationship_types"] = list(_RELATIONSHIP_TYPES_FULL)
     return profile
 
 

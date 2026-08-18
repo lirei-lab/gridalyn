@@ -151,9 +151,33 @@ class TwinModelFirstTest(unittest.TestCase):
         return nodes, edges
 
     def test_model_first_core_has_zero_flexibility_triples(self) -> None:
-        nodes, _edges = self._build(set())
+        nodes, edges = self._build(set())
         flex_nodes = nodes.loc[nodes["semantic_type"].str.startswith(_FLEX_PREFIXES)]
         self.assertEqual(len(flex_nodes), 0)
+        # No flex relationship types either — a stray flex EDGE would slip
+        # through a node-only assertion.
+        flex_edges = edges.loc[
+            edges["relationship_type"].isin(
+                {
+                    "AGGREGATES",
+                    "ALLOWS",
+                    "CONSTRAINT_ZONE_FOR",
+                    "DESCRIBES_FLEXIBILITY",
+                    "ENABLES",
+                    "HAS_EVSE",
+                    "HAS_FLEXIBILITY_RESOURCE",
+                    "IMPLEMENTS_CONTRACT",
+                    "INCLUDES_PROVIDER",
+                    "LOCATED_IN_CONSTRAINT_ZONE",
+                    "MANAGES_PORTFOLIO",
+                    "OFFERS",
+                    "PARTICIPATES_IN",
+                    "QUANTIFIES",
+                    "TARGETS_CONSTRAINT",
+                }
+            )
+        ]
+        self.assertEqual(len(flex_edges), 0)
         # The model-first core still carries the generic grid/observation types.
         remaining = set(nodes["semantic_type"].unique())
         self.assertLessEqual(
@@ -185,11 +209,12 @@ class TwinModelFirstTest(unittest.TestCase):
         )
 
     def test_legacy_default_matches_explicit_flexibility_capability(self) -> None:
-        nodes_default, _ = self._build(None)
-        nodes_flex, _ = self._build({"flexibility"})
+        nodes_default, edges_default = self._build(None)
+        nodes_flex, edges_flex = self._build({"flexibility"})
         # R7: ``None`` (legacy callers) is value-identical to declaring the
-        # flexibility capability explicitly.
+        # flexibility capability explicitly — on both nodes AND edges.
         self.assertTrue(nodes_default.equals(nodes_flex))
+        self.assertTrue(edges_default.equals(edges_flex))
 
     def test_profile_core_vs_combined(self) -> None:
         core = north_america_profile()
