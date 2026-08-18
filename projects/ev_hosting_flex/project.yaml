@@ -24,6 +24,12 @@ spec:
     powerflowBackendByStage:
       # network_min_voltage() -- the only lightsim2grid consumer in the study.
       analyze_voltage_risk_network: lightsim2grid
+    # analyze_locational_contracts substitutes this surrogate for a full solve
+    # when scoring provider impact. Declared rather than inherited so the run
+    # manifest records WHICH surrogate answered and its measured error bound,
+    # not merely that one did. This names the registry default, so the value
+    # is unchanged -- the declaration is what makes it auditable.
+    surrogate: network_impact_tabular_v1
   pathBase: repo
   problem:
     type: ev_hosting_capacity_flexibility

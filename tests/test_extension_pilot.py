@@ -174,12 +174,12 @@ class EndToEndPilotTest(unittest.TestCase):
             self.assertEqual(0, code1, extra)
             self.assertEqual(out1, out2, extra)
 
-    def test_pilot_does_not_touch_projects(self) -> None:
-        # R7 guard: the pilot writes only to its system temp dir; projects/
-        # must remain untouched. The git returncode is asserted so a git
-        # failure (not an empty status) cannot make the guard pass vacuously.
-        code, _, stderr = self._run()
-        self.assertEqual(0, code, stderr[-2000:])
+    def _projects_status(self) -> str:
+        """Return ``git status --porcelain`` for ``projects/``.
+
+        The returncode is asserted by the caller so a git failure (rather than
+        a genuinely empty status) cannot make the guard pass vacuously.
+        """
         status = subprocess.run(
             ["git", "status", "--porcelain", "--", "projects"],
             capture_output=True,
@@ -188,7 +188,31 @@ class EndToEndPilotTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(0, status.returncode)
-        self.assertEqual("", status.stdout)
+        return status.stdout
+
+    def test_pilot_does_not_touch_projects(self) -> None:
+        # R7 guard: the pilot writes only to its system temp dir, so projects/
+        # must be exactly as it was before the run.
+        #
+        # This compares the status BEFORE and AFTER rather than asserting the
+        # tree is absolutely clean. The absolute form conflated two different
+        # facts -- "the pilot dirtied projects/" and "projects/ was already
+        # dirty for an unrelated reason" -- so any uncommitted study edit in
+        # the working tree turned this guard red while the pilot was behaving
+        # correctly (observed 2026-08-18, while a project.yaml change was in
+        # flight). The delta form isolates the pilot's own effect, which is
+        # what the guard's name claims, and still fails if the pilot writes
+        # anything under projects/.
+        before = self._projects_status()
+        code, _, stderr = self._run()
+        self.assertEqual(0, code, stderr[-2000:])
+        after = self._projects_status()
+        self.assertEqual(
+            before,
+            after,
+            "the pilot changed projects/ -- it must write only to its "
+            "system temp dir",
+        )
 
 
 if __name__ == "__main__":

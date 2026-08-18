@@ -24,9 +24,15 @@ file another stage wrote, and its only output is a file on disk.
   stage script never reaches into `script.project.raw` by hand.
 - **`bind_project_components(script)`** — resolves a `ProjectScript` into a
   frozen `ProjectComponents` (`script`, `feeder_spec`, `load_profiles`,
-  `backend`, `registered`). A project is *bound*, not hand-wired: today the
-  `backend` role is wired; `observation_producer` / `surrogate` / `policy` are
-  declared follow-up surface, not yet consumed here.
+  `backend`, `surrogate`, `registered`). A project is *bound*, not hand-wired:
+  a stage consumes a resolved role rather than importing a solver or a
+  surrogate directly. Two roles are wired today — `backend`
+  (`spec.simulation.powerflowBackend`) and `surrogate`
+  (`spec.simulation.surrogate`) — each resolved through its registry and
+  recorded in the run manifest. `observation_producer` and `policy` are
+  declared follow-up surface: their registries do not yet expose the
+  `registration_source` discriminator that tells a project-registered
+  component from a core one.
 - **Sense checks and regression** — `project_sense_check` runs objective
   plausibility checks; `run_project_regression` compares a run's outputs
   against `baselines/results_baseline.json`.
@@ -48,6 +54,14 @@ governed record of what happened: `git_commit`, one entry per stage with
 `status`/`started_at`/`ended_at`/`exit_code`, and an overall `status` that is
 `"completed"` only if every stage exited zero — the first non-zero exit marks
 both the stage and the run `"failed"` and re-raises with a re-run hint.
+
+A declared role is recorded, not merely resolved. `provenance.powerflow_backend`
+names the solver a run used; `provenance.surrogate` names the surrogate that
+stood in for a solve **and its stated error bound**, because naming a surrogate
+without its accuracy invites the reader to assume there is none. Both carry a
+`declared_source` saying whether the study declared the component or inherited
+the registry default — so a study that names the default explicitly stays
+distinguishable from one that named nothing.
 
 ## Using it
 

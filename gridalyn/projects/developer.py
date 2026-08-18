@@ -2,8 +2,9 @@
 
 A project is *bound*, not hand-wired: :func:`bind_project_components` resolves
 the project's declared specs ONCE through the ``ProjectScript`` typed loaders,
-resolves the declared power-flow backend through the backend registry, and
-returns a frozen :class:`ProjectComponents` bundle a stage script drives::
+resolves the declared power-flow backend and surrogate through their
+registries, and returns a frozen :class:`ProjectComponents` bundle a stage
+script drives::
 
     from gridalyn.projects.developer import bind_project_components
     from gridalyn.projects.scripting import project_script
@@ -14,11 +15,14 @@ returns a frozen :class:`ProjectComponents` bundle a stage script drives::
 
 Project-defined components register through the per-role extension registries
 before the bind and are consumed by explicit ID via
-:meth:`ProjectComponents.consume` — never by ambient discovery. The currently
-wired role is the power-flow **backend** (``register_powerflow_backend_extension``
-→ ``consume("backend", id)``); the observation-producer / surrogate / policy
-roles are declared surface for a follow-up (their registries do not yet expose
-a ``registration_source`` discriminator the way the backend registry does).
+:meth:`ProjectComponents.consume` — never by ambient discovery. The wired roles are
+the power-flow **backend** (``register_powerflow_backend_extension`` →
+``consume("backend", id)``) and the **surrogate** (declared in
+``spec.simulation.surrogate``, resolved through the surrogate registry, and
+recorded in ``provenance.surrogate``); the observation-producer / policy roles
+are declared surface for a follow-up (their registries do not yet expose a
+``registration_source`` discriminator the way the backend registry does, so
+project-registered components of those roles cannot be told from core ones).
 """
 
 from __future__ import annotations
@@ -43,16 +47,21 @@ class ProjectComponents:
             input), or ``None`` if the project declares none.
         backend: The resolved power-flow backend, or ``None`` if the project
             declares none.
+        surrogate: The resolved surrogate standing in for a full solve. Like
+            ``backend`` this is never optional -- a study that declares none
+            gets the registry default -- so it is ``None`` only if resolution
+            was skipped entirely.
         registered: Explicit-ID components the project registered through the
-            per-role registries, keyed by their role name (``backend`` today;
-            the platform's ``observation_producer`` / ``surrogate`` / ``policy``
-            roles are declared follow-up surface).
+            per-role registries, keyed by their role name (``backend`` and
+            ``surrogate`` today; the platform's ``observation_producer`` /
+            ``policy`` roles are declared follow-up surface).
     """
 
     script: ProjectScript
     feeder_spec: Any | None = None
     load_profiles: Any | None = None
     backend: Any | None = None
+    surrogate: Any | None = None
     registered: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def build_feeder(self) -> Any:
@@ -124,6 +133,12 @@ class ProjectComponents:
                 getattr(self.backend, "descriptor", None).backend_id
                 if self.backend is not None
                 and getattr(self.backend, "descriptor", None) is not None
+                else None
+            ),
+            "surrogate_id": (
+                getattr(self.surrogate, "descriptor", None).surrogate_id
+                if self.surrogate is not None
+                and getattr(self.surrogate, "descriptor", None) is not None
                 else None
             ),
             "registered": {
@@ -217,6 +232,9 @@ def bind_project_components(script: ProjectScript) -> ProjectComponents:
     # the registry default, so this always resolves (or raises a located error
     # / MissingCapabilityError for a genuinely bad declaration).
     backend = script.powerflow_backend()
+    # Same contract as the backend: never optional, always resolved, so the
+    # component that answered is the one provenance records.
+    surrogate = script.surrogate()
 
     registered = _collect_backend_registrations()
 
@@ -225,5 +243,6 @@ def bind_project_components(script: ProjectScript) -> ProjectComponents:
         feeder_spec=feeder_spec,
         load_profiles=load_profiles,
         backend=backend,
+        surrogate=surrogate,
         registered=registered,
     )

@@ -320,6 +320,29 @@ class ProjectScript:
 
         return resolve_powerflow_backend(self.powerflow_backend_id(), **settings)
 
+    def surrogate_id(self) -> str:
+        """Return the surrogate ID this study declares in ``spec.simulation``."""
+        return model_inputs.load_surrogate_id(self.project)
+
+    def surrogate(self, **settings: Any) -> Any:
+        """Resolve the surrogate this study declares.
+
+        A stage that substitutes a surrogate for a full solve calls this rather
+        than importing one directly, so the component that answered is the one
+        ``provenance.surrogate.surrogate_id`` records. Every registered
+        surrogate carries a stated error bound; resolving through the registry
+        is what keeps that bound attached to the choice.
+
+        Args:
+            **settings: Settings forwarded to the surrogate factory.
+
+        Returns:
+            A ``Surrogate`` ready to predict.
+        """
+        from gridalyn.simulation.surrogates.registry import resolve_surrogate
+
+        return resolve_surrogate(self.surrogate_id(), **settings)
+
 
 def project_script(
     root: Path | str | None = None,

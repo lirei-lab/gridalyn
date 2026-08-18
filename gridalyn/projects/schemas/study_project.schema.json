@@ -56,6 +56,11 @@
               "enum": ["selection"],
               "description": "The clearing surface this study's stages actually use, when it clears at all. Validated against the modules gridalyn.operations.clearing actually ships, so a retired mode stops being accepted on its own. Omit it for a study that does no flexibility clearing: provenance then records null rather than naming an engine no stage ran. Recorded as provenance.clearing_engine.name."
             },
+            "surrogate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The surrogate ID this study's stages resolve through when they substitute a surrogate for a full power-flow solve, via ProjectScript.surrogate(). A surrogate answers in place of physics, so which one answered is a property of the run: recorded as provenance.surrogate.surrogate_id together with its stated error bound, and provenance.surrogate.declared_source states whether it was declared here or inherited from the registry default."
+            },
             "powerflowBackendByStage": {
               "type": "object",
               "description": "Per-stage overrides of powerflowBackend, for a study whose stages genuinely solve with different engines. A single scalar cannot describe such a study, and recording one names an engine some stage did not use. Keys are workflow stage IDs; each must exist in the workflow. Recorded as provenance.powerflow_backend.by_stage.",

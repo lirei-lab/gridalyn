@@ -733,6 +733,64 @@ def load_powerflow_backend_id(
     return backend_id
 
 
+def _registered_surrogate_ids() -> list[str]:
+    from gridalyn.simulation.surrogates.registry import default_surrogate_registry
+
+    return [
+        descriptor.surrogate_id
+        for descriptor in default_surrogate_registry().list_descriptors()
+    ]
+
+
+def load_surrogate_id(project_or_path: ProjectRef) -> str:
+    """Load the surrogate ID a study declares in ``spec.simulation``.
+
+    A surrogate stands in for a full power-flow solve, so *which* one a run
+    used is a property of the run, not an implementation detail: two studies
+    that differ only in their surrogate produce different numbers from the
+    same inputs. This is the ``surrogate`` role's half of the same contract
+    :func:`load_powerflow_backend_id` gives the ``backend`` role -- a study
+    declares the component, the library resolves it through the registry, and
+    ``provenance.surrogate`` records what actually answered.
+
+    A study that declares nothing gets ``DEFAULT_SURROGATE_ID``, which is what
+    the repository's own network-impact path already resolves, so declaring
+    nothing keeps current behaviour exactly.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+
+    Returns:
+        The declared surrogate ID, or ``DEFAULT_SURROGATE_ID`` when the study
+        declares none.
+
+    Raises:
+        ValueError: If ``spec.simulation.surrogate`` is present but is not a
+            non-empty string, or names a surrogate the repository does not
+            register. The message lists the registered IDs.
+    """
+    from gridalyn.simulation.surrogates.registry import DEFAULT_SURROGATE_ID
+
+    project = _project(project_or_path)
+    declared = _simulation(project).get("surrogate")
+    if declared is None:
+        return DEFAULT_SURROGATE_ID
+    if not isinstance(declared, str) or not declared.strip():
+        raise ValueError(
+            f"{project.path}: spec.simulation.surrogate must be a "
+            f"non-empty string, found {type(declared).__name__}"
+        )
+    surrogate_id = declared.strip()
+    registered = _registered_surrogate_ids()
+    if surrogate_id not in registered:
+        raise ValueError(
+            f"{project.path}: spec.simulation.surrogate names an "
+            f"unregistered surrogate {surrogate_id!r} "
+            f"(registered: {', '.join(sorted(registered))})"
+        )
+    return surrogate_id
+
+
 __all__ = [
     "load_der_dispatch_assets",
     "load_generated_bus_loads_mw",
@@ -742,6 +800,7 @@ __all__ = [
     "load_powerflow_backend_by_stage",
     "load_powerflow_backend_id",
     "load_simulation_seed",
+    "load_surrogate_id",
     "load_prosumer_assets",
     "load_radial_feeder_spec",
     "load_standard_powerflow_scenarios",

@@ -345,6 +345,74 @@ def _declares_powerflow_backend(project: StudyProject) -> bool:
     return isinstance(simulation, dict) and "powerflowBackend" in simulation
 
 
+def _surrogate_provenance(project: StudyProject) -> dict[str, Any]:
+    """Which surrogate this run would substitute for a full solve.
+
+    A surrogate answers in place of power flow, so two runs that differ only in
+    their surrogate produce different numbers from identical inputs -- the same
+    indistinguishability ``_powerflow_backend_provenance`` exists to prevent,
+    one layer up. This records the surrogate the study DECLARES in
+    ``spec.simulation.surrogate``, with ``declared_source`` saying whether the
+    value was declared or inherited from the registry default.
+
+    Every registered surrogate states an error bound, so this records the bound
+    of the resolved one beside its ID: a report that names a surrogate without
+    its stated accuracy invites the reader to assume there is none.
+
+    Surrogates resolve by explicit ID only -- no ``entry_points`` discovery --
+    so ``registered`` is exactly what the repository registers.
+
+    Side-effect-free, following ``_powerflow_backend_provenance``: it reads
+    descriptors, never constructs a surrogate, never predicts, and never draws
+    from any RNG.
+
+    Args:
+        project: The loaded study, read for its declared surrogate ID.
+
+    Returns:
+        The resolved surrogate's ID and stated error bound, where the
+        declaration came from, and every registered surrogate ID.
+    """
+    from gridalyn.projects.model_inputs import load_surrogate_id
+    from gridalyn.simulation.surrogates.registry import default_surrogate_registry
+
+    registry = default_surrogate_registry()
+    descriptors = registry.list_descriptors()
+    by_id = {descriptor.surrogate_id: descriptor for descriptor in descriptors}
+
+    surrogate_id = load_surrogate_id(project)
+    descriptor = by_id.get(surrogate_id)
+    resolved = descriptor.as_dict() if descriptor is not None else {}
+
+    return {
+        "surrogate_id": surrogate_id,
+        "error_bound": resolved.get("error_bound"),
+        "contract_version": resolved.get("contract_version"),
+        "declared_source": (
+            "spec.simulation.surrogate"
+            if _declares_surrogate(project)
+            else "registry default (study declares none)"
+        ),
+        "registered": sorted(by_id),
+    }
+
+
+def _declares_surrogate(project: StudyProject) -> bool:
+    """Report whether the study declares a surrogate rather than inheriting one.
+
+    Args:
+        project: The loaded study.
+
+    Returns:
+        True when ``spec.simulation.surrogate`` is present, so a study that
+        names the default explicitly is distinguishable in provenance from one
+        that names nothing.
+    """
+    spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
+    simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
+    return isinstance(simulation, dict) and "surrogate" in simulation
+
+
 def _build_provenance(
     project: StudyProject, planned: list[WorkflowStage]
 ) -> dict[str, Any]:
@@ -360,6 +428,7 @@ def _build_provenance(
         "seeds": _resolve_seeds(project, planned),
         "macro_model": _macro_model_provenance(),
         "powerflow_backend": _powerflow_backend_provenance(project),
+        "surrogate": _surrogate_provenance(project),
         "input_hashes": _input_hashes(project),
         "extensions": _extensions_provenance(),
     }
