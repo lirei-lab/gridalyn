@@ -6,7 +6,16 @@ import pandas as pd
 
 from gridalyn.twin import SemanticGraphRepository
 from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
-from gridalyn.twin.semantic.mappings import build_semantic_graph, north_america_profile
+from gridalyn.twin.semantic.capabilities.flexibility import (
+    flexibility_profile_extensions,
+    query_providers_for_constraint,
+    query_trace_building_to_constraint,
+)
+from gridalyn.twin.semantic.mappings import (
+    build_semantic_graph,
+    north_america_profile,
+    profile_with_capabilities,
+)
 from gridalyn.twin.semantic.validation import validate_semantic_graph
 
 
@@ -388,33 +397,46 @@ class SemanticGraphTest(unittest.TestCase):
             rels,
         )
 
-    def test_north_america_profile_includes_efont_as_building_flexibility_crosswalk(
+    def test_model_first_profile_excludes_flex_and_capability_extensions_include_it(
         self,
     ):
+        # Phase 21 re-layering: the model-first core profile carries only
+        # generic CIM/Brick/Scenario types; the flexibility ontology lives in
+        # the on-demand capability's profile extensions.
         profile = north_america_profile()
+        self.assertNotIn("efont", profile["namespaces"])
+        self.assertNotIn("cls", profile["namespaces"])
+        self.assertNotIn("building_flexibility", profile["primary_standards"])
+        self.assertNotIn("cls_market", profile["primary_standards"])
+        self.assertNotIn("efont:EnergyFlexibility", profile["allowed_semantic_types"])
+        self.assertNotIn("cls:FlexibilityProvider", profile["allowed_semantic_types"])
+        self.assertNotIn("dt:ScenarioDevice", profile["allowed_semantic_types"])
+        self.assertNotIn("HAS_FLEXIBILITY_RESOURCE", profile["relationship_types"])
+        # The core still declares the generic grid/observation types.
+        self.assertIn("cim:ConnectivityNode", profile["allowed_semantic_types"])
+        self.assertIn("brick:Building", profile["allowed_semantic_types"])
+        self.assertIn("dt:TimeSeriesDataset", profile["allowed_semantic_types"])
+        self.assertIn("IEC CIM", profile["primary_standards"]["grid_topology"])
 
-        self.assertIn("efont", profile["namespaces"])
-        self.assertIn("EFOnt", profile["primary_standards"]["building_flexibility"])
-        self.assertIn("efont:EnergyFlexibility", profile["allowed_semantic_types"])
-        self.assertIn("efont:FlexibleOperation", profile["allowed_semantic_types"])
-        self.assertIn(
-            "efont:ThermallyActivatedBuildingSystem", profile["allowed_semantic_types"]
-        )
-        self.assertIn("efont:EnergyFlexibilityKPI", profile["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityAggregator", profile["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityPortfolio", profile["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityProvider", profile["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityOffer", profile["allowed_semantic_types"])
-        self.assertIn("cls:ConstraintZone", profile["allowed_semantic_types"])
-        self.assertIn("dt:ScenarioDevice", profile["allowed_semantic_types"])
-        self.assertIn("HAS_FLEXIBILITY_RESOURCE", profile["relationship_types"])
-        self.assertIn("QUANTIFIES", profile["relationship_types"])
-        self.assertIn("AGGREGATES", profile["relationship_types"])
-        self.assertIn("IMPLEMENTS_CONTRACT", profile["relationship_types"])
-        self.assertIn("LOCATED_IN_CONSTRAINT_ZONE", profile["relationship_types"])
-        self.assertIn("MANAGES_PORTFOLIO", profile["relationship_types"])
-        self.assertIn("OFFERS", profile["relationship_types"])
-        self.assertIn("TARGETS_CONSTRAINT", profile["relationship_types"])
+        # The flexibility capability supplies the ontology it emits.
+        extensions = flexibility_profile_extensions()
+        self.assertIn("efont", extensions["namespaces"])
+        self.assertIn("cls", extensions["namespaces"])
+        self.assertIn("EFOnt", extensions["primary_standards"]["building_flexibility"])
+        self.assertIn("efont:EnergyFlexibility", extensions["allowed_semantic_types"])
+        self.assertIn("cls:FlexibilityProvider", extensions["allowed_semantic_types"])
+        self.assertIn("dt:ScenarioDevice", extensions["allowed_semantic_types"])
+        for relationship in (
+            "HAS_FLEXIBILITY_RESOURCE",
+            "QUANTIFIES",
+            "AGGREGATES",
+            "IMPLEMENTS_CONTRACT",
+            "LOCATED_IN_CONSTRAINT_ZONE",
+            "MANAGES_PORTFOLIO",
+            "OFFERS",
+            "TARGETS_CONSTRAINT",
+        ):
+            self.assertIn(relationship, extensions["relationship_types"])
 
     def test_validate_semantic_graph_reports_integrity_and_scenario_counts(self):
         data = self._fixtures()
@@ -432,7 +454,7 @@ class SemanticGraphTest(unittest.TestCase):
         report = validate_semantic_graph(
             nodes,
             edges,
-            north_america_profile(),
+            profile_with_capabilities({"flexibility"}),
             expected_scenario_counts={
                 "S4": {
                     "n_ev": 1,
@@ -509,8 +531,8 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertIn("load:0", context["outgoing"]["HAS_LOAD"])
         self.assertIn("ev:S4:0", context["outgoing"]["HAS_EVSE"])
 
-        providers = repository.providers_for_constraint(
-            "transformer:0", scenario_id="S4"
+        providers = query_providers_for_constraint(
+            repository, "transformer:0", scenario_id="S4"
         )
         self.assertEqual(
             {provider["provider_id"] for provider in providers},
@@ -521,7 +543,9 @@ class SemanticGraphTest(unittest.TestCase):
             {"soft_cls_building", "hard_cls_ev"},
         )
 
-        trace = repository.trace_building_to_constraint("building:0", scenario_id="S4")
+        trace = query_trace_building_to_constraint(
+            repository, "building:0", scenario_id="S4"
+        )
         self.assertEqual(trace["building_id"], "building:0")
         self.assertEqual(trace["load_ids"], ("load:0",))
         self.assertEqual(trace["bus_ids"], ("bus:0",))

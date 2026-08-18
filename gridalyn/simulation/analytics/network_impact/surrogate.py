@@ -16,7 +16,7 @@ from gridalyn.simulation.surrogates.contract import (
     SurrogateDescriptor,
     measure_relief_error_bound,
 )
-from gridalyn.twin.semantic.profile import NAMESPACES, SEMANTIC_TYPE, semantic_uri
+from gridalyn.twin.semantic.profile import SEMANTIC_TYPE, semantic_uri
 
 NODE_COLUMNS = [
     "node_id",
@@ -46,11 +46,17 @@ def _json(data: dict[str, Any]) -> str:
 
 
 def _uri_for(qname: str) -> str:
-    """Resolve a qname to its namespace URI when the prefix is registered."""
-    prefix = qname.split(":", 1)[0] if ":" in qname else ""
-    if prefix in NAMESPACES:
+    """Resolve a qname to its namespace URI when the prefix is registered.
+
+    Phase 21: the model-first core owns ``NAMESPACES``; the flexibility/DER
+    prefixes (``cls:``/``efont:``/``ieee2030_5:``) resolve through the
+    capability extensions via ``semantic_uri``. Fall back to the bare qname
+    only when the prefix is genuinely unregistered.
+    """
+    try:
         return semantic_uri(qname)
-    return qname
+    except KeyError:
+        return qname
 
 
 def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> None:

@@ -7,7 +7,7 @@ import unittest
 import pandas as pd
 
 from gridalyn.simulation.analytics.network_impact.surrogate import build_graph_snapshot
-from gridalyn.twin.semantic.profile import NAMESPACES, SEMANTIC_TYPE, semantic_uri
+from gridalyn.twin.semantic.profile import SEMANTIC_TYPE, _all_namespaces, semantic_uri
 
 
 class SemanticVocabularyConsistencyTest(unittest.TestCase):
@@ -72,15 +72,21 @@ class SemanticVocabularyConsistencyTest(unittest.TestCase):
                 frame["semantic_type"], frame["semantic_uri"], strict=True
             ):
                 prefix = qname.split(":", 1)[0]
-                self.assertIn(prefix, NAMESPACES, qname)
+                # Phase 21: the model-first core owns NAMESPACES; the
+                # flexibility/DER prefixes (cls:/efont:/ieee2030_5:) resolve
+                # through the capability extensions, which semantic_uri uses.
+                self.assertIn(prefix, _all_namespaces(), qname)
                 self.assertEqual(uri, semantic_uri(qname), qname)
                 self.assertNotEqual(uri, qname, qname)
 
     def test_canonical_types_are_registered(self) -> None:
+        # Phase 21: SEMANTIC_TYPE is the shared canonical vocabulary (core +
+        # capability); each qname must resolve against the merged namespaces.
+        namespaces = _all_namespaces()
         for qname in SEMANTIC_TYPE.values():
             prefix = qname.split(":", 1)[0]
-            self.assertIn(prefix, NAMESPACES, qname)
-            self.assertTrue(semantic_uri(qname).startswith(NAMESPACES[prefix]))
+            self.assertIn(prefix, namespaces, qname)
+            self.assertTrue(semantic_uri(qname).startswith(namespaces[prefix]))
 
 
 if __name__ == "__main__":

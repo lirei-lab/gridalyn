@@ -49,6 +49,7 @@ nav:
       - Core Concepts:
           - Concept Overview: concepts/overview.md
           - Digital Twin Core: platform/digital-twin.md
+          - Digital Twin Layering: platform/digital-twin-layering.md
           - Network Model: concepts/network-model.md
           - Artifacts: concepts/data-and-artifact-model.md
           - Scenarios: concepts/scenarios.md

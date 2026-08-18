@@ -1,4 +1,13 @@
-"""Query API for materialized semantic graph artifacts."""
+"""Query API for materialized semantic graph artifacts — the model-first core.
+
+Phase 21 re-layering (2026-08-17): the flexibility-specific queries
+(``providers_for_constraint``, ``trace_building_to_constraint``) moved to the
+on-demand capability
+:mod:`gridalyn.twin.semantic.capabilities.flexibility` (as the free functions
+``query_providers_for_constraint`` / ``query_trace_building_to_constraint``).
+This class keeps the generic graph queries (nodes, neighbors, asset context,
+scenario assets, time-series, edge matching).
+"""
 
 from __future__ import annotations
 
@@ -63,8 +72,12 @@ class SemanticGraphRepository:
         node = self.get_node(node_id)
         if node is None:
             raise KeyError(f"Semantic node not found: {node_id}")
-        outgoing = self._group_neighbors(self.edges.loc[self.edges["source_id"] == node_id], "target_id")
-        incoming = self._group_neighbors(self.edges.loc[self.edges["target_id"] == node_id], "source_id")
+        outgoing = self._group_neighbors(
+            self.edges.loc[self.edges["source_id"] == node_id], "target_id"
+        )
+        incoming = self._group_neighbors(
+            self.edges.loc[self.edges["target_id"] == node_id], "source_id"
+        )
         return {"node": node, "outgoing": outgoing, "incoming": incoming}
 
     def assets_in_scenario(
@@ -73,66 +86,14 @@ class SemanticGraphRepository:
         semantic_type: str | None = None,
     ) -> tuple[dict[str, Any], ...]:
         """Return scenario-scoped assets, optionally filtered by semantic type."""
-        rows = self.nodes.loc[self.nodes["scenario_id"].fillna("").astype(str) == str(scenario_id)]
+        rows = self.nodes.loc[
+            self.nodes["scenario_id"].fillna("").astype(str) == str(scenario_id)
+        ]
         if semantic_type is not None:
             rows = rows.loc[rows["semantic_type"] == semantic_type]
-        return tuple(self._node_record(row) for _, row in rows.sort_values("node_id").iterrows())
-
-    def providers_for_constraint(
-        self,
-        constraint_id: str,
-        *,
-        scenario_id: str | None = None,
-    ) -> tuple[dict[str, Any], ...]:
-        """Return flexibility providers located in a constraint zone."""
-        zone_ids = self._constraint_zone_ids(constraint_id, scenario_id=scenario_id)
-        provider_ids: set[str] = set()
-        for zone_id in zone_ids:
-            provider_ids.update(
-                self.neighbors(
-                    zone_id,
-                    "LOCATED_IN_CONSTRAINT_ZONE",
-                    direction="in",
-                    scenario_id=scenario_id,
-                )
-            )
         return tuple(
-            self._provider_record(provider_id)
-            for provider_id in sorted(provider_ids)
-            if self.get_node(provider_id) is not None
+            self._node_record(row) for _, row in rows.sort_values("node_id").iterrows()
         )
-
-    def trace_building_to_constraint(
-        self,
-        building_id: str,
-        *,
-        scenario_id: str | None = None,
-    ) -> dict[str, Any]:
-        """Trace a building to load, bus, providers, and constraint IDs."""
-        if self.get_node(building_id) is None:
-            raise KeyError(f"Semantic building node not found: {building_id}")
-        load_ids = self.neighbors(building_id, "HAS_LOAD")
-        bus_ids: set[str] = set()
-        for load_id in load_ids:
-            bus_ids.update(self.neighbors(load_id, "CONNECTED_TO"))
-
-        providers = self._providers_for_building(building_id, scenario_id=scenario_id)
-        constraint_ids = tuple(
-            sorted(
-                {
-                    provider.get("constraint_zone_id")
-                    for provider in providers
-                    if provider.get("constraint_zone_id")
-                }
-            )
-        )
-        return {
-            "building_id": building_id,
-            "load_ids": tuple(sorted(load_ids)),
-            "bus_ids": tuple(sorted(bus_ids)),
-            "provider_ids": tuple(provider["provider_id"] for provider in providers),
-            "constraint_ids": constraint_ids,
-        }
 
     def timeseries_for_asset(
         self,
@@ -152,7 +113,9 @@ class SemanticGraphRepository:
                 self.nodes.loc[
                     self.nodes["semantic_type"] == "dt:TimeSeriesDataset",
                     "scenario_id",
-                ].dropna().astype(str)
+                ]
+                .dropna()
+                .astype(str)
             )
         rows = self.nodes.loc[
             (self.nodes["semantic_type"] == "dt:TimeSeriesDataset")
@@ -160,7 +123,9 @@ class SemanticGraphRepository:
         ]
         if node is not None and node.get("semantic_type") == "ieee2030_5:EVSE":
             rows = rows.loc[rows["source_table"] == "ev_load_summary"]
-        return tuple(self._node_record(row) for _, row in rows.sort_values("node_id").iterrows())
+        return tuple(
+            self._node_record(row) for _, row in rows.sort_values("node_id").iterrows()
+        )
 
     def _matching_edges(
         self,
@@ -177,64 +142,15 @@ class SemanticGraphRepository:
         if relationship_type is not None:
             matches = matches.loc[matches["relationship_type"] == relationship_type]
         if scenario_id is not None:
-            matches = matches.loc[matches["scenario_id"].fillna("").astype(str) == str(scenario_id)]
+            matches = matches.loc[
+                matches["scenario_id"].fillna("").astype(str) == str(scenario_id)
+            ]
         return matches
 
-    def _constraint_zone_ids(
-        self,
-        constraint_id: str,
-        *,
-        scenario_id: str | None,
-    ) -> tuple[str, ...]:
-        zone_ids = set(
-            self.neighbors(
-                str(constraint_id),
-                "CONSTRAINT_ZONE_FOR",
-                direction="in",
-                scenario_id=scenario_id,
-            )
-        )
-        zones = self.nodes.loc[self.nodes["semantic_type"] == "cls:ConstraintZone"]
-        if scenario_id is not None:
-            zones = zones.loc[zones["scenario_id"].fillna("").astype(str) == str(scenario_id)]
-        for _, row in zones.iterrows():
-            props = _loads_json(row["properties"])
-            if str(props.get("constraint_id")) == str(constraint_id):
-                zone_ids.add(str(row["node_id"]))
-        return tuple(sorted(zone_ids))
-
-    def _providers_for_building(
-        self,
-        building_id: str,
-        *,
-        scenario_id: str | None,
-    ) -> tuple[dict[str, Any], ...]:
-        rows = self.nodes.loc[self.nodes["semantic_type"] == "cls:FlexibilityProvider"]
-        if scenario_id is not None:
-            rows = rows.loc[rows["scenario_id"].fillna("").astype(str) == str(scenario_id)]
-        providers = []
-        for _, row in rows.iterrows():
-            record = self._provider_record(str(row["node_id"]))
-            if record.get("building_id") == building_id:
-                providers.append(record)
-        return tuple(sorted(providers, key=lambda item: item["provider_id"]))
-
-    def _provider_record(self, provider_id: str) -> dict[str, Any]:
-        node = self.get_node(provider_id)
-        if node is None:
-            raise KeyError(f"Semantic provider node not found: {provider_id}")
-        record = dict(node["properties"])
-        record.update(
-            {
-                "provider_id": provider_id,
-                "semantic_type": node["semantic_type"],
-                "scenario_id": node.get("scenario_id"),
-            }
-        )
-        return record
-
     @staticmethod
-    def _group_neighbors(edges: pd.DataFrame, neighbor_column: str) -> dict[str, tuple[str, ...]]:
+    def _group_neighbors(
+        edges: pd.DataFrame, neighbor_column: str
+    ) -> dict[str, tuple[str, ...]]:
         grouped: dict[str, tuple[str, ...]] = {}
         for relationship_type, group in edges.groupby("relationship_type", sort=True):
             grouped[str(relationship_type)] = tuple(

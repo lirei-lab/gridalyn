@@ -24,57 +24,87 @@ def build_digital_twin_steps(
     *,
     skip_heavy: bool = False,
     include_network_impact: bool = False,
+    capabilities: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Return the ordered digital-twin build plan."""
+    """Return the ordered digital-twin build plan.
+
+    Phase 21 re-layering (2026-08-17): the build is model-first by declared
+    capability. ``None`` preserves the pre-Phase-21 build (the ``ev-hosting``
+    and ``flexibility`` layers are assumed, so existing callers stay
+    identical); an explicit set builds the model-first core plus the declared
+    capability layers — e.g. ``set()`` for a pure generic build
+    (base + building models + semantic core + reports) or
+    ``{"ev-hosting", "flexibility"}`` for the full legacy build.
+    """
+    # ``None`` preserves the pre-Phase-21 build for existing callers.
+    capabilities = (
+        {"ev-hosting", "flexibility"} if capabilities is None else set(capabilities)
+    )
     steps = [
         _step("export_base", ["-m", "gridalyn.interfaces.cli.digital_twin", "base"]),
         _step(
             "generate_building_models",
             ["-m", "gridalyn.interfaces.cli.digital_twin", "building-models"],
         ),
-        _step(
-            "generate_scenarios",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"],
-        ),
-        _step(
-            "generate_ev_timeseries",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "timeseries"],
-        ),
-        _step(
-            "run_powerflow",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "powerflow"],
-            heavy=True,
-        ),
-        _step(
-            "report_transformer_overloads",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "overload-report"],
-        ),
-        _step(
-            "generate_asset_registry",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "asset-registry"],
-        ),
-        _step(
-            "generate_scenario_models",
-            ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"],
-        ),
-        _step(
-            "generate_flexibility_providers",
-            ["-m", "gridalyn.interfaces.cli.flexibility", "providers"],
-        ),
-        _step(
-            "generate_semantic_graph",
-            ["-m", "gridalyn.interfaces.cli.semantic", "build"],
-        ),
-        _step(
-            "validate_semantics", ["-m", "gridalyn.interfaces.cli.semantic", "validate"]
-        ),
-        _step(
-            "generate_canonical_reports",
-            ["-m", "gridalyn.interfaces.reporting.digital_twin"],
-        ),
     ]
 
-    if include_network_impact:
+    if "ev-hosting" in capabilities:
+        steps.extend(
+            [
+                _step(
+                    "generate_scenarios",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "scenarios"],
+                ),
+                _step(
+                    "generate_ev_timeseries",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "timeseries"],
+                ),
+                _step(
+                    "run_powerflow",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "powerflow"],
+                    heavy=True,
+                ),
+                _step(
+                    "report_transformer_overloads",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "overload-report"],
+                ),
+                _step(
+                    "generate_asset_registry",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "asset-registry"],
+                ),
+                _step(
+                    "generate_scenario_models",
+                    ["-m", "gridalyn.interfaces.cli.digital_twin", "scenario-models"],
+                ),
+            ]
+        )
+
+    if "flexibility" in capabilities:
+        steps.append(
+            _step(
+                "generate_flexibility_providers",
+                ["-m", "gridalyn.interfaces.cli.flexibility", "providers"],
+            )
+        )
+
+    steps.extend(
+        [
+            _step(
+                "generate_semantic_graph",
+                ["-m", "gridalyn.interfaces.cli.semantic", "build"],
+            ),
+            _step(
+                "validate_semantics",
+                ["-m", "gridalyn.interfaces.cli.semantic", "validate"],
+            ),
+            _step(
+                "generate_canonical_reports",
+                ["-m", "gridalyn.interfaces.reporting.digital_twin"],
+            ),
+        ]
+    )
+
+    if include_network_impact and "flexibility" in capabilities:
         steps.extend(
             [
                 _step(

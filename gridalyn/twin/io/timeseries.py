@@ -7,9 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 BASELINE_MC_FILE = "substation_baseline_mc.parquet"
-EV_CAPABILITY_MC_FILE = "substation_ev_capability_mc.parquet"
 POWERFLOW_MC_FILE = "substation_powerflow_mc.parquet"
 
 
@@ -45,16 +43,6 @@ def get_baseline_building_load_all(*, data_dir: Path) -> np.ndarray:
         Path(data_dir),
         BASELINE_MC_FILE,
         "Run the workflow stage that generates stochastic baseline profiles first.",
-    )
-    return pd.read_parquet(path).to_numpy().T * 1000.0
-
-
-def get_ev_capability_load_all(*, data_dir: Path) -> np.ndarray:
-    """Return EV capability load in kW for every realization."""
-    path = _require_parquet(
-        Path(data_dir),
-        EV_CAPABILITY_MC_FILE,
-        "Run the workflow stage that generates EV capability profiles first.",
     )
     return pd.read_parquet(path).to_numpy().T * 1000.0
 

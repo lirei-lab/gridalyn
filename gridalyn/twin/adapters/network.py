@@ -552,9 +552,6 @@ def _make_buildings_and_connectivity(
                 "static_q_mvar": float(load_row["q_mvar"]),
                 "load_seed_base": 42 + building_idx,
                 "thermal_seed_base": 42 + building_idx,
-                "cls_participant": False,
-                "has_ev": False,
-                "ev_id": None,
                 "scenario_id": "BASE",
                 "ontology_class": "Building",
             }

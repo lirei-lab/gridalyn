@@ -22,6 +22,7 @@ from gridalyn.twin.semantic import emitters
 from gridalyn.twin.semantic.builder import SemanticGraphBuilder
 from gridalyn.twin.semantic.profile import (  # noqa: F401  (re-exported for workflow scripts)
     north_america_profile,
+    profile_with_capabilities,
     semantic_uri,
     write_profile,
 )
@@ -45,6 +46,7 @@ def build_semantic_graph(
     asset_registry: pd.DataFrame | None = None,
     provider_registry: pd.DataFrame | None = None,
     timeseries_manifests: dict[str, Any] | None = None,
+    capabilities: set[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     """Build the semantic node/edge graph from the canonical twin tables.
 
@@ -57,6 +59,12 @@ def build_semantic_graph(
         asset_registry: Scenario asset registry; empty when absent.
         provider_registry: Flexibility provider registry; empty when absent.
         timeseries_manifests: Run manifests keyed by name.
+        capabilities: Declared semantic capabilities (Phase 21 re-layering).
+            ``None`` preserves the pre-re-layering graph (the ``flexibility``
+            capability is assumed, so existing callers stay value-identical);
+            an explicit set builds the model-first core plus the declared
+            capabilities (e.g. ``set()`` for a pure model-first graph, or
+            ``{"flexibility"}`` for the full graph).
 
     Returns:
         ``(nodes, edges, manifest)``. The frames are sorted by ID, so the order
@@ -67,6 +75,9 @@ def build_semantic_graph(
         provider_registry if provider_registry is not None else pd.DataFrame()
     )
     timeseries_manifests = timeseries_manifests or {}
+    # ``None`` preserves the pre-Phase-21 graph for existing callers; an
+    # explicit set is the declared-capability (model-first) contract.
+    capabilities = {"flexibility"} if capabilities is None else set(capabilities)
 
     builder = SemanticGraphBuilder()
     emitters.emit_buses(builder, buses)
@@ -78,11 +89,16 @@ def build_semantic_graph(
     )
     emitters.emit_scenarios(builder, scenario_ids)
     emitters.emit_asset_registry(builder, asset_registry)
-    emitters.emit_provider_registry(builder, provider_registry)
+    if "flexibility" in capabilities:
+        from gridalyn.twin.semantic.capabilities.flexibility import (
+            extend_graph_with_flexibility,
+        )
+
+        extend_graph_with_flexibility(builder, asset_registry, provider_registry)
     emitters.emit_timeseries_runs(builder, timeseries_manifests)
 
     nodes_df, edges_df = builder.to_frames()
-    profile = north_america_profile()
+    profile = profile_with_capabilities(capabilities)
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "semantic_profile": profile["semantic_profile"],

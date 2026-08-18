@@ -61,11 +61,16 @@ def generate_semantic_graph(
     timeseries_dir: Path,
     out_dir: Path,
     root: Path | None = None,
+    capabilities: set[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     if profile != "north_america":
         raise ValueError(
             "Only the north_america semantic profile is currently supported"
         )
+    # ``None`` preserves the pre-Phase-21 graph (flexibility assumed) so
+    # existing study invocations stay value-identical (R7); an explicit set is
+    # the model-first declared-capability contract.
+    capabilities = {"flexibility"} if capabilities is None else set(capabilities)
     base_dir = base_dir.resolve()
     scenario_dir = scenario_dir.resolve()
     flexibility_dir = flexibility_dir.resolve()
@@ -103,12 +108,13 @@ def generate_semantic_graph(
         asset_registry=asset_registry,
         provider_registry=provider_registry,
         timeseries_manifests=timeseries_manifests,
+        capabilities=capabilities,
     )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     nodes.to_parquet(out_dir / "nodes.parquet", index=False)
     edges.to_parquet(out_dir / "edges.parquet", index=False)
-    write_profile(out_dir / "profile_north_america.json")
+    write_profile(out_dir / "profile_north_america.json", capabilities=capabilities)
     workspace_root = _resolve_root(root, out_dir)
     manifest["artifacts"] = {
         "nodes": _relpath(out_dir / "nodes.parquet", workspace_root),
@@ -151,6 +157,16 @@ def main() -> None:
     parser.add_argument("--flexibility-dir", type=Path, default=DEFAULT_FLEXIBILITY_DIR)
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
+    parser.add_argument(
+        "--semantic-capabilities",
+        nargs="*",
+        default=None,
+        help=(
+            "Declared semantic capabilities (e.g. 'flexibility'). Defaults to "
+            "flexibility for backwards compatibility (R7); pass an empty list "
+            "for a model-first core-only graph."
+        ),
+    )
     args = parser.parse_args()
 
     nodes, edges, manifest = generate_semantic_graph(
@@ -161,6 +177,11 @@ def main() -> None:
         timeseries_dir=args.timeseries_dir,
         out_dir=args.out_dir,
         root=find_workspace_root(args.root),
+        capabilities=(
+            set(args.semantic_capabilities)
+            if args.semantic_capabilities is not None
+            else None
+        ),
     )
     print(
         f"Generated semantic graph {manifest['semantic_profile']} "
