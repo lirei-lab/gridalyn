@@ -22,135 +22,58 @@ later be loaded into DuckDB, FalkorDB, or another operational backend.
     [Network Model](../concepts/network-model.md#what-class-of-thing-this-is)
     for the measurement behind that statement.
 
-The default runtime instance lives at:
-
-```text
-instances/default/digital_twin/
-```
-
-This is the only default digital-twin path. Commands, tests, documentation, and
+The default runtime instance lives at `instances/default/digital_twin/`. This
+is the only default digital-twin path. Commands, tests, documentation, and
 dashboard mounts should resolve through `ArtifactLayout` or explicit
 `instances/<name>/digital_twin/` paths, not through a repository-root alias.
 
-## Directory Contract
+## The model-first architecture
 
-```text
-instances/default/digital_twin/
-  base/
-    buildings.parquet
-    building_grid_connectivity.parquet
-    grid_buses.parquet
-    grid_lines.parquet
-    grid_transformers.parquet
-    metadata.json
-  models/
-    building_models.parquet
-    thermal_zones.parquet
-    device_registry.parquet
-    end_use_loads.parquet
-    building_model_manifest.json
-    scenarios/
-      S*_device_registry.parquet
-      scenario_summary.parquet
-      scenario_model_manifest.json
-  dashboard/
-    catalog.json
-  scenarios/
-    S0.json ... S4.json
-    ev_assignments.parquet
-    asset_registry.parquet
-    asset_registry_summary.json
-    index.json
-  timeseries/
-    S*_ev_load.parquet
-    S*_powerflow_*.parquet
-    ev_load_summary.json
-    powerflow_smoke_summary.json
-  flexibility/
-    provider_registry.parquet
-    network_sensitivity.parquet
-    provider_registry_summary.json
-    network_graph_nodes.parquet
-    network_graph_edges.parquet
-    network_node_features.parquet
-    network_edge_features.parquet
-    network_impact_training.parquet
-    network_impact_predictions.parquet
-    network_impact_surrogate_report.json
-    network_impact_physics_labels.parquet
-    network_impact_physics_labels_report.json
-    network_impact_physics_predictions.parquet
-    network_impact_physics_surrogate_report.json
-    locational_clearing_events.parquet
-    locational_clearing_selections.parquet
-    locational_clearing_summary.json
-  reports/
-    digital_twin_build_manifest.json
-    mv_lv_transformer_overload_report.json
-    canonical/
-  semantic/
-    nodes.parquet
-    edges.parquet
-    graph_manifest.json
-    profile_north_america.json
-    validation_report.json
+A gridalyn twin is **model-first**: its first, faithful representation is the
+grid model — a canonical, schema-declared network plus its observed state.
+Domain capabilities (flexibility, EV/DER, market) are **layers added on
+demand** by declaring a capability, never baked into the core. See
+[Digital Twin Layering](digital-twin-layering.md) for the full layering model,
+framework decision, and the API to declare a capability.
+
+Conceptually, the twin is built as a stack — each layer depends on the one
+below it:
+
+```mermaid
+flowchart TD
+    B[1. Static network · base] --> M[2. Building models]
+    M --> S[3. Scenarios · asset registry]
+    S --> T[4. Simulation results · timeseries]
+    S --> F[5. Flexibility layer · capability]
+    T --> F
+    B --> O[Observed state · observation]
+    M --> G[6. Semantic graph · core]
+    F --> G
+    G --> D[7. Dashboard catalog]
 ```
 
-## Build Orchestration
+Each layer is described below with the artifacts it produces and the command
+that regenerates it.
 
-Use `gridalyn twin` as the top-level regeneration entrypoint when rebuilding
-the canonical artifacts. The stable contract is centered on:
-`instances/default/digital_twin/base`, `instances/default/digital_twin/scenarios`, `instances/default/digital_twin/timeseries`,
-`instances/default/digital_twin/models`, `instances/default/digital_twin/flexibility`, `instances/default/digital_twin/semantic`,
-`instances/default/digital_twin/reports`, and `instances/default/digital_twin/dashboard/catalog.json`.
-
-Preview the ordered build without writing heavy simulation outputs:
-
-```bash
-uv run gridalyn twin build --dry-run --skip-heavy
-```
-
-Rebuild the core digital twin:
-
-```bash
-uv run gridalyn twin build
-```
-
-The first step, `export_base`, reads the topology caches
-`pp_net_cache.pkl` and `pg_graph_cache.pkl` from
-`instances/default/digital_twin/cache/`. That directory is git-ignored and is
-absent on a fresh checkout, so the build fails there with `FileNotFoundError`
-until it is populated. Populate it with
-`gridalyn.simulation.build_synthetic_network_from_geojson`, passing the cache
-directory as `out_dir` and `write_cache=True` — the same call
-`examples/tutorials/create_grid_from_real_data.py` makes, pointed at the twin
-cache instead of `examples/generated/outputs/`.
-
-Include the Network Impact and clearing scorecard artifacts:
-
-```bash
-uv run gridalyn twin build --include-network-impact
-```
-
-For fast CI or local checks, combine `--skip-heavy` with
-`--include-network-impact`; this skips pandapower-heavy sampling while still
-planning the semantic, dashboard, report, and surrogate metadata steps.
-
-Every run writes `instances/default/digital_twin/reports/digital_twin_build_manifest.json` with
-the planned/executed steps and canonical downstream artifacts.
-
-## Base Assets
+## 1. The static network (base)
 
 `instances/default/digital_twin/base` describes the static network:
 
-- `buildings.parquet`: one row per building/load instance with `building_id`, `load_id`, `pandapower_load`, location, area, static load, and seeds.
-- `building_grid_connectivity.parquet`: maps buildings and loads to load buses, LV clusters, feeder buses, and transformers.
-- `grid_buses.parquet`: CIM-like connectivity nodes with voltage, category, location, and service status.
-- `grid_lines.parquet`: line assets with terminal buses and electrical parameters.
-- `grid_transformers.parquet`: transformer assets with HV/LV buses and nameplate data.
+- `buildings.parquet`: one row per building/load instance with `building_id`,
+  `load_id`, `pandapower_load`, location, area, static load, and seeds.
+- `building_grid_connectivity.parquet`: maps buildings and loads to load
+  buses, LV clusters, feeder buses, and transformers.
+- `grid_buses.parquet`: CIM-like connectivity nodes with voltage, category,
+  location, and service status.
+- `grid_lines.parquet`: line assets with terminal buses and electrical
+  parameters.
+- `grid_transformers.parquet`: transformer assets with HV/LV buses and
+  nameplate data.
 - `metadata.json`: repository-centric model manifest with schema version,
   model version, source adapter, artifact hashes, topology counts, and network
   validation status.
+
+### Reading the base through the repository
 
 Reusable code should access these tables through the network repository instead
 of duplicating topology joins:
@@ -175,16 +98,13 @@ for the full contract and the error text.
 
 The same repository is used by platform services such as dashboard catalog
 generation so that topology counts, feeder queries, transformer downstream
-queries, and validation metadata stay consistent across studies.
+queries, and validation metadata stay consistent across studies. Current
+repository-first consumers include base metadata generation, EV scenario
+generation, building model input loading, semantic graph generation,
+flexibility provider registry generation, and dashboard catalog topology
+summaries.
 
-Current repository-first consumers include:
-
-- base metadata generation;
-- EV scenario generation;
-- building model input loading;
-- semantic graph generation;
-- flexibility provider registry generation;
-- dashboard catalog topology summaries.
+### Base metadata
 
 The base metadata manifest is generated after the Parquet files are written and
 is validated by loading those files back through `NetworkModelRepository`. Its
@@ -205,25 +125,23 @@ key fields are:
 | `validation` | Endpoint and customer-connectivity validation from `NetworkModelRepository`. |
 | `model_authority` | The producing adapter's Model Authority Sets and profiles, JSON-native. `null` when a producer declares none. See [Model Authority Sets and Profiles](#model-authority-sets-and-profiles). |
 
-The current base export command is a thin wrapper around
-the default `gridalyn.twin.adapters.NetworkAdapterRegistry`, which resolves
-`synthetic_pandapower` to
-`gridalyn.twin.adapters.SyntheticPandapowerAdapter`. That keeps the synthetic
-workflow working while making the source-adapter boundary explicit for future
-GIS, CIM, OpenDSS, or DMS imports. Adapter exports also write
-`network_adapter_validation_report.json`, which records adapter identity, source
-standard, source format, declared capabilities, artifact existence, model
-counts, and topology validation results.
-
-Dashboard catalogs read `model_version_id` and `model_version` from
-`instances/default/digital_twin/base/metadata.json` when a network repository is available, so
-visualized scenarios can be traced back to the exact model snapshot.
+The base export command is a thin wrapper around the default
+`gridalyn.twin.adapters.NetworkAdapterRegistry`, which resolves
+`synthetic_pandapower` to `gridalyn.twin.adapters.SyntheticPandapowerAdapter`.
+That keeps the synthetic workflow working while making the source-adapter
+boundary explicit for future GIS, CIM, OpenDSS, or DMS imports. Adapter
+exports also write `network_adapter_validation_report.json`, which records
+adapter identity, source standard, source format, declared capabilities,
+artifact existence, model counts, and topology validation results. Dashboard
+catalogs read `model_version_id` and `model_version` from
+`base/metadata.json` when a network repository is available, so visualized
+scenarios can be traced back to the exact model snapshot.
 
 The registry also exposes `cim_parquet` through
-`gridalyn.twin.adapters.CimParquetAdapter`. This first utility-facing path accepts
-CIM-like Parquet source tables and emits the same canonical base snapshot as the
-synthetic pandapower path. It is a pragmatic interchange adapter, not a full CIM
-RDF/XML importer.
+`gridalyn.twin.adapters.CimParquetAdapter`. This first utility-facing path
+accepts CIM-like Parquet source tables and emits the same canonical base
+snapshot as the synthetic pandapower path. It is a pragmatic interchange
+adapter, not a full CIM RDF/XML importer.
 
 ### Model Authority Sets and Profiles
 
@@ -250,8 +168,7 @@ quietly drop out of the documentation.
 Geography is **not** a second authority. `gridalyn/twin/geoprocess/` constructs
 zero canonical artifacts; building footprints reach the model as an *input* to
 `PowerGridGraph.building_data`, inside the synthetic authority set rather than
-beside it. Earlier design notes describing the twin as "a synthetic base plus
-GeoJSON geography" are measurably wrong — do not repeat that framing.
+beside it.
 
 A `ModelProfile` carries a stable id, a version, its artifacts, and a
 `depends_on` list. **`depends_on` is derived, never authored**: it is computed
@@ -296,8 +213,8 @@ field carrying every `as_dict()`. The committed
 zero by AST scan.** This is deliberate and load-bearing; a future contributor
 reaching for a graph library to "finish" CGMES support should read this first.
 
-- The repository *used* to ship an RDF/XML exporter. It was removed in Phase 9
-  because it had **no importers and no tests** — it was dead code, and `rdflib`
+- The repository *used* to ship an RDF/XML exporter. It was removed because it
+  had **no importers and no tests** — it was dead code, and `rdflib`
   came off the dependency list with it.
 - What this layer needs from CGMES is its **vocabulary**: `FullModel` identity
   fields, authority sets, profile dependencies. Those are expressible as frozen
@@ -315,33 +232,11 @@ If a consumer for CGMES RDF/XML ever appears, the honest move is to add the
 dependency *with* that consumer and delete this section — not to add the
 serializer first and hope a reader arrives.
 
-### Observed State
+## 2. Building models
 
-`gridalyn.twin.observation` owns `NetworkObservation` and `observe_network`:
-one definition of what a solved network shows, in the same layer as the model
-it describes. `gridalyn.simulation.observation` still resolves — it re-binds the
-same objects and emits a `DeprecationWarning` — so no consumer had to change.
-
-An observation carries a keyword-only `as_of: datetime | None`, and it is
-**caller-supplied**, never inferred. A solved `pandapowerNet` holds one
-converged operating point with no record of which instant it represents; only
-the caller that chose the point knows. All **13** production
-`observe_network(...)` call sites pass `as_of=None` today, which is correct
-rather than a gap — a sensitivity perturbation, a
-named scenario and a Monte-Carlo draw index have no real instant to offer, and
-stamping one would fabricate evidence. `AS_OF_ABSENT_REASON` travels with the
-field to say exactly that.
-
-There is deliberately **no state-producer registry**. One real producer plus a
-placeholder is the speculative abstraction the platform's registries exist to
-avoid; the absence is asserted by a test rather than left to be mistaken for an
-oversight.
-
-## Building Model Layer
-
-`instances/default/digital_twin/models` turns static building rows into simulation-ready building
-entities. It follows a pyCity-style decomposition without introducing a pyCity
-runtime dependency:
+`instances/default/digital_twin/models` turns static building rows into
+simulation-ready building entities. It follows a pyCity-style decomposition
+without introducing a pyCity runtime dependency:
 
 - `building_models.parquet`: one deterministic model per building with
   archetype, floor area, bus/transformer lineage, thermal parameters, and
@@ -377,28 +272,7 @@ North America residential profile intended as a reproducible baseline for
 studies, flexibility provider synthesis, and future calibration against measured
 or simulated building data.
 
-## Dashboard Catalog
-
-`instances/default/digital_twin/dashboard/catalog.json` is the general-purpose UI contract for the
-grid viewer. It is intentionally study-agnostic:
-
-- scenario labels and descriptions;
-- Parquet paths for nodes, lines, transformers, and power traces;
-- pure grid metrics such as grid peak, load peak, minimum voltage, line loading,
-  transformer loading, and overload counts;
-- topology counts such as buses, lines, loads, transformers, and timesteps;
-- optional extension report paths for study-specific panels.
-
-Generate it with:
-
-```bash
-uv run gridalyn dashboard catalog
-```
-
-The dashboard should load this catalog first. Other manifests are supporting
-diagnostics rather than the primary UI contract.
-
-## Scenarios and Asset Registry
+## 3. Scenarios and asset registry
 
 The scenario layer separates study assumptions from physical assets.
 
@@ -414,7 +288,7 @@ For S4 in the current generated dataset:
 - EVs overlapping soft participants: `389`
 - hard-preferred EVs: `905`
 
-## Powerflow Time Series
+## 4. Simulation results (timeseries)
 
 `instances/default/digital_twin/timeseries` stores scenario-specific simulation results:
 
@@ -426,9 +300,12 @@ For S4 in the current generated dataset:
 
 The dashboard reads these files directly through DuckDB in the browser.
 
-## Flexibility Provider Layer
+## 5. The flexibility layer (capability)
 
-The provider layer turns scenario roles into network-aware controllable assets:
+The provider layer turns scenario roles into network-aware controllable assets.
+It is a **capability** — it participates only when a project declares the
+flexibility semantic capability (see
+[Digital Twin Layering](digital-twin-layering.md)):
 
 - `provider_registry.parquet`: one provider row for each Soft CLS building and
   Hard CLS EV, including building, load, bus, feeder, transformer, capacity,
@@ -520,7 +397,7 @@ selection Parquet tables, and emits
 
 ### Retired: the pandapower replay chain
 
-Five commands were removed on 2026-08-06 — `market verify-clearing`,
+Five commands were removed — `market verify-clearing`,
 `market perturbation-samples`, `market verify-network-impact`,
 `market shadow-report` and `market scorecard` — together with the five
 `gridalyn twin build --include-network-impact` steps that invoked them.
@@ -529,9 +406,9 @@ All five read
 `instances/default/digital_twin/flexibility/market_dispatch_timeseries.parquet`.
 No command in this repository writes that file: it came from a study that was
 consolidated away, and the capability was never re-homed. They therefore failed
-with `FileNotFoundError` wherever they were run. Because their build steps were declared optional, the
-build tolerated those failures and still exited 0 — a green exit on a build
-missing its verification artifacts.
+with `FileNotFoundError` wherever they were run. Because their build steps were
+declared optional, the build tolerated those failures and still exited 0 — a
+green exit on a build missing its verification artifacts.
 
 The locational clearing MVP above still runs and still emits its report; what
 is gone is the replay-and-verify layer that consumed a dispatch time series
@@ -551,26 +428,19 @@ reports:
 uv run gridalyn market network-impact-catalog
 ```
 
-## Operational Reports
+## 6. The semantic graph (capability)
 
-Transformer overload summaries should be published through canonical reports
-under `instances/default/digital_twin/reports/canonical`.
+The semantic graph is a federated index over the twin artifacts: stable entity
+IDs, ontology labels, and relationship metadata that let the same assets be
+queried as a graph. It is **model-first** — the core emits only generic CIM/Brick
+types — and the flexibility/market ontology is an **on-demand capability**
+declared through `--semantic-capabilities`. See
+[Semantic Graph](../reference/semantic-graph.md) for the ontology and
+[Digital Twin Layering](digital-twin-layering.md) for the capability model.
 
-Canonical reports include:
-
-- `network_capacity_report.json`
-- `scenario_registry_report.json`
-- `semantic_graph_report.json`
-- `digital_twin_report_manifest.json`
-
-Each canonical report records input file hashes, source artifacts, metrics, and schema version.
-
-## Regeneration
-
-Generate semantic graph artifacts (model-first — the `--semantic-capabilities`
-flag is optional; omitting it preserves the full legacy graph, passing an empty
-list builds the model-first core only, and `flexibility` adds the
-market-management layer):
+Generate semantic graph artifacts (omitting `--semantic-capabilities` preserves
+the full legacy graph, passing an empty list builds the model-first core only,
+and `flexibility` adds the market-management layer):
 
 ```bash
 uv run gridalyn semantic build \
@@ -591,8 +461,7 @@ present, the semantic graph also indexes the market-management layer:
 aggregators, portfolios, providers, offers, and constraint zones. This lets
 FalkorDB/DuckDB consumers ask which providers belong to an aggregator, which
 contract each provider implements, and which transformer constraint an offer
-targets without embedding heavy time-series data in the graph. See
-`docs/platform/digital-twin-layering.md` for the model-first layering model.
+targets without embedding heavy time-series data in the graph.
 
 Validate semantic graph:
 
@@ -602,8 +471,172 @@ uv run gridalyn semantic validate \
   --scenario-dir instances/default/digital_twin/scenarios
 ```
 
-Build canonical digital-twin reports:
+## 7. The dashboard catalog
+
+`instances/default/digital_twin/dashboard/catalog.json` is the general-purpose
+UI contract for the grid viewer. It is intentionally study-agnostic:
+
+- scenario labels and descriptions;
+- Parquet paths for nodes, lines, transformers, and power traces;
+- pure grid metrics such as grid peak, load peak, minimum voltage, line loading,
+  transformer loading, and overload counts;
+- topology counts such as buses, lines, loads, transformers, and timesteps;
+- optional extension report paths for study-specific panels.
+
+Generate it with:
 
 ```bash
-uv run python -m gridalyn.interfaces.reporting.digital_twin
+uv run gridalyn dashboard catalog
 ```
+
+The dashboard should load this catalog first. Other manifests are supporting
+diagnostics rather than the primary UI contract.
+
+## Observed state
+
+`gridalyn.twin.observation` owns `NetworkObservation` and `observe_network`:
+one definition of what a solved network shows, in the same layer as the model
+it describes. `gridalyn.simulation.observation` still resolves — it re-binds the
+same objects and emits a `DeprecationWarning` — so no consumer had to change.
+
+An observation carries a keyword-only `as_of: datetime | None`, and it is
+**caller-supplied**, never inferred. A solved `pandapowerNet` holds one
+converged operating point with no record of which instant it represents; only
+the caller that chose the point knows. All **13** production
+`observe_network(...)` call sites pass `as_of=None` today, which is correct
+rather than a gap — a sensitivity perturbation, a named scenario and a
+Monte-Carlo draw index have no real instant to offer, and stamping one would
+fabricate evidence. `AS_OF_ABSENT_REASON` travels with the field to say exactly
+that.
+
+There is deliberately **no state-producer registry**. One real producer plus a
+placeholder is the speculative abstraction the platform's registries exist to
+avoid; the absence is asserted by a test rather than left to be mistaken for an
+oversight.
+
+## Building the twin
+
+Use `gridalyn twin` as the top-level regeneration entrypoint when rebuilding
+the canonical artifacts. Preview the ordered build without writing heavy
+simulation outputs:
+
+```bash
+uv run gridalyn twin build --dry-run --skip-heavy
+```
+
+Rebuild the core digital twin:
+
+```bash
+uv run gridalyn twin build
+```
+
+The first step, `export_base`, reads the topology caches
+`pp_net_cache.pkl` and `pg_graph_cache.pkl` from
+`instances/default/digital_twin/cache/`. That directory is git-ignored and is
+absent on a fresh checkout, so the build fails there with `FileNotFoundError`
+until it is populated. Populate it with
+`gridalyn.simulation.build_synthetic_network_from_geojson`, passing the cache
+directory as `out_dir` and `write_cache=True` — the same call
+`examples/tutorials/create_grid_from_real_data.py` makes, pointed at the twin
+cache instead of `examples/generated/outputs/`.
+
+Include the Network Impact and clearing scorecard artifacts:
+
+```bash
+uv run gridalyn twin build --include-network-impact
+```
+
+For fast CI or local checks, combine `--skip-heavy` with
+`--include-network-impact`; this skips pandapower-heavy sampling while still
+planning the semantic, dashboard, report, and surrogate metadata steps.
+
+Every run writes
+`instances/default/digital_twin/reports/digital_twin_build_manifest.json` with
+the planned/executed steps and canonical downstream artifacts.
+
+## Operational reports
+
+Transformer overload summaries should be published through canonical reports
+under `instances/default/digital_twin/reports/canonical`.
+
+Canonical reports include:
+
+- `network_capacity_report.json`
+- `scenario_registry_report.json`
+- `semantic_graph_report.json`
+- `digital_twin_report_manifest.json`
+
+Each canonical report records input file hashes, source artifacts, metrics, and schema version.
+
+## The artifact contract (reference)
+
+The default runtime instance materializes under `instances/default/digital_twin/`:
+
+```text
+instances/default/digital_twin/
+  base/
+    buildings.parquet
+    building_grid_connectivity.parquet
+    grid_buses.parquet
+    grid_lines.parquet
+    grid_transformers.parquet
+    metadata.json
+  models/
+    building_models.parquet
+    thermal_zones.parquet
+    device_registry.parquet
+    end_use_loads.parquet
+    building_model_manifest.json
+    scenarios/
+      S*_device_registry.parquet
+      scenario_summary.parquet
+      scenario_model_manifest.json
+  dashboard/
+    catalog.json
+  scenarios/
+    S0.json ... S4.json
+    ev_assignments.parquet
+    asset_registry.parquet
+    asset_registry_summary.json
+    index.json
+  timeseries/
+    S*_ev_load.parquet
+    S*_powerflow_*.parquet
+    ev_load_summary.json
+    powerflow_smoke_summary.json
+  flexibility/
+    provider_registry.parquet
+    network_sensitivity.parquet
+    provider_registry_summary.json
+    network_graph_nodes.parquet
+    network_graph_edges.parquet
+    network_node_features.parquet
+    network_edge_features.parquet
+    network_impact_training.parquet
+    network_impact_predictions.parquet
+    network_impact_surrogate_report.json
+    network_impact_physics_labels.parquet
+    network_impact_physics_labels_report.json
+    network_impact_physics_predictions.parquet
+    network_impact_physics_surrogate_report.json
+    locational_clearing_events.parquet
+    locational_clearing_selections.parquet
+    locational_clearing_summary.json
+  reports/
+    digital_twin_build_manifest.json
+    mv_lv_transformer_overload_report.json
+    canonical/
+  semantic/
+    nodes.parquet
+    edges.parquet
+    graph_manifest.json
+    profile_north_america.json
+    validation_report.json
+```
+
+## Related documentation
+
+- [Network Model](../concepts/network-model.md) — what class of thing the twin is (Kritzinger taxonomy), the model identity and observed-state contracts.
+- [Digital Twin Layering](digital-twin-layering.md) — the model-first layering model and the capability API.
+- [Semantic Graph](../reference/semantic-graph.md) — the graph ontology and its profile.
+- [Network Repository](../sdk/network-repository.md) — the repository API and its validation contract.
