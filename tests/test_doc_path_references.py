@@ -103,10 +103,21 @@ checker = _load_checker()
 _MIN_FILES_SCANNED = 45
 _MIN_FILES_WITH_REFERENCES = 40
 _MIN_TOTAL_REFERENCES = 400
+# Per-class floors, re-measured 2026-08-18 on the same `git stash create` +
+# `git archive` clean-checkout scan as the totals above: SOURCE 359,
+# SHORTHAND 105, RUNTIME 108. The RUNTIME drop (was pinned against ~219) is
+# the Phase-22/23 consolidation: the pages that carried dense runtime-path
+# walkthroughs (run-demo-projects, the twin build pages) were merged or
+# tightened, and the git-ignored CLAUDE.md/AGENTS.md -- which pad the class
+# locally but are absent in CI -- no longer mask the difference. That masking
+# is exactly how the 150 floor shipped red: it passed the working tree and
+# failed the clean checkout (CI run 32168680947, "only 111 RUNTIME
+# references"). Floors sit below the clean-checkout figure, as the comment
+# above requires.
 _MIN_PER_CLASS: dict[str, int] = {
-    checker.SOURCE: 200,
+    checker.SOURCE: 250,
     checker.SHORTHAND: 25,
-    checker.RUNTIME: 150,
+    checker.RUNTIME: 80,
 }
 
 # Ceiling on the taxonomy's blind spot. Measured: 25 in the working tree, 1 in
