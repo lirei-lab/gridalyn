@@ -13,14 +13,24 @@ The active profile is:
 instances/default/digital_twin/semantic/profile_north_america.json
 ```
 
-The profile is North America-first:
+The profile is North America-first and **model-first** (Phase 21 re-layering,
+2026-08-17): the core profile carries the generic grid model, and the
+flexibility/market ontology is an **on-demand capability** a project declares
+through its semantic profile (`build_semantic_graph(capabilities=...)` /
+`--semantic-capabilities` — see
+`docs/platform/digital-twin-layering.md`).
+
+Core (always emitted):
 
 - IEC CIM / IEC 61970 / IEC 61968 for grid topology;
 - CIM100 and GridAPPS-D-compatible distribution extensions where needed;
 - ASHRAE 223 and Brick for buildings, points, meters, and building systems;
+- Green Button / NAESB ESPI for customer interval metadata.
+
+Flexibility capability (`capabilities={"flexibility"}`, on-demand):
+
 - LBNL Energy Flexibility Ontology (EFOnt) for building flexibility resources,
   flexible operations, load characteristics, and flexibility KPIs;
-- Green Button / NAESB ESPI for customer interval metadata;
 - OpenADR for demand-response and CLS event messaging;
 - IEEE 2030.5 reserved for future DER and EV control interoperability;
 - `cls:` as the local namespace for Soft CLS and Hard CLS contracts;
@@ -29,7 +39,8 @@ The profile is North America-first:
   zones.
 
 SAREF is not a primary ontology in this profile. It can be added later as a
-crosswalk if an integration requires it.
+crosswalk if an integration requires it. With the capability ON the emitted
+profile is byte-identical to the pre-re-layering profile (R7).
 
 ## Generated Artifacts
 

@@ -2883,7 +2883,7 @@
     "docs/platform/digital-twin.md#13": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",
-      "date": "2026-08-06",
+      "date": null,
       "evidence": "chain member; the verdict and its evidence are owned by sequence docs/platform/digital-twin.md#seq0",
       "family": "platform",
       "file": "docs/platform/digital-twin.md",
@@ -2892,7 +2892,7 @@
       "ordinal": 13,
       "rationale": "",
       "sequence": "docs/platform/digital-twin.md#seq0",
-      "sha1": "6b92ddaca99cff825557f94ee183a5f9a187f96e",
+      "sha1": "6903da9174771d2d79655df0f650a85c9a9577d2",
       "verdict": null
     },
     "docs/platform/digital-twin.md#14": {

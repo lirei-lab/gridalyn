@@ -567,7 +567,10 @@ Each canonical report records input file hashes, source artifacts, metrics, and 
 
 ## Regeneration
 
-Generate semantic graph artifacts:
+Generate semantic graph artifacts (Phase 21 model-first re-layering — the
+`--semantic-capabilities` flag is optional; omitting it preserves the full
+legacy graph, passing an empty list builds the model-first core only, and
+`flexibility` adds the market-management layer):
 
 ```bash
 uv run gridalyn semantic build \
@@ -577,14 +580,19 @@ uv run gridalyn semantic build \
   --flexibility-dir instances/default/digital_twin/flexibility \
   --timeseries-dir instances/default/digital_twin/timeseries \
   --out-dir instances/default/digital_twin/semantic
+  # model-first core only:  add  --semantic-capabilities
+  # core + flexibility:      add  --semantic-capabilities flexibility
 ```
 
-When `instances/default/digital_twin/flexibility/provider_registry.parquet` is present, the
-semantic graph also indexes the market-management layer: aggregators,
-portfolios, providers, offers, and constraint zones. This lets FalkorDB/DuckDB
-consumers ask which providers belong to an aggregator, which contract each
-provider implements, and which transformer constraint an offer targets without
-embedding heavy time-series data in the graph.
+When the `flexibility` semantic capability is declared (or the flag is
+omitted, which assumes it for backwards compatibility) and
+`instances/default/digital_twin/flexibility/provider_registry.parquet` is
+present, the semantic graph also indexes the market-management layer:
+aggregators, portfolios, providers, offers, and constraint zones. This lets
+FalkorDB/DuckDB consumers ask which providers belong to an aggregator, which
+contract each provider implements, and which transformer constraint an offer
+targets without embedding heavy time-series data in the graph. See
+`docs/platform/digital-twin-layering.md` for the re-layering contract.
 
 Validate semantic graph:
 
