@@ -146,10 +146,16 @@ jobs:
         run: python -m pytest -q --durations=15
 
       - name: Run the mypy ratchet
-        # Reports; blocks only when the count RISES. Same script and same
-        # baseline file as the pre-push hook, so the two cannot disagree.
+        # Reports; blocks only when a count RISES. Same script and same
+        # baseline files as the pre-push hook, so the two cannot disagree.
+        # Two independent targets: gridalyn/ (.mypy-baseline) and, since
+        # 2026-08-18, projects/ (.mypy-baseline-projects) -- added after a
+        # study script's call site drifted from a shared helper's changed
+        # signature with nothing to catch it; see tools/mypy_ratchet.py's
+        # module docstring for the measured incident.
         run: |
           python tools/mypy_ratchet.py | tee -a "${GITHUB_STEP_SUMMARY}"
+          python tools/mypy_ratchet.py --target projects --baseline-file .mypy-baseline-projects | tee -a "${GITHUB_STEP_SUMMARY}"
 
       - name: Verify the operator-run protocols are accounted for
         # The things CI cannot run -- the multi-hour flagship regeneration, the

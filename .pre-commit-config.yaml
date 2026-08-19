@@ -63,6 +63,23 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+      - id: mypy-ratchet-projects
+        # Same mechanism, a second target: study scripts under projects/ were
+        # outside every type gate until 2026-08-18, when a shared helper's
+        # signature changed and 9 of 10 call sites in ev_hosting_flex kept the
+        # old type -- no test caught it (the study skips in CI), and mypy
+        # named the exact line and mismatched type when checked directly. A
+        # separate baseline (868, measured 2026-08-18) rather than one shared
+        # with gridalyn/'s: gridalyn/ is held to full type discipline, studies
+        # were never held to any, and folding the two numbers together would
+        # either fail immediately or bless the whole projects/ backlog as
+        # fine.
+        name: mypy (ratchet against .mypy-baseline-projects)
+        entry: python3 tools/mypy_ratchet.py --target projects --baseline-file .mypy-baseline-projects
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
 ci:
   autofix_commit_msg: "style: Auto-format code and docs [skip ci]"
