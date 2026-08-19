@@ -12,6 +12,7 @@ import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
 import { WORKSPACES, loadIeee33Dashboard } from './projectDashboards';
+import { operatingProject } from './projectSource';
 
 // Base map style (Carto Dark Matter equivalent in Open Standard)
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -824,6 +825,9 @@ export default function App() {
       }}>
         <WorkspaceSelector activeWorkspace={activeWorkspace} onChange={setActiveWorkspace} />
         <h2 style={{ margin: '14px 0 5px 0', fontSize: '1.4rem' }}>Gridalyn Digital Twin</h2>
+        <p style={{ margin: '0 0 4px 0', color: '#666666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Project: {operatingProject()}
+        </p>
         <p style={{ margin: '0 0 20px 0', color: '#aaaaaa', fontSize: '0.9rem' }}>Scenario {scenarioSummary?.label || selectedScenario} · Heatmap: {heatmapTitle(heatmapMode)}</p>
 
         <div style={{ marginBottom: '20px' }}>

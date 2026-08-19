@@ -7,6 +7,16 @@
 //
 // Configure with `VITE_GRIDALYN_PROJECT` at build time, or call the path
 // helpers with an explicit `project` argument at runtime.
+//
+// FALLBACK_PROJECT still exists (Phase 30, Milestone 14, 2026-08-19) because
+// the "Digital Twin" workspace's dashboards (operations catalog, clearing
+// scorecard, network impact) are coded to one study's artifact SHAPE, not
+// just its name — a real multi-project switcher for that workspace is
+// unbuilt SDK work, not a config change. What changed here: the fallback
+// used to resolve SILENTLY, so a viewer could not tell whether they were
+// looking at a configured project or an accidental default. App.jsx now
+// prints `operatingProject()` in the panel header on every load, so the
+// active project is always visible, never assumed.
 
 export const FALLBACK_PROJECT = 'ev_hosting_flex';
 
