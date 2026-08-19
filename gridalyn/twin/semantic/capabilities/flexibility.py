@@ -768,8 +768,7 @@ def flexibility_profile_extensions() -> dict[str, Any]:
             "dt:ScenarioDevice",
             "efont:EnergyFlexibility",
             "efont:EnergyFlexibilityKPI",
-            # Aspirational — declared but not currently emitted by any generator.
-            "efont:FlexibleLoadCharacteristic",
+            "efont:FlexibleLoadCharacteristic",  # Aspirational — not currently emitted.
             "efont:FlexibleOperation",
             "efont:ThermallyActivatedBuildingSystem",
             "ieee2030_5:EVSE",

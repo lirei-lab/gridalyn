@@ -7,15 +7,15 @@ Four behaviours are held here:
 (b) both power-flow backends registered by the backend registry yield
     identical observations -- the seam proof;
 (c) no in-scope file recomputes ``res_bus.vm_pu`` min/max directly any more;
-(d) importing the package pulls no optional dependency.
-(e) ``as_of`` is carried, and its absence is explicit rather than fabricated.
+(d) ``as_of`` is carried, and its absence is explicit rather than fabricated.
 
-Behaviour (d) probes ``gridalyn.simulation.observation``, which Phase 11 turned
-into an eager deprecation shim. Eager is the stricter case: the ``_LAZY_EXPORTS``
-map that used to defer its imports is gone, so anything the re-export chain
-touches is loaded at package import. The canonical home,
-``gridalyn.twin.observation``, is probed by
-``tests/test_twin_observation_relocation.py``.
+``gridalyn.simulation.observation``, the deprecation shim Phase 11 left behind
+when the contract moved to ``gridalyn.twin.observation``, was deleted
+2026-08-19 (Phase 26) -- it had no in-repo consumer, and the deprecation had
+no pinned removal version. ``gridalyn.twin.observation``'s own
+no-optional-dependency behaviour is covered generically by
+``tests/test_import_hygiene.py``'s whole-tree sweep, not by a dedicated test
+here.
 
 Behaviour (c) is an :mod:`ast` scan, never a bare identifier grep. A grep for
 ``res_bus.vm_pu`` would match the prose in this docstring and in the contract's
@@ -27,9 +27,6 @@ retrospective item 3.
 from __future__ import annotations
 
 import ast
-import json
-import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -270,7 +267,7 @@ def test_the_contract_does_not_require_a_pandapower_network() -> None:
 
 
 # --------------------------------------------------------------------------
-# (e) the clock: carried when supplied, explicitly absent when not
+# (d) the clock: carried when supplied, explicitly absent when not
 # --------------------------------------------------------------------------
 
 
@@ -437,7 +434,7 @@ def test_the_as_of_scan_would_catch_a_supplied_instant() -> None:
 
 
 # --------------------------------------------------------------------------
-# (f) provenance: required, stamped by the producer, carried by the filter
+# (e) provenance: required, stamped by the producer, carried by the filter
 # --------------------------------------------------------------------------
 # Red-first note: the required field makes red-first structural -- these tests
 # cannot even construct their subjects on the pre-provenance tree, where the
@@ -569,27 +566,7 @@ def test_the_ast_scan_would_catch_a_reintroduced_reduction() -> None:
 # a solved network -- evidence that this contract had not invented a consumer.
 # Deleting the module answers the question it was asking.
 
-
-# --------------------------------------------------------------------------
-# (d) importing the package pulls no optional dependency
-# --------------------------------------------------------------------------
-
-
-def test_importing_the_package_pulls_no_optional_dependency() -> None:
-    """A clean-process import of the package leaks no optional module."""
-    probe = (
-        "import json, sys;"
-        "import gridalyn.simulation.observation;"
-        "print(json.dumps(sorted("
-        "{'lightsim2grid', 'cvxpy', 'osmnx'} & set(sys.modules))))"
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", probe],
-        capture_output=True,
-        text=True,
-        timeout=120,
-        check=False,
-    )
-
-    assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == []
+# ``test_importing_the_package_pulls_no_optional_dependency`` (behaviour (d) in
+# the original numbering) was removed 2026-08-19 with the
+# ``gridalyn.simulation.observation`` deprecation shim it probed -- see the
+# module docstring.

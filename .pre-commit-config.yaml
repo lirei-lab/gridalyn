@@ -70,12 +70,22 @@ repos:
         # old type -- no test caught it (the study skips in CI), and mypy
         # named the exact line and mismatched type when checked directly. A
         # separate baseline (868, measured 2026-08-18) rather than one shared
-        # with gridalyn/'s: gridalyn/ is held to full type discipline, studies
-        # were never held to any, and folding the two numbers together would
-        # either fail immediately or bless the whole projects/ backlog as
-        # fine.
+        # with gridalyn/'s (133): the two backlogs are held to different
+        # bars, and folding the numbers together would obscure which side a
+        # regression came from.
         name: mypy (ratchet against .mypy-baseline-projects)
         entry: python3 tools/mypy_ratchet.py --target projects --baseline-file .mypy-baseline-projects
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: mypy-ratchet-twin
+        # A third target, scoped to gridalyn/twin/ (23 errors, measured
+        # 2026-08-19): the digital-twin/semantic layer is a distinct backlog
+        # from the rest of gridalyn/, folded into the whole-SDK number
+        # (133) with no way to see a twin-specific regression separately.
+        name: mypy (ratchet against .mypy-baseline-twin)
+        entry: python3 tools/mypy_ratchet.py --target gridalyn/twin --baseline-file .mypy-baseline-twin
         language: system
         pass_filenames: false
         always_run: true

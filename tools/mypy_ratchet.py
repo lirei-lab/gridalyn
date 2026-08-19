@@ -11,13 +11,12 @@ Two independent targets, two independent baselines
 ----------------------------------------------------
 ``gridalyn/`` (``.mypy-baseline``) and ``projects/`` (``.mypy-baseline-projects``,
 added 2026-08-18) are ratcheted separately, on purpose. Measured the day the
-second target was added: 0 errors in ``gridalyn/`` under this configuration
-(the SDK is held to full type discipline) against 868 in ``projects/`` across
+second target was added: 133 errors in ``gridalyn/`` under this configuration
+-- a real, tracked backlog, not zero -- against 868 in ``projects/`` across
 72 files -- study scripts were never held to the same bar. Folding the two
-into one baseline would either fail immediately (0 does not cover 868) or
-require accepting 868 as the shared number, which blesses the entire backlog
-as fine rather than stopping it from growing. Same mechanism, honest separate
-numbers.
+into one baseline would require accepting the union as a single number,
+obscuring which side of the boundary a regression came from. Same mechanism,
+honest separate numbers.
 
 Why this is the gate that would have caught a real bug this one number missed
 -------------------------------------------------------------------------------

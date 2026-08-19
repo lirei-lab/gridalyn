@@ -170,22 +170,6 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "extensionless module reference; the file is gridalyn/operations/settlement.py",
     (
         "CLAUDE.md",
-        "gridalyn/operations/market/",
-    ): "gridalyn/operations/market/ was retired; the successor is clearing/",
-    (
-        "CLAUDE.md",
-        "gridalyn/operations/flexibility/",
-    ): "retired alongside operations/market/, same successor. Until the "
-    "2026-08-18 docs restructure this was written bare as `flexibility/` and "
-    "resolved by accident against `docs/flexibility/`, which no longer exists; "
-    "the sentence always meant the retired subpackage, so the reference was "
-    "qualified and waived here rather than left resolving to the wrong thing",
-    (
-        "CLAUDE.md",
-        "archive/flexibility_cls",
-    ): "a git tag, not a path; the notation is indistinguishable from a directory",
-    (
-        "CLAUDE.md",
         "archive/engine-mode-clearing",
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",

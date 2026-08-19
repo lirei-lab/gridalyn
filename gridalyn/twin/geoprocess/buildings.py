@@ -5,7 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 from pathlib import Path
-from typing import Sequence
+from typing import IO, Sequence
 
 import geopandas as gpd
 from shapely.geometry import Polygon
@@ -57,13 +57,13 @@ def download_osm_building_footprints(
 
     downloader = BuildingDownloader()
     downloader.download_buildings(
-        tuple(tuple(float(value) for value in coordinate) for coordinate in polygon_coordinates),
+        tuple((float(lon), float(lat)) for lon, lat in polygon_coordinates),
         str(output_file),
     )
     return Path(output_file)
 
 
-def _open_text(path: Path):
+def _open_text(path: Path) -> IO[str]:
     if path.suffix == ".gz":
         return gzip.open(path, "rt", encoding="utf-8")
     return path.open("r", encoding="utf-8")

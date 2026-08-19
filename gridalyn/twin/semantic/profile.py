@@ -38,8 +38,7 @@ NAMESPACES = {
 }
 
 RELATIONSHIP_TYPES = [
-    # Aspirational — declared but not currently emitted by any generator.
-    "CHARACTERIZES",
+    "CHARACTERIZES",  # Aspirational — not currently emitted.
     "CONNECTS",
     "CONNECTED_TO",
     "FEEDS",
@@ -72,8 +71,7 @@ _ALLOWED_SEMANTIC_TYPES_FULL: list[str] = [
     "dt:TimeSeriesDataset",
     "efont:EnergyFlexibility",
     "efont:EnergyFlexibilityKPI",
-    # Aspirational — declared but not currently emitted by any generator.
-    "efont:FlexibleLoadCharacteristic",
+    "efont:FlexibleLoadCharacteristic",  # Aspirational — not currently emitted.
     "efont:FlexibleOperation",
     "efont:ThermallyActivatedBuildingSystem",
     "ieee2030_5:EVSE",

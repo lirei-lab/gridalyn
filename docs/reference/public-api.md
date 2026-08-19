@@ -97,8 +97,10 @@ keyword-only, caller-supplied `as_of`. Every `NetworkObservation` now carries a
 required `provenance` field (`ObservationProvenance =
 Literal["simulated", "measured"]`) — `observe_network` stamps `"simulated"`
 unconditionally, and construction without a provenance is a `TypeError` (a
-documented breaking change). `gridalyn.simulation.observation` still
-resolves as a deprecated re-export.
+documented breaking change). `gridalyn.simulation.observation`, the
+deprecation shim that used to re-export these from the old pre-Phase-11
+location, was deleted 2026-08-19 — import from `gridalyn.twin.observation`
+(or the `gridalyn.twin`/`gridalyn.simulation` facades above).
 
 In 2026-08-13 the same facade was extended with the measured-state ingest
 path and the observation producer registry. New stable `gridalyn.twin` imports:

@@ -75,9 +75,10 @@ every reduction skips ``NaN``, an empty reduction is ``nan`` for min/max and
 ``gridalyn.simulation.observation`` because that is where the need surfaced.
 "What a solved network shows" is a property of the network, not of the solver,
 so Phase 11 moved it down to ``gridalyn.twin.observation`` -- the layer that
-owns network state. ``gridalyn.simulation.observation`` remains as a
-re-exporting shim that emits :class:`DeprecationWarning` and yields *this*
-module's objects, not copies of them.
+owns network state. ``gridalyn.simulation.observation`` stayed behind as a
+re-exporting deprecation shim through Phase 25; it had no in-repo consumer and
+its deprecation carried no pinned removal version, so Phase 26 deleted it
+outright rather than fix the version.
 
 **The clock.** :attr:`NetworkObservation.as_of` is the instant the observed
 state belongs to. Two producers ship. :func:`observe_network` reads a solved

@@ -235,7 +235,10 @@ Migration rule of thumb:
 Use `SemanticGraphRepository` when application or workflow code needs graph
 answers instead of raw node and edge tables. It is an external-facing public
 read API for researchers and applications that consume the materialized graph
-directly; it has no in-repo application consumer today (a recorded decision).
+directly. It has had zero in-repo application consumers since Phase 9 —
+**a permanent design decision (confirmed 2026-08-19), not an open question**:
+no internal consumer is planned, and its absence from `gridalyn`'s own call
+graph is not evidence of dead code.
 
 ```python
 from gridalyn.twin import SemanticGraphRepository

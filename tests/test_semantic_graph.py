@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -5,7 +6,10 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.twin import SemanticGraphRepository
-from gridalyn.twin.db.federated_graph_adapter import FederatedGraphAdapter
+from gridalyn.twin.db.federated_graph_adapter import (
+    FederatedGraphAdapter,
+    _cypher_label,
+)
 from gridalyn.twin.semantic.capabilities.flexibility import (
     flexibility_profile_extensions,
     query_providers_for_constraint,
@@ -510,6 +514,46 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertTrue(
             all("UNWIND $props AS p" in batch["cypher"] for batch in batches["nodes"])
         )
+
+    def test_falkor_batches_merge_the_computed_semantic_type_label(self):
+        """A node batch's MERGE clause must carry the exact label its own
+        rows compute — the labels field is otherwise dead metadata."""
+        data = self._fixtures()
+        nodes, edges, _manifest = build_semantic_graph(
+            buses=data["buses"],
+            lines=data["lines"],
+            transformers=data["transformers"],
+            buildings=data["buildings"],
+            connectivity=data["connectivity"],
+            asset_registry=data["assets"],
+            provider_registry=data["providers"],
+            timeseries_manifests=data["timeseries"],
+        )
+        self.assertGreater(nodes["semantic_type"].nunique(), 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            nodes.to_parquet(tmp_path / "nodes.parquet", index=False)
+            edges.to_parquet(tmp_path / "edges.parquet", index=False)
+            adapter = FederatedGraphAdapter.from_parquet(tmp_path)
+            batches = adapter.to_falkor_batches(batch_size=2)["nodes"]
+
+        seen_labels = set()
+        for batch in batches:
+            match = re.search(r"MERGE \(n:SemanticAsset:(\w+) \{", batch["cypher"])
+            self.assertIsNotNone(match, batch["cypher"])
+            merged_label = match.group(1)
+            self.assertEqual(batch["labels"], [merged_label])
+            row_labels = {
+                _cypher_label(row["semantic_type"]) for row in batch["params"]["props"]
+            }
+            self.assertEqual(row_labels, {merged_label})
+            seen_labels.add(merged_label)
+
+        expected_labels = {
+            _cypher_label(value) for value in nodes["semantic_type"].unique()
+        }
+        self.assertEqual(seen_labels, expected_labels)
 
     def test_semantic_repository_answers_operational_relationship_queries(self):
         data = self._fixtures()

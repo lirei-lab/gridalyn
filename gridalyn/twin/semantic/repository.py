@@ -7,6 +7,14 @@ on-demand capability
 ``query_providers_for_constraint`` / ``query_trace_building_to_constraint``).
 This class keeps the generic graph queries (nodes, neighbors, asset context,
 scenario assets, time-series, edge matching).
+
+**Consumer story (decided 2026-08-19, Phase 26).** This class has had zero
+in-repo consumers since Phase 9 shipped it — it is a deliberately
+external-facing query API for a researcher or notebook to load a materialized
+semantic graph and ask questions of it, not a dependency any `gridalyn`
+pipeline stage reaches for internally. That is a permanent design decision,
+not an open question: no internal consumer is planned, and its absence from
+`gridalyn`'s own call graph is not evidence of dead code.
 """
 
 from __future__ import annotations

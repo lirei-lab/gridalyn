@@ -56,21 +56,23 @@ class FederatedGraphAdapter:
     ) -> dict[str, list[dict[str, Any]]]:
         node_batches: list[dict[str, Any]] = []
         edge_batches: list[dict[str, Any]] = []
-        for start in range(0, len(self.nodes), batch_size):
-            chunk = self.nodes.iloc[start : start + batch_size]
-            labels = sorted({_cypher_label(value) for value in chunk["semantic_type"]})
-            cypher = (
-                "UNWIND $props AS p\n"
-                "MERGE (n:SemanticAsset {node_id: p.node_id})\n"
-                "SET n += p"
-            )
-            node_batches.append(
-                {
-                    "cypher": cypher,
-                    "params": {"props": chunk.to_dict("records")},
-                    "labels": labels,
-                }
-            )
+        node_labels = self.nodes["semantic_type"].map(_cypher_label)
+        for label in sorted(node_labels.unique()):
+            group = self.nodes.loc[node_labels == label]
+            for start in range(0, len(group), batch_size):
+                chunk = group.iloc[start : start + batch_size]
+                cypher = (
+                    "UNWIND $props AS p\n"
+                    f"MERGE (n:SemanticAsset:{label} {{node_id: p.node_id}})\n"
+                    "SET n += p"
+                )
+                node_batches.append(
+                    {
+                        "cypher": cypher,
+                        "params": {"props": chunk.to_dict("records")},
+                        "labels": [label],
+                    }
+                )
 
         for start in range(0, len(self.edges), batch_size):
             chunk = self.edges.iloc[start : start + batch_size]

@@ -97,7 +97,11 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: ``gridalyn.simulation.observation`` stayed behind as a deprecation shim, so
 #: the sweep now covers both. This is an addition, not a relocation of the
 #: count -- the shim is still a real package and still has to be proven clean.
-_EXPECTED_SUBPACKAGE_COUNT = 41
+#: 41 -> 40 on 2026-08-19, when the ``gridalyn.simulation.observation`` shim
+#: was deleted (Phase 26): it had no in-repo consumer and its deprecation
+#: carried no pinned removal version, so rather than fix the version the
+#: user chose to remove it outright.
+_EXPECTED_SUBPACKAGE_COUNT = 40
 
 _PROBE = """\
 import json

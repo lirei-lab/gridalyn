@@ -22,7 +22,7 @@ class BuildingDownloader:
         self.config_path = config_path
 
     def download_buildings(
-        self, polygon_coordinates: Tuple[Tuple[float, float]], output_path: str
+        self, polygon_coordinates: Tuple[Tuple[float, float], ...], output_path: str
     ) -> None:
         """
         Downloads building shapes for a given polygon using osmnx and saves them to a file.

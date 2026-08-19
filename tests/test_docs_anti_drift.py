@@ -206,6 +206,9 @@ class AntiDriftTests(unittest.TestCase):
             "components/twin.md",  # explains why rdflib is NOT a dependency
             "start/installation.md",  # dated retirement note (2026-08-07)
         ),
+        "gridalyn.simulation.observation": (
+            "reference/public-api.md",  # dated retirement note (2026-08-19)
+        ),
     }
 
     #: NOT included: ``falkordb``. See the module docstring -- it names a
@@ -220,6 +223,7 @@ class AntiDriftTests(unittest.TestCase):
         "flexibility_cls",
         "NetworkAnalyzer",
         "rdflib",
+        "gridalyn.simulation.observation",
     )
 
     def test_no_retired_name_outside_a_reviewed_note(self) -> None:

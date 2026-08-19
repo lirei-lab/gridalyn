@@ -3,9 +3,10 @@
 The contract lives here, in the layer that owns network state, rather than in
 ``gridalyn.simulation`` where Phase 10 first needed it. Only the *producer* of
 a solved operating point belongs to the simulation layer; what that state shows
-is a property of the network. ``gridalyn.simulation.observation`` re-exports
-these objects behind a :class:`DeprecationWarning` and yields the identical
-classes, not copies.
+is a property of the network. ``gridalyn.simulation.observation`` re-exported
+these objects behind a :class:`DeprecationWarning` through Phase 25; it had no
+in-repo consumer and its deprecation carried no pinned removal version, so
+Phase 26 deleted it outright.
 
 The map below is not stylistic. :mod:`gridalyn.twin.observation.contract`
 imports pandas, a base dependency, so it does not leak today. The package
