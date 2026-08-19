@@ -4,12 +4,16 @@ Phase 28 (Milestone 14) moved ``PandapowerGridBuilder`` from
 ``gridalyn.simulation.simulators.powerflow.builder`` down to
 ``gridalyn.twin.adapters.pandapower_builder`` -- a pure file move, no logic
 change, since the class's only real dependency (``PowerGridGraph``) already
-lived in ``twin``. Four behaviours are held here:
+lived in ``twin``. Phase 29 then extracted the topology-construction glue
+around it (``build_power_grid_and_network``) into the same module, so
+``gridalyn.simulation``'s orchestrator no longer imports the class directly
+-- it imports the twin-native construction function instead. Four behaviours
+are held here:
 
 (a) the new import path resolves to the class;
 (b) the old import path is gone, not duplicated;
-(c) ``synthetic_network.py``'s orchestrator uses the twin-native class, not a
-    second one wearing the same name;
+(c) ``synthetic_network.py``'s orchestrator binds the twin-native
+    construction function, not a second one wearing the same name;
 (d) the constructed network's structure is unchanged -- exact table shapes
     for a deterministic fixture, so a future edit to this exact construction
     path cannot silently drift without this test noticing.
@@ -23,7 +27,10 @@ from pathlib import Path
 from gridalyn.simulation.simulators.powerflow.synthetic_network import (
     build_synthetic_network_from_geojson,
 )
-from gridalyn.twin.adapters.pandapower_builder import PandapowerGridBuilder
+from gridalyn.twin.adapters.pandapower_builder import (
+    PandapowerGridBuilder,
+    build_power_grid_and_network,
+)
 from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
 
 
@@ -49,11 +56,11 @@ def test_the_old_path_no_longer_resolves() -> None:
         )
 
 
-def test_synthetic_network_uses_the_twin_native_builder() -> None:
-    """(c) The orchestrator binds the twin-native class, not a look-alike."""
+def test_synthetic_network_uses_the_twin_native_construction_function() -> None:
+    """(c) The orchestrator binds the twin-native function, not a look-alike."""
     import gridalyn.simulation.simulators.powerflow.synthetic_network as module
 
-    assert module.PandapowerGridBuilder is PandapowerGridBuilder
+    assert module.build_power_grid_and_network is build_power_grid_and_network
 
 
 def test_constructed_network_structure_is_unchanged(tmp_path: Path) -> None:

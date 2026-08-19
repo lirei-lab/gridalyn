@@ -21,7 +21,7 @@ import numpy as np
 import pandapower as pp
 
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.twin.adapters.pandapower_builder import PandapowerGridBuilder
+from gridalyn.twin.adapters.pandapower_builder import build_power_grid_and_network
 from gridalyn.twin.core.graph import PowerGridGraph
 
 # Cap on the number of over-capacity line indices recorded in the report so a
@@ -124,14 +124,12 @@ def build_synthetic_network_from_config(
     footprints = Path(footprints_path)
     output_dir = Path(out_dir) if out_dir is not None else None
 
-    power_grid = PowerGridGraph()
-    buildings = power_grid.extract_building_centers_and_areas(
-        str(footprints),
+    power_grid, net = build_power_grid_and_network(
+        footprints_path=footprints,
+        config=config,
         clustering_crs=clustering_crs,
     )
-
-    _build_graph_hierarchy(power_grid, config)
-    net, line_sizing = _build_pandapower_network(power_grid, config)
+    line_sizing = _apply_load_aware_sizing_if_configured(net, config)
     if building_peak_loads_kw is not None:
         _apply_building_peak_loads(net, building_peak_loads_kw)
 
@@ -142,7 +140,7 @@ def build_synthetic_network_from_config(
         config_source=config_source,
         config=config,
         power_grid=power_grid,
-        buildings_count=len(buildings),
+        buildings_count=len(power_grid.building_data),
         net=net,
         topology=topology,
         powerflow=powerflow,
@@ -227,91 +225,29 @@ def _load_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def _build_graph_hierarchy(power_grid: PowerGridGraph, config: dict[str, Any]) -> None:
-    loads = config["loads"]
-    transformers = config["transformers"]
-    max_load_per_building = float(loads["max_load_per_building"])
-    diversity_factor_lv = float(loads.get("diversity_factor_lv", 5.0))
-    diversity_factor_mv = float(loads.get("diversity_factor_mv", 1.3))
-    diversity_factor_hv = float(loads.get("diversity_factor_hv", 1.1))
-    mv_lv_capacity = float(transformers["lv_mv"]["capacity_kva"])
-    hv_mv_capacity = float(transformers["mv_hv"]["capacity_kva"])
-    utilization = float(transformers["lv_mv"].get("utilization_margin", 0.8))
-
-    power_grid.create_lv_graph(
-        max_load_per_building=max_load_per_building,
-        mv_lv_transformer_capacity=mv_lv_capacity,
-        capacity_utilization_factor=utilization,
-        diversity_factor_lv=diversity_factor_lv,
-    )
-    power_grid.extend_graph_with_cim("graph_lv_buses")
-    power_grid.create_building_graph(
-        max_load_per_building=max_load_per_building,
-        diversity_factor_lv=diversity_factor_lv,
-    )
-
-    power_grid.create_mv_graph(
-        mv_lv_transformer_capacity=mv_lv_capacity,
-        hv_mv_transformer_capacity=hv_mv_capacity,
-        diversity_factor_mv=diversity_factor_mv,
-    )
-    power_grid.extend_graph_with_cim("graph_mv_buses")
-
-    hv_substation_capacity = (
-        len(power_grid.labels_mv) if power_grid.labels_mv is not None else 1
-    ) * hv_mv_capacity
-    power_grid.create_hv_substation_graph(
-        hv_mv_transformer_capacity=hv_mv_capacity,
-        hv_substation_capacity=hv_substation_capacity,
-        diversity_factor_hv=diversity_factor_hv,
-    )
-    power_grid.extend_graph_with_cim("graph_hv_buses")
-    power_grid.merge_graphs()
-
-
-def _build_pandapower_network(
-    power_grid: PowerGridGraph,
+def _apply_load_aware_sizing_if_configured(
+    net: pp.pandapowerNet,
     config: dict[str, Any],
-) -> tuple[pp.pandapowerNet, dict[str, Any] | None]:
-    """Build the pandapower network and optional load-aware sizing summary.
+) -> dict[str, Any] | None:
+    """Run the opt-in load-aware line-sizing post-pass, if configured.
 
     Returns:
-        A tuple ``(net, line_sizing)`` where ``line_sizing`` is ``None`` under
-        the default ``uniform`` sizing mode (so the validation report stays
-        byte-identical to the historical generator output) and a deterministic
-        summary block when the opt-in ``load_aware`` post-pass ran.
+        ``None`` under the default ``uniform`` sizing mode (so the validation
+        report stays byte-identical to the historical generator output) or a
+        deterministic summary block when ``config["lines"]["sizing"]["mode"]
+        == "load_aware"`` ran.
     """
-    pp_config = {
-        "buses": config["buses"],
-        "lines": config["lines"],
-        "transformers": {
-            "lv_mv": dict(config["transformers"]["lv_mv"]),
-            "mv_hv": dict(config["transformers"]["mv_hv"]),
-        },
-    }
-    builder = PandapowerGridBuilder(power_grid=power_grid, config=pp_config)
-    builder.build_lv_buses_and_lines()
-    builder.build_mv_buses_and_lines()
-    builder.build_hv_buses_and_lines()
-    builder.build_loads_from_graph_buildings()
-    builder.validate_network_consistency()
-    builder.build_lv_mv_power_transformers()
-    builder.build_mv_hv_power_transformers()
-    builder.connect_hv_bus_to_ext_grid()
-    builder.create_bus_geodata()
-    net = builder.get_pandapower_net()
     mode = config.get("lines", {}).get("sizing", {}).get("mode", "uniform")
-    line_sizing: dict[str, Any] | None = None
-    if mode == "load_aware":
-        # Local import keeps the default ``uniform`` path's import graph
-        # unchanged, preserving byte-identity with the historical generator.
-        from gridalyn.simulation.simulators.powerflow.line_sizing_select import (
-            size_lines_load_aware,
-        )
+    if mode != "load_aware":
+        return None
+    # Local import keeps the default ``uniform`` path's import graph
+    # unchanged, preserving byte-identity with the historical generator.
+    from gridalyn.simulation.simulators.powerflow.line_sizing_select import (
+        size_lines_load_aware,
+    )
 
-        sizing_rows = size_lines_load_aware(net, config)
-        line_sizing = _summarize_line_sizing(sizing_rows)
-    return net, line_sizing
+    sizing_rows = size_lines_load_aware(net, config)
+    return _summarize_line_sizing(sizing_rows)
 
 
 def _summarize_line_sizing(sizing_rows: list[dict[str, Any]]) -> dict[str, Any]:

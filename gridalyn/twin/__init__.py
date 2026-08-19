@@ -48,6 +48,10 @@ from importlib import import_module
 from typing import Any
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "build_power_grid_and_network": (
+        "gridalyn.twin.adapters",
+        "build_power_grid_and_network",
+    ),
     "CimParquetAdapter": ("gridalyn.twin.adapters", "CimParquetAdapter"),
     "ConnectedEquipment": ("gridalyn.twin.network", "ConnectedEquipment"),
     "DownstreamAssets": ("gridalyn.twin.network", "DownstreamAssets"),

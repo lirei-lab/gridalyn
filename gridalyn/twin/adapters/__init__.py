@@ -6,6 +6,10 @@ from importlib import import_module
 
 _LAZY_EXPORTS = {
     "BuildingDownloader": ("gridalyn.twin.adapters.geojson", "BuildingDownloader"),
+    "build_power_grid_and_network": (
+        "gridalyn.twin.adapters.pandapower_builder",
+        "build_power_grid_and_network",
+    ),
     "CimParquetAdapter": ("gridalyn.twin.adapters.cim", "CimParquetAdapter"),
     "FakeGeoJSONGenerator": ("gridalyn.twin.adapters.geojson", "FakeGeoJSONGenerator"),
     "GeoProcessor": ("gridalyn.twin.adapters.geojson", "GeoProcessor"),

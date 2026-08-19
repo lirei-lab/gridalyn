@@ -20,12 +20,24 @@ builds a network's *topology*, which is what a network looks like, not how
 it is solved. Moved down to ``gridalyn.twin.adapters`` (Phase 28, 2026-08-19)
 so the twin layer finally has a real construction capability instead of only
 ever adapting a network someone else already built.
+
+**Building from source.** :func:`build_power_grid_and_network` (Phase 29,
+2026-08-19) is the twin-native construction entry point: building footprints
+in, a built :class:`PowerGridGraph` and :class:`pp.pandapowerNet` out, no
+power-flow solve and no load-aware line sizing -- both stay
+``gridalyn.simulation`` concerns.
+:func:`gridalyn.simulation.simulators.powerflow.synthetic_network.build_synthetic_network_from_config`
+calls this for topology, then adds the optional load-aware sizing pass and
+power-flow solve on top; :class:`~gridalyn.twin.adapters.network.SyntheticPandapowerAdapter`
+calls it directly so ``gridalyn.twin`` can build a network from source, not
+only adapt one someone else already built.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandapower as pp
 import pandas as pd
@@ -630,3 +642,114 @@ class PandapowerGridBuilder:
                     f"{unmatched_graph_edges}"
                 )
             return False
+
+
+def build_power_grid_and_network(
+    *,
+    footprints_path: str | Path,
+    config: Dict[str, Any],
+    clustering_crs: str | int | None = "auto",
+) -> Tuple[PowerGridGraph, pp.pandapowerNet]:
+    """Build a `PowerGridGraph` and `pandapower` network from building footprints.
+
+    Pure topology construction: extracts building centroids, builds the
+    LV/MV/HV graph hierarchy, and builds buses/lines/transformers/loads via
+    `PandapowerGridBuilder` under the default uniform line-sizing mode. No
+    power-flow solve and no load-aware line sizing -- both are
+    `gridalyn.simulation`-layer concerns; see
+    `gridalyn.simulation.simulators.powerflow.synthetic_network` for the full
+    orchestration that adds them.
+
+    Args:
+        footprints_path: GeoJSON file with building polygons.
+        config: Grid configuration mapping (buses/lines/transformers/loads).
+        clustering_crs: Metric CRS for clustering. `"auto"` estimates a local
+            UTM CRS from the footprint layer. Graph geodata stays
+            longitude/latitude.
+
+    Returns:
+        `(power_grid, net)`. `power_grid.building_data` carries the extracted
+        building count and coordinates for a caller that needs them.
+    """
+    power_grid = PowerGridGraph()
+    power_grid.extract_building_centers_and_areas(
+        str(Path(footprints_path)), clustering_crs=clustering_crs
+    )
+    _build_graph_hierarchy(power_grid, config)
+    net = _build_uniform_pandapower_network(power_grid, config)
+    return power_grid, net
+
+
+def _build_graph_hierarchy(power_grid: PowerGridGraph, config: Dict[str, Any]) -> None:
+    """Build and merge the LV/MV/HV `PowerGridGraph` hierarchy in place."""
+    loads = config["loads"]
+    transformers = config["transformers"]
+    max_load_per_building = float(loads["max_load_per_building"])
+    diversity_factor_lv = float(loads.get("diversity_factor_lv", 5.0))
+    diversity_factor_mv = float(loads.get("diversity_factor_mv", 1.3))
+    diversity_factor_hv = float(loads.get("diversity_factor_hv", 1.1))
+    mv_lv_capacity = float(transformers["lv_mv"]["capacity_kva"])
+    hv_mv_capacity = float(transformers["mv_hv"]["capacity_kva"])
+    utilization = float(transformers["lv_mv"].get("utilization_margin", 0.8))
+
+    power_grid.create_lv_graph(
+        max_load_per_building=max_load_per_building,
+        mv_lv_transformer_capacity=mv_lv_capacity,
+        capacity_utilization_factor=utilization,
+        diversity_factor_lv=diversity_factor_lv,
+    )
+    power_grid.extend_graph_with_cim("graph_lv_buses")
+    power_grid.create_building_graph(
+        max_load_per_building=max_load_per_building,
+        diversity_factor_lv=diversity_factor_lv,
+    )
+
+    power_grid.create_mv_graph(
+        mv_lv_transformer_capacity=mv_lv_capacity,
+        hv_mv_transformer_capacity=hv_mv_capacity,
+        diversity_factor_mv=diversity_factor_mv,
+    )
+    power_grid.extend_graph_with_cim("graph_mv_buses")
+
+    hv_substation_capacity = (
+        len(power_grid.labels_mv) if power_grid.labels_mv is not None else 1
+    ) * hv_mv_capacity
+    power_grid.create_hv_substation_graph(
+        hv_mv_transformer_capacity=hv_mv_capacity,
+        hv_substation_capacity=hv_substation_capacity,
+        diversity_factor_hv=diversity_factor_hv,
+    )
+    power_grid.extend_graph_with_cim("graph_hv_buses")
+    power_grid.merge_graphs()
+
+
+def _build_uniform_pandapower_network(
+    power_grid: PowerGridGraph,
+    config: Dict[str, Any],
+) -> pp.pandapowerNet:
+    """Build the `pandapower` network under the default uniform sizing mode.
+
+    Load-aware line sizing is an opt-in `gridalyn.simulation`-layer post-pass
+    (`config["lines"]["sizing"]["mode"] == "load_aware"`) applied by the
+    caller, not here -- keeping this function's only dependency
+    `PandapowerGridBuilder`, already in `twin`.
+    """
+    pp_config = {
+        "buses": config["buses"],
+        "lines": config["lines"],
+        "transformers": {
+            "lv_mv": dict(config["transformers"]["lv_mv"]),
+            "mv_hv": dict(config["transformers"]["mv_hv"]),
+        },
+    }
+    builder = PandapowerGridBuilder(power_grid=power_grid, config=pp_config)
+    builder.build_lv_buses_and_lines()
+    builder.build_mv_buses_and_lines()
+    builder.build_hv_buses_and_lines()
+    builder.build_loads_from_graph_buildings()
+    builder.validate_network_consistency()
+    builder.build_lv_mv_power_transformers()
+    builder.build_mv_hv_power_transformers()
+    builder.connect_hv_bus_to_ext_grid()
+    builder.create_bus_geodata()
+    return builder.get_pandapower_net()

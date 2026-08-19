@@ -22,6 +22,7 @@ from gridalyn.twin.adapters.authority import (
     model_authority_payload,
     validate_authority_partition,
 )
+from gridalyn.twin.adapters.pandapower_builder import build_power_grid_and_network
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.network.metadata import write_base_metadata
 from gridalyn.twin.network.model import (
@@ -144,10 +145,25 @@ def exported_model_identity(out_dir: Path) -> ModelIdentity:
 
 @dataclass(frozen=True)
 class SyntheticPandapowerAdapter:
-    """Adapter from cached synthetic pandapower/Gridalyn objects to base Parquet."""
+    """Adapter from synthetic pandapower/Gridalyn objects to base Parquet.
+
+    Two sources, chosen by whether ``footprints_path`` is set:
+
+    * unset (default): ``load_snapshot`` normalizes an already-built network
+      it reads from ``cache_dir``'s ``pp_net_cache.pkl``/``pg_graph_cache.pkl``
+      -- the historical, adapt-only path.
+    * set: ``load_snapshot`` builds the network fresh from the building
+      footprints via
+      :func:`~gridalyn.twin.adapters.pandapower_builder.build_power_grid_and_network`
+      (Phase 29, 2026-08-19) -- no ``gridalyn.simulation`` dependency, no
+      cache required. This is what gives ``gridalyn.twin`` a real
+      construction capability instead of only ever adapting a network
+      someone else already built.
+    """
 
     cache_dir: Path
     config_path: Path
+    footprints_path: Path | None = None
     adapter_id: str = "synthetic_pandapower"
     source_adapter: str = "SyntheticPandapowerAdapter"
     source_standard: str = "pandapower"
@@ -182,7 +198,11 @@ class SyntheticPandapowerAdapter:
         return base_model_profiles()
 
     def load_snapshot(self) -> NetworkModel:
-        """Load cached synthetic grid objects and normalize them to base tables.
+        """Build or load the synthetic grid and normalize it to base tables.
+
+        Builds fresh from ``footprints_path`` when set (Phase 29); otherwise
+        loads ``cache_dir``'s pickled net/graph, the historical adapt-only
+        path.
 
         Returns:
             The canonical :class:`NetworkModel`.
@@ -194,7 +214,13 @@ class SyntheticPandapowerAdapter:
                 produces the committed base rather than only on the CIM path.
         """
         validate_authority_partition(self.authority_sets(), adapter_id=self.adapter_id)
-        net, pg = _load_cache(self.cache_dir)
+        if self.footprints_path is not None:
+            config = _load_json(self.config_path)
+            pg, net = build_power_grid_and_network(
+                footprints_path=self.footprints_path, config=config
+            )
+        else:
+            net, pg = _load_cache(self.cache_dir)
         buses = _make_bus_table(net)
         lines = _make_line_table(net, buses)
         transformers = _make_transformer_table(net, buses)

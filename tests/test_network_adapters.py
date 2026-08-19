@@ -36,6 +36,7 @@ from gridalyn.twin.adapters.validation import (
     build_network_adapter_validation_report,
     write_network_adapter_validation_report,
 )
+from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
 from gridalyn.twin.network.model import ModelIdentity, NetworkModel
 
 
@@ -192,6 +193,38 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertEqual(adapter.source_standard, "pandapower")
         self.assertEqual(descriptor.source_format, "pandapower-cache")
         self.assertIn("export_base_parquet", descriptor.capabilities)
+
+    def test_synthetic_pandapower_adapter_builds_fresh_from_footprints(self):
+        """Phase 29: with ``footprints_path`` set, ``load_snapshot`` builds
+        the network from source through the twin-native
+        ``build_power_grid_and_network`` -- no cache_dir read, no
+        gridalyn.simulation import -- rather than only ever adapting an
+        already-built cache."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            footprints_path = tmp_path / "buildings.geojson"
+            generator = FakeGeoJSONGenerator(grid_size=3, seed=11, rectangular=True)
+            footprints_path.write_text(
+                json.dumps(generator.generate_geojson()), encoding="utf-8"
+            )
+
+            adapter = SyntheticPandapowerAdapter(
+                cache_dir=Path("unused-no-cache-read"),
+                config_path=Path("configs/grid/config.json"),
+                footprints_path=footprints_path,
+            )
+            snapshot = adapter.load_snapshot()
+
+            out_dir = tmp_path / "base"
+            snapshot.write_parquet(out_dir)
+            repo = NetworkModelRepository.from_parquet(out_dir, provenance="ignore")
+            validation = repo.validate_integrity()
+
+        self.assertEqual(len(snapshot.buses), 14)
+        self.assertEqual(len(snapshot.lines), 11)
+        self.assertEqual(len(snapshot.transformers), 2)
+        self.assertEqual(len(snapshot.buildings), 9)
+        self.assertTrue(validation.valid, validation.errors)
 
     def test_building_rows_carry_latitude_and_longitude_unswapped(self):
         """Regression: ``_make_buildings_and_connectivity`` once assigned
