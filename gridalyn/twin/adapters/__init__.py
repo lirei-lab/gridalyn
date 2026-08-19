@@ -25,6 +25,10 @@ _LAZY_EXPORTS = {
     ),
     "NetworkExportResult": ("gridalyn.twin.adapters.network", "NetworkExportResult"),
     "NetworkSourceAdapter": ("gridalyn.twin.adapters.network", "NetworkSourceAdapter"),
+    "PandapowerGridBuilder": (
+        "gridalyn.twin.adapters.pandapower_builder",
+        "PandapowerGridBuilder",
+    ),
     "SyntheticPandapowerAdapter": (
         "gridalyn.twin.adapters.network",
         "SyntheticPandapowerAdapter",

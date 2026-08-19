@@ -7,6 +7,7 @@ import unittest
 
 import numpy as np
 import pandapower as pp
+
 try:
     from hypothesis import given, settings
     from hypothesis import strategies as st
@@ -18,8 +19,8 @@ from pandapower.diagnostic import diagnostic
 from timeout_decorator import timeout
 from tqdm import tqdm
 
+from gridalyn.twin.adapters.pandapower_builder import PandapowerGridBuilder
 from gridalyn.twin.core.graph import PowerGridGraph
-from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
 
 
 class TestPowerGridModel(unittest.TestCase):

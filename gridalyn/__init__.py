@@ -66,7 +66,7 @@ _LAZY_EXPORTS = {
     "simulation": ("gridalyn.simulation", "simulation"),
     "twin": ("gridalyn.twin", "twin"),
     "PandapowerGridBuilder": (
-        "gridalyn.simulation.simulators.powerflow.builder",
+        "gridalyn.twin.adapters.pandapower_builder",
         "PandapowerGridBuilder",
     ),
     "GridPlotter": ("gridalyn.interfaces.viz.interactive", "GridPlotter"),

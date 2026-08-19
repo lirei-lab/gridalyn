@@ -21,7 +21,7 @@ import numpy as np
 import pandapower as pp
 
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.simulation.simulators.powerflow.builder import PandapowerGridBuilder
+from gridalyn.twin.adapters.pandapower_builder import PandapowerGridBuilder
 from gridalyn.twin.core.graph import PowerGridGraph
 
 # Cap on the number of over-capacity line indices recorded in the report so a

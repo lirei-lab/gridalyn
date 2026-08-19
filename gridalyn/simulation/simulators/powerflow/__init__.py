@@ -10,7 +10,7 @@ _LAZY_EXPORTS = {
         "PowerflowMonteCarloRunner",
     ),
     "PandapowerGridBuilder": (
-        "gridalyn.simulation.simulators.powerflow.builder",
+        "gridalyn.twin.adapters.pandapower_builder",
         "PandapowerGridBuilder",
     ),
     "SyntheticNetworkBuildResult": (

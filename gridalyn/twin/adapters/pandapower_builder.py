@@ -11,7 +11,18 @@ The class is designed to be highly configurable, allowing users to specify
 the electrical parameters of the network components through a configuration
 dictionary. It also includes validation methods to ensure the consistency
 and correctness of the resulting `pandapower` network.
+
+**Where this lives.** This builder used to live under
+``gridalyn.simulation.simulators.powerflow`` because that is where the
+power-flow need first surfaced. Its only ``gridalyn`` dependency is
+:class:`~gridalyn.twin.core.graph.PowerGridGraph`, already in ``twin`` -- it
+builds a network's *topology*, which is what a network looks like, not how
+it is solved. Moved down to ``gridalyn.twin.adapters`` (Phase 28, 2026-08-19)
+so the twin layer finally has a real construction capability instead of only
+ever adapting a network someone else already built.
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -164,7 +175,7 @@ class PandapowerGridBuilder:
                 type=bus_config["type"],
                 geodata=geodata_list,
             )
-            node_to_bus_mapping = dict(zip(valid_nodes, bus_indices))
+            node_to_bus_mapping = dict(zip(valid_nodes, bus_indices, strict=True))
             self.node_to_bus_mapping.update(node_to_bus_mapping)
 
         # Collect data for vectorized line creation
@@ -315,7 +326,8 @@ class PandapowerGridBuilder:
 
         if added_transformers > 0:
             self.logger.info(
-                f"Vectorizing creation of {added_transformers} {high_level.upper()}-{low_level.upper()} transformers..."
+                f"Vectorizing creation of {added_transformers} "
+                f"{high_level.upper()}-{low_level.upper()} transformers..."
             )
 
             # Using single dataframe concat methodology to mass-insert transformers

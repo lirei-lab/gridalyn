@@ -390,6 +390,12 @@ ENTRY_POINT_CLASSES: tuple[str, ...] = (
     # kept for external consumers despite zero internal ones), i.e. an API
     # root nothing in-repo signs by design.
     "SemanticGraphRepository",
+    # Phase 28 (Milestone 14) append: users construct this directly
+    # (PandapowerGridBuilder(power_grid, config)) to build a network from a
+    # PowerGridGraph -- the head of the twin-native construction flow, moved
+    # down from gridalyn.simulation, same head-of-flow reasoning as
+    # CimParquetAdapter/SyntheticPandapowerAdapter.
+    "PandapowerGridBuilder",
 )
 
 #: Exported exception types. Exceptions are raised, not signed -- they appear

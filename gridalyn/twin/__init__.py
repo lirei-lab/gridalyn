@@ -83,6 +83,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation",
         "ObservationProvenance",
     ),
+    "PandapowerGridBuilder": ("gridalyn.twin.adapters", "PandapowerGridBuilder"),
     "SemanticGraphRepository": ("gridalyn.twin.semantic", "SemanticGraphRepository"),
     "SyntheticPandapowerAdapter": (
         "gridalyn.twin.adapters",

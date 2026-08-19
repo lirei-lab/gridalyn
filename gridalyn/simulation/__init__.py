@@ -104,7 +104,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "unmeasured_error_bound",
     ),
     "PandapowerGridBuilder": (
-        "gridalyn.simulation.simulators.powerflow.builder",
+        "gridalyn.twin.adapters.pandapower_builder",
         "PandapowerGridBuilder",
     ),
     "SyntheticNetworkBuildResult": (
