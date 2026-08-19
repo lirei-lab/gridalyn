@@ -25,6 +25,7 @@ and the solver import is deferred inside the kernel.
 from __future__ import annotations
 
 import argparse
+import itertools
 import pickle
 from pathlib import Path
 from typing import Any
@@ -512,11 +513,17 @@ def _figures(
         peaks_by_variant = mc.groupby(["variant", "realization"])[
             "trafo_loading_percent"
         ].max()
-        for variant, color in zip(
-            peaks_by_variant.index.get_level_values(0).unique(),
-            (f"C{i}" for i in range(10)),
-            strict=True,
-        ):
+        variants = peaks_by_variant.index.get_level_values(0).unique()
+        # Cycle the 10 matplotlib default colors rather than pairing 1:1 with a
+        # fixed range(10): the variant count is the number of named MC roles
+        # this study declares (base/firm/unmanaged/curtailed = 4 today), not a
+        # constant, and a `zip(..., strict=True)` against a hardcoded 10 broke
+        # the moment it stopped being exactly 10 (measured 2026-08-19, a fresh
+        # end-to-end run: 4 variants, ValueError on the first mismatch).
+        colors = itertools.islice(
+            itertools.cycle(f"C{i}" for i in range(10)), len(variants)
+        )
+        for variant, color in zip(variants, colors, strict=True):
             peaks = np.sort(peaks_by_variant.loc[variant].to_numpy())
             ecdf = np.arange(1, len(peaks) + 1) / len(peaks)
             over = float((peaks > 100.0).mean())
