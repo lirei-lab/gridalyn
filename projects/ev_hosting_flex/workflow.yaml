@@ -35,6 +35,31 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/building_footprint_validation_report.json
         - projects/ev_hosting_flex/outputs/cache/topology_cache_manifest.json
 
+    # ── Stage 2b: twin-native NetworkModel export (additive, terminal,
+    # Phase 31/Milestone 14, R26) ─────────────────────────────────────────
+    # Read-only w.r.t. the topology cache: adapts the already-built
+    # pp_net_cache.pkl/pg_graph_cache.pkl into gridalyn.twin's canonical
+    # NetworkModel Parquet tables so the observation/semantic layers can load
+    # the flagship's real network. Nothing downstream depends on this stage.
+    - id: export_twin_network_model
+      needs: [prepare_topology_cache]
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.export_twin_network_model"
+      inputs:
+        - projects/ev_hosting_flex/scripts/pipeline/export_twin_network_model.py
+        - projects/ev_hosting_flex/scripts/config.py
+        - projects/ev_hosting_flex/inputs/synthetic_network_config.json
+        - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
+        - projects/ev_hosting_flex/outputs/cache/pg_graph_cache.pkl
+      outputs:
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/grid_buses.parquet
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/grid_lines.parquet
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/grid_transformers.parquet
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/buildings.parquet
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/metadata.json
+        - projects/ev_hosting_flex/outputs/data/twin_network_model/network_adapter_validation_report.json
+        - projects/ev_hosting_flex/outputs/reports/twin_network_model_report.json
+
     # ── Stage 3: study-B annual Monte-Carlo seam — SDK-agent annual base
     # (R_STUDY_B), day-ahead forecast bases, and the cold-coupled nested EV
     # pool (docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-annual-

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
+import pandapower as pp
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
@@ -24,6 +25,7 @@ from gridalyn.twin.adapters.authority import (
 )
 from gridalyn.twin.adapters.pandapower_builder import build_power_grid_and_network
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
+from gridalyn.twin.core.graph import PowerGridGraph
 from gridalyn.twin.network.metadata import write_base_metadata
 from gridalyn.twin.network.model import (
     BASE_TABLE_FILENAMES,
@@ -71,13 +73,35 @@ class NetworkAdapterDescriptor:
 
 
 class NetworkSourceAdapter(Protocol):
-    """Contract for adapters that can produce canonical network snapshots."""
+    """Contract for adapters that can produce canonical network snapshots.
 
-    adapter_id: str
-    source_adapter: str
-    source_standard: str
-    source_format: str
-    capabilities: tuple[str, ...]
+    Declared as read-only properties, not plain attributes: every known
+    implementer (``SyntheticPandapowerAdapter``, ``CimParquetAdapter``) is a
+    frozen dataclass, so a plain ``name: type`` declaration -- which Protocol
+    structural matching treats as requiring a settable attribute -- flags a
+    false-positive mismatch against both. Nothing ever assigns to these
+    fields; read-only is what every implementer already is.
+    """
+
+    @property
+    def adapter_id(self) -> str:
+        """Stable identifier of the network source adapter."""
+
+    @property
+    def source_adapter(self) -> str:
+        """Class name of the producing source adapter."""
+
+    @property
+    def source_standard(self) -> str:
+        """Source data standard, e.g. ``"pandapower"``."""
+
+    @property
+    def source_format(self) -> str:
+        """Source serialization format."""
+
+    @property
+    def capabilities(self) -> tuple[str, ...]:
+        """Capabilities this adapter declares."""
 
     def load_snapshot(self) -> NetworkModel:
         """Load a source model into the canonical in-memory tables."""
@@ -388,7 +412,7 @@ def _config_hash(config: dict[str, Any]) -> str:
     ).hexdigest()
 
 
-def _load_cache(cache_dir: Path):
+def _load_cache(cache_dir: Path) -> tuple[pp.pandapowerNet, PowerGridGraph]:
     with (cache_dir / "pp_net_cache.pkl").open("rb") as f:
         net = pickle.load(f)
     with (cache_dir / "pg_graph_cache.pkl").open("rb") as f:
@@ -427,7 +451,7 @@ def _parse_building_idx(load_name: str) -> int:
     return int(load_name.removeprefix(prefix))
 
 
-def _make_bus_table(net) -> pd.DataFrame:
+def _make_bus_table(net: pp.pandapowerNet) -> pd.DataFrame:
     rows = []
     for bus_idx, row in net.bus.iterrows():
         name = str(row["name"])
@@ -450,7 +474,7 @@ def _make_bus_table(net) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _make_line_table(net, buses: pd.DataFrame) -> pd.DataFrame:
+def _make_line_table(net: pp.pandapowerNet, buses: pd.DataFrame) -> pd.DataFrame:
     bus_lookup = buses.set_index("pandapower_bus")
     rows = []
     for line_idx, row in net.line.iterrows():
@@ -480,7 +504,7 @@ def _make_line_table(net, buses: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _make_transformer_table(net, buses: pd.DataFrame) -> pd.DataFrame:
+def _make_transformer_table(net: pp.pandapowerNet, buses: pd.DataFrame) -> pd.DataFrame:
     bus_lookup = buses.set_index("pandapower_bus")
     rows = []
     for trafo_idx, row in net.trafo.iterrows():
@@ -514,8 +538,8 @@ def _make_transformer_table(net, buses: pd.DataFrame) -> pd.DataFrame:
 
 
 def _make_buildings_and_connectivity(
-    net,
-    pg,
+    net: pp.pandapowerNet,
+    pg: PowerGridGraph,
     buses: pd.DataFrame,
     transformers: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:

@@ -116,7 +116,7 @@ class FlagshipVerifyTests(unittest.TestCase):
 
     def test_real_workflow_parses_and_enumerates_stages(self) -> None:
         stages = tool.topo_sort(tool.load_stages(_REPO_ROOT))
-        self.assertEqual(22, len(stages))
+        self.assertEqual(23, len(stages))
         self.assertIn("generate_annual_mc", tool.HEAVY_STAGES)
 
     # -- R7 baseline check (review fix: was untested) -------------------------
@@ -180,7 +180,7 @@ class FlagshipVerifyTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertTrue(out.exists())
             payload = json.loads(out.read_text())
-            self.assertEqual(22, len(payload["stages"]))
+            self.assertEqual(23, len(payload["stages"]))
 
     def test_main_list_stages_exits_zero(self) -> None:
         from contextlib import redirect_stdout
@@ -190,7 +190,7 @@ class FlagshipVerifyTests(unittest.TestCase):
         with redirect_stdout(buffer):
             code = tool.main(["--list-stages", "--workspace", str(_REPO_ROOT)])
         self.assertEqual(0, code)
-        self.assertEqual(22, len(buffer.getvalue().splitlines()))
+        self.assertEqual(23, len(buffer.getvalue().splitlines()))
 
     def test_main_usage_error_exits_two(self) -> None:
         with self.assertRaises(SystemExit) as ctx:

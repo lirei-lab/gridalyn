@@ -1,7 +1,7 @@
 """Shape-covering verification subset for the flagship ``ev_hosting_flex`` study.
 
 The flagship study's reproduce-and-pin tests pass against a cached tree, but a
-full source regeneration takes roughly six hours across 22 stages. This tool
+full source regeneration takes roughly six hours across 23 stages. This tool
 makes that verification *source-proven by protocol*: it runs the pipeline's
 non-heavy stages end to end (the "shape" of the pipeline), records a
 per-stage result for every stage — run, skipped, or failed — and reports the R7

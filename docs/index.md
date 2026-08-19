@@ -43,7 +43,7 @@ uv run gridalyn project run projects/minimal_grid_project
 
 For the flagship research study — the full arc, calibrated inputs, pinned
 headlines — budget time before running it: a full source regeneration is
-roughly **six hours** across 22 stages, verified by an operator rather than in
+roughly **six hours** across 23 stages, verified by an operator rather than in
 CI via a pinned verification receipt. Warm runs against an existing cache take
 minutes.
 

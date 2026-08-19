@@ -195,7 +195,7 @@ When you need the full research arc — calibrated inputs, pinned headline
 metrics, and reproduce-and-pin verification — run the flagship study. It also
 exercises the flexibility-market API end to end (locational clearing, provider
 registry, settlement) inside its contract stage. A full source regeneration is
-long-running — roughly six hours across 22 stages — and operator-verified via a
+long-running — roughly six hours across 23 stages — and operator-verified via a
 pinned verification receipt rather than gated in CI; warm runs against an
 existing cache take minutes. To run it:
 

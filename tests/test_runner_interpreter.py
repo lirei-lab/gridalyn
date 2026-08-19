@@ -224,8 +224,9 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         )
 
         # 32 (Phase 19) + 20 ev_hosting_flex pipeline stages converted to
-        # {python} -m in Phase 20 (plan 20-02).
-        self.assertEqual(52, declared)
+        # {python} -m in Phase 20 (plan 20-02) + 1 export_twin_network_model
+        # stage added in Phase 31 (Milestone 14).
+        self.assertEqual(53, declared)
 
 
 if __name__ == "__main__":

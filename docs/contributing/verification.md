@@ -44,7 +44,7 @@ That is the gap this page exists to close, and it is why the studies are
 described as *operator-verified only*.
 
 CI cannot close it itself. `ev_hosting_flex` last took **5 h 59 m** of wall clock
-to regenerate (22 stages; `analyze_congestion_risk` alone is 76 min), against a
+to regenerate (23 stages; `analyze_congestion_risk` alone is 76 min), against a
 `projects` job budgeted 25 minutes. The cost is real, not incidental.
 
 Two smaller gaps belong to the operator as well:
