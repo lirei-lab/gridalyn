@@ -2,8 +2,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import numpy as np
+import pandapower as pp
 import pandas as pd
 
 from gridalyn.projects.workflows.scripts.export_digital_twin_base import (
@@ -19,6 +22,8 @@ from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkExportResult,
     SyntheticPandapowerAdapter,
+    _make_buildings_and_connectivity,
+    _make_bus_table,
     describe_network_source_adapter,
     exported_model_identity,
 )
@@ -187,6 +192,42 @@ class NetworkAdaptersTest(unittest.TestCase):
         self.assertEqual(adapter.source_standard, "pandapower")
         self.assertEqual(descriptor.source_format, "pandapower-cache")
         self.assertIn("export_base_parquet", descriptor.capabilities)
+
+    def test_building_rows_carry_latitude_and_longitude_unswapped(self):
+        """Regression: ``_make_buildings_and_connectivity`` once assigned
+        ``building_data``'s ``Longitude`` column to the ``lat`` field and
+        ``Latitude`` to ``lon`` -- a copy/rename bug, since
+        ``CimParquetAdapter``'s equivalent code names them correctly. Reaches
+        the module-private helper directly because the bug is inside it and
+        neither field is part of the declared buildings schema, so nothing
+        else in the pipeline would catch a reintroduction.
+        """
+        net = pp.create_empty_network()
+        bus = pp.create_bus(net, vn_kv=0.4, name="lv_bus_0", geodata=(0.0, 0.0))
+        pp.create_load(net, bus=bus, p_mw=0.01, q_mvar=0.001, name="Load_building_0")
+        net.bus["geo"] = None
+        buses = _make_bus_table(net)
+        transformers = pd.DataFrame(columns=["transformer_id", "lv_bus_id"])
+        pg = SimpleNamespace(
+            building_data=pd.DataFrame(
+                [
+                    {
+                        "Building ID": 0,
+                        "Longitude": -72.5,
+                        "Latitude": 46.5,
+                        "Area (sq. meters)": 100.0,
+                    }
+                ]
+            ),
+            labels_lv=np.array([0]),
+        )
+
+        buildings, _connectivity = _make_buildings_and_connectivity(
+            net, pg, buses, transformers
+        )
+
+        self.assertEqual(buildings.loc[0, "lat"], 46.5)
+        self.assertEqual(buildings.loc[0, "lon"], -72.5)
 
     def test_default_registry_exposes_synthetic_pandapower_adapter(self):
         registry = default_network_adapter_registry()

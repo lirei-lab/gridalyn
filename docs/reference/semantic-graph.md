@@ -30,8 +30,10 @@ Flexibility capability (`capabilities={"flexibility"}`, on-demand):
 
 - LBNL Energy Flexibility Ontology (EFOnt) for building flexibility resources,
   flexible operations, load characteristics, and flexibility KPIs;
-- OpenADR for demand-response and CLS event messaging;
-- IEEE 2030.5 reserved for future DER and EV control interoperability;
+- OpenADR reserved for future demand-response and CLS event messaging (no
+  `openadr:`-prefixed node or edge is emitted today);
+- IEEE 2030.5 for DER and EV control interoperability, emitted as
+  `ieee2030_5:EVSE` nodes;
 - `cls:` as the local namespace for Soft CLS and Hard CLS contracts;
 - `cls:` also owns the local market-management vocabulary for aggregators,
   portfolios, providers, offers, clearing/dispatch extensions, and constraint
@@ -108,14 +110,14 @@ The minimum relationship vocabulary is:
 - `(:EnergyConsumer)-[:CONNECTED_TO]->(:ConnectivityNode)`;
 - `(:PowerTransformer)-[:FEEDS]->(:ConnectivityNode)`;
 - `(:ACLineSegment)-[:CONNECTS]->(:ConnectivityNode)`;
-- `(:Building)-[:HAS_EVSE]->(:EVChargingAsset)`;
+- `(:Building)-[:HAS_EVSE]->(:EVSE)`;
 - `(:Building)-[:PARTICIPATES_IN]->(:SoftCLSContract)`;
 - `(:Building)-[:HAS_FLEXIBILITY_RESOURCE]->(:ThermallyActivatedBuildingSystem)`;
 - `(:ThermallyActivatedBuildingSystem)-[:ALLOWS]->(:FlexibleOperation)`;
 - `(:FlexibleOperation)-[:ENABLES]->(:EnergyFlexibility)`;
 - `(:EnergyFlexibilityKPI)-[:QUANTIFIES]->(:EnergyFlexibility)`;
 - `(:SoftCLSContract)-[:DESCRIBES_FLEXIBILITY]->(:EnergyFlexibility)`;
-- `(:EVChargingAsset)-[:ENABLES]->(:HardCLSContract)`;
+- `(:EVSE)-[:ENABLES]->(:HardCLSContract)`;
 - `(:FlexibilityAggregator)-[:MANAGES_PORTFOLIO]->(:FlexibilityPortfolio)`;
 - `(:FlexibilityAggregator)-[:AGGREGATES]->(:FlexibilityProvider)`;
 - `(:FlexibilityPortfolio)-[:INCLUDES_PROVIDER]->(:FlexibilityProvider)`;
@@ -124,7 +126,7 @@ The minimum relationship vocabulary is:
 - `(:FlexibilityProvider)-[:LOCATED_IN_CONSTRAINT_ZONE]->(:ConstraintZone)`;
 - `(:FlexibilityOffer)-[:TARGETS_CONSTRAINT]->(:ConstraintZone)`;
 - `(:ConstraintZone)-[:CONSTRAINT_ZONE_FOR]->(:PowerTransformer)`;
-- `(:Scenario)-[:INCLUDES_ASSET]->(:Building | :EVChargingAsset | :Contract)`;
+- `(:Scenario)-[:INCLUDES_ASSET]->(:Building | :EVSE | :SoftCLSContract | :HardCLSContract)`;
 - `(:TimeSeriesDataset)-[:OBSERVES]->(:Asset)`;
 - `(:SimulationRun)-[:PRODUCED]->(:TimeSeriesDataset)`.
 
@@ -154,9 +156,10 @@ offers target constraint zones, and each constraint zone resolves to a CIM
 
 EFOnt is integrated as a building-flexibility crosswalk, not as the primary
 network or market ontology. CIM still owns grid topology, OpenADR remains the
-future demand-response event messaging profile, IEEE 2030.5 remains the future
-EV/DER control profile, and `cls:` continues to model Soft/Hard CLS contracts,
-clearing, settlement, and network constraints.
+future demand-response event messaging profile, IEEE 2030.5 is emitted today
+as `ieee2030_5:EVSE` nodes for the EV/DER control profile, and `cls:` continues
+to model Soft/Hard CLS contracts, clearing, settlement, and network
+constraints.
 
 For every Soft CLS contract, the graph creates:
 

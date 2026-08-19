@@ -516,8 +516,9 @@ class SemanticGraphTest(unittest.TestCase):
         )
 
     def test_falkor_batches_merge_the_computed_semantic_type_label(self):
-        """A node batch's MERGE clause must carry the exact label its own
-        rows compute — the labels field is otherwise dead metadata."""
+        """A node batch's MERGE clause must carry the exact labels its own
+        rows compute — from both semantic_type and the labels column,
+        otherwise the latter is dead metadata."""
         data = self._fixtures()
         nodes, edges, _manifest = build_semantic_graph(
             buses=data["buses"],
@@ -530,6 +531,7 @@ class SemanticGraphTest(unittest.TestCase):
             timeseries_manifests=data["timeseries"],
         )
         self.assertGreater(nodes["semantic_type"].nunique(), 1)
+        self.assertTrue((nodes["labels"] != "").all())
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -538,22 +540,32 @@ class SemanticGraphTest(unittest.TestCase):
             adapter = FederatedGraphAdapter.from_parquet(tmp_path)
             batches = adapter.to_falkor_batches(batch_size=2)["nodes"]
 
-        seen_labels = set()
-        for batch in batches:
-            match = re.search(r"MERGE \(n:SemanticAsset:(\w+) \{", batch["cypher"])
-            self.assertIsNotNone(match, batch["cypher"])
-            merged_label = match.group(1)
-            self.assertEqual(batch["labels"], [merged_label])
-            row_labels = {
-                _cypher_label(row["semantic_type"]) for row in batch["params"]["props"]
-            }
-            self.assertEqual(row_labels, {merged_label})
-            seen_labels.add(merged_label)
+        def expected_labels(semantic_type: str, labels: str) -> set[str]:
+            names = {_cypher_label(semantic_type)}
+            names |= {_cypher_label(part) for part in labels.split(";") if part}
+            return names
 
-        expected_labels = {
-            _cypher_label(value) for value in nodes["semantic_type"].unique()
+        seen_labels: set[tuple[str, ...]] = set()
+        for batch in batches:
+            match = re.search(r"MERGE \(n:SemanticAsset((?::\w+)+) \{", batch["cypher"])
+            self.assertIsNotNone(match, batch["cypher"])
+            merged_labels = tuple(sorted(match.group(1).lstrip(":").split(":")))
+            self.assertEqual(tuple(sorted(batch["labels"])), merged_labels)
+            for row in batch["params"]["props"]:
+                self.assertEqual(
+                    expected_labels(row["semantic_type"], row["labels"]),
+                    set(merged_labels),
+                    row,
+                )
+            seen_labels.add(merged_labels)
+
+        expected = {
+            tuple(sorted(expected_labels(semantic_type, labels)))
+            for semantic_type, labels in zip(
+                nodes["semantic_type"], nodes["labels"], strict=True
+            )
         }
-        self.assertEqual(seen_labels, expected_labels)
+        self.assertEqual(seen_labels, expected)
 
     def test_semantic_repository_answers_operational_relationship_queries(self):
         data = self._fixtures()
@@ -602,6 +614,49 @@ class SemanticGraphTest(unittest.TestCase):
         timeseries = repository.timeseries_for_asset("ev:S4:0", scenario_id="S4")
         self.assertEqual(len(timeseries), 1)
         self.assertEqual(timeseries[0]["semantic_type"], "dt:TimeSeriesDataset")
+
+    def test_semantic_repository_from_parquet_and_assets_in_scenario(self):
+        """``from_parquet`` (the class's only documented entry point) and
+        ``assets_in_scenario`` (the worked example in
+        docs/reference/semantic-graph.md) had zero test references."""
+        data = self._fixtures()
+        nodes, edges, _manifest = build_semantic_graph(
+            buses=data["buses"],
+            lines=data["lines"],
+            transformers=data["transformers"],
+            buildings=data["buildings"],
+            connectivity=data["connectivity"],
+            asset_registry=data["assets"],
+            provider_registry=data["providers"],
+            timeseries_manifests=data["timeseries"],
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            nodes.to_parquet(tmp_path / "nodes.parquet", index=False)
+            edges.to_parquet(tmp_path / "edges.parquet", index=False)
+            repository = SemanticGraphRepository.from_parquet(tmp_path)
+
+        scenario_assets = repository.assets_in_scenario("S4")
+        expected_scenario_ids = set(
+            nodes.loc[nodes["scenario_id"].fillna("") == "S4", "node_id"]
+        )
+        self.assertEqual(
+            {asset["node_id"] for asset in scenario_assets}, expected_scenario_ids
+        )
+        self.assertEqual(
+            list(scenario_assets), sorted(scenario_assets, key=lambda a: a["node_id"])
+        )
+
+        providers = repository.assets_in_scenario(
+            "S4", semantic_type="cls:FlexibilityProvider"
+        )
+        self.assertEqual(
+            {p["node_id"] for p in providers},
+            {"provider:S4:building:0:soft_cls", "provider:S4:ev:S4:0:hard_cls"},
+        )
+
+        self.assertEqual(repository.assets_in_scenario("no-such-scenario"), ())
 
 
 class SemanticScriptRootResolutionTest(unittest.TestCase):

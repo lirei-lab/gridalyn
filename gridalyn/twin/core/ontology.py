@@ -29,11 +29,11 @@ class EnergyConsumer(GridNodeBase):
     q_mvar: float = 0.0
 
 
-class PowerTransformer(GridNodeBase):
-    """A transformer stepping voltage down/up."""
-
-    cimclass: Literal["cim.PowerTransformer"] = "cim.PowerTransformer"
-    sn_mva: Optional[float] = None
+# A transformer has no node class here: it connects two voltage levels, so
+# ``merge_graphs`` models it as an edge (``cimclass="cim.PowerTransformer"``
+# on the LV-MV/MV-HV edge) rather than as a node. A ``PowerTransformer``
+# node class predates that design and was never instantiated -- removed
+# 2026-08-19 rather than left as a declared type nothing produces.
 
 
 # You can have validation factories

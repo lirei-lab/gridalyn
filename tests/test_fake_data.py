@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 
+import networkx as nx
 import pandas as pd
 
 from gridalyn.twin.adapters.geojson import FakeGeoJSONGenerator
@@ -253,6 +254,62 @@ class TestFakeDataProcessing(unittest.TestCase):
             0,
             "No transformer connections found in merged graph",
         )
+
+    def test_export_to_graphml_round_trips_the_merged_graph(self) -> None:
+        """``export_to_graphml`` had no test or in-repo caller -- verify it
+        actually writes a GraphML file networkx can read back with the same
+        node/edge count as the merged graph, rather than trusting an
+        untested method on a load-bearing class."""
+        pg = PowerGridGraph()
+        pg.extract_building_centers_and_areas(self.temp_file.name)
+        pg.create_lv_graph(avg_load_per_building=10, mv_lv_transformer_capacity=100)
+        pg.create_mv_graph(
+            mv_lv_transformer_capacity=100, hv_mv_transformer_capacity=1000
+        )
+        pg.create_hv_substation_graph(
+            hv_mv_transformer_capacity=1000, hv_substation_capacity=10000
+        )
+        merged_graph = pg.merge_graphs()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = os.path.join(tmp, "power_grid.graphml")
+            pg.export_to_graphml(out_path)
+
+            self.assertTrue(os.path.isfile(out_path))
+            reloaded = nx.read_graphml(out_path)
+
+        self.assertEqual(len(reloaded.nodes), len(merged_graph.nodes))
+        self.assertEqual(len(reloaded.edges), len(merged_graph.edges))
+
+    def test_export_to_graphml_requires_a_merged_graph(self) -> None:
+        """The documented precondition is real, not aspirational."""
+        pg = PowerGridGraph()
+
+        with self.assertRaisesRegex(ValueError, "merge_graphs"):
+            pg.export_to_graphml("unused.graphml")
+
+    def test_merge_graphs_rejects_uninitialized_voltage_levels(self) -> None:
+        """None means uninitialized -- the documented failure case."""
+        pg = PowerGridGraph()
+
+        with self.assertRaises(ValueError):
+            pg.merge_graphs()
+
+    def test_merge_graphs_accepts_an_empty_but_initialized_graph(self) -> None:
+        """Regression: the initialized check used to be ``not all([...])``,
+        which reads a graph's truthiness rather than whether it is ``None``.
+        ``bool(nx.Graph())`` is False for an empty-but-real graph, so a
+        legitimately initialized, zero-node voltage level used to be
+        rejected as if it were never set."""
+        pg = PowerGridGraph()
+        pg.graph_lv_buses = nx.Graph()
+        pg.graph_mv_buses = nx.Graph()
+        pg.graph_hv_buses = nx.Graph()
+
+        merged = pg.merge_graphs()
+
+        self.assertIsNotNone(merged)
+        self.assertEqual(len(merged.nodes), 0)
 
 
 if __name__ == "__main__":

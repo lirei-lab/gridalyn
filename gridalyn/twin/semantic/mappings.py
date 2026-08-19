@@ -97,14 +97,16 @@ def build_semantic_graph(
         extend_graph_with_flexibility(builder, asset_registry, provider_registry)
     emitters.emit_timeseries_runs(builder, timeseries_manifests)
 
+    node_count = builder.node_count
+    edge_count = builder.edge_count
     nodes_df, edges_df = builder.to_frames()
     profile = profile_with_capabilities(capabilities)
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "semantic_profile": profile["semantic_profile"],
         "namespaces": profile["namespaces"],
-        "node_count": int(len(nodes_df)),
-        "edge_count": int(len(edges_df)),
+        "node_count": node_count,
+        "edge_count": edge_count,
         "source_counts": {
             "buses": int(len(buses)),
             "lines": int(len(lines)),

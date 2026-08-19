@@ -500,7 +500,8 @@ class PowerGridGraph:
         capacity of each transformer.
 
         Args:
-            max_load_per_building (float): The maximum installed non-coincident load per building in kW.
+            max_load_per_building (float): The maximum installed non-coincident
+                load per building in kW.
             mv_lv_transformer_capacity (float): The capacity of the MV-LV
                 transformers in kW.
             capacity_utilization_factor (float): Target ratio of maximum transformer
@@ -714,7 +715,9 @@ class PowerGridGraph:
                 (kW) for each building.
             reactive_power_ratio (float): The ratio of reactive to active
                 power (e.g., 0.1 for 10%).
-            diversity_factor_lv (float): The block diversity factor for lowering the non-coincident static peak load for flow initialization.
+            diversity_factor_lv (float): The block diversity factor for
+                lowering the non-coincident static peak load for flow
+                initialization.
 
         Returns:
             nx.Graph: A NetworkX graph representing the buildings and their
@@ -876,8 +879,16 @@ class PowerGridGraph:
             ValueError: If any of the required graphs (LV, MV, HV) have not
                 been initialized.
         """
-        # Ensure all required graphs are initialized
-        if not all([self.graph_lv_buses, self.graph_mv_buses, self.graph_hv_buses]):
+        # Ensure all required graphs are initialized. `is None`, not
+        # truthiness: `bool(nx.Graph())` is False for an empty-but-real
+        # graph, which would wrongly fail this check on a legitimately
+        # initialized, zero-node graph.
+        required_graphs = (
+            self.graph_lv_buses,
+            self.graph_mv_buses,
+            self.graph_hv_buses,
+        )
+        if any(graph is None for graph in required_graphs):
             raise ValueError(
                 "All three graphs (graph_lv_buses, graph_mv_buses, graph_hv_buses) "
                 "must be initialized."
@@ -976,12 +987,12 @@ class PowerGridGraph:
 
         # Scrub NoneType values since GraphML specification strictly forbids them
         clean_graph = self.merged_graph.copy()
-        for node, data in clean_graph.nodes(data=True):
+        for _node, data in clean_graph.nodes(data=True):
             for k, v in list(data.items()):
                 if v is None:
                     data[k] = ""
 
-        for u, v, data in clean_graph.edges(data=True):
+        for _u, _v, data in clean_graph.edges(data=True):
             for k, val in list(data.items()):
                 if val is None:
                     data[k] = ""

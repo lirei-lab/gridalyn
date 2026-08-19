@@ -33,7 +33,10 @@ def _hard_preferred_count(nodes: pd.DataFrame, scenario_id: str) -> int:
         & (nodes["semantic_type"] == "cls:HardCLSContract")
     ]
     return int(
-        sum(bool(_loads_json(row["properties"]).get("hard_preferred")) for _, row in hard.iterrows())
+        sum(
+            bool(_loads_json(row["properties"]).get("hard_preferred"))
+            for _, row in hard.iterrows()
+        )
     )
 
 
@@ -101,7 +104,7 @@ def validate_semantic_graph(
         if prefix not in namespaces:
             errors.append(f"semantic type uses unknown namespace: {semantic_type}")
         if allowed_types and semantic_type not in allowed_types:
-            warnings.append(f"semantic type not listed in profile: {semantic_type}")
+            errors.append(f"semantic type not listed in profile: {semantic_type}")
 
     for rel in edges["relationship_type"].dropna().unique():
         if allowed_relationships and rel not in allowed_relationships:
@@ -140,7 +143,9 @@ def validate_semantic_graph(
         props = _loads_json(node["properties"])
         for key in props:
             if key.endswith(("power", "voltage", "current")):
-                errors.append(f"property {key} on {node['node_id']} lacks explicit unit")
+                errors.append(
+                    f"property {key} on {node['node_id']} lacks explicit unit"
+                )
 
     return _report(nodes, edges, errors, warnings)
 
@@ -151,7 +156,9 @@ def write_validation_report(report: dict[str, Any], path: Path) -> None:
         json.dump(report, f, indent=2, sort_keys=True)
 
 
-def _report(nodes: pd.DataFrame, edges: pd.DataFrame, errors: list[str], warnings: list[str]) -> dict[str, Any]:
+def _report(
+    nodes: pd.DataFrame, edges: pd.DataFrame, errors: list[str], warnings: list[str]
+) -> dict[str, Any]:
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "valid": len(errors) == 0,

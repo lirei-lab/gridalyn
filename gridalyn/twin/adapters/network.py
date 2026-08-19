@@ -524,12 +524,12 @@ def _make_buildings_and_connectivity(
             source.get("Building ID") if hasattr(source, "get") else None
         )
         lat = (
-            source.get("Longitude")
+            source.get("Latitude")
             if hasattr(source, "get")
             else bus_lookup.at[bus_idx, "lat"]
         )
         lon = (
-            source.get("Latitude")
+            source.get("Longitude")
             if hasattr(source, "get")
             else bus_lookup.at[bus_idx, "lon"]
         )

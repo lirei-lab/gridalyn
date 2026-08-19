@@ -76,17 +76,6 @@ class SemanticGraphBuilder:
         self._edges.append(edge)
         return True
 
-    def has_node(self, node_id: str) -> bool:
-        """Report whether a node ID has already been minted.
-
-        Args:
-            node_id: The ID to test.
-
-        Returns:
-            True when some emitter already added it.
-        """
-        return node_id in self._node_ids
-
     @property
     def node_count(self) -> int:
         """Return how many distinct nodes have been collected."""

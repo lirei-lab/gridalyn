@@ -152,7 +152,12 @@ def north_america_profile() -> dict[str, Any]:
             "voltage": "kV or pu, explicit in property name",
             "current": "kA, explicit in property name",
         },
-        "crosswalk_only_namespaces": ["saref"],
+        # SAREF is not integrated at all today -- no generator emits a
+        # `saref:` type, primary or crosswalk -- so a declared
+        # `crosswalk_only_namespaces` constraint had nothing to enforce and
+        # no reader checked it (removed 2026-08-19). If SAREF is integrated
+        # later, declare and enforce this alongside the real emitter, not
+        # ahead of it.
     }
 
 

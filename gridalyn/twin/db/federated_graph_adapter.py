@@ -24,6 +24,37 @@ def _cypher_label(semantic_type: str) -> str:
     return label
 
 
+def _node_labels(semantic_type: Any, labels: Any) -> tuple[str, ...]:
+    """Return the sorted, deduplicated Cypher labels for one node.
+
+    Combines the type-derived label with the node's own ``labels`` column
+    (``;``-joined), so a node's MERGE carries every label the semantic graph
+    recorded for it, not just the one derived from its primary type.
+
+    Args:
+        semantic_type: The node's ``semantic_type`` value.
+        labels: The node's ``labels`` value (``;``-joined string, or absent).
+
+    Returns:
+        Sorted, deduplicated Cypher-safe label names.
+
+    Raises:
+        ValueError: If ``semantic_type`` is missing -- a node with no type
+            has no label to MERGE on, and silently coercing it would export
+            an anonymous node no query could ever select.
+    """
+    if not isinstance(semantic_type, str) or not semantic_type:
+        raise ValueError(
+            f"to_falkor_batches: a node has semantic_type={semantic_type!r}; "
+            "every exported node must declare one -- run "
+            "`gridalyn semantic validate` on the source parquet first"
+        )
+    names = {_cypher_label(semantic_type)}
+    if isinstance(labels, str) and labels:
+        names |= {_cypher_label(part) for part in labels.split(";") if part}
+    return tuple(sorted(names))
+
+
 @dataclass
 class FederatedGraphAdapter:
     nodes: pd.DataFrame
@@ -56,21 +87,35 @@ class FederatedGraphAdapter:
     ) -> dict[str, list[dict[str, Any]]]:
         node_batches: list[dict[str, Any]] = []
         edge_batches: list[dict[str, Any]] = []
-        node_labels = self.nodes["semantic_type"].map(_cypher_label)
-        for label in sorted(node_labels.unique()):
-            group = self.nodes.loc[node_labels == label]
+        label_column = self.nodes["labels"] if "labels" in self.nodes.columns else None
+        node_labels = pd.Series(
+            [
+                _node_labels(
+                    semantic_type,
+                    None if label_column is None else label_column.iat[position],
+                )
+                for position, semantic_type in enumerate(self.nodes["semantic_type"])
+            ],
+            index=self.nodes.index,
+            dtype=object,
+        )
+        for labels, group_index in sorted(
+            node_labels.groupby(node_labels).groups.items()
+        ):
+            group = self.nodes.loc[group_index]
             for start in range(0, len(group), batch_size):
                 chunk = group.iloc[start : start + batch_size]
+                label_clause = ":".join(("SemanticAsset", *labels))
                 cypher = (
                     "UNWIND $props AS p\n"
-                    f"MERGE (n:SemanticAsset:{label} {{node_id: p.node_id}})\n"
+                    f"MERGE (n:{label_clause} {{node_id: p.node_id}})\n"
                     "SET n += p"
                 )
                 node_batches.append(
                     {
                         "cypher": cypher,
                         "params": {"props": chunk.to_dict("records")},
-                        "labels": [label],
+                        "labels": list(labels),
                     }
                 )
 

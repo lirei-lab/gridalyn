@@ -56,7 +56,7 @@ def export_pp_to_geojson(net, output_dir: str):
 
         nodes.append(
             {
-                "geometry": Point(y, x),
+                "geometry": Point(x, y),
                 "bus_idx": int(bus_idx),
                 "name": str(bus_name),
                 "category": bus_category,
@@ -92,11 +92,11 @@ def export_pp_to_geojson(net, output_dir: str):
         )
 
         p1 = (
-            (bus_y.at[from_bus], bus_x.at[from_bus])
+            (bus_x.at[from_bus], bus_y.at[from_bus])
             if from_bus in bus_x.index
             else None
         )
-        p2 = (bus_y.at[to_bus], bus_x.at[to_bus]) if to_bus in bus_x.index else None
+        p2 = (bus_x.at[to_bus], bus_y.at[to_bus]) if to_bus in bus_x.index else None
 
         if p1 and p2:
             lines.append(
