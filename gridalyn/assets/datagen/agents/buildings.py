@@ -9,15 +9,30 @@ Physical model (discrete-time, Δt = 1 min):
   T_in[k+1] = T_in[k] + (Δt/C) * ((T_out[k] - T_in[k])/R + η * P_heat[k])
 
 Thermostat: ON/OFF hysteresis band around setpoint T_set ± deadband/2
+
+**Deliberately independent of `gridalyn.assets.modeling.synthesis`'s
+per-archetype `heating_kw_per_m2`/`cooling_kw_per_m2` capacity constants
+(R27/Phase 32, 2026-08-20).** The two answer different questions and were
+never meant to agree: this module is a *dynamic time-domain simulator* --
+`P_HEAT_MAX_KW`/`R_MEAN`/etc. drive a stateful RC thermal model that produces
+minute-by-minute load curves consumed by studies with pinned regression
+baselines (e.g. `admm_thermal_consensus`'s heating agents); `synthesis.py`'s
+archetype constants are a *static capacity lookup* used to populate
+`device_registry.parquet`/`building_models.parquet` structural asset data,
+with no time dimension at all. Reconciling them would mean either driving a
+stateful simulator from a static lookup table or vice versa -- a real design
+decision with regression-baseline risk for any study built on this module,
+out of scope for a coherence pass. If you are looking to change either
+model's capacity constants, check whether the other one should move too;
+if you are looking to unify them, that is a separate, deliberate phase.
 """
 
 from __future__ import annotations
 
 import math
-
-import numpy as np
 from dataclasses import dataclass, field
 
+import numpy as np
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Household-level parameters (each Building object = one residential dwelling)
@@ -41,21 +56,21 @@ from dataclasses import dataclass, field
 HOUSEHOLDS_PER_BUILDING = 1
 
 # Thermal parameters (individual household air-node specific)
-R_MEAN   = 11.0   # °C/kW  (R_house)
-R_STD    = 2.0    # ±18%
-C_MEAN   = 2.0    # kWh/°C (Fast indoor air mass constraint for realistic duty cycles)
-C_STD    = 0.5
-P_HEAT_MAX_KW = 8.0   # kW
-P_COOL_MAX_KW = 3.0   # kW
-ETA_HEAT      = 1.0     # electric baseboard: 100% conversion
-ETA_COOL      = 3.0     # A/C COP
+R_MEAN = 11.0  # °C/kW  (R_house)
+R_STD = 2.0  # ±18%
+C_MEAN = 2.0  # kWh/°C (Fast indoor air mass constraint for realistic duty cycles)
+C_STD = 0.5
+P_HEAT_MAX_KW = 8.0  # kW
+P_COOL_MAX_KW = 3.0  # kW
+ETA_HEAT = 1.0  # electric baseboard: 100% conversion
+ETA_COOL = 3.0  # A/C COP
 
 # Background load statistics strictly used for thermal bounding (generation handled externally)
-BG_MEAN_KW     = 1.5    # kW/household
-BG_STD_KW      = 0.6
+BG_MEAN_KW = 1.5  # kW/household
+BG_STD_KW = 0.6
 
-T_SET      = 21.0
-DEADBAND   = 0.8  # ±0.4°C for heating
+T_SET = 21.0
+DEADBAND = 0.8  # ±0.4°C for heating
 
 # Independent per-room thermostats in a Québec all-electric dwelling. Each zone
 # latches ON/OFF around its own setpoint, so the house total steps rather than
@@ -70,11 +85,11 @@ ZONE_SETPOINT_SPREAD_C = 1.2
 # crossing rate of the house total is set by the zone count, not the band --
 # while it pushed the swing from 5.5 to 6.6 kW against a measured 4.6.
 ZONE_DEADBAND_C = DEADBAND
-T_COOL_SET = 24.0 # A/C setpoint
-COOL_DEADBAND = 1.0 # ±0.5°C for cooling
+T_COOL_SET = 24.0  # A/C setpoint
+COOL_DEADBAND = 1.0  # ±0.5°C for cooling
 
-DT_MIN         = 1     # simulation time step in minutes
-DT_H           = DT_MIN / 60.0
+DT_MIN = 1  # simulation time step in minutes
+DT_H = DT_MIN / 60.0
 
 
 @dataclass
@@ -85,19 +100,20 @@ class Building:
     Parameters are randomly sampled at initialisation to create natural
     diversity in the feeder population.
     """
+
     unit_id: int
     rng: np.random.Generator = field(default_factory=lambda: np.random.default_rng())
 
     # Physical parameters (sampled)
-    R: float = field(init=False)   # °C/kW
-    C: float = field(init=False)   # kWh/°C
-    p_heat_max: float = field(init=False)    # kW
-    bg_mean: float = field(init=False)       # kW
-    bg_std: float = field(init=False)        # kW
-    occupancy_offset_min: int = field(init=False)   # phase shift for occupancy
+    R: float = field(init=False)  # °C/kW
+    C: float = field(init=False)  # kWh/°C
+    p_heat_max: float = field(init=False)  # kW
+    bg_mean: float = field(init=False)  # kW
+    bg_std: float = field(init=False)  # kW
+    occupancy_offset_min: int = field(init=False)  # phase shift for occupancy
 
     # State
-    T_in: float = field(init=False)    # indoor temperature °C
+    T_in: float = field(init=False)  # indoor temperature °C
     heating_on: bool = False
 
     def __post_init__(self):
@@ -163,7 +179,8 @@ class Building:
         ----------
         t_out        : outdoor temperature (°C)
         minute_of_day: float [0, 1439]
-        p_bg_kw      : rigorously precalculated exact ARX background appliance trace for this instant
+        p_bg_kw      : rigorously precalculated exact ARX background appliance
+                       trace for this instant
         p_cap_kw     : if not None, total building power cap (CLS active)
         dt_min       : time step in minutes
         integrator   : thermal-update scheme; ``"euler"`` (default) keeps the
@@ -228,7 +245,7 @@ class Building:
         # ── 2b. A/C control
         T_c_on = T_COOL_SET + COOL_DEADBAND / 2
         T_c_off = T_COOL_SET - COOL_DEADBAND / 2
-        
+
         if self.T_in >= T_c_on:
             self.cooling_on = True
         elif self.T_in <= T_c_off:
@@ -237,10 +254,10 @@ class Building:
         # Mutual exclusion
         if self.heating_on and self.cooling_on:
             self.cooling_on = False
-            
+
         if not self.heating_on:
             p_heat_desired = 0.0
-            
+
         p_cool_desired = self.p_cool_max if self.cooling_on else 0.0
 
         # ── 3.  Apply CLS power cap
@@ -273,10 +290,14 @@ class Building:
             self.T_in = float(np.dot(share, self.zone_T))
         elif integrator == "euler":
             # Forward-Euler update (default, byte-identical to historical runs).
-            dT = (dt_min / 60.0) / self.C * (
-                (t_out - self.T_in) / self.R
-                + ETA_HEAT * p_heat_actual
-                - ETA_COOL * p_cool_actual
+            dT = (
+                (dt_min / 60.0)
+                / self.C
+                * (
+                    (t_out - self.T_in) / self.R
+                    + ETA_HEAT * p_heat_actual
+                    - ETA_COOL * p_cool_actual
+                )
             )
             self.T_in += dT
         else:

@@ -229,7 +229,7 @@ class TestFakeDataProcessing(unittest.TestCase):
         transformer_edges = [
             (u, v)
             for u, v, d in merged_graph.edges(data=True)
-            if d.get("cimclass") == "cim.PowerTransformer"
+            if d.get("cimclass") == "cim:PowerTransformer"
         ]
         print(f"\nFound {len(transformer_edges)} transformer connections:")
         print(

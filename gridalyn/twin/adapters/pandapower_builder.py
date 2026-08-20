@@ -171,7 +171,7 @@ class PandapowerGridBuilder:
         valid_nodes = []
         geodata_list = []
         for node, data in graph.nodes(data=True):
-            if data.get("cimclass") == "cim.ConnectivityNode":
+            if data.get("cimclass") == "cim:ConnectivityNode":
                 valid_nodes.append(node)
                 geodata_list.append((data["x"], data["y"]))
 

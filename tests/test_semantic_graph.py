@@ -10,6 +10,8 @@ from gridalyn.twin.db.federated_graph_adapter import (
     FederatedGraphAdapter,
     _cypher_label,
 )
+from gridalyn.twin.semantic import emitters
+from gridalyn.twin.semantic.builder import SemanticGraphBuilder
 from gridalyn.twin.semantic.capabilities.flexibility import (
     flexibility_profile_extensions,
     query_providers_for_constraint,
@@ -400,6 +402,26 @@ class SemanticGraphTest(unittest.TestCase):
             ),
             rels,
         )
+
+    def test_emit_premises_resolves_bus_column_through_declared_aliases(self):
+        """emit_premises must resolve any declared-valid bus alias for both
+        buildings and connectivity, not just the default lv_bus_id/
+        load_bus_id spellings it used to hardcode (Phase 32, R27) -- proven
+        by feeding it the schema's other declared-valid spelling, bus_id."""
+        buildings = pd.DataFrame(
+            [{"building_id": "building:0", "load_id": "load:0", "bus_id": "bus:9"}]
+        )
+        connectivity = pd.DataFrame(
+            [{"building_id": "building:0", "load_id": "load:0", "bus_id": "bus:9"}]
+        )
+        builder = SemanticGraphBuilder()
+
+        emitters.emit_premises(builder, buildings, connectivity)
+
+        _nodes, edges = builder.to_frames()
+        connected_to = edges[edges["relationship_type"] == "CONNECTED_TO"]
+        self.assertEqual(len(connected_to), 1)
+        self.assertEqual(connected_to.iloc[0]["target_id"], "bus:9")
 
     def test_model_first_profile_excludes_flex_and_capability_extensions_include_it(
         self,

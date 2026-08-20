@@ -17,26 +17,25 @@ class GridNodeBase(BaseModel):
 class ConnectivityNode(GridNodeBase):
     """A standard connectivity bus in the power system."""
 
-    cimclass: Literal["cim.ConnectivityNode"] = "cim.ConnectivityNode"
+    cimclass: Literal["cim:ConnectivityNode"] = "cim:ConnectivityNode"
     vn_kv: Optional[float] = None  # Nominal voltage
 
 
 class EnergyConsumer(GridNodeBase):
     """A building or load consuming power from the grid."""
 
-    cimclass: Literal["cim.EnergyConsumer"] = "cim.EnergyConsumer"
+    cimclass: Literal["cim:EnergyConsumer"] = "cim:EnergyConsumer"
     p_mw: float = 0.0
     q_mvar: float = 0.0
 
 
 # A transformer has no node class here: it connects two voltage levels, so
-# ``merge_graphs`` models it as an edge (``cimclass="cim.PowerTransformer"``
+# ``merge_graphs`` models it as an edge (``cimclass="cim:PowerTransformer"``
 # on the LV-MV/MV-HV edge) rather than as a node. A ``PowerTransformer``
 # node class predates that design and was never instantiated -- removed
 # 2026-08-19 rather than left as a declared type nothing produces.
 
 
-# You can have validation factories
 def create_node_payload(
     node_id: str, x: float, y: float, node_type: str, **kwargs: Any
 ) -> dict:

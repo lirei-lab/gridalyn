@@ -4,12 +4,20 @@ The defaults are intentionally lightweight. They are inspired by pyCity's
 entity-oriented philosophy, but they stay dependency-free and deterministic so
 that project workflows can generate repeatable building model artifacts from
 the digital twin base layer.
+
+**`heating_kw_per_m2`/`cooling_kw_per_m2` are deliberately independent of
+`gridalyn.assets.datagen.agents.buildings`'s RC thermal simulator
+(`P_HEAT_MAX_KW`/`R_MEAN`/etc.; R27/Phase 32, 2026-08-20).** This module is a
+static per-archetype capacity lookup (no time dimension), consumed by
+`synthesis.py` to populate structural asset tables; the datagen module is a
+dynamic RC simulator that produces load *curves* consumed by studies with
+pinned regression baselines. See that module's docstring for the full
+rationale before assuming one is a stale duplicate of the other.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
 
 NORTH_AMERICA_RESIDENTIAL_PROFILE = "north_america_residential_v1"
 

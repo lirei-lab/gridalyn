@@ -29,6 +29,12 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.twin.network.schema import (
+    BUILDING_GRID_CONNECTIVITY,
+    BUILDINGS,
+    ROLE_BUS,
+    table_schema,
+)
 from gridalyn.twin.semantic.builder import SemanticGraphBuilder
 from gridalyn.twin.semantic.records import _edge, _node, _safe_str
 
@@ -212,7 +218,13 @@ def emit_premises(
 
     Args:
         builder: Accumulator that owns node and edge identity.
+        buildings: The canonical ``buildings`` table.
+        connectivity: The canonical ``building_grid_connectivity`` table.
     """
+    buildings_bus_column = table_schema(BUILDINGS).resolve(buildings, ROLE_BUS)
+    connectivity_bus_column = table_schema(BUILDING_GRID_CONNECTIVITY).resolve(
+        connectivity, ROLE_BUS
+    )
     connectivity_by_load = (
         connectivity.set_index("load_id").to_dict("index")
         if not connectivity.empty
@@ -221,9 +233,11 @@ def emit_premises(
     for row in buildings.to_dict("records"):
         building_id = row["building_id"]
         load_id = row["load_id"]
-        load_bus_id = row.get("lv_bus_id")
+        load_bus_id = row.get(buildings_bus_column)
         if load_id in connectivity_by_load:
-            load_bus_id = connectivity_by_load[load_id].get("load_bus_id", load_bus_id)
+            load_bus_id = connectivity_by_load[load_id].get(
+                connectivity_bus_column, load_bus_id
+            )
         builder.add_node(
             _node(
                 building_id,

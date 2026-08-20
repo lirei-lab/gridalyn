@@ -35,10 +35,19 @@ exclude =
 # first touched these files under this config -- neither function's
 # complexity moved. Waived rather than refactored in an otherwise-unrelated
 # bugfix diff; a real reduction is separate work.
+#
+# buildings.py (datagen): C901 in Building.step, pre-existing (Phase 32,
+# 2026-08-20, touched this file's module docstring only -- confirmed by diff
+# that step()'s body is unchanged). The complexity is inherent to the
+# physics being modeled (per-zone thermostat hysteresis + background load in
+# one discrete-time step) and this function backs pinned regression
+# baselines (e.g. admm_thermal_consensus); a real reduction needs its own
+# verified-no-output-change pass, not a coherence-audit side effect.
 per-file-ignores =
     gridalyn/projects/templates.py: B907
     gridalyn/twin/core/graph.py: C901
     gridalyn/twin/semantic/validation.py: C901
+    gridalyn/assets/datagen/agents/buildings.py: C901
 
 # Set complexity threshold
 max-complexity = 10

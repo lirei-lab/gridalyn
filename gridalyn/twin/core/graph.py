@@ -770,8 +770,8 @@ class PowerGridGraph:
         """Extends a specified graph with CIM (Common Information Model) classes.
 
         This method adds CIM class information to the nodes and edges of a
-        specified graph. Nodes are assigned the class "cim.ConnectivityNode",
-        and edges are assigned "cim.ACLineSegment" with a length calculated
+        specified graph. Nodes are assigned the class "cim:ConnectivityNode",
+        and edges are assigned "cim:ACLineSegment" with a length calculated
         based on the geodesic distance between the connected nodes.
 
         Args:
@@ -793,7 +793,7 @@ class PowerGridGraph:
 
         # Extend nodes with CIM class
         for _node, data in graph.nodes(data=True):
-            data["cimclass"] = "cim.ConnectivityNode"
+            data["cimclass"] = "cim:ConnectivityNode"
 
         # Extend edges with CIM class and length
         for source, target, data in graph.edges(data=True):
@@ -806,7 +806,7 @@ class PowerGridGraph:
             if length < 1:
                 length = 1  # Enforce minimum length
 
-            data["cimclass"] = "cim.ACLineSegment"
+            data["cimclass"] = "cim:ACLineSegment"
             data["length"] = length
 
     def _connect_lv_to_mv_buses(self, merged_graph: nx.Graph) -> None:
@@ -834,7 +834,7 @@ class PowerGridGraph:
                         mv_data = self.graph_mv_buses.nodes[mv_node]
                         if mv_data.get("child") == lv_data.get("cluster"):
                             merged_graph.add_edge(
-                                lv_node, mv_node, cimclass="cim.PowerTransformer"
+                                lv_node, mv_node, cimclass="cim:PowerTransformer"
                             )
 
     def _connect_mv_to_hv_buses(self, merged_graph: nx.Graph) -> None:
@@ -862,7 +862,7 @@ class PowerGridGraph:
                         hv_data = self.graph_hv_buses.nodes[hv_node]
                         if hv_data.get("child") == mv_data.get("cluster"):
                             merged_graph.add_edge(
-                                mv_node, hv_node, cimclass="cim.PowerTransformer"
+                                mv_node, hv_node, cimclass="cim:PowerTransformer"
                             )
 
     def merge_graphs(self) -> nx.Graph:
