@@ -29,6 +29,27 @@ ProvenanceStatus = Literal["declared", "absent"]
 PROVENANCE_DECLARED: ProvenanceStatus = "declared"
 PROVENANCE_ABSENT: ProvenanceStatus = "absent"
 
+OperationalState = Literal["base", "normal", "current", "planned", "study_case"]
+
+OPERATIONAL_STATES: tuple[OperationalState, ...] = (
+    "base",
+    "normal",
+    "current",
+    "planned",
+    "study_case",
+)
+
+DEFAULT_OPERATIONAL_STATE: OperationalState = "base"
+
+OPERATIONAL_STATE_ABSENT_REASON = (
+    "a model built in memory by a source adapter has no operational state to "
+    "report: nothing has declared which state it represents, and defaulting it "
+    "to `base` would manufacture a claim the model cannot support -- the same "
+    "failure mode `ModelIdentity.scenario_time` and `NetworkObservation.as_of` "
+    "avoid by staying None. A repository resolves it on load; a bare model "
+    "carries None"
+)
+
 
 @dataclass(frozen=True)
 class ModelIdentity:
@@ -99,6 +120,21 @@ class NetworkModel:
     This is the only canonical model type. The adapter-side twin of it —
     ``NetworkSnapshot`` — was merged into it in Phase 11 (plan 11-01) because
     the two held the same five frames with byte-identical ``counts``.
+
+    Attributes:
+        operational_state: Which operational state this snapshot represents, or
+            ``None`` when nothing has declared one — see
+            :data:`OPERATIONAL_STATE_ABSENT_REASON`. ``None`` rather than
+            ``"base"`` is deliberate: a model built in memory by a source
+            adapter has no evidence for any state, and this module already
+            refuses to invent such values twice over (``scenario_time`` is
+            permanently ``None`` with :data:`SCENARIO_TIME_ABSENT_REASON`, and
+            ``provenance_status`` defaults to the ABSENT sentinel rather than to
+            a plausible value). ``"base"`` is a repository *resolution* default,
+            not a model-level claim:
+            :meth:`~gridalyn.twin.network.repository.NetworkModelRepository.load_model`
+            always stamps a non-``None`` state, while a bare model carries
+            ``None``.
     """
 
     buses: pd.DataFrame
@@ -110,6 +146,7 @@ class NetworkModel:
     source_standard: str | None = None
     identity: ModelIdentity | None = None
     provenance_status: ProvenanceStatus = PROVENANCE_ABSENT
+    operational_state: OperationalState | None = None
 
     @property
     def counts(self) -> dict[str, int]:

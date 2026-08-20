@@ -60,6 +60,27 @@ claimed twice, none left unclaimed. Reading the base through
 row counts and a SHA-256 per artifact recorded for provenance, not a bag of
 whatever columns a producer happened to write.
 
+**Which state a snapshot is read as.** A snapshot's operational state is
+declared, never inferred from its contents: `base`, `normal`, `current`,
+`planned` or `study_case`. `NetworkModelRepository` resolves exactly one of them
+for every model it loads, in a fixed order of authority — an explicit
+`operational_state=` passed to the repository wins; failing that, the
+`operational_state` recorded in the snapshot's `metadata.json`; failing that,
+`base` — the state a snapshot reads as when neither the caller nor the manifest
+declares one. A non-`base` state reaches disk exactly one way, through
+`write_base_metadata(..., operational_state=...)`; no production adapter passes
+it yet, so the manifests they write record no state at all. That absence is not
+an error: a manifest carrying no such key — written before the key existed, or
+by a producer never told which state it is exporting — loads as `base` rather
+than failing, so an older base snapshot keeps reading with no call-site change.
+A manifest recording anything outside those five is rejected, naming the
+manifest path and the valid set, rather than quietly degraded to `base`; the
+same set is enforced at the writer, so an unloadable state cannot reach a file
+in the first place. The state belongs to a repository's *reading* of a
+snapshot, not to the tables themselves: a `NetworkModel` a source adapter
+builds directly in memory carries `operational_state` of `None`, because
+nothing has declared which state it represents.
+
 **Why no `rdflib`.** CGMES semantics are adopted as *fields and rules*, never
 as *serialization*. `rdflib` is not a dependency of this repository — not in
 `pyproject.toml`, in any extra, and real imports of it under `gridalyn/` are

@@ -9,7 +9,7 @@ New code should use the native seven-module structure:
 | Module | Stable responsibility |
 | --- | --- |
 | `gridalyn.foundation` | Workspaces, artifact policy, reports, manifests, validation, and governance. |
-| `gridalyn.twin` | Network repositories, the canonical `NetworkModel` and its `ModelIdentity`, observed state (`NetworkObservation` with a required `provenance`, `observe_network`, the measured-state ingest and the observation producer registry), model authority declarations (`ModelAuthoritySet`, `ModelProfile`), topology, source adapters, IO helpers, and semantic graph. |
+| `gridalyn.twin` | Network repositories, the canonical `NetworkModel` and its `ModelIdentity`, declared operational state (`OperationalState`, resolved per loaded snapshot — reached through `gridalyn.twin.network`), observed state (`NetworkObservation` with a required `provenance`, `observe_network`, the measured-state ingest and the observation producer registry), model authority declarations (`ModelAuthoritySet`, `ModelProfile`), topology, source adapters, IO helpers, and semantic graph. |
 | `gridalyn.assets` | Building, EV, DER, thermal, load, and asset-model generation. |
 | `gridalyn.simulation` | Synthetic-network builders, power-flow builders, solver adapters, network impact, and validation analytics. |
 | `gridalyn.operations` | Providers, aggregators, offers, clearing, dispatch, settlement, constraints, and KPIs. |
@@ -64,7 +64,7 @@ equipment = repo.get_connected_equipment("bus:17")
 integrity = repo.validate_integrity()
 ```
 
-Four things about that snippet changed in 2026-08-12 and are worth
+Five things about that snippet have changed since 2026-08-12 and are worth
 knowing before you build on it:
 
 - **`load_model()` now carries identity.** The returned `NetworkModel` exposes
@@ -81,7 +81,19 @@ knowing before you build on it:
 - **`from_parquet` takes a `provenance` policy** — `"require" | "warn" |
   "ignore"`. The default warns and records a degraded `provenance_status`;
   `"require"` raises `FileNotFoundError` naming the remedy, and is what an
-  export uses to check its own post-condition.
+  export uses to check its own post-condition. `"ignore"` additionally means
+  the on-disk manifest is not consulted as authority, so its
+  `operational_state` is neither read nor validated — which is what lets the
+  manifest *producer* run against a snapshot whose current manifest is corrupt.
+- **`from_parquet` also takes an `operational_state`** — `"base" | "normal" |
+  "current" | "planned" | "study_case"`, or `None`, which means *undeclared*
+  rather than `"base"`. `load_model()` resolves exactly one onto the returned
+  `NetworkModel`: an explicit argument wins, else the `operational_state`
+  recorded in the manifest, else `"base"`. A manifest that records no state
+  loads as `"base"` rather than failing; one recording anything outside the
+  five is rejected, naming the path, the valid set and the remedy. A
+  `NetworkModel` a source adapter builds in memory carries `None`, because
+  nothing has declared which state it represents.
 - **`NetworkExportResult` gained a required `identity` field** — a breaking
   change for out-of-tree adapters. `NetworkSourceAdapter` is a `Protocol` whose
   `export()` must return one, and third-party adapters are an intended,
