@@ -47,6 +47,39 @@ artifacts=None, summary=None, validation=None)` is the only constructor, and
 is the sanctioned way to record an artifact's provenance — path plus a SHA-256
 digest — inside that report, rather than a hand-rolled hash loop.
 
+```mermaid
+flowchart LR
+    SC["a stage script<br/>script.write_report"]
+    MD["ReportMetadata<br/>report_id · source_domain · governance ids"]
+    FR["file_reference<br/>path + sha256"]
+    BR["build_report<br/>the only constructor"]
+    WR["write_report<br/>the only way to disk"]
+    DISK[("outputs/reports/*.json<br/>eight required fields · schema_version 1.0")]
+    HAND["a hand-assembled dict"]
+
+    SC --> MD --> BR
+    FR --> BR
+    BR --> WR --> DISK
+    HAND -. "GOVERNED-VIOLATION in tests/test_report_contract.py" .-x DISK
+
+    classDef entry fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef step fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef sink fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    classDef bad fill:#ffebee,stroke:#c62828,color:#b71c1c
+    class SC entry
+    class MD,FR,BR,WR step
+    class DISK sink
+    class HAND bad
+    linkStyle 5 stroke:#c62828,stroke-width:2px,color:#b71c1c
+```
+
+The red edge is the failure this contract exists to prevent, and it is
+classified rather than banned outright: a direct `json.dump` is a violation
+only when the payload is the run's own account of itself **and** it lands
+where a report lands **and** it never reaches `build_report`. A manifest is
+not a report; wrapping one in a report envelope breaks its own consumers.
+
+
 **The capability contract** is a promise about `import`: importing any
 `gridalyn` sub-package must never place a truly-optional dependency
 (`lightsim2grid`, `cvxpy`, `osmnx`) into `sys.modules`. Code that needs one of

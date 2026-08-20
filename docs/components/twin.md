@@ -50,6 +50,35 @@ layer "is a digital shadow" unqualified.
   | `powerflow` | `simulated` | A solved network's `res_bus`/`res_line` result tables; one observation per solved operating point |
   | `measured-ingest` | `measured` | Tidy `(timestamp, entity_id, quantity, value)` rows against a declared `EntityJoin`; `as_of` stamped **from the datum** — naive timestamps are rejected, never silently localized |
 
+```mermaid
+flowchart LR
+    subgraph SIM["provenance = simulated"]
+        direction TB
+        A["a solved network<br/>res_bus · res_line"] --> B["powerflow"]
+    end
+    subgraph MEA["provenance = measured"]
+        direction TB
+        C["tidy rows<br/>timestamp · entity_id · quantity · value"] --> D["measured-ingest"]
+    end
+
+    B --> O["NetworkObservation<br/>provenance required · as_of"]
+    D --> O
+    O --> U["assets · simulation · operations"]
+
+    classDef sim fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef mea fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    classDef contract fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    class A,B sim
+    class C,D mea
+    class O,U contract
+```
+
+The right-hand lane is the only one that changes a deployment's Kritzinger
+class: feeding real measured data through `measured-ingest` is what makes a
+*deployment* a digital shadow. Both producers CI exercises are
+simulated-or-fixture, which is why the SDK itself never claims to be one.
+
+
 ## The contract
 
 A declared schema is a promise, not a suggestion: `validate_authority_partition`
@@ -80,6 +109,39 @@ in the first place. The state belongs to a repository's *reading* of a
 snapshot, not to the tables themselves: a `NetworkModel` a source adapter
 builds directly in memory carries `operational_state` of `None`, because
 nothing has declared which state it represents.
+
+```mermaid
+flowchart TB
+    START(["NetworkModelRepository.load_model"])
+    Q1{"operational_state=<br/>passed to the repository?"}
+    Q2{"operational_state recorded<br/>in metadata.json?"}
+    A1["that state"]
+    A2["that state"]
+    A3["base"]
+    BAD["ValueError naming the manifest path<br/>and the five valid states"]
+
+    START --> Q1
+    Q1 -->|yes| A1
+    Q1 -->|no| Q2
+    Q2 -->|"present and one of the five"| A2
+    Q2 -->|"present, outside the five"| BAD
+    Q2 -->|absent| A3
+
+    classDef ask fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef ok fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef fallback fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef bad fill:#ffebee,stroke:#c62828,color:#b71c1c
+    class Q1,Q2 ask
+    class A1,A2 ok
+    class A3 fallback
+    class BAD bad
+```
+
+The five states are `base`, `normal`, `current`, `planned` and `study_case`.
+Note which branch is *not* an error: an absent key loads as `base`, so an
+older snapshot keeps reading with no call-site change — only a key holding
+something outside the five is rejected.
+
 
 **Why no `rdflib`.** CGMES semantics are adopted as *fields and rules*, never
 as *serialization*. `rdflib` is not a dependency of this repository — not in

@@ -16,8 +16,17 @@ Read:
 
 You should come away with one mental model:
 
-```text
-SDK capability -> digital twin artifact -> governed workflow -> report or app
+```mermaid
+flowchart LR
+    A["SDK capability<br/>gridalyn/"] --> B["digital twin artifact<br/>instances/default/digital_twin/"]
+    B --> C["governed workflow<br/>one directory per study under projects/"] --> D["report or app<br/>outputs/reports/ · dashboard"]
+
+    classDef sdk fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef art fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef out fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    class A sdk
+    class B,C art
+    class D out
 ```
 
 The important distinction is:

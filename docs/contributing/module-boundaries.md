@@ -20,15 +20,41 @@ single demo's internal structure.
 
 Use this direction when deciding where new code belongs:
 
-```text
-projects   -> foundation + twin + assets + simulation + operations + interfaces
-interfaces -> foundation + twin + projects
-operations -> foundation + assets + simulation
-simulation -> foundation + twin + assets
-assets     -> foundation + twin
-twin       -> foundation
-foundation -> standard library and external primitives only
+```mermaid
+flowchart TB
+    IN["interfaces"]
+    PR["projects"]
+    OP["operations"]
+    SI["simulation"]
+    AS["assets"]
+    TW["twin"]
+    FO["foundation<br/>standard library only"]
+
+    IN --> PR
+    PR --> OP
+    OP --> SI
+    SI --> AS
+    AS --> TW
+    TW --> FO
+
+    OP -.-> AS
+    SI -.-> TW
+    IN -.-> TW
+    PR -.-> FO
+    TW -. "no core layer may import orchestration" .-x PR
+
+    classDef orch fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef core fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef floor fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    class IN,PR orch
+    class OP,SI,AS,TW core
+    class FO floor
+    linkStyle 10 stroke:#c62828,stroke-width:2px,color:#b71c1c
 ```
+
+Solid = the primary chain. Dashed = a real sideways or skip edge the code
+forms. Red cross = the direction `tests/test_project_hygiene.py` actually
+bans.
 
 This is the graph the code actually forms, measured by walking every import in
 `gridalyn/`. Two entries used to be stated more narrowly than reality: `assets`

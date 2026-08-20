@@ -12,22 +12,28 @@ in order is reading the platform in the same direction its own imports run.
 
 ## The stack
 
-```text
-gridalyn/interfaces/    CLI, reporting, visualization
-       |
-gridalyn/projects/      StudyProject + Workflow contract, runner, sense checks
-       |
-gridalyn/operations/    Providers, locational clearing, dispatch, settlement
-       |
-gridalyn/simulation/    Power-flow builders, backends, surrogates, policies
-       |
-gridalyn/assets/        Building, load, EV, DER, thermal modeling + datagen
-       |
-gridalyn/twin/          Network model, adapters, semantic graph, observation
-       |
-gridalyn/foundation/    Governance, report contract, capabilities, workspace
-                         [standard library only]
+```mermaid
+flowchart TB
+    I["gridalyn/interfaces/<br/>CLI · reporting · visualization"]
+    P["gridalyn/projects/<br/>StudyProject + Workflow contract · runner · sense checks"]
+    O["gridalyn/operations/<br/>providers · locational clearing · dispatch · settlement"]
+    S["gridalyn/simulation/<br/>power-flow builders · backends · surrogates · policies"]
+    A["gridalyn/assets/<br/>building · load · EV · DER · thermal modeling + datagen"]
+    T["gridalyn/twin/<br/>network model · adapters · semantic graph · observation"]
+    F["gridalyn/foundation/<br/>governance · report contract · capabilities · workspace<br/>standard library only"]
+
+    I --> P --> O --> S --> A --> T --> F
+
+    classDef top fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef mid fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef floor fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    class I,P top
+    class O,S,A,T mid
+    class F floor
 ```
+
+Every arrow above is an *allowed import direction*, and the only one: a layer
+may reach down the chain, never up it.
 
 `foundation` is the floor: it depends on nothing else in this repository.
 Every other layer depends on the ones below it and is depended on by the ones

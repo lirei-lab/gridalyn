@@ -17,6 +17,32 @@ A reproducible run must have:
 | Healthy code | tests pass | `uv run --with pytest python -m pytest -q` |
 | Published docs | MkDocs builds strictly | `uv run --extra docs mkdocs build --strict -f docs/mkdocs.yml` |
 
+The two paths a checkout can take — and only one of them ends in a citable
+number:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Checkout
+    Checkout --> Pinned : .python-version selects CPython 3.12
+    Pinned --> Frozen : frozen sync WITH the sim, ops and dev extras
+    Pinned --> Degraded : frozen sync, base deps only
+    Frozen --> Ready : doctor reports cvxpy and lightsim2grid true
+    Ready --> Run : gridalyn project run
+    Run --> Compared : gridalyn project regression
+    Compared --> [*] : baseline reproduces bit for bit
+    Degraded --> Moved : study still exits 0, on fallback code paths
+    Moved --> [*] : most of the 81 metrics move, not citable
+
+    classDef good fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef bad fill:#ffebee,stroke:#c62828,color:#b71c1c
+    class Frozen,Ready,Run,Compared good
+    class Degraded,Moved bad
+```
+
+The lower branch is the dangerous one precisely because it never fails: exit
+code 0, a full set of artifacts, and different numbers.
+
 ## 0. The Canonical Reproducible Install (Pinned 3.12, Frozen Lock)
 
 A citable `ev_hosting_flex` result must be rebuildable bit-for-bit on a stranger's

@@ -69,33 +69,41 @@ offer:S4:building:123:soft_cls
 constraint-zone:S4:transformer:64
 ```
 
-## Node Schema
+## Node And Edge Schema
 
-```text
-node_id: string
-labels: list/string
-semantic_type: string
-semantic_uri: string
-source_standard: string
-source_table: string
-source_id: string
-name: string|null
-scenario_id: string|null
-properties: json
-```
+Two parquet tables, one join. An edge is not a property of a node — it is a
+row that names two of them, which is what lets the graph be rebuilt from the
+canonical twin tables rather than incrementally mutated.
 
-## Edge Schema
+```mermaid
+erDiagram
+    NODE ||--o{ EDGE : "referenced as source_id"
+    NODE ||--o{ EDGE : "referenced as target_id"
 
-```text
-edge_id: string
-source_id: string
-target_id: string
-relationship_type: string
-semantic_uri: string
-source_standard: string
-source_table: string
-scenario_id: string|null
-properties: json
+    NODE {
+        string node_id PK
+        string labels "list or string"
+        string semantic_type
+        string semantic_uri
+        string source_standard
+        string source_table "lineage"
+        string source_id "lineage"
+        string name "nullable"
+        string scenario_id "nullable"
+        json properties
+    }
+
+    EDGE {
+        string edge_id PK
+        string source_id FK
+        string target_id FK
+        string relationship_type
+        string semantic_uri
+        string source_standard
+        string source_table "lineage"
+        string scenario_id "nullable"
+        json properties
+    }
 ```
 
 Every node and edge preserves lineage through `source_table` and `source_id`.

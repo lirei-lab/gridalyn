@@ -27,6 +27,38 @@ action a controller takes — policies.
   (`observe_network`) that lives in [Twin](twin.md), because current network
   state is a property of the twin, not of the solver. Three registries, four
   roles: never write "four registries."
+
+```mermaid
+flowchart LR
+    subgraph REG["three registries · gridalyn/simulation"]
+        direction TB
+        B["PowerFlowBackendRegistry"]
+        S["SurrogateRegistry"]
+        P["PolicyRegistry"]
+    end
+    subgraph TW["not a registry · gridalyn/twin"]
+        direction TB
+        O["observe_network<br/>single-builder contract"]
+    end
+
+    B --> RB["which solver runs"]
+    S --> RS["what stands in for a solve"]
+    P --> RP["which policy decides an action"]
+    O --> RO["what the network currently shows"]
+
+    classDef reg fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef notreg fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    classDef role fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    class B,S,P reg
+    class O notreg
+    class RB,RS,RP,RO role
+```
+
+Four roles, three registries. The registries resolve by explicit ID and never
+by `entry_points`; observation sits one layer down instead, because current
+network state is a property of the twin rather than of whichever solver
+happened to produce it.
+
 - **`lightsim2grid` is genuinely optional**, gated through
   `require_capabilities("sim", ...)`; `pandapower` itself is a base
   dependency and always available, so the `pandapower_native` backend never
