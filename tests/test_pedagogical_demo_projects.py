@@ -7,7 +7,6 @@ from gridalyn.projects import project_status, run_workflow, validate_project
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.runner import plan_stages
 
-
 MINIMAL_PROJECT = Path("projects/minimal_grid_project")
 GEOJSON_PROJECT = Path("projects/synthetic_geojson_feeder")
 
@@ -32,7 +31,9 @@ def test_minimal_grid_project_runs_end_to_end() -> None:
     buses_path = MINIMAL_PROJECT / "outputs" / "data" / "buses.csv"
     lines_path = MINIMAL_PROJECT / "outputs" / "data" / "lines.csv"
     loads_path = MINIMAL_PROJECT / "outputs" / "data" / "loads.csv"
-    figure_path = MINIMAL_PROJECT / "outputs" / "figures" / "minimal_voltage_profile.png"
+    figure_path = (
+        MINIMAL_PROJECT / "outputs" / "figures" / "minimal_voltage_profile.png"
+    )
 
     payload = json.loads(report_path.read_text(encoding="utf-8"))
     buses = pd.read_csv(buses_path)
@@ -64,6 +65,7 @@ def test_synthetic_geojson_feeder_contract_and_workflow_are_explicit() -> None:
         "prepare_workspace",
         "generate_building_footprints",
         "build_synthetic_feeder",
+        "export_twin_network_model",
     ]
 
 
@@ -72,12 +74,21 @@ def test_synthetic_geojson_feeder_runs_end_to_end() -> None:
     status = project_status(GEOJSON_PROJECT, check_artifacts=True)
 
     geojson_path = GEOJSON_PROJECT / "outputs" / "data" / "building_footprints.geojson"
-    report_path = GEOJSON_PROJECT / "outputs" / "reports" / "synthetic_geojson_feeder_report.json"
-    validation_path = GEOJSON_PROJECT / "outputs" / "reports" / "synthetic_network_validation_report.json"
+    report_path = (
+        GEOJSON_PROJECT / "outputs" / "reports" / "synthetic_geojson_feeder_report.json"
+    )
+    validation_path = (
+        GEOJSON_PROJECT
+        / "outputs"
+        / "reports"
+        / "synthetic_network_validation_report.json"
+    )
     buses_path = GEOJSON_PROJECT / "outputs" / "data" / "buses.csv"
     lines_path = GEOJSON_PROJECT / "outputs" / "data" / "lines.csv"
     loads_path = GEOJSON_PROJECT / "outputs" / "data" / "loads.csv"
-    figure_path = GEOJSON_PROJECT / "outputs" / "figures" / "synthetic_feeder_topology.png"
+    figure_path = (
+        GEOJSON_PROJECT / "outputs" / "figures" / "synthetic_feeder_topology.png"
+    )
 
     geojson = json.loads(geojson_path.read_text(encoding="utf-8"))
     report = json.loads(report_path.read_text(encoding="utf-8"))
@@ -90,6 +101,7 @@ def test_synthetic_geojson_feeder_runs_end_to_end() -> None:
         "prepare_workspace",
         "generate_building_footprints",
         "build_synthetic_feeder",
+        "export_twin_network_model",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

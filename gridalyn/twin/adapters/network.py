@@ -33,6 +33,11 @@ from gridalyn.twin.network.model import (
     NetworkModel,
 )
 from gridalyn.twin.network.repository import NetworkModelRepository
+from gridalyn.twin.network.schema import (
+    BUILDING_GRID_CONNECTIVITY,
+    BUILDINGS,
+    table_schema,
+)
 
 __all__ = [
     "BASE_EXPORT_NOTES",
@@ -41,7 +46,9 @@ __all__ = [
     "NetworkAdapterDescriptor",
     "NetworkExportResult",
     "NetworkSourceAdapter",
+    "PandapowerTopologyAdapter",
     "SyntheticPandapowerAdapter",
+    "TOPOLOGY_ONLY_EXPORT_NOTES",
     "describe_network_source_adapter",
     "exported_model_identity",
 ]
@@ -330,6 +337,157 @@ class SyntheticPandapowerAdapter:
             Provenance note lines, recorded verbatim in ``metadata.json``.
         """
         return [*BASE_EXPORT_NOTES, *cgmes_export_notes(self.authority_sets())]
+
+
+TOPOLOGY_ONLY_EXPORT_NOTES = [
+    "This source has no building-footprint layer (no PowerGridGraph): "
+    "buildings and building_grid_connectivity are exported empty, not "
+    "fabricated. NetworkModelRepository.validate_integrity() treats a "
+    "present-but-empty artifact as a warning, not an error -- this is the "
+    "documented shape for a source adapter that legitimately lacks one.",
+]
+
+
+@dataclass(frozen=True)
+class PandapowerTopologyAdapter:
+    """Adapter from an in-memory pandapower net to base Parquet, topology only.
+
+    For feeders with no building-footprint layer -- built directly from
+    ``gridalyn.assets.modeling.feeders.RadialFeederSpec`` or hand-rolled
+    pandapower, as in ``der_voltage_optimization``, ``prosumer_battery_market``,
+    ``rl_voltage_control_lightsim`` and ``admm_thermal_consensus`` -- where
+    ``SyntheticPandapowerAdapter`` does not apply: it requires a
+    ``PowerGridGraph`` (``pg.building_data``/``pg.labels_lv``) that these
+    sources never have. This adapter reuses the same bus/line/transformer
+    normalization and exports ``buildings``/``building_grid_connectivity``
+    empty rather than fabricating building-level data that does not exist in
+    the source -- see :data:`TOPOLOGY_ONLY_EXPORT_NOTES`.
+
+    Unlike ``SyntheticPandapowerAdapter``, the net is handed in directly
+    (``net``), not read from a cache directory or built from footprints: none
+    of these sources persist a cache pickle, and there is no footprint file to
+    build from.
+    """
+
+    net: pp.pandapowerNet
+    config_path: Path
+    adapter_id: str = "pandapower_topology"
+    source_adapter: str = "PandapowerTopologyAdapter"
+    source_standard: str = "pandapower"
+    source_format: str = "pandapower-net"
+    capabilities: tuple[str, ...] = DEFAULT_NETWORK_ADAPTER_CAPABILITIES
+
+    def describe(self) -> NetworkAdapterDescriptor:
+        """Return stable adapter identity and capability metadata."""
+        return describe_network_source_adapter(self)
+
+    def authority_sets(self) -> tuple[ModelAuthoritySet, ...]:
+        """Return the Model Authority Sets partitioning models this produces.
+
+        Returns:
+            The declared partition -- see
+            :data:`~gridalyn.twin.adapters.authority.AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER`.
+
+        Raises:
+            UnknownModelAuthoritySetError: If this adapter declares no set.
+        """
+        return authority_set_partition(self.adapter_id)
+
+    def profiles(self) -> tuple[ModelProfile, ...]:
+        """Return the declared profiles of the base this adapter exports.
+
+        Returns:
+            Every profile in
+            :data:`~gridalyn.twin.adapters.authority.BASE_MODEL_PROFILES`,
+            ordered by profile ID.
+        """
+        return base_model_profiles()
+
+    def load_snapshot(self) -> NetworkModel:
+        """Normalize the handed-in net to base tables; buildings/connectivity empty.
+
+        Returns:
+            The canonical :class:`NetworkModel`.
+
+        Raises:
+            ValueError: If this adapter's declared Model Authority Sets do not
+                partition the canonical base artifacts.
+        """
+        validate_authority_partition(self.authority_sets(), adapter_id=self.adapter_id)
+        buses = _make_bus_table(self.net)
+        lines = _make_line_table(self.net, buses)
+        transformers = _make_transformer_table(self.net, buses)
+        return NetworkModel(
+            buses=buses,
+            lines=lines,
+            transformers=transformers,
+            buildings=_empty_buildings_table(),
+            connectivity=_empty_connectivity_table(),
+            source_adapter=self.source_adapter,
+            source_standard=self.source_standard,
+        )
+
+    def export(self, *, out_dir: Path, root: Path) -> NetworkExportResult:
+        """Write base network artifacts and repository-centric metadata."""
+        config = _load_json(self.config_path)
+        snapshot = self.load_snapshot()
+        artifact_paths = snapshot.write_parquet(out_dir)
+        validation_report_path = _validation_report_path(out_dir=out_dir, root=root)
+        metadata_path = write_base_metadata(
+            base_dir=out_dir,
+            root=root,
+            config_path=self.config_path,
+            config_hash=_config_hash(config),
+            cache_dir=None,
+            adapter_id=self.adapter_id,
+            source_adapter=self.source_adapter,
+            source_standard=self.source_standard,
+            source_format=self.source_format,
+            adapter_capabilities=self.capabilities,
+            adapter_validation_report=validation_report_path,
+            notes=self._export_notes(),
+            model_authority=model_authority_payload(
+                self.authority_sets(), self.profiles()
+            ),
+        )
+        write_network_adapter_validation_report(
+            path=validation_report_path,
+            base_dir=out_dir,
+            root=root,
+            adapter_id=self.adapter_id,
+            source_adapter=self.source_adapter,
+            source_standard=self.source_standard,
+            source_format=self.source_format,
+            adapter_capabilities=self.capabilities,
+            artifact_paths=artifact_paths,
+            metadata_path=metadata_path,
+        )
+        return NetworkExportResult(
+            out_dir=out_dir,
+            metadata_path=metadata_path,
+            validation_report_path=validation_report_path,
+            artifact_paths=artifact_paths,
+            counts=snapshot.counts,
+            identity=exported_model_identity(out_dir),
+        )
+
+    def _export_notes(self) -> list[str]:
+        """Build the manifest provenance notes, including the CGMES posture.
+
+        Returns:
+            Provenance note lines, recorded verbatim in ``metadata.json``.
+        """
+        return [*TOPOLOGY_ONLY_EXPORT_NOTES, *cgmes_export_notes(self.authority_sets())]
+
+
+def _empty_buildings_table() -> pd.DataFrame:
+    schema = table_schema(BUILDINGS)
+    return pd.DataFrame(columns=[spec.canonical for spec in schema.columns])
+
+
+def _empty_connectivity_table() -> pd.DataFrame:
+    schema = table_schema(BUILDING_GRID_CONNECTIVITY)
+    return pd.DataFrame(columns=[spec.canonical for spec in schema.columns])
 
 
 def _load_json(path: Path) -> dict[str, Any]:

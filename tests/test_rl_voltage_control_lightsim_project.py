@@ -7,7 +7,6 @@ from gridalyn.projects import project_status, run_workflow, validate_project
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.runner import plan_stages
 
-
 PROJECT_ROOT = Path("projects/rl_voltage_control_lightsim")
 
 
@@ -24,6 +23,7 @@ def test_rl_voltage_control_lightsim_workflow_is_small_and_explicit() -> None:
     assert stages == [
         "prepare_workspace",
         "build_rl_feeder",
+        "export_twin_network_model",
         "train_rl_voltage_agent",
     ]
 
@@ -36,7 +36,9 @@ def test_rl_voltage_control_lightsim_runs_end_to_end() -> None:
     rl_report = PROJECT_ROOT / "outputs" / "reports" / "rl_voltage_control_report.json"
     q_table_path = PROJECT_ROOT / "outputs" / "operations" / "q_table.csv"
     policy_path = PROJECT_ROOT / "outputs" / "operations" / "learned_policy.csv"
-    trajectory_path = PROJECT_ROOT / "outputs" / "data" / "policy_evaluation_trajectory.csv"
+    trajectory_path = (
+        PROJECT_ROOT / "outputs" / "data" / "policy_evaluation_trajectory.csv"
+    )
     episodes_path = PROJECT_ROOT / "outputs" / "data" / "training_episodes.csv"
     figure_path = PROJECT_ROOT / "outputs" / "figures" / "rl_voltage_control.png"
 
@@ -50,6 +52,7 @@ def test_rl_voltage_control_lightsim_runs_end_to_end() -> None:
     assert executed == [
         "prepare_workspace",
         "build_rl_feeder",
+        "export_twin_network_model",
         "train_rl_voltage_agent",
     ]
     assert status["valid"], status
@@ -60,9 +63,18 @@ def test_rl_voltage_control_lightsim_runs_end_to_end() -> None:
     assert report["summary"]["simulation_engine"] == "lightsim2grid"
     assert report["summary"]["episode_count"] == 90
     assert report["summary"]["evaluation_step_count"] == 24
-    assert report["summary"]["total_reward_last_episode"] > report["summary"]["total_reward_first_episode"]
-    assert report["summary"]["voltage_violation_count_controlled"] <= report["summary"]["voltage_violation_count_uncontrolled"]
-    assert report["summary"]["controlled_voltage_deviation_sum"] < report["summary"]["uncontrolled_voltage_deviation_sum"]
+    assert (
+        report["summary"]["total_reward_last_episode"]
+        > report["summary"]["total_reward_first_episode"]
+    )
+    assert (
+        report["summary"]["voltage_violation_count_controlled"]
+        <= report["summary"]["voltage_violation_count_uncontrolled"]
+    )
+    assert (
+        report["summary"]["controlled_voltage_deviation_sum"]
+        < report["summary"]["uncontrolled_voltage_deviation_sum"]
+    )
     assert not q_table.empty
     assert set(q_table["action_mw"]).issuperset({-0.12, 0.0, 0.12})
     assert not policy.empty

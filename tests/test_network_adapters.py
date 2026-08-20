@@ -21,6 +21,7 @@ from gridalyn.twin.adapters.authority import (
 from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkExportResult,
+    PandapowerTopologyAdapter,
     SyntheticPandapowerAdapter,
     _make_buildings_and_connectivity,
     _make_bus_table,
@@ -558,6 +559,103 @@ class NetworkAdaptersTest(unittest.TestCase):
             "producer stopped rendering the CGMES authority-set note",
         )
         self.assertIn(AUTHORITY_SET_PARTITION_IS_SINGLE_MEMBER, manifest["notes"])
+
+    # -- PandapowerTopologyAdapter: no building-footprint layer ---------------
+
+    def _tiny_net(self) -> "pp.pandapowerNet":
+        net = pp.create_empty_network(name="tiny")
+        mv = pp.create_bus(net, vn_kv=25.0, name="MV")
+        pp.create_ext_grid(net, mv, vm_pu=1.0, name="grid")
+        lv = pp.create_bus(net, vn_kv=0.4, name="lv_0")
+        pp.create_transformer_from_parameters(
+            net,
+            hv_bus=mv,
+            lv_bus=lv,
+            sn_mva=0.5,
+            vn_hv_kv=25.0,
+            vn_lv_kv=0.4,
+            vkr_percent=1.0,
+            vk_percent=4.0,
+            pfe_kw=0.6,
+            i0_percent=0.2,
+            name="transformer_0",
+        )
+        lv2 = pp.create_bus(net, vn_kv=0.4, name="lv_1")
+        pp.create_line_from_parameters(
+            net,
+            from_bus=lv,
+            to_bus=lv2,
+            length_km=0.1,
+            r_ohm_per_km=0.5,
+            x_ohm_per_km=0.3,
+            c_nf_per_km=0.0,
+            max_i_ka=0.2,
+            name="line_0",
+        )
+        pp.create_load(net, bus=lv2, p_mw=0.05, q_mvar=0.01, name="cluster_0")
+        return net
+
+    def test_pandapower_topology_adapter_declares_platform_identity(self):
+        adapter = PandapowerTopologyAdapter(
+            net=self._tiny_net(), config_path=Path("configs/grid/config.json")
+        )
+
+        descriptor = describe_network_source_adapter(adapter)
+
+        self.assertEqual(descriptor.adapter_id, "pandapower_topology")
+        self.assertEqual(adapter.source_adapter, "PandapowerTopologyAdapter")
+        self.assertEqual(adapter.source_standard, "pandapower")
+        self.assertEqual(descriptor.source_format, "pandapower-net")
+
+    def test_pandapower_topology_adapter_populates_topology_leaves_buildings_empty(
+        self,
+    ):
+        adapter = PandapowerTopologyAdapter(
+            net=self._tiny_net(), config_path=Path("configs/grid/config.json")
+        )
+
+        snapshot = adapter.load_snapshot()
+
+        self.assertEqual(len(snapshot.buses), 3)
+        self.assertEqual(len(snapshot.lines), 1)
+        self.assertEqual(len(snapshot.transformers), 1)
+        self.assertTrue(snapshot.buildings.empty)
+        self.assertTrue(snapshot.connectivity.empty)
+        self.assertIn("building_id", snapshot.buildings.columns)
+        self.assertIn("building_id", snapshot.connectivity.columns)
+
+    def test_pandapower_topology_adapter_export_is_a_valid_repository_base(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / "config.json"
+            config_path.write_text(json.dumps({"topology": "tiny"}), encoding="utf-8")
+            out_dir = root / "base"
+
+            adapter = PandapowerTopologyAdapter(
+                net=self._tiny_net(), config_path=config_path
+            )
+            result = adapter.export(out_dir=out_dir, root=root)
+
+            repo = NetworkModelRepository.from_parquet(out_dir, provenance="require")
+            model = repo.load_model()
+            validation = repo.validate_integrity()
+
+        self.assertEqual(result.counts["buses"], 3)
+        self.assertEqual(result.counts["buildings"], 0)
+        self.assertEqual(len(model.buildings), 0)
+        self.assertTrue(validation.valid, validation.errors)
+        self.assertTrue(validation.warnings, "empty buildings/connectivity should warn")
+
+    def test_default_registry_exposes_pandapower_topology_adapter(self):
+        registry = default_network_adapter_registry()
+
+        descriptor = registry.get_descriptor("pandapower_topology")
+
+        self.assertEqual(descriptor.source_format, "pandapower-net")
+        self.assertIn(
+            "pandapower_topology",
+            {d.adapter_id for d in registry.list_descriptors()},
+        )
 
 
 if __name__ == "__main__":

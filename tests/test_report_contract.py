@@ -428,6 +428,18 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "derive_curtailment_economics::write_json#0",
         "projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py::"
         "run_stage::write_json#0",
+        # twin_network_model_config.json: provenance for the twin-network-model
+        # export stages (Phase 31/Milestone 14) -- the config the exported
+        # NetworkModel was built from, referenced as an artifact by the
+        # governed twin_network_model_report, not a report itself.
+        "projects/admm_thermal_consensus/scripts/pipeline/"
+        "export_twin_network_model.py::run_stage::write_json#0",
+        "projects/der_voltage_optimization/scripts/export_twin_network_model.py::"
+        "run_stage::write_json#0",
+        "projects/prosumer_battery_market/scripts/export_twin_network_model.py::"
+        "run_stage::write_json#0",
+        "projects/rl_voltage_control_lightsim/scripts/export_twin_network_model.py::"
+        "run_stage::write_json#0",
     }
 )
 
@@ -956,7 +968,7 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            46,
+            50,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
@@ -972,8 +984,13 @@ class ReportContractAuditTest(unittest.TestCase):
             "routed the flagship's 20 pipeline JSON writes through "
             "script.write_json, bringing the helper-routed total to 46 (the "
             "five prepare_topology_cache _write_json cache documents were "
-            "already counted there). A different number means the tree moved; "
-            "reconcile before adjusting this number.",
+            "already counted there). The Phase 31 (Milestone 14) "
+            "twin-network-model export stages added 4 more "
+            "script.write_json(twin_network_model_config.json) sites (admm, "
+            "der_voltage_optimization, prosumer_battery_market, "
+            "rl_voltage_control_lightsim), bringing the total to 50. A "
+            "different number means the tree moved; reconcile before "
+            "adjusting this number.",
         )
 
 

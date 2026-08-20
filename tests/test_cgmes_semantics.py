@@ -372,7 +372,7 @@ def test_unknown_authority_set_error_enumerates_the_declared_ids() -> None:
 
     message = str(excinfo.value)
     assert "iec_61850_scl" in message
-    assert "cim_parquet, synthetic_pandapower" in message
+    assert "cim_parquet, pandapower_topology, synthetic_pandapower" in message
     assert "MODEL_AUTHORITY_SETS" in message
 
 

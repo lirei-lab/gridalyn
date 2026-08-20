@@ -14,6 +14,7 @@ from gridalyn.twin.adapters.cim import CimParquetAdapter
 from gridalyn.twin.adapters.network import (
     NetworkAdapterDescriptor,
     NetworkSourceAdapter,
+    PandapowerTopologyAdapter,
     SyntheticPandapowerAdapter,
     describe_network_source_adapter,
 )
@@ -96,14 +97,16 @@ def default_network_adapter_registry() -> NetworkAdapterRegistry:
 
     Built once and cached so external adapters registered via
     :func:`register_network_adapter_extension` stay resolvable through the
-    default path. Holds the synthetic pandapower adapter and the CIM parquet
-    adapter.
+    default path. Holds the synthetic pandapower adapter, the CIM parquet
+    adapter, and the topology-only pandapower adapter (no building-footprint
+    layer).
     """
     global _DEFAULT_NETWORK_ADAPTER_REGISTRY
     if _DEFAULT_NETWORK_ADAPTER_REGISTRY is None:
         registry = NetworkAdapterRegistry()
         registry.register(SyntheticPandapowerAdapter)
         registry.register(CimParquetAdapter)
+        registry.register(PandapowerTopologyAdapter)
         _DEFAULT_NETWORK_ADAPTER_REGISTRY = registry
     return _DEFAULT_NETWORK_ADAPTER_REGISTRY
 

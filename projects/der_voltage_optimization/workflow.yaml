@@ -36,3 +36,17 @@ spec:
         - outputs/data/pandapower_verification.csv
         - outputs/reports/der_voltage_optimization_report.json
         - outputs/figures/der_voltage_optimization.png
+    - id: export_twin_network_model
+      needs:
+        - prepare_workspace
+      command: "{python} scripts/export_twin_network_model.py"
+      outputs:
+        - outputs/data/twin_network_model_config.json
+        - outputs/data/twin_network_model/grid_buses.parquet
+        - outputs/data/twin_network_model/grid_lines.parquet
+        - outputs/data/twin_network_model/grid_transformers.parquet
+        - outputs/data/twin_network_model/buildings.parquet
+        - outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - outputs/data/twin_network_model/metadata.json
+        - outputs/data/twin_network_model/network_adapter_validation_report.json
+        - outputs/reports/twin_network_model_report.json

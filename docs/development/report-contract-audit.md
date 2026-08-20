@@ -1019,3 +1019,35 @@ Pins updated together with this amendment in `tests/test_report_contract.py`
 (`_NOT_A_REPORT_BY_FILE`, `_HELPER_ROUTED_NOT_A_REPORT`, and both count
 guards), per §7's rule that a reclassification must update the audit and the
 gate in the same change.
+
+## 14. Amendment — 2026-08-20: twin-network-model export stages (Phase 31, Milestone 14)
+
+**Counts move: helper-routed sites 46 → 50. Direct-JSON sites unchanged (41).**
+
+**Why.** Five new additive, terminal pipeline stages (`export_twin_network_model`)
+were added to `ev_hosting_flex`, `synthetic_geojson_feeder`,
+`der_voltage_optimization`, `prosumer_battery_market`,
+`rl_voltage_control_lightsim` and `admm_thermal_consensus`, so each project's
+network can be loaded through `gridalyn.twin`'s canonical `NetworkModel`. Four
+of the five (all but `synthetic_geojson_feeder`, which needs no extra config
+file) write a small provenance JSON — the feeder/config parameters the
+exported `NetworkModel` was built from — via `script.write_json(...)` before
+calling the export adapter. This is domain-data provenance the governed
+`twin_network_model_report` references as an artifact, not a report itself —
+the same class as the admm (§12) and ev_hosting_flex (§13) study-data
+payloads.
+
+**Added to the helper-routed classification (4 sites, NOT-A-REPORT):**
+
+| Site |
+|---|
+| `projects/admm_thermal_consensus/scripts/pipeline/export_twin_network_model.py::run_stage::write_json#0` |
+| `projects/der_voltage_optimization/scripts/export_twin_network_model.py::run_stage::write_json#0` |
+| `projects/prosumer_battery_market/scripts/export_twin_network_model.py::run_stage::write_json#0` |
+| `projects/rl_voltage_control_lightsim/scripts/export_twin_network_model.py::run_stage::write_json#0` |
+
+**Reconciliation.** Helper-routed: `46 + 4 = 50`.
+
+Pins updated together with this amendment in `tests/test_report_contract.py`
+(`_HELPER_ROUTED_NOT_A_REPORT` and both count guards), per §7's rule that a
+reclassification must update the audit and the gate in the same change.

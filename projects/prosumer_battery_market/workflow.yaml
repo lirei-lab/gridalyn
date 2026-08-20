@@ -38,3 +38,17 @@ spec:
         - outputs/data/realtime_powerflow_results.csv
         - outputs/reports/prosumer_realtime_market_report.json
         - outputs/figures/prosumer_market_dispatch.png
+    - id: export_twin_network_model
+      needs:
+        - prepare_workspace
+      command: "{python} scripts/export_twin_network_model.py"
+      outputs:
+        - outputs/data/twin_network_model_config.json
+        - outputs/data/twin_network_model/grid_buses.parquet
+        - outputs/data/twin_network_model/grid_lines.parquet
+        - outputs/data/twin_network_model/grid_transformers.parquet
+        - outputs/data/twin_network_model/buildings.parquet
+        - outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - outputs/data/twin_network_model/metadata.json
+        - outputs/data/twin_network_model/network_adapter_validation_report.json
+        - outputs/reports/twin_network_model_report.json

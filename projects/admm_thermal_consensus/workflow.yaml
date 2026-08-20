@@ -31,6 +31,19 @@ spec:
         - projects/admm_thermal_consensus/outputs/json/bus_weights.json
         - projects/admm_thermal_consensus/outputs/json/network_scale.json
         - projects/admm_thermal_consensus/outputs/reports/network_report.json
+    - id: export_twin_network_model
+      needs: [prepare_workspace]
+      command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.export_twin_network_model"
+      outputs:
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model_config.json
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_buses.parquet
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_lines.parquet
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_transformers.parquet
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/buildings.parquet
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/metadata.json
+        - projects/admm_thermal_consensus/outputs/data/twin_network_model/network_adapter_validation_report.json
+        - projects/admm_thermal_consensus/outputs/reports/twin_network_model_report.json
     - id: train_forecaster
       needs: [generate_agents]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.train_forecaster"

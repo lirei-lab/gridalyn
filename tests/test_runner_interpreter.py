@@ -225,8 +225,11 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
 
         # 32 (Phase 19) + 20 ev_hosting_flex pipeline stages converted to
         # {python} -m in Phase 20 (plan 20-02) + 1 export_twin_network_model
-        # stage added in Phase 31 (Milestone 14).
-        self.assertEqual(53, declared)
+        # stage added to ev_hosting_flex + 5 export_twin_network_model stages
+        # added to der_voltage_optimization, prosumer_battery_market,
+        # rl_voltage_control_lightsim, synthetic_geojson_feeder and
+        # admm_thermal_consensus (all Milestone 14).
+        self.assertEqual(58, declared)
 
 
 if __name__ == "__main__":

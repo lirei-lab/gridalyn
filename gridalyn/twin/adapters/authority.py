@@ -152,6 +152,19 @@ MODEL_AUTHORITY_SETS: dict[str, ModelAuthoritySet] = {
             "building_grid_connectivity",
         ),
     ),
+    "pandapower_topology": ModelAuthoritySet(
+        authority_set_id="gridalyn:mas:pandapower-topology",
+        authority="PandapowerTopologyAdapter",
+        adapter_id="pandapower_topology",
+        source_standard="pandapower",
+        artifacts=(
+            "grid_buses",
+            "grid_lines",
+            "grid_transformers",
+            "buildings",
+            "building_grid_connectivity",
+        ),
+    ),
 }
 """Every declared Model Authority Set, keyed by producing ``adapter_id``.
 

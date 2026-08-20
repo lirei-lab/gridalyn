@@ -31,3 +31,19 @@ spec:
         - outputs/reports/synthetic_network_validation_report.json
         - outputs/reports/synthetic_geojson_feeder_report.json
         - outputs/figures/synthetic_feeder_topology.png
+    - id: export_twin_network_model
+      needs:
+        - generate_building_footprints
+      command: "{python} scripts/export_twin_network_model.py"
+      inputs:
+        - outputs/data/building_footprints.geojson
+        - inputs/synthetic_network_config.json
+      outputs:
+        - outputs/data/twin_network_model/grid_buses.parquet
+        - outputs/data/twin_network_model/grid_lines.parquet
+        - outputs/data/twin_network_model/grid_transformers.parquet
+        - outputs/data/twin_network_model/buildings.parquet
+        - outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - outputs/data/twin_network_model/metadata.json
+        - outputs/data/twin_network_model/network_adapter_validation_report.json
+        - outputs/reports/twin_network_model_report.json
