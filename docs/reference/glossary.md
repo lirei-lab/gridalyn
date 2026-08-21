@@ -64,6 +64,15 @@ git commit, per-stage status and exit code, and an overall status of
 `ModelIdentity` — the CGMES `FullModel`-style header (`id`, `created`,
 `profile`) stamped on a canonical network model. See [Twin](../components/twin.md).
 
+### operational state
+
+Which state a network snapshot represents: `base`, `normal`, `current`,
+`planned` or `study_case`. Declared, never inferred from the tables;
+`NetworkModelRepository` resolves exactly one per loaded model, preferring an
+explicit `operational_state=` over the manifest's, over `base`. A model a
+source adapter builds in memory carries `None` — nothing has declared its
+state. See [Twin](../components/twin.md).
+
 ### policy
 
 Which control policy decides an action, resolved through `PolicyRegistry`.

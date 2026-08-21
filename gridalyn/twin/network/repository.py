@@ -6,18 +6,21 @@ import json
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, cast
 
 import pandas as pd
 
 from gridalyn.twin.network.model import (
     BASE_PROFILE_ID,
+    DEFAULT_OPERATIONAL_STATE,
+    OPERATIONAL_STATES,
     PROVENANCE_DECLARED,
     ConnectedEquipment,
     DownstreamAssets,
     ModelIdentity,
     NetworkIntegrityReport,
     NetworkModel,
+    OperationalState,
 )
 from gridalyn.twin.network.schema import (
     BASE_TABLE_SCHEMAS,
@@ -38,6 +41,22 @@ from gridalyn.twin.network.schema import (
 
 METADATA_FILENAME = "metadata.json"
 
+# Both manifest-state errors end with this. It names the keyword, because the
+# bare "regenerate it with write_base_metadata" it replaced, followed literally
+# with defaults, rewrote the manifest as an undeclared snapshot -- turning a
+# loud error into the silent mislabel the check exists to prevent. It names no
+# repository override: the manifest's own value is validated before precedence
+# is applied, so no constructor argument can make a corrupt manifest load, and
+# advertising one sent the reader straight back into this same error.
+MANIFEST_STATE_REMEDY = (
+    "rewrite the manifest with "
+    "gridalyn.twin.network.metadata.write_base_metadata"
+    "(base_dir=..., root=..., operational_state=...), which reads the snapshot "
+    "under provenance='ignore' and so is not blocked by the manifest it "
+    "replaces; or, where that writer is out of reach, remove or correct the "
+    "'operational_state' key in metadata.json by hand"
+)
+
 ProvenancePolicy = Literal["require", "warn", "ignore"]
 
 
@@ -52,21 +71,166 @@ class NetworkModelRepository:
     Attributes:
         base_dir: Directory holding the canonical base Parquet artifacts and
             their ``metadata.json`` manifest.
-        provenance: What to do when the manifest is absent. ``"require"``
-            raises, ``"warn"`` (the default) returns an explicitly degraded
-            model and warns, ``"ignore"`` returns the degraded model silently
-            and exists for the manifest *producer*, which by construction runs
-            before the manifest it writes. A model loaded without provenance is
-            never a silent success under the default policy.
+        provenance: What to do when the manifest is absent -- and, for
+            ``"ignore"``, whether the manifest is consulted as authority at
+            all. ``"require"`` raises, ``"warn"`` (the default) returns an
+            explicitly degraded model and warns, ``"ignore"`` returns the
+            degraded model silently and exists for the manifest *producer*,
+            which by construction runs before the manifest it writes. A model
+            loaded without provenance is never a silent success under the
+            default policy.
+
+            ``"ignore"`` therefore also means an *existing* manifest is not
+            read as authority: its ``"operational_state"`` is neither used nor
+            validated, and the state resolves from this repository's declared
+            one, else
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`.
+            Without that widening the producer would be gated on the very file
+            it is about to overwrite, so a corrupt ``"operational_state"``
+            would block the writer that exists to repair it. ``"warn"`` and
+            ``"require"`` read and validate the key exactly as before.
 
             Each policy has a production caller, which is why all three are
             kept: ``"ignore"`` in :func:`build_base_metadata`, ``"require"`` in
             :func:`gridalyn.twin.adapters.network.exported_model_identity` (the
             export post-condition), ``"warn"`` everywhere else by default.
+        operational_state: Which operational state this repository loads its
+            models as, or ``None`` when the caller declared none. ``None`` means
+            UNDECLARED, *not* ``"base"``: collapsing the two would make "the
+            caller explicitly asked for ``base``" and "the caller said nothing"
+            the same value, and the resolution order that reads a state back off
+            the manifest branches on exactly that difference. A caller that
+            declares nothing still loads a model stamped
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`, so
+            the sentinel costs no existing call site a change.
     """
 
     base_dir: Path
     provenance: ProvenancePolicy = "warn"
+    operational_state: OperationalState | None = None
+
+    def __post_init__(self) -> None:
+        """Reject an operational state outside the declared set.
+
+        Raises:
+            ValueError: If ``operational_state`` is neither ``None`` nor a
+                member of
+                :data:`~gridalyn.twin.network.model.OPERATIONAL_STATES`. Case
+                variants are rejected rather than normalized: silently
+                lowercasing ``"Base"`` would hide a caller's typo.
+        """
+        if (
+            self.operational_state is not None
+            and self.operational_state not in OPERATIONAL_STATES
+        ):
+            raise ValueError(
+                f"unknown operational state {self.operational_state!r} for "
+                f"base_dir={self.base_dir} (known: {', '.join(OPERATIONAL_STATES)}); "
+                "pass one of those, or leave operational_state unset to load the "
+                f"model as {DEFAULT_OPERATIONAL_STATE!r}"
+            )
+
+    def resolved_operational_state(self) -> OperationalState:
+        """Return the operational state this repository loads models as.
+
+        Resolves all three legs of the rule — the state this repository
+        declared, else the snapshot manifest's ``"operational_state"``, else
+        :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE` — by
+        delegating to the same resolver and the same manifest read that
+        :meth:`load_model` uses. The two therefore agree by construction:
+        ``repo.resolved_operational_state()`` is what
+        ``repo.load_model().operational_state`` will be.
+
+        Reading the manifest is what buys that agreement, so this method
+        touches disk and obeys the provenance policy exactly as
+        :meth:`load_model` does: on a snapshot with no manifest,
+        ``provenance="warn"`` (the default) emits
+        :class:`MissingProvenanceWarning`, ``provenance="require"`` raises, and
+        ``provenance="ignore"`` is silent. Under ``"ignore"`` the manifest is
+        additionally not consulted for the state itself -- see
+        :attr:`provenance` -- so the answer is the declared state, else the
+        default. Call it once and keep the value if that matters.
+
+        Returns:
+            The resolved state, never ``None``: every model this repository
+            loads carries one, while a model built in memory by a source
+            adapter carries ``None`` — see
+            :data:`~gridalyn.twin.network.model.OPERATIONAL_STATE_ABSENT_REASON`.
+
+        Raises:
+            FileNotFoundError: If the manifest is missing and this repository
+                was constructed with ``provenance="require"``.
+            ValueError: If the manifest exists but is not a JSON object, or
+                records an unreadable ``"operational_state"``.
+        """
+        return self._operational_state_from(self._read_metadata())
+
+    def _operational_state_from(
+        self, manifest: Mapping[str, Any] | None
+    ) -> OperationalState:
+        """Resolve the state of a model loaded alongside ``manifest``.
+
+        Args:
+            manifest: Parsed ``metadata.json`` payload, or ``None`` when the
+                snapshot has no manifest.
+
+        Returns:
+            The state this repository declared when it declared one; otherwise
+            the manifest's ``"operational_state"`` (skipped entirely under
+            ``provenance="ignore"``, which treats the file as non-authoritative
+            rather than as input); otherwise
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`. A
+            manifest written before this key existed therefore keeps loading,
+            as the base snapshot it is, rather than failing.
+
+        Raises:
+            ValueError: If the manifest records an ``"operational_state"`` that
+                is not a string, or a string outside
+                :data:`~gridalyn.twin.network.model.OPERATIONAL_STATES`. An
+                unreadable state is rejected rather than degraded to the
+                default, which would make a mislabelled snapshot look like a
+                base one. The manifest's own value is validated whenever the
+                key is present *and* the policy consults the manifest at all,
+                and always *before* precedence is applied: precedence decides
+                which valid value wins, never whether the file on disk is
+                checked, so under ``"warn"`` and ``"require"`` a corrupt
+                manifest is caught identically with and without a declared
+                constructor state. Never raised under ``"ignore"``.
+        """
+        manifest_state: OperationalState | None = None
+        # Under "ignore" the manifest is not authority (see `provenance`), so
+        # its state is neither read nor validated: `build_base_metadata` loads
+        # the model in order to *replace* this file, and validating what it is
+        # about to overwrite would make a corrupt state unrepairable.
+        consults_manifest = self.provenance != "ignore"
+        if (
+            consults_manifest
+            and manifest is not None
+            and "operational_state" in manifest
+        ):
+            value = manifest["operational_state"]
+            path = self.base_dir / METADATA_FILENAME
+            if not isinstance(value, str):
+                raise ValueError(
+                    f"{path}: manifest key 'operational_state' must be a "
+                    f"string, found {type(value).__name__} "
+                    f"(known: {', '.join(OPERATIONAL_STATES)}); "
+                    f"{MANIFEST_STATE_REMEDY}"
+                )
+            if value not in OPERATIONAL_STATES:
+                raise ValueError(
+                    f"{path}: manifest declares unknown operational state "
+                    f"{value!r} (known: {', '.join(OPERATIONAL_STATES)}); "
+                    f"{MANIFEST_STATE_REMEDY}"
+                )
+            # mypy does not narrow `str` to the Literal through the membership
+            # test above, so the cast carries the check's result into the type.
+            manifest_state = cast(OperationalState, value)
+        if self.operational_state is not None:
+            return self.operational_state
+        if manifest_state is not None:
+            return manifest_state
+        return DEFAULT_OPERATIONAL_STATE
 
     @classmethod
     def from_parquet(
@@ -74,8 +238,13 @@ class NetworkModelRepository:
         base_dir: Path | str,
         *,
         provenance: ProvenancePolicy = "warn",
+        operational_state: OperationalState | None = None,
     ) -> "NetworkModelRepository":
-        return cls(base_dir=Path(base_dir), provenance=provenance)
+        return cls(
+            base_dir=Path(base_dir),
+            provenance=provenance,
+            operational_state=operational_state,
+        )
 
     def load_model(self) -> NetworkModel:
         """Load the canonical network tables together with their provenance.
@@ -84,11 +253,18 @@ class NetworkModelRepository:
             A :class:`NetworkModel` whose ``identity`` and
             ``provenance_status`` come from ``metadata.json`` when it is
             present, and which is explicitly marked ``"absent"`` when it is not.
+            Its ``operational_state`` is always non-``None``, resolved on both
+            paths as *declared state, else manifest, else*
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`,
+            with the manifest leg skipped under ``provenance="ignore"``, where
+            the file is not authority (see :attr:`provenance`).
 
         Raises:
             FileNotFoundError: If the manifest is missing and this repository
                 was constructed with ``provenance="require"``.
-            ValueError: If the manifest exists but is not a JSON object.
+            ValueError: If the manifest exists but is not a JSON object, or --
+                under any policy but ``"ignore"`` -- records an unreadable
+                ``"operational_state"``.
         """
         frames = {
             "buses": self._read_table(GRID_BUSES),
@@ -98,14 +274,16 @@ class NetworkModelRepository:
             "connectivity": self._read_table(BUILDING_GRID_CONNECTIVITY),
         }
         manifest = self._read_metadata()
+        operational_state = self._operational_state_from(manifest)
         if manifest is None:
-            return NetworkModel(**frames)
+            return NetworkModel(**frames, operational_state=operational_state)
         return NetworkModel(
             **frames,
             source_adapter=_text_or_none(manifest.get("source_adapter")),
             source_standard=_text_or_none(manifest.get("source_standard")),
             identity=_build_identity(manifest),
             provenance_status=PROVENANCE_DECLARED,
+            operational_state=operational_state,
         )
 
     def _read_metadata(self) -> dict[str, Any] | None:

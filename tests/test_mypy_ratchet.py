@@ -26,9 +26,11 @@ under ``projects/`` actually turns the gate red.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import unittest
+import warnings
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -52,6 +54,38 @@ def _run_ratchet(*extra_args: str) -> subprocess.CompletedProcess[str]:
         check=False,
         timeout=180,
     )
+
+
+_REPORT = re.compile(
+    r"^mypy \((?P<target>[^)]+)\): (?P<count>\d+) errors \(baseline (?P<baseline>\d+)\)"
+)
+
+
+def _projects_error_count() -> tuple[int, int]:
+    """Return ``(baseline, measured)`` error counts for the ``projects`` target.
+
+    Parsed from the ratchet's own report line rather than re-running mypy here,
+    so the numbers are the ones the gate itself acts on.
+
+    Returns:
+        The baseline the ratchet read, and the count mypy reported for this
+        tree in this environment. They are equal on a machine whose baseline
+        was measured against the same installed set, and differ where it was
+        not -- which is the case this test suite must not assume away.
+
+    Raises:
+        AssertionError: If the ratchet printed no recognisable report line,
+            which means it crashed rather than measured.
+    """
+    result = _run_ratchet(
+        "--target", "projects", "--baseline-file", ".mypy-baseline-projects"
+    )
+    match = _REPORT.search(result.stdout)
+    assert match is not None, (
+        "the projects ratchet printed no report line, so nothing can be "
+        f"measured from it:\n{result.stdout}{result.stderr}"
+    )
+    return int(match.group("baseline")), int(match.group("count"))
 
 
 class MypyRatchetCliTests(unittest.TestCase):
@@ -90,6 +124,35 @@ class MypyBaselinesMatchTheTreeTests(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
+    def test_projects_baseline_slack_is_reported_not_hidden(self) -> None:
+        """Record how far the baseline sits above what mypy actually reports.
+
+        ``test_projects_ratchet_does_not_report_a_rise`` passes on any count at
+        or below the baseline, so a baseline measured on one machine and run on
+        another can sit well above the tree without any gate noticing -- and a
+        baseline above the tree is slack the ratchet will absorb a real
+        regression into. This does not fail on slack, because whether to
+        re-measure is a human decision; it names the number so the decision is
+        made against evidence rather than rediscovered from a mute failure.
+        """
+        baseline, measured = _projects_error_count()
+        self.assertLessEqual(
+            measured,
+            baseline,
+            f"projects ratchet reports a rise: {measured} > baseline {baseline}",
+        )
+        if measured < baseline:
+            # A warning, not a print: CI runs `pytest -q` without `-s`, which
+            # swallows stdout from a passing test but still renders the warnings
+            # summary. A finding nobody can see is not reported.
+            warnings.warn(
+                f"projects baseline slack: mypy reports {measured}, baseline "
+                f"records {baseline} ({baseline - measured} absorbed). The "
+                "ratchet would let a regression of that size through here. "
+                "Re-measure .mypy-baseline-projects in the environment CI uses.",
+                stacklevel=2,
+            )
+
 
 class MypyRatchetCatchesARealRegressionTests(unittest.TestCase):
     """Mutation proof: a new type error under ``projects/`` reddens the gate.
@@ -116,18 +179,49 @@ class MypyRatchetCatchesARealRegressionTests(unittest.TestCase):
         self._scratch.unlink(missing_ok=True)
 
     def test_a_new_type_error_turns_the_projects_gate_red(self) -> None:
+        # Measure the slack BEFORE mutating, rather than assuming the tree sits
+        # exactly at its baseline. It does on the machine the baseline was
+        # measured on, and this test injected a single error on that
+        # assumption -- so in any environment reporting FEWER errors than the
+        # baseline records, that one error was absorbed by the slack, the gate
+        # stayed green, and the assertion failed with a bare `0 == 0` naming
+        # neither number. CI has been red on exactly that since the projects
+        # ratchet was added (2026-08-19). The slack is a real finding about the
+        # baseline, reported below; it is not this test's subject, and a
+        # mutation proof must not depend on it being zero.
+        baseline, before = _projects_error_count()
+        slack = baseline - before
+        self.assertGreaterEqual(
+            slack,
+            0,
+            f"projects ratchet already reports a rise ({before} > {baseline}) "
+            "before this test mutated anything",
+        )
+
+        # One error more than the slack can absorb, so the gate must redden in
+        # any environment. Each line is the defect class that shipped: an
+        # argument of the wrong type into an annotated signature.
+        errors = slack + 1
+        calls = "".join(
+            f"takes_a_string({n})  # wrong type on purpose\n" for n in range(errors)
+        )
         self._scratch.write_text(
             "from __future__ import annotations\n\n\n"
             "def takes_a_string(value: str) -> int:\n"
-            "    return len(value)\n\n\n"
-            "takes_a_string(12345)  # wrong type on purpose\n",
+            "    return len(value)\n\n\n" + calls,
             encoding="utf-8",
         )
         result = _run_ratchet(
             "--target", "projects", "--baseline-file", ".mypy-baseline-projects"
         )
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn("rose from", result.stdout + result.stderr)
+        detail = (
+            f"injected {errors} type error(s) into {self._SCRATCH_RELATIVE} "
+            f"(measured {before} errors against baseline {baseline}, "
+            f"slack {slack}); the ratchet should have reported a rise.\n"
+            f"{result.stdout}{result.stderr}"
+        )
+        self.assertNotEqual(0, result.returncode, detail)
+        self.assertIn("rose from", result.stdout + result.stderr, detail)
 
         self._scratch.unlink()
         restored = _run_ratchet(

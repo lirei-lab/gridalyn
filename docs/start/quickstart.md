@@ -112,8 +112,22 @@ uv run gridalyn project verify projects/minimal_grid_project
 
 This proves the basic platform loop:
 
-```text
-project contract -> workflow stages -> generated artifacts -> reports -> sense checks
+```mermaid
+flowchart LR
+    A["project contract<br/>project.yaml + workflow.yaml"]
+    B["workflow stages<br/>run as subprocesses"]
+    C["generated artifacts<br/>outputs/data · outputs/figures"]
+    D["reports<br/>outputs/reports"]
+    E["sense checks<br/>gridalyn project verify"]
+
+    A --> B --> C --> D --> E
+
+    classDef contract fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef work fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef check fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    class A contract
+    class B,C,D work
+    class E check
 ```
 
 Expected outcome: a five-bus feeder, one AC power-flow run, CSV tables, one

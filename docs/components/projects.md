@@ -49,6 +49,38 @@ project with **neither** a registered checker **nor** declarative sense-check
 rules in its YAML fails the `project_has_registered_sense_checks` gate — a
 study cannot pass vacuously by declaring nothing to check.
 
+```mermaid
+flowchart TB
+    subgraph WF["1 · Is the contract well-formed?"]
+        direction TB
+        V["validate_project_file"] --> VO["schema check on<br/>project.yaml + workflow.yaml"]
+        VO --> VX["fails before any stage runs"]
+    end
+    subgraph SN["2 · Do the numbers make sense?"]
+        direction TB
+        S["project_sense_check"] --> SO["project_sense_check_report.json"]
+        SO --> SX["validation.valid = false<br/>on any error-severity check"]
+    end
+    subgraph RG["3 · Did the numbers move?"]
+        direction TB
+        R["run_project_regression"] --> RO["regression_report.json"]
+        RO --> RX["json_path by json_path<br/>vs results_baseline.json"]
+    end
+
+    WF --> SN --> RG
+
+    classDef q fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
+    classDef out fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef verdict fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    class V,S,R q
+    class VO,SO,RO out
+    class VX,SX,RX verdict
+```
+
+Nothing in that picture folds into anything else: a well-formed contract says
+nothing about whether the numbers are plausible, and a plausible number says
+nothing about whether it moved since the baseline was pinned.
+
 The run manifest (`outputs/manifests/project_run_manifest.json`) is the
 governed record of what happened: `git_commit`, one entry per stage with
 `status`/`started_at`/`ended_at`/`exit_code`, and an overall `status` that is

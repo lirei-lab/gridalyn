@@ -1,4 +1,13 @@
-"""Metadata manifest builder for base digital-twin network snapshots."""
+"""Metadata manifest builder for base digital-twin network snapshots.
+
+``base`` in this module's names — :data:`BASE_ARTIFACTS`,
+:data:`BASE_METADATA_SCHEMA_VERSION`, ``BASE_TABLE_FILENAMES`` — denotes the
+canonical five-table snapshot **form**, not the ``base`` operational **state**
+carried by the manifest's ``"operational_state"`` key (and not
+``ArtifactLayout.base``, the artifact-kind directory either). The three are
+independent: a snapshot in this form may record any of
+:data:`~gridalyn.twin.network.model.OPERATIONAL_STATES`, or none at all.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +20,11 @@ from typing import Any, Mapping
 import pandas as pd
 
 from gridalyn.foundation.platform.governance import build_model_version
-from gridalyn.twin.network.model import BASE_TABLE_FILENAMES
+from gridalyn.twin.network.model import (
+    BASE_TABLE_FILENAMES,
+    OPERATIONAL_STATES,
+    OperationalState,
+)
 from gridalyn.twin.network.repository import NetworkModelRepository
 
 BASE_METADATA_SCHEMA_VERSION = "1.0"
@@ -40,9 +53,10 @@ def build_base_metadata(
     adapter_validation_report: Path | None = None,
     notes: list[str] | None = None,
     model_authority: Mapping[str, Any] | None = None,
+    operational_state: OperationalState | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
-    """Build a repository-centric manifest for a base digital-twin snapshot.
+    """Build a repository-centric manifest for a canonical digital-twin snapshot.
 
     Args:
         base_dir: Directory holding the canonical base Parquet artifacts.
@@ -66,15 +80,43 @@ def build_base_metadata(
             from ``adapter_id`` would be an upward import. Recorded as ``null``
             when a producer declares none, which is a statement rather than an
             omission.
+        operational_state: Operational state the snapshot represents, recorded
+            verbatim into the manifest. ``None`` (the default) records no key
+            at all, which is not the same as recording ``"base"``: a producer
+            that was never told which state it is exporting must not assert one
+            on its behalf, so key *presence* is what distinguishes a
+            state-aware producer from a state-blind one. A reader treats an
+            absent key as undeclared and resolves it to
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`.
         created_at: ISO-8601 UTC timestamp to stamp instead of "now". Pin it to
             make regeneration byte-deterministic; leaving it ``None`` stamps the
             current time, which changes on every regeneration by design.
 
     Returns:
         The manifest payload, ready to serialize to ``metadata.json``.
+
+    Raises:
+        ValueError: If ``operational_state`` is neither ``None`` nor a member
+            of :data:`~gridalyn.twin.network.model.OPERATIONAL_STATES`, naming
+            the offending value and the valid set. Caught at the writer rather
+            than left for a reader to trip over on a manifest already on disk.
     """
+    # Reject a poisoned state here, the single choke point every writer
+    # routes through, so no unloadable manifest is ever produced -- and
+    # before anything is read or written, so a rejected call is a no-op.
+    if operational_state is not None and operational_state not in OPERATIONAL_STATES:
+        raise ValueError(
+            f"unknown operational state {operational_state!r} for "
+            f"base_dir={base_dir} (known: {', '.join(OPERATIONAL_STATES)}); "
+            "pass one of those, or leave operational_state unset to record no "
+            "state in the manifest"
+        )
     # This function *produces* the provenance manifest, so it must load the
-    # model before that manifest exists: "ignore" is the only honest policy here.
+    # model before that manifest exists: "ignore" is the only honest policy
+    # here. It also covers the repair case -- under "ignore" the repository
+    # does not validate an *existing* manifest's operational_state either, so
+    # a snapshot carrying a poisoned one can still be rewritten from here
+    # rather than being gated on the very key this call replaces.
     repo = NetworkModelRepository.from_parquet(base_dir, provenance="ignore")
     model = repo.load_model()
     validation = repo.validate_integrity()
@@ -113,7 +155,7 @@ def build_base_metadata(
         },
     )
 
-    metadata = {
+    metadata: dict[str, Any] = {
         "report_id": "digital_twin_base_metadata",
         "schema_version": BASE_METADATA_SCHEMA_VERSION,
         "created_at": stamped_at,
@@ -135,6 +177,8 @@ def build_base_metadata(
         "model_authority": dict(model_authority) if model_authority else None,
         "notes": notes or [],
     }
+    if operational_state is not None:
+        metadata["operational_state"] = operational_state
     if adapter_validation_report is not None:
         metadata["adapter_validation_report"] = _relpath(
             adapter_validation_report, root
@@ -157,6 +201,7 @@ def write_base_metadata(
     adapter_validation_report: Path | None = None,
     notes: list[str] | None = None,
     model_authority: Mapping[str, Any] | None = None,
+    operational_state: OperationalState | None = None,
     created_at: str | None = None,
 ) -> Path:
     """Write `metadata.json` for a base digital-twin snapshot.
@@ -176,10 +221,24 @@ def write_base_metadata(
         notes: Free-text provenance notes recorded verbatim.
         model_authority: The producing adapter's Model Authority Sets and
             profiles, JSON-native. See :func:`build_base_metadata`.
+        operational_state: Operational state the snapshot represents, recorded
+            verbatim into the manifest. ``None`` (the default) records no key
+            at all, which is not the same as recording ``"base"``: a producer
+            that was never told which state it is exporting must not assert one
+            on its behalf, so key *presence* is what distinguishes a
+            state-aware producer from a state-blind one. A reader treats an
+            absent key as undeclared and resolves it to
+            :data:`~gridalyn.twin.network.model.DEFAULT_OPERATIONAL_STATE`.
         created_at: ISO-8601 UTC timestamp to stamp instead of "now".
 
     Returns:
         The path of the written ``metadata.json``.
+
+    Raises:
+        ValueError: If ``operational_state`` is neither ``None`` nor a member
+            of :data:`~gridalyn.twin.network.model.OPERATIONAL_STATES`. Raised
+            by :func:`build_base_metadata` before any file is touched, so a
+            rejected call leaves the manifest on disk unchanged.
     """
     metadata = build_base_metadata(
         base_dir=base_dir,
@@ -195,6 +254,7 @@ def write_base_metadata(
         adapter_validation_report=adapter_validation_report,
         notes=notes,
         model_authority=model_authority,
+        operational_state=operational_state,
         created_at=created_at,
     )
     path = base_dir / "metadata.json"

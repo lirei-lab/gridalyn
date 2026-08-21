@@ -83,6 +83,84 @@ spec:
         - projects/minimal_grid_project/outputs/reports/minimal_grid_report.json
 ```
 
+### The Stage DAG
+
+`needs:` is the only thing that orders a run. The runner topologically sorts
+the stages, raises on a cycle, and executes the result **sequentially** — so
+the DAG describes what *could* run in parallel, not what does. It is also what
+`--stage <id>` resolves against: asking for one stage pulls in its transitive
+ancestors and nothing else.
+
+The two-stage example above is a straight line. A real study is not — this is
+the flagship `ev_hosting_flex` workflow, 23 stages, drawn from its own
+`workflow.yaml`:
+
+```mermaid
+flowchart LR
+    prepare_workspace["prepare_workspace"]
+    prepare_topology_cache["prepare_topology_cache"]
+    export_twin_network_model["export_twin_network_model"]
+    generate_annual_mc["generate_annual_mc"]
+    compute_congestion_annual["compute_congestion_annual"]
+    apply_curtailment_contracts["apply_curtailment_contracts"]
+    compute_curtailment_economics["compute_curtailment_economics"]
+    analyze_credibility["analyze_credibility"]
+    analyze_cold_insurance["analyze_cold_insurance"]
+    analyze_cold_coupling["analyze_cold_coupling"]
+    analyze_network_characterization["analyze_network_characterization"]
+    analyze_clustered_adoption["analyze_clustered_adoption"]
+    analyze_flexibility_incentive["analyze_flexibility_incentive"]
+    analyze_network_performance["analyze_network_performance"]
+    analyze_congestion_risk["analyze_congestion_risk"]
+    analyze_fleet_triage["analyze_fleet_triage"]
+    analyze_locational_contracts["analyze_locational_contracts"]
+    analyze_nonwires_value["analyze_nonwires_value"]
+    analyze_phase_imbalance["analyze_phase_imbalance"]
+    analyze_voltage_risk["analyze_voltage_risk"]
+    analyze_voltage_risk_network["analyze_voltage_risk_network"]
+    validate_powerflow["validate_powerflow"]
+    build_study_reports["build_study_reports"]
+
+    prepare_workspace --> prepare_topology_cache
+    prepare_topology_cache --> export_twin_network_model
+    prepare_topology_cache --> generate_annual_mc
+    generate_annual_mc --> compute_congestion_annual
+    compute_congestion_annual --> apply_curtailment_contracts
+    compute_congestion_annual --> compute_curtailment_economics
+    generate_annual_mc --> analyze_credibility
+    compute_congestion_annual --> analyze_credibility
+    apply_curtailment_contracts --> analyze_credibility
+    generate_annual_mc --> analyze_cold_insurance
+    analyze_credibility --> analyze_cold_insurance
+    generate_annual_mc --> analyze_cold_coupling
+    generate_annual_mc --> analyze_network_characterization
+    generate_annual_mc --> analyze_clustered_adoption
+    generate_annual_mc --> analyze_flexibility_incentive
+    generate_annual_mc --> analyze_network_performance
+    generate_annual_mc --> analyze_congestion_risk
+    analyze_congestion_risk --> analyze_fleet_triage
+    analyze_fleet_triage --> analyze_locational_contracts
+    analyze_network_characterization --> analyze_nonwires_value
+    analyze_congestion_risk --> analyze_nonwires_value
+    generate_annual_mc --> analyze_phase_imbalance
+    generate_annual_mc --> analyze_voltage_risk
+    generate_annual_mc --> analyze_voltage_risk_network
+    compute_congestion_annual --> validate_powerflow
+    apply_curtailment_contracts --> validate_powerflow
+    compute_curtailment_economics --> build_study_reports
+    validate_powerflow --> build_study_reports
+
+    classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
+    classDef hub fill:#e8eaf6,stroke:#3f51b5,color:#1a237e,stroke-width:2px
+    classDef step fill:#e0f2f1,stroke:#00897b,color:#004d40
+    class prepare_workspace,build_study_reports entry
+    class generate_annual_mc hub
+    class prepare_topology_cache,export_twin_network_model,compute_congestion_annual,apply_curtailment_contracts,compute_curtailment_economics,analyze_credibility,analyze_cold_insurance,analyze_cold_coupling,analyze_network_characterization,analyze_clustered_adoption,analyze_flexibility_incentive,analyze_network_performance,analyze_congestion_risk,analyze_fleet_triage,analyze_locational_contracts,analyze_nonwires_value,analyze_phase_imbalance,analyze_voltage_risk,analyze_voltage_risk_network,validate_powerflow step
+```
+
+`generate_annual_mc` is the hub: eleven stages depend on it and nothing else,
+which is why `--stage analyze_voltage_risk` still costs a Monte Carlo run.
+
 ### The `{python}` Placeholder
 
 Stage commands run through a shell, so a bare `python` is resolved against

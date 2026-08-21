@@ -238,7 +238,8 @@ it remains local Parquet/JSON.
 - `NetworkModelRepository` snapshot metadata API;
 - query methods by feeder, transformer, bus, downstream zone, and asset type;
 - explicit operational states: `base`, `normal`, `current`, `planned`,
-  `study_case`;
+  `study_case` — *declared and resolved on load as of Phase 1; producer wiring
+  and multi-state layouts outstanding*;
 - `NetworkModel` export/import contract shared by all adapters;
 - adapter validation summaries exposed in a common format.
 
@@ -460,7 +461,7 @@ reading study scripts.
 | Capability | Current status | Main gap |
 | --- | --- | --- |
 | Foundation And Governance | Project manifests, artifact checks, report schemas, regression baseline. | First-class model/run contracts across every report. |
-| Digital Twin Core | Repository, base Parquet, semantic graph, adapter registry, synthetic and CIM-like adapters. | Explicit operational states and richer partial model access. |
+| Digital Twin Core | Repository, base Parquet, semantic graph, adapter registry, synthetic and CIM-like adapters, operational state declared per snapshot and resolved on load. | Producer wiring for non-`base` states, snapshot listing, and richer partial model access. |
 | Asset And Flexibility Modeling | Building models, EV scenario overlays, thermal forecast, asset registry. | Clear model assumptions and flexibility envelopes. |
 | Simulation And Validation | Pandapower validation, network impact surrogate, consistency reports. | Common environment interface. |
 | Flexibility Market And Operations | Provider registry, locational clearing, operations facade, aggregator portfolios, offers, dispatch, settlement, network constraints, and operational KPIs. | Measured delivery records and dashboard-ready operations catalog. |
