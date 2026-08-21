@@ -145,6 +145,8 @@ AGENTS.md
 .planning/
 .legion/
 .legion/var/
+# Generated view of .legion/project/requirements, rewritten by `legion start --finalize`.
+/ROADMAP.md
 docs/development/ai-agent-guide.md
 docs/development/agent-task-templates/
 docs/development/cleanup-inventory.md
