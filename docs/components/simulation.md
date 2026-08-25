@@ -73,6 +73,24 @@ surrogate declares a stated error bound rather than being trusted blind — a
 surrogate that has not measured its own error against the physics it stands in
 for does not belong in `SurrogateRegistry`.
 
+That rule is not specific to network impact, and since the contract was
+generalised the machinery is not either. `measure_relief_error_bound` still
+measures the two registered surrogates against finite-difference physics
+labels, but it is now one caller of `measure_error_bound`, which compares any
+surrogate against any physical reference in that domain's own units. Pairing
+stays the caller's job: how a prediction is matched to an observation is
+domain knowledge — join keys for a tabular impact frame, a shared timestamp
+for a dispatch replay — and inferring it centrally would reintroduce exactly
+the specialisation the generalisation removed.
+
+The distinction worth holding is between the **contract** and the
+**registry**. The contract now covers any surrogate/reference pair; the
+registry still holds the two network-impact surrogates, because entering it
+means implementing `fit`/`predict`/`verify` over that domain's frames. A
+surrogate measured through `measure_error_bound` therefore has a real,
+falsifiable bound without necessarily being resolvable by ID — those are two
+different claims, and conflating them is the easy mistake here.
+
 ## Using it
 
 ```python

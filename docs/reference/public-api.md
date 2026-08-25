@@ -332,6 +332,14 @@ Stable simulation helpers also include `build_radial_pandapower_feeder`,
 `run_standard_powerflow_scenario`. Project scripts should use these helpers
 instead of duplicating pandapower table/report/scenario code.
 
+`gridalyn.simulation.surrogates` exposes the accuracy contract: a surrogate
+that stands in for a physical model states a measured `ErrorBound` or is
+refused. `measure_error_bound(predicted, observed, *, metric, units,
+reference, method)` measures any surrogate against any physical reference in
+that domain's own units; `measure_relief_error_bound` is the network-impact
+specialisation of it, and `unmeasured_error_bound` is how a surrogate declares
+a located reason for having no number rather than quietly reporting zero.
+
 See [Solver And Model Adapters](../components/simulation.md) for the
 adapter contract and optional solver capability groups.
 

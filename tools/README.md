@@ -1,10 +1,13 @@
 # `tools/`
 
-Ten scripts. Nine Python, one Node (`check_mermaid_diagrams.mjs` — the
-mermaid parser this repo needs isn't available in Python, so it stands alone
-as the one non-Python tool here). Each carries a substantial module docstring
-explaining *why* it exists; this file is the index that says *when to run it*
-and *what actually calls it*, which the docstrings alone don't convey.
+Ten scripts at this level. Nine Python, one Node (`check_mermaid_diagrams.mjs`
+— the mermaid parser this repo needs isn't available in Python, so it stands
+alone as the one non-Python tool here). Plus one directory,
+[`ochre_calibration/`](#ochre_calibration), which is a harness rather than a
+check and so gets its own section instead of ten near-identical table rows.
+Each script carries a substantial module docstring explaining *why* it exists;
+this file is the index that says *when to run it* and *what actually calls
+it*, which the docstrings alone don't convey.
 
 ## How a tool reaches the tree
 
@@ -38,6 +41,38 @@ Three ways, and they are not equivalent:
 | `measured_ingest_proof.py` (391 lines) | Operator-only, receipted | At-scale proof of the measured-state ingest path against `datasets/hq`'s real 35,041×1000 axis. Needs that dataset on disk (544 MB, gitignored, undistributable) — CI genuinely cannot run this one. |
 | `check_congestion_retarget_contract.py` (77 lines) | Operator-only, no receipt | Static source-contract check for one historical `ev_hosting_flex` stage retarget (Phase 14). Narrow and dated by design — re-run it if that stage's source changes, not on a schedule. |
 | `render_hero_network.py` (206 lines) | Operator-only, no receipt | Regenerates the documentation homepage's hero image from the digital twin's real Trois-Rivières feeder. Run it after a change to the twin's geometry or styling; nothing else depends on its output being fresh. |
+
+## `ochre_calibration/`
+
+**Operator-only, no receipt.** Ten Python scripts that build a Québec
+all-electric dwelling fleet from the open NRCan archetypes, simulate it in
+EnergyPlus at 15 minutes per end use, and measure gridalyn's RC building model
+against it. Nothing in CI or the test suite calls any of them, and nothing
+can: the harness downloads roughly 1.6 GB of vendor toolchain into a
+gitignored workdir and takes ~20 minutes for a 74-dwelling fleet.
+
+It is a *harness*, not a gate — the one exception is `check_fleet_gate.py`,
+which is a gate over the harness's own output rather than over the repository.
+
+EnergyPlus never enters gridalyn's environment. `ochre-nrel` pins
+`numpy==1.26.4` and `h2k-hpxml` pins `numpy==1.26.2`; the two are mutually
+incompatible and both sit below this repo's floor of 2.1.3, so the harness
+runs them in their own virtualenvs behind a process boundary.
+
+| Script | Role |
+|---|---|
+| `build_fleet.py` | Stratified sample of the NRCan Québec all-electric pool into a manifest carrying every row's source hash and the sampling seed. Allocation is largest-remainder with **no** per-stratum floor — an earlier floor put pre-1900 dwellings at 21 % of the fleet against 1.8 % of the stock. |
+| `run_fleet.py` | Retimes the translated HPXML to 15 minutes, draws a per-dwelling occupancy seed and thermostat schedule, optionally replays a flexibility decision, and simulates. |
+| `plot_fleet.py` | Individual traces, aggregate by end use, and the diversity curve. |
+| `validate_scaling.py` | Coincidence factor against pool size, convergence at the pool's edge, what replication to feeder size does, and the implied feeder MW. |
+| `check_fleet_gate.py` | Gates a fleet against thresholds taken from the **measured** `datasets/hq` subset, not from prose. Its own header records the four figures it replaced and why each was wrong. |
+| `compare_diversity.py` | Uniform versus per-dwelling thermostat schedules, on one axis. |
+| `measure_flex_bound.py` | What a flexibility decision actually delivers — relief, pre-heat cost, rebound, comfort drift — on dwellings the bound was not fitted on. |
+| `rc_dispatch.py` | What the RC surrogate *promises* for that same decision. The gap between this and the previous row is the surrogate's error bound. |
+| `run_feasibility_gate.py`, `ochre_driver.py` | The original OCHRE feasibility gate. Kept because it is what established that OCHRE's envelope model cannot represent the conditioned basement 92.6 % of the Québec stock has — a negative result worth not repeating. |
+
+Needs `datasets/hq` on disk for anything that compares against measurement,
+the same 544 MB gitignored dataset `measured_ingest_proof.py` depends on.
 
 ## Adding a new tool
 
