@@ -57,10 +57,12 @@ ACTUAL_PERTURBATION_COLUMN = "actual_perturbation_kw"
 #: Join keys tying a prediction row to its physics label.
 _LABEL_JOIN_KEYS = ["provider_id", "scenario_id", "constraint_id"]
 
-#: Units of every bound this module measures.
+#: Units of the network-impact bound. Not the module's only units: any
+#: surrogate/reference pair states its own through :func:`measure_error_bound`.
 RELIEF_ERROR_UNITS = "transformer_loading_pct_point_per_kw"
 
-#: Metric name of every bound this module measures.
+#: Metric name of the network-impact bound. See :data:`RELIEF_ERROR_UNITS` for
+#: why this is one metric among several rather than the module's only one.
 RELIEF_ERROR_METRIC = "mae_relief_pct_per_kw"
 
 
@@ -208,6 +210,82 @@ def unmeasured_error_bound(
     )
 
 
+def measure_error_bound(
+    predicted: pd.Series,
+    observed: pd.Series,
+    *,
+    metric: str,
+    units: str,
+    reference: str,
+    method: str,
+) -> ErrorBound:
+    """Measure any surrogate against any physical reference, elementwise.
+
+    The rule this module exists to enforce -- a decision taken on a fast
+    estimate must be traceable to a known accuracy -- is not specific to
+    network impact. A thermal surrogate checked against a building-physics
+    model needs exactly the same guarantee, in different units. This function
+    is that rule with the network-impact schema factored out:
+    :func:`measure_relief_error_bound` is now one caller of it, not the only
+    way to obtain a bound.
+
+    Pairing is the caller's job. Two aligned series arrive already joined,
+    because how a prediction is matched to an observation is domain knowledge
+    -- join keys for a tabular impact frame, a shared timestamp for a dispatch
+    replay -- and guessing it here would be the specialisation this function
+    removes.
+
+    Args:
+        predicted: The surrogate's estimate, already aligned to ``observed``.
+        observed: The physical model's value for the same rows.
+        metric: Name of the statistic, e.g. ``mae_relief_pct_per_kw``.
+        units: Physical units of the result, so the number is never bare.
+        reference: The physical model ``observed`` came from.
+        method: The evaluation protocol and dataset, recorded on the bound.
+
+    Returns:
+        A ``measured`` :class:`ErrorBound`, or an ``unmeasured`` one when no
+        rows survive alignment -- an empty comparison is a missing
+        measurement, never an accuracy of zero.
+
+    Raises:
+        ValueError: If the two series differ in length, which means the
+            caller's pairing is wrong and any number computed here would be
+            meaningless.
+    """
+    if len(predicted) != len(observed):
+        raise ValueError(
+            "predicted and observed must be aligned before measuring a bound "
+            f"(predicted has {len(predicted)} rows, observed has "
+            f"{len(observed)}); join them on the domain's own keys first"
+        )
+    paired = pd.DataFrame(
+        {
+            "predicted": predicted.astype(float).to_numpy(),
+            "observed": observed.astype(float).to_numpy(),
+        }
+    ).dropna()
+    if paired.empty:
+        return unmeasured_error_bound(
+            metric=metric,
+            units=units,
+            reference=reference,
+            reason=(
+                "no rows survived alignment between the surrogate's "
+                "predictions and the reference's observations, so there is "
+                "nothing to measure"
+            ),
+        )
+    return ErrorBound(
+        metric=metric,
+        units=units,
+        value=float((paired["predicted"] - paired["observed"]).abs().mean()),
+        sample_size=int(len(paired)),
+        method=method,
+        reference=reference,
+    )
+
+
 def measure_relief_error_bound(
     predictions: pd.DataFrame,
     labels: pd.DataFrame,
@@ -270,15 +348,13 @@ def measure_relief_error_bound(
                 "perturbation_sampler before measuring the bound"
             ),
         )
-    predicted = -paired[PREDICTED_DELTA_LOADING_COLUMN].astype(float)
-    observed = paired[RELIEF_LABEL_COLUMN].astype(float)
-    return ErrorBound(
+    return measure_error_bound(
+        -paired[PREDICTED_DELTA_LOADING_COLUMN].astype(float),
+        paired[RELIEF_LABEL_COLUMN].astype(float),
         metric=RELIEF_ERROR_METRIC,
         units=RELIEF_ERROR_UNITS,
-        value=float((predicted - observed).abs().mean()),
-        sample_size=int(len(paired)),
-        method=method,
         reference=reference,
+        method=method,
     )
 
 
@@ -343,11 +419,18 @@ class SurrogateDescriptor:
 class Surrogate(Protocol):
     """A fast estimator with a declared physical reference and known error.
 
-    The three methods are the lifecycle the existing network-impact triple
-    already implements: fit a model (trivially, for a fit-free surrogate),
-    predict a selector-compatible impact frame, and verify that frame against
-    finite-difference physics labels. ``verify`` is what makes the stated
-    bound falsifiable rather than prose.
+    The three methods are a lifecycle, not a schema: fit a model (trivially,
+    for a fit-free surrogate), predict whatever frame the surrogate's own
+    domain defines, and verify it against that domain's physical labels.
+    ``verify`` is what makes the stated bound falsifiable rather than prose.
+
+    The network-impact surrogates this module shipped first predict a
+    selector-compatible impact frame and verify against finite-difference
+    physics labels, but that pairing is theirs, not the protocol's. A
+    surrogate in another domain -- a thermal model checked against a
+    building-physics reference, say -- implements the same three methods over
+    its own frames and states its accuracy through
+    :func:`measure_error_bound`.
     """
 
     @property
