@@ -147,6 +147,9 @@ AGENTS.md
 .legion/var/
 # Generated view of .legion/project/requirements, rewritten by `legion start --finalize`.
 /ROADMAP.md
+# OCHRE calibration harness workdir: two ~1.6 GB virtualenvs, downloaded
+# archetypes and simulation output. Regenerable; never belongs in git.
+/.ochre-calibration/
 docs/development/ai-agent-guide.md
 docs/development/agent-task-templates/
 docs/development/cleanup-inventory.md
