@@ -52,6 +52,58 @@ def _retime(source: Path, target: Path, minutes: int) -> None:
     )
 
 
+def _cap_heating(target: Path, capacity_kw: float) -> int:
+    """Pin the electric heating system's output capacity to the archetype's.
+
+    OS-HPXML documents ``HeatingCapacity`` as optional and **autosized** when
+    absent, and 81 of this fleet's 82 electric heating systems arrived without
+    it. An autosized system is given whatever capacity holds the setpoint at
+    the design condition, so a large leaky dwelling gets 46 kW of baseboards --
+    more than any of the 215 metered Quebec dwellings ever draws, whose
+    measured maximum is 26.2 kW.
+
+    The archetype already states what is installed (``heating_capacity_kw``,
+    median 13.0 kW across this pool). Pinning it restores the ceiling a real
+    house has, and with it the behaviour a real house shows in a cold snap:
+    falling short of setpoint rather than drawing without limit.
+
+    Capacity is written in Btu/hr, the unit the schema specifies, and inserted
+    before ``AnnualHeatingEfficiency`` because HPXML is order-sensitive.
+
+    Args:
+        target: The HPXML file to rewrite in place.
+        capacity_kw: Installed heating capacity from the archetype manifest.
+
+    Returns:
+        How many electric heating systems were pinned.
+    """
+    import re
+
+    text = target.read_text(encoding="utf-8")
+    btu_per_hour = round(capacity_kw * 3412.142, 1)
+    pinned = 0
+
+    def fix(match: "re.Match[str]") -> str:
+        nonlocal pinned
+        block = match.group(0)
+        if "<HeatingSystemFuel>electricity<" not in block:
+            return block
+        if "<HeatingCapacity>" in block:
+            return block
+        anchor = "<AnnualHeatingEfficiency"
+        if anchor not in block:
+            return block
+        pinned += 1
+        return block.replace(
+            anchor, f"<HeatingCapacity>{btu_per_hour}</HeatingCapacity>{anchor}", 1
+        )
+
+    text = re.sub(r"<HeatingSystem>.*?</HeatingSystem>", fix, text, flags=re.S)
+    if pinned:
+        target.write_text(text, encoding="utf-8")
+    return pinned
+
+
 def _seed_schedules(work: Path, seed: int) -> bool:
     """Generate a seeded stochastic occupancy schedule, rewriting the HPXML."""
     osw = {
@@ -222,6 +274,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--setback-depths", default="0,0,1.5,2.5,3.0")
     parser.add_argument("--results-name", default="fleet_results.json")
     parser.add_argument(
+        "--cap-heating",
+        action="store_true",
+        help="pin heating capacity to the archetype instead of autosizing",
+    )
+    parser.add_argument(
         "--dispatch",
         default=None,
         help=(
@@ -250,6 +307,8 @@ def main(argv: list[str] | None = None) -> int:
         started = time.perf_counter()
 
         _retime(source, work / "in.xml", args.minutes)
+        if args.cap_heating:
+            _cap_heating(work / "in.xml", float(record["heating_capacity_kw"]))
         if not _seed_schedules(work, seed):
             _echo(f"  {name}: schedule generation FAILED")
             results.append({**record, "status": "schedule_failed", "seed": seed})
