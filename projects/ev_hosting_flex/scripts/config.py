@@ -365,7 +365,31 @@ a small group of all-electric homes (CALIBRATION.md §1/§2; band 10–15 kW
 nameplate). Cross-checked against the design-cold heating-degree path below:
 ``(T_BALANCE − (−25)) / R_THERM + BG_KW ≈ (18 − (−25)) / 8.1 + 1.2 ≈ 5.3 + 1.2 ≈
 6.5 kW/home`` — the two derivations agree. Reconciled to the manuscript's
-6.5 kW/home anchor (D-04)."""
+6.5 kW/home anchor (D-04).
+
+**Inert, and contradicted by measurement.** Two facts a reader should have
+before quoting this number:
+
+*It drives nothing.* This constant is bound here and never read in an
+expression; no pipeline script imports it. The one relationship that would use
+it, ``_homes = round(UTIL·TRANSFORMER_KVA·PF/ADMD)``, is explicitly decoupled —
+see ``TARGET_HOMES`` below, where the downstream home count comes from the twin
+and congestion is computed on its real subtree. Changing this value does not
+move a result.
+
+*It is low.* Measured against ``datasets/hq``'s all-electric subset (n=215,
+15-min) conditioned to the design band −25..−20 degC, the after-diversity
+demand of a random 6-home group is **11.07 kW/home**, not 6.5 — and it is
+stable across neighbouring temperature bands (11.08 at −20..−15, 10.71 at
+−15..−10), so it is not one extreme event. The two derivations above agree with
+each other because both assume an instantaneous thermostat diversity of ~0.5;
+the measurement says that assumption does not describe this stock.
+
+Note this study's own feeder-scale figure is consistent with the measurement,
+not with 6.5: the ~35 MW design-cold load quoted for the 3235-home area is
+10.8 kW/home. With inter-cluster diversity at design cold near zero (the
+verified 0.997 factor cited there), the small-group and feeder-scale numbers
+should be nearly equal — and 10.8 and 11.07 are. 6.5 is the outlier."""
 
 UTIL = _CONFIG["util"]
 """Winter-peak base utilization target on ``TRANSFORMER_KVA`` (manuscript KNOB,
