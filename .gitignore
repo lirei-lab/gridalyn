@@ -147,6 +147,14 @@ AGENTS.md
 .legion/var/
 # Generated view of .legion/project/requirements, rewritten by `legion start --finalize`.
 /ROADMAP.md
+# Beads issue tracker: local-only by decision. The database, the config, the
+# hooks and the agent-instruction blocks all stay out of the public remote —
+# bd init's own hooks embed an absolute path from whichever machine ran it,
+# which is portable to nobody. Mirror it privately if the team needs it shared.
+.beads/
+.dolt/
+.beads-credential-key
+
 # OCHRE calibration harness workdir: two ~1.6 GB virtualenvs, downloaded
 # archetypes and simulation output. Regenerable; never belongs in git.
 /.ochre-calibration/
