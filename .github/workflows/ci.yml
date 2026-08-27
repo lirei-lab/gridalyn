@@ -42,6 +42,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       code: ${{ steps.classify.outputs.code }}
+      dashboard: ${{ steps.classify.outputs.dashboard }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,7 +82,14 @@ jobs:
           else
             CODE=false
           fi
+          if printf '%s\n' "${CHANGED}" | grep -qE \
+             '^(dashboard/|\.github/workflows/)'; then
+            DASH=true
+          else
+            DASH=false
+          fi
           echo "code=${CODE}" >> "${GITHUB_OUTPUT}"
+          echo "dashboard=${DASH}" >> "${GITHUB_OUTPUT}"
           {
             echo "### Change surface"
             echo ""
@@ -310,6 +318,51 @@ jobs:
             python -m gridalyn.interfaces.cli.project regression "projects/${project}"
             echo "::endgroup::"
           done
+
+  dashboard:
+    # The SPA carried six `node:test` suites -- 23 assertions over the catalog
+    # and network-impact normalisers -- that no entry point could run: there
+    # was no `test` script in package.json and no job here. They passed the
+    # whole time, in 71 ms, unseen. This job is what makes that signal real.
+    #
+    # `node:test` is built into Node 20, so this needs no install beyond the
+    # SPA's own dependencies, and `npm ci` is what keeps the lockfile honest.
+    #
+    # Gated on the dashboard surface for the same reason the study job is gated
+    # on the code surface: a Python-only PR has nothing to prove here. It also
+    # runs when the workflow itself changes, so a mistake in this job cannot
+    # hide behind its own gate.
+    needs: changes
+    if: >-
+      github.event_name != 'pull_request' ||
+      needs.changes.outputs.dashboard == 'true'
+    name: Dashboard build and tests
+    runs-on: sti-k8s
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the unit tests
+        run: npm test
+
+      - name: Build the SPA
+        # The build is the second half of the signal: a test suite can pass
+        # against modules that Vite then fails to bundle.
+        run: npm run build
 
   lint:
     # Lints only the files changed in the pull request, mirroring the local
