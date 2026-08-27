@@ -31,25 +31,7 @@ residential load).
   analytical model. `provenance.macro_model` in the run manifest records which
   one a run actually used.
 
-## The contract
-
-`_LOAD_GENERATION_KEYS` is the whole accepted vocabulary for
-`loadGeneration`: `generator`, `nUnits`, `seed`, `day`, `durationHours`,
-`resolutionMinutes`, `weather`, `multipliers`. Only `nUnits` and `seed` are
-required; everything else defaults. An unsupported key is rejected loudly,
-never silently ignored — `_load_generation_mapping` names both the offending
-key and the supported set in its error.
-
-**Weather is fixed for study reproducibility.** The SDK default for `weather`
-is `"auto"`, but the project loader overrides it to `"synthetic"`, so a
-study's results are byte-stable across machines rather than depending on
-whatever PVGIS returns that day.
-
-**Two components, summed.** Internally, load generation produces heating kW
-and background kW separately and sums them — a study never needs to reconcile
-the two components itself, only the combined kW DataFrame.
-
-## Which generator, and when
+### Which generator, and when
 
 There is more than one way to produce a dwelling's load here, and they are not
 interchangeable. Reading only the section above leaves the impression of a
@@ -95,6 +77,24 @@ disagree, neither settles it — `datasets/hq` does, which is what
 The parametric macro model is not characterised against the metered set here;
 `provenance.macro_model` records which variant a run used, and that record is
 what makes two runs comparable.
+
+## The contract
+
+`_LOAD_GENERATION_KEYS` is the whole accepted vocabulary for
+`loadGeneration`: `generator`, `nUnits`, `seed`, `day`, `durationHours`,
+`resolutionMinutes`, `weather`, `multipliers`. Only `nUnits` and `seed` are
+required; everything else defaults. An unsupported key is rejected loudly,
+never silently ignored — `_load_generation_mapping` names both the offending
+key and the supported set in its error.
+
+**Weather is fixed for study reproducibility.** The SDK default for `weather`
+is `"auto"`, but the project loader overrides it to `"synthetic"`, so a
+study's results are byte-stable across machines rather than depending on
+whatever PVGIS returns that day.
+
+**Two components, summed.** Internally, load generation produces heating kW
+and background kW separately and sums them — a study never needs to reconcile
+the two components itself, only the combined kW DataFrame.
 
 ## Using it
 
