@@ -49,7 +49,7 @@ The platform name is Gridalyn. The public interfaces are:
 
 - `gridalyn` as the command-line entrypoint;
 - `gridalyn` as the Python SDK namespace;
-- `lirei-lab/gridalyn` as the public repository name.
+- `github.com/lirei-lab/gridalyn` as the public repository.
 
 ## Recommended Reading Order
 

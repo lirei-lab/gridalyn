@@ -166,10 +166,6 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     "so no fixed prefix exists to resolve it against",
     (
         "CLAUDE.md",
-        "operations/settlement",
-    ): "extensionless module reference; the file is gridalyn/operations/settlement.py",
-    (
-        "CLAUDE.md",
         "archive/engine-mode-clearing",
     ): "a git tag, not a path: the retired engine_mode/replay clearing "
     "surface is recoverable with `git checkout archive/engine-mode-clearing -- <file>`",
@@ -266,10 +262,6 @@ _ALLOWLIST: dict[tuple[str, str], str] = {
     ): "retired 2026-08-06 (audit section 11); the row records the site that "
     "was removed from the direct-JSON classification, so being absent is the "
     "claim",
-    (
-        "docs/start/what-is-gridalyn.md",
-        "lirei-lab/gridalyn",
-    ): "a GitHub owner/repo slug, not a path",
     (
         "docs/components/_merge/project-model.md",
         "scripts/write_summary_report.py",
