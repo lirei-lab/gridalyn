@@ -1,62 +1,36 @@
 # Minimal Grid Project
 
-This is the smallest complete Gridalyn project. It is meant for developers who
-want to understand the platform contract before opening the larger demos.
+The smallest complete Gridalyn study. It exists to teach the project contract
+before anyone opens a benchmark feeder, a geospatial pipeline, a market
+workflow or an advanced control demo — and it is the folder to copy when
+starting a new study by hand.
 
-The workflow builds a five-bus radial feeder, runs one AC power flow, writes
-CSV tables, creates one JSON report, and saves one voltage-profile figure.
+## What this study asks
 
-Even this minimal project uses the platform load generators: the
-`loadGeneration` block in `project.yaml` declares a seeded synthetic
-residential fleet, and the declared `loadsMw` anchor the system total while
-the generated coincident-peak snapshot diversifies the per-bus shares.
+Nothing, deliberately. Every other study under `projects/` asks a research
+question; this one asks only whether the platform contract is legible. It
+keeps the first experience small enough to hold in one reading: one
+`project.yaml`, one `workflow.yaml`, one script, one Gridalyn-managed AC power
+flow, three CSV tables, one JSON report, one figure, one run manifest.
 
-Run it from the repository root:
+Even at this size it uses the platform's real load generators rather than a
+shortcut. The `loadGeneration` block in `project.yaml` declares a seeded
+synthetic residential fleet; the declared `loadsMw` anchor the system total
+while the generated coincident-peak snapshot diversifies the per-bus shares.
 
-```bash
-uv run gridalyn project run projects/minimal_grid_project
-uv run gridalyn project status projects/minimal_grid_project --check-artifacts
-```
-
-Use this project as the first template when creating a new study. Copy the
-folder, rename the project, then replace the single script with domain-specific
-logic while keeping the same `project.yaml`, `workflow.yaml`, report, and
-artifact structure.
-
----
-
-<!-- Merged from the former docs/projects/minimal-grid-project.md. The published
-documentation now covers the project CONTRACT in general; per-project
-detail lives with the project. -->
-
-`projects/minimal_grid_project` is the smallest complete Gridalyn project. It
-exists to teach the project contract before a user opens a benchmark feeder,
-geospatial pipeline, market workflow, or advanced control demo.
-
-## Why This Demo Exists
-
-Large workflows are useful after the user understands the platform. This demo
-keeps the first experience deliberately small:
-
-- one `project.yaml`;
-- one `workflow.yaml`;
-- one script;
-- one Gridalyn-managed AC power-flow run;
-- three CSV data tables;
-- one JSON report;
-- one figure;
-- one run manifest.
-
-It is the recommended starting point when creating a new project by hand.
-
-## Run It
+## Running it
 
 ```bash
 uv run gridalyn project run projects/minimal_grid_project
 uv run gridalyn project status projects/minimal_grid_project --check-artifacts
 ```
 
-Expected artifacts:
+| Stage | Purpose |
+| --- | --- |
+| `prepare_workspace` | Creates the project output folders. |
+| `run_minimal_powerflow` | Loads the five-bus feeder contract from `project.yaml`, runs the standard power-flow helper, exports tables, writes a report, and plots voltage. |
+
+## What it produces
 
 ```text
 projects/minimal_grid_project/outputs/data/buses.csv
@@ -67,33 +41,38 @@ projects/minimal_grid_project/outputs/figures/minimal_voltage_profile.png
 projects/minimal_grid_project/outputs/manifests/project_run_manifest.json
 ```
 
-## Workflow
+## How it is verified
 
-| Stage | Purpose |
-| --- | --- |
-| `prepare_workspace` | Creates the project output folders. |
-| `run_minimal_powerflow` | Loads the five-bus feeder contract from `project.yaml`, runs the standard power-flow helper, exports tables, writes a report, and plots voltage. |
+`gridalyn project status --check-artifacts` above is the check: it reports
+whether every declared artifact and report was produced. The study also
+carries `baselines/results_baseline.json`, so `gridalyn project regression`
+answers whether its numbers moved, and it runs end to end in CI as one of the
+six governed fixtures.
 
-## What To Learn
+## Scope and limits
 
-This demo shows the core Gridalyn loop:
+This study demonstrates the loop, not a result. Its five-bus feeder is not a
+model of anything, its numbers are not calibrated against measurement, and no
+finding should be quoted from it. For what the platform can and cannot claim
+about generated loads, see [Assets](../../docs/components/assets.md).
+
+## Where this sits
+
+It is the concrete form of the loop the platform is built around:
 
 ```text
 project contract -> workflow stage -> simulation -> artifacts -> report -> validation
 ```
 
-Use it when you want to understand the mechanics without studying market
-clearing, semantic graph generation, stochastic profiles, or geospatial
-network synthesis.
-
-## How To Extend It
+To extend it, edit inward from the contract:
 
 | Goal | First file to edit |
 | --- | --- |
 | Change loads or topology | `project.yaml` |
 | Add another report | `project.yaml` and `workflow.yaml` |
 | Add operation records | `outputs/operations/` and a new workflow stage |
-| Promote reusable logic | Move it from `projects/minimal_grid_project/scripts/` into `gridalyn/` |
+| Promote reusable logic | Move it from `scripts/` into `gridalyn/` |
 
-Project scripts should bind concrete paths and parameters. Reusable platform
-logic belongs in the SDK package.
+Project scripts bind concrete paths and parameters; reusable platform logic
+belongs in the SDK package. The larger studies under `projects/` are this same
+shape with a research question attached.

@@ -9,11 +9,196 @@ real-time backstop** expands the feeder's EV hosting capacity beyond its firm
 (curtailment-free) limit, and when that contract beats reinforcing the
 transformer.
 
-Design provenance: `manuscripts/ev_hosting_flex/scripts/study_b/` (the
-authoritative sandbox) and the local migration design doc
-`docs/superpowers/specs/2026-07-06-ev-hosting-flex-study-b-annual-migration.md`.
+Design provenance: `manuscripts/ev_hosting_flex/scripts/study_b/`, the
+authoritative sandbox. The migration design doc that accompanied it lived under
+`docs/superpowers/`, a tree since deleted; its reasoning is carried by
+`CALIBRATION.md` and the history section below.
 
-## Generators (the model, in two pieces)
+## What this study asks
+
+The study follows a deliberate arc — *diagnosis before solutions*:
+
+1. **Diagnosis.** Where does the network actually bind under EV growth?
+    - **Thermal congestion** — probabilistic, per transformer, on cold days.
+    - **AC undervoltage** — both the governed feeder and the full network.
+    - **MV phase imbalance** — at 25 kV, where Québec's single-phase pole
+      transformers spread across the three phases (the LV is 240 V split-phase,
+      so imbalance is an MV phenomenon, not an LV one).
+2. **A realistic base.** The stochastic building population is calibrated to be
+   realistic in **both** coincident peak and annual energy — see below.
+3. **Solutions.** Network-scale non-wires value: how much reinforcement
+   (transformer-years and NPV) EV flexibility defers, across all 540 LV
+   transformers plus the N-1 substation bank.
+4. **Credibility.** Confidence intervals on the citable headlines over K=50
+   realizations spanning seeds and winter severity.
+5. **Cold-tail insurance** — the study the others were building toward, and the
+   answer to *why flexibility matters if the network is robust at the median*:
+    - **Hosting capacity is a distribution, not a number.** Firm hosting spans
+      **10–13 EVs** (P05–P95) across weather years, and the spread is weather
+      (corr(severity, firm) = **+0.42**), not sampling noise. Planning at the P50
+      still leaves the feeder short **26 % of years**.
+    - **At the governed feeder there is currently nothing to insure.** Judged
+      against the capability each hour's ambient allows (see *Rating convention*
+      below), the reference adoption never falls short — activation frequency
+      **0**, and the reinforcement it would defer costs **$0/yr** because no
+      reinforcement is triggered. The crossover where reinforcing wins sits at
+      **11 EVs**, i.e. at the firm limit itself.
+    - This is a **result of the rating convention, not an absence of risk.**
+      Under the static nameplate the same feeder falls short in most years and
+      the insurance case is worth several hundred dollars a year against
+      reinforcement; under the ambient-dependent capability it never binds. The
+      convention moves the answer more than the EVs do. Set
+      `RATING_CONVENTION = "static"` and re-run to reproduce that comparison —
+      the figures are deliberately not quoted here, because a number carried
+      across a convention change is how this study previously acquired several
+      stale headlines.
+    - Coverage is an **energy-service** criterion: the backstop always holds the
+      transformer, so what can fail is denied charging, and that denied energy is
+      **priced into** the flex cost so the comparison is like-for-like.
+    - Where the value does live is the **fleet**, not this feeder — see the fleet
+      triage, which classifies all 540 transformers rather than the one the
+      headline happens to sit on.
+
+### Lead finding: cold-coupled EV charging shrinks winter hosting
+
+In a cold all-electric network the winter heating peak coincides with the
+evening EV-charging peak, and EVs charge MORE on the coldest evenings (higher
+plug-in probability + larger sessions). `analyze_cold_coupling` re-runs the
+firm/flexible/curtailment analysis on a NAIVE (cold-agnostic) EV model — the
+standard hosting-study assumption of a fixed year-round profile — against the
+governed cold-coupled model:
+
+- A naive model **overestimates the firm winter hosting limit by 50 %** (3 vs
+  2 EVs on the 6-home feeder).
+- It **underestimates the curtailment the flexibility contract must deliver
+  ~2.8×** (2.2 % vs 6.1 % of EV energy).
+- Driver: the cold-coupled model puts **+54 % more EV energy on cold days**,
+  exactly when the electric-heating base also peaks.
+
+Takeaway: cold-climate EV hosting studies need cold-coupled charging demand;
+a typical/mild profile is optimistic about both the limit and the flexibility
+work. See `cold_coupling_comparison.png`.
+
+## Running it
+
+```bash
+uv run gridalyn project validate projects/ev_hosting_flex
+uv run gridalyn project run projects/ev_hosting_flex
+uv run gridalyn project regression projects/ev_hosting_flex
+# or stage by stage:
+uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
+uv run python projects/ev_hosting_flex/scripts/verify_regression.py
+```
+
+Outputs land under `projects/ev_hosting_flex/outputs/` (gitignored; every
+artifact-producing stage emits a platform report). Reproducibility contract:
+`SEED = 42`, BLAS thread caps at stage import, float64 everywhere, 1e-6
+rounding before writes; the annual chain is byte-stable across runs
+(`tests/test_ev_hosting_flex_annual_seal.py`).
+
+## What it produces
+
+- **Firm = 11 EVs** (P95 cold-evening rule against the hourly K(T) capability
+  curve; P05-P95 across weather years is 10-13).
+- **Flexible = 16 EVs (+45 %)**: the full-enrollment backstop hosts the whole
+  pool, curtailing **0.39 %** of EV energy.
+- **Notice**: at σ_T = 1.5 °C day-ahead forecast error, ~97 % of curtailment
+  arrives pre-notified; the backstop covers the rest (no forecast-blindness).
+- **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
+  annualized reinforcement up to **6 EVs (38 % of the pool)** — the technical
+  +45 % vs the narrower economic window is the study's two-sided headline.
+- **AC network validation (HQ-realistic network)**: the LV transformers (load-
+  matched on the standard kVA ladder + C57.91 cold dynamic rating), the LV
+  secondary conductors (thermal ampacity + ≤1 %/conductor voltage drop), and the
+  substation (the standard HQ N-1 bank of 2 identical parallel 33.3 MVA 120/25 kV
+  units on a common tied MV bus, ~56 % loaded normally — sized so the lone
+  survivor carries the full load on a single-unit contingency using its 1.5×
+  emergency rating) are all matched to the Québec all-electric design-cold load.
+  The network is then fully healthy before EVs (LV min voltage 0.942 pu, no
+  overloads), and EV adoption drives undervoltage and LV line overloads (the
+  binding channels — 1.5 EV/home: min 0.900 pu, 431 lines over 100 %) while the
+  load-matched LV transformers stay robust and the substation N-1 becomes a real
+  reinforcement trigger at ~1.35 EV/home. The governed 6-home / 75 kVA feeder
+  stays fixed, so the firm/flexible headlines are unaffected.
+- **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
+  uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
+  MC shows the firm count overloading a few % of cold days (losses/reactive
+  flow push AC apparent power ~3–4 % above the kW proxy). An AC-consistent
+  governed rating is an open, deliberate study decision.
+
+## How it is verified
+
+The building base generator is validated on three independent axes:
+
+| Axis | Validated against | Result |
+|---|---|---|
+| Diurnal shape | Real Hydro-Québec 1000-home dataset (`datasets/hq/`) | Same dual morning/evening peak |
+| Aggregate smoothness | Same HQ dataset | Needs revalidation — see note |
+| DHW tank physics | CREST model lineage (via `demod`) | Surface-normalized UA matches (0.0598 vs 0.0600) |
+
+!!! warning "The smoothness axis is stale"
+
+    This axis was measured at the 5th re-base as 0.35 kW/home/h coincident step
+    against an HQ reference of 0.41. Neither figure survives scrutiny today: the
+    0.41 reference appears nowhere in the repository, and the 0.35 predates the
+    6th re-base, which gave dwellings latching thermostats and deliberately
+    raised per-dwelling stepping. An attempt to recompute it did not reproduce
+    the original definition — the home count, window and normalisation were not
+    recorded — so the numbers are withdrawn rather than replaced with new ones
+    that would be equally unverifiable. The other two axes are unaffected.
+
+The base is realistic in **both** dimensions at once — ~11 kW/home coincident peak
+(inside the Hydro-Québec 10–15 kW design band) **and** ~29 MWh/home/year — rather
+than hitting one at the cost of the other. Reaching that required modelling the
+electric water-heater tank explicitly, since a single-R envelope model couples
+peak and energy and cannot satisfy both.
+
+Full calibration provenance, including six deliberate re-bases and their
+rationale, is in `projects/ev_hosting_flex/CALIBRATION.md`.
+
+### Reproducing it
+
+The study is heavy — the annual Monte-Carlo base and the AC power-flow stages
+are the multi-hour core of the roughly six-hour full regeneration, so it is
+**not** executed in CI. Its regression baseline is **operator-verified** (a
+shape-covering subset runs the non-heavy stages via
+`tools/flagship_verify.py`; the full regeneration is scheduled and recorded in
+the verification receipts). Since Phase 20 the stages are invoked as
+interpreter-bound modules (module identity for the pickled caches):
+
+```bash
+# run a stage (Phase 20: {python} -m, the workflow's own invocation mode)
+python -m projects.ev_hosting_flex.scripts.pipeline.<stage>
+
+# verify the governed baseline
+python projects/ev_hosting_flex/scripts/verify_regression.py
+```
+
+The reproduce-and-pin tests in `tests/test_ev_hosting_flex_*.py` `skipif` their
+(gitignored) outputs are absent, so they **skip in CI**. After touching any
+generator or kernel, re-run the affected stages locally and re-verify the baseline
+before trusting a green test run.
+
+## Scope and limits
+
+The study reports results that weaken the flexibility case where the evidence
+says so — this is deliberate:
+
+- At realistic penetration the network is **genuinely robust**; the median feeder
+  has headroom. Validation against real HQ feeders confirms this is how Québec is,
+  not a modelling artifact.
+- The winter peak is dominated by **inflexible electric heating**, not EVs.
+- The non-wires value is **dominated by the substation**, not the feeders: feeders
+  either bind for reasons flexibility cannot fix, or bind late enough that
+  reinforcing is cheaper than contracting flexibility.
+- The firm hosting headline is **weather-sensitive** — a colder-than-typical winter
+  moves it materially, which is why it is published with a confidence interval.
+
+## Where this sits
+
+- `docs/projects/overview.md` — the project contract these studies implement.
+
+## The model, in two pieces
 
 1. **Buildings — SDK agent only** (`gridalyn.assets.datagen.agents`):
    first-order RC thermal model per dwelling with ON/OFF thermostat hysteresis
@@ -69,169 +254,7 @@ discrete EV step, so the congestion metrics are computed at the utility
 demand-metering interval (the SDK agent already simulates 1-min, so the finer
 base aggregation is free; the AC validation layer stays hourly).
 
-## Lead finding: cold-coupled EV charging shrinks winter hosting
-
-In a cold all-electric network the winter heating peak coincides with the
-evening EV-charging peak, and EVs charge MORE on the coldest evenings (higher
-plug-in probability + larger sessions). `analyze_cold_coupling` re-runs the
-firm/flexible/curtailment analysis on a NAIVE (cold-agnostic) EV model — the
-standard hosting-study assumption of a fixed year-round profile — against the
-governed cold-coupled model:
-
-- A naive model **overestimates the firm winter hosting limit by 50 %** (3 vs
-  2 EVs on the 6-home feeder).
-- It **underestimates the curtailment the flexibility contract must deliver
-  ~2.8×** (2.2 % vs 6.1 % of EV energy).
-- Driver: the cold-coupled model puts **+54 % more EV energy on cold days**,
-  exactly when the electric-heating base also peaks.
-
-Takeaway: cold-climate EV hosting studies need cold-coupled charging demand;
-a typical/mild profile is optimistic about both the limit and the flexibility
-work. See `cold_coupling_comparison.png`.
-
-## Headlines (governed pins, `baselines/results_baseline.json`)
-
-- **Firm = 11 EVs** (P95 cold-evening rule against the hourly K(T) capability
-  curve; P05-P95 across weather years is 10-13).
-- **Flexible = 16 EVs (+45 %)**: the full-enrollment backstop hosts the whole
-  pool, curtailing **0.39 %** of EV energy.
-- **Notice**: at σ_T = 1.5 °C day-ahead forecast error, ~97 % of curtailment
-  arrives pre-notified; the backstop covers the rest (no forecast-blindness).
-- **Economics**: the contract (80 $/EV·yr + 0.5 $/kWh) beats the ~520 $/yr
-  annualized reinforcement up to **6 EVs (38 % of the pool)** — the technical
-  +45 % vs the narrower economic window is the study's two-sided headline.
-- **AC network validation (HQ-realistic network)**: the LV transformers (load-
-  matched on the standard kVA ladder + C57.91 cold dynamic rating), the LV
-  secondary conductors (thermal ampacity + ≤1 %/conductor voltage drop), and the
-  substation (the standard HQ N-1 bank of 2 identical parallel 33.3 MVA 120/25 kV
-  units on a common tied MV bus, ~56 % loaded normally — sized so the lone
-  survivor carries the full load on a single-unit contingency using its 1.5×
-  emergency rating) are all matched to the Québec all-electric design-cold load.
-  The network is then fully healthy before EVs (LV min voltage 0.942 pu, no
-  overloads), and EV adoption drives undervoltage and LV line overloads (the
-  binding channels — 1.5 EV/home: min 0.900 pu, 431 lines over 100 %) while the
-  load-matched LV transformers stay robust and the substation N-1 becomes a real
-  reinforcement trigger at ~1.35 EV/home. The governed 6-home / 75 kVA feeder
-  stays fixed, so the firm/flexible headlines are unaffected.
-- **AC caveat (reported, not silently fixed)**: the governed firm/flexible gate
-  uses the conservative STATIC feeder rating (kVA × PF); the cold-day AC feeder
-  MC shows the firm count overloading a few % of cold days (losses/reactive
-  flow push AC apparent power ~3–4 % above the kW proxy). An AC-consistent
-  governed rating is an open, deliberate study decision.
-
-## Running
-
-```bash
-uv run gridalyn project validate projects/ev_hosting_flex
-uv run gridalyn project run projects/ev_hosting_flex
-uv run gridalyn project regression projects/ev_hosting_flex
-# or stage by stage:
-uv run python projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
-uv run python projects/ev_hosting_flex/scripts/verify_regression.py
-```
-
-Outputs land under `projects/ev_hosting_flex/outputs/` (gitignored; every
-artifact-producing stage emits a platform report). Reproducibility contract:
-`SEED = 42`, BLAS thread caps at stage import, float64 everywhere, 1e-6
-rounding before writes; the annual chain is byte-stable across runs
-(`tests/test_ev_hosting_flex_annual_seal.py`).
-
-## History
-
-The design-day two-stage-reserve pipeline (Phases 8–17, firm=6/deferral=12 on
-the decoupled unit) was retired on 2026-07-07 in favour of this annual
-study-B model; its record lives in git history and the migration design doc.
-
----
-
-<!-- Merged from the former docs/projects/ev-hosting-flex.md. The published
-documentation now covers the project CONTRACT in general; per-project
-detail lives with the project. -->
-
-`projects/ev_hosting_flex` is the repository's flagship research study: how many
-electric vehicles a Québec all-electric distribution feeder can host, where the
-network actually binds, and what EV flexibility is worth against reinforcement.
-
-It is a governed `StudyProject` (22 workflow stages, ~9.7k lines of study code)
-whose distinguishing property is that **its generators are validated against real
-data** and its headlines are reported **with uncertainty**.
-
-## What It Answers
-
-The study follows a deliberate arc — *diagnosis before solutions*:
-
-1. **Diagnosis.** Where does the network actually bind under EV growth?
-    - **Thermal congestion** — probabilistic, per transformer, on cold days.
-    - **AC undervoltage** — both the governed feeder and the full network.
-    - **MV phase imbalance** — at 25 kV, where Québec's single-phase pole
-      transformers spread across the three phases (the LV is 240 V split-phase,
-      so imbalance is an MV phenomenon, not an LV one).
-2. **A realistic base.** The stochastic building population is calibrated to be
-   realistic in **both** coincident peak and annual energy — see below.
-3. **Solutions.** Network-scale non-wires value: how much reinforcement
-   (transformer-years and NPV) EV flexibility defers, across all 540 LV
-   transformers plus the N-1 substation bank.
-4. **Credibility.** Confidence intervals on the citable headlines over K=50
-   realizations spanning seeds and winter severity.
-5. **Cold-tail insurance** — the study the others were building toward, and the
-   answer to *why flexibility matters if the network is robust at the median*:
-    - **Hosting capacity is a distribution, not a number.** Firm hosting spans
-      **10–13 EVs** (P05–P95) across weather years, and the spread is weather
-      (corr(severity, firm) = **+0.42**), not sampling noise. Planning at the P50
-      still leaves the feeder short **26 % of years**.
-    - **At the governed feeder there is currently nothing to insure.** Judged
-      against the capability each hour's ambient allows (see *Rating convention*
-      below), the reference adoption never falls short — activation frequency
-      **0**, and the reinforcement it would defer costs **$0/yr** because no
-      reinforcement is triggered. The crossover where reinforcing wins sits at
-      **11 EVs**, i.e. at the firm limit itself.
-    - This is a **result of the rating convention, not an absence of risk.**
-      Under the static nameplate the same feeder falls short in most years and
-      the insurance case is worth several hundred dollars a year against
-      reinforcement; under the ambient-dependent capability it never binds. The
-      convention moves the answer more than the EVs do. Set
-      `RATING_CONVENTION = "static"` and re-run to reproduce that comparison —
-      the figures are deliberately not quoted here, because a number carried
-      across a convention change is how this study previously acquired several
-      stale headlines.
-    - Coverage is an **energy-service** criterion: the backstop always holds the
-      transformer, so what can fail is denied charging, and that denied energy is
-      **priced into** the flex cost so the comparison is like-for-like.
-    - Where the value does live is the **fleet**, not this feeder — see the fleet
-      triage, which classifies all 540 transformers rather than the one the
-      headline happens to sit on.
-
-## Why It Is Defensible
-
-The building base generator is validated on three independent axes:
-
-| Axis | Validated against | Result |
-|---|---|---|
-| Diurnal shape | Real Hydro-Québec 1000-home dataset (`datasets/hq/`) | Same dual morning/evening peak |
-| Aggregate smoothness | Same HQ dataset | Needs revalidation — see note |
-| DHW tank physics | CREST model lineage (via `demod`) | Surface-normalized UA matches (0.0598 vs 0.0600) |
-
-!!! warning "The smoothness axis is stale"
-
-    This axis was measured at the 5th re-base as 0.35 kW/home/h coincident step
-    against an HQ reference of 0.41. Neither figure survives scrutiny today: the
-    0.41 reference appears nowhere in the repository, and the 0.35 predates the
-    6th re-base, which gave dwellings latching thermostats and deliberately
-    raised per-dwelling stepping. An attempt to recompute it did not reproduce
-    the original definition — the home count, window and normalisation were not
-    recorded — so the numbers are withdrawn rather than replaced with new ones
-    that would be equally unverifiable. The other two axes are unaffected.
-
-The base is realistic in **both** dimensions at once — ~11 kW/home coincident peak
-(inside the Hydro-Québec 10–15 kW design band) **and** ~29 MWh/home/year — rather
-than hitting one at the cost of the other. Reaching that required modelling the
-electric water-heater tank explicitly, since a single-R envelope model couples
-peak and energy and cannot satisfy both.
-
-Full calibration provenance, including six deliberate re-bases and their
-rationale, is in `projects/ev_hosting_flex/CALIBRATION.md`.
-
-## Rating Convention
+## Rating convention
 
 How a load is judged against a transformer limit is a **declared axis** of this
 study, not an assumption. `RATING_CONVENTION` in the project config decides it in
@@ -254,43 +277,16 @@ The extra capability is not borrowed against transformer life: across the whole
 reachable adoption range the resulting hot spot stays below the 110 °C
 normal-insulation-life limit.
 
-## Honest Findings
+## History
 
-The study reports results that weaken the flexibility case where the evidence
-says so — this is deliberate:
+The design-day two-stage-reserve pipeline (Phases 8–17, firm=6/deferral=12 on
+the decoupled unit) was retired on 2026-07-07 in favour of this annual
+study-B model; its record lives in git history and the migration design doc.
 
-- At realistic penetration the network is **genuinely robust**; the median feeder
-  has headroom. Validation against real HQ feeders confirms this is how Québec is,
-  not a modelling artifact.
-- The winter peak is dominated by **inflexible electric heating**, not EVs.
-- The non-wires value is **dominated by the substation**, not the feeders: feeders
-  either bind for reasons flexibility cannot fix, or bind late enough that
-  reinforcing is cheaper than contracting flexibility.
-- The firm hosting headline is **weather-sensitive** — a colder-than-typical winter
-  moves it materially, which is why it is published with a confidence interval.
-
-## Reproducing It
-
-The study is heavy — the annual Monte-Carlo base and the AC power-flow stages
-are the multi-hour core of the roughly six-hour full regeneration, so it is
-**not** executed in CI. Its regression baseline is **operator-verified** (a
-shape-covering subset runs the non-heavy stages via
-`tools/flagship_verify.py`; the full regeneration is scheduled and recorded in
-the verification receipts). Since Phase 20 the stages are invoked as
-interpreter-bound modules (module identity for the pickled caches):
-
-```bash
-# run a stage (Phase 20: {python} -m, the workflow's own invocation mode)
-python -m projects.ev_hosting_flex.scripts.pipeline.<stage>
-
-# verify the governed baseline
-python projects/ev_hosting_flex/scripts/verify_regression.py
-```
-
-The reproduce-and-pin tests in `tests/test_ev_hosting_flex_*.py` `skipif` their
-(gitignored) outputs are absent, so they **skip in CI**. After touching any
-generator or kernel, re-run the affected stages locally and re-verify the baseline
-before trusting a green test run.
+A governed `StudyProject` of 23 workflow stages and roughly 9.7k lines of
+study code, whose distinguishing property is that **its generators are
+validated against real data** and its headlines are reported **with
+uncertainty**.
 
 ## Phase 20 migration (2026-08-17)
 
@@ -325,7 +321,3 @@ value as before; nothing was re-calibrated (see `CALIBRATION.md`).
 The migration's R7 guarantees are enforced by `tests/test_ev_hosting_flex_project.py`
 (81-pin value-identity, zero-sys.path guard, runtime studyConfig read) and the
 annual byte-stability seal in `tests/test_ev_hosting_flex_annual_seal.py`.
-
-## Related
-
-- `docs/projects/overview.md` — the project contract these studies implement.

@@ -1,31 +1,11 @@
-# admm_thermal_consensus
+# ADMM Thermal Consensus
 
 Network-validated distributed ADMM coordination of cold-climate electric-heating
-homes with ML imputation of communication-failed agents, validated on the
-IEEE-33 feeder with pandapower.
+homes, with ML imputation of communication-failed agents, validated on the
+IEEE-33 feeder with pandapower. A governed `StudyProject` with 14 workflow
+stages.
 
-Run the full study:
-
-    uv run gridalyn-project run projects/admm_thermal_consensus
-
-Methodology adapted from the reja MAS/ADMM thesis; extended with power-flow
-validation (the reja work coordinated only an aggregate signal). See the design
-spec in `docs/superpowers/specs/2026-06-25-admm-thermal-consensus-design.md`.
-
----
-
-<!-- Merged from the former docs/projects/admm-thermal-consensus.md. The published
-documentation now covers the project CONTRACT in general; per-project
-detail lives with the project. -->
-
-`projects/admm_thermal_consensus` is a research study on **distributed ADMM
-coordination of cold-climate electric-heating homes**, with ML imputation for
-agents whose communication fails, validated on the IEEE-33 feeder with
-pandapower.
-
-It is a governed `StudyProject` with 13 workflow stages.
-
-## What It Studies
+## What this study asks
 
 Electric space heating in a cold climate is highly coincident — every thermostat
 responds to the same weather — so it produces a sharp aggregate winter peak.
@@ -34,19 +14,21 @@ household agents, rather than a central optimiser) can flatten that peak while
 respecting each home's thermal comfort, and what happens when the communication
 layer degrades.
 
-Its distinguishing contributions over the coordination literature it builds on:
+Three things distinguish it from the coordination literature it builds on:
 
-- **Network validation.** The coordinated set-points are run through an actual
-  power flow on the IEEE-33 feeder, rather than coordinating an aggregate signal
-  in isolation.
-- **Communication failure.** Agents that drop out are handled with an ML imputer,
-  and the study compares imputation strategies rather than assuming ideal comms.
-- **Comfort as a constraint**, validated explicitly (`comfort_validation` stage).
+- **Network validation.** Coordinated set-points are run through an actual power
+  flow on the IEEE-33 feeder, rather than coordinating an aggregate signal in
+  isolation.
+- **Communication failure.** Agents that drop out are handled with an ML
+  imputer, and the study compares imputation strategies rather than assuming
+  ideal comms.
+- **Comfort as a constraint**, validated explicitly in its own stage.
 
-The scenario ladder runs from `native` (no coordination — the firm peak baseline)
-through `coordinated_ideal` (perfect communications) to the degraded-comms cases.
+The scenario ladder runs from `native` (no coordination — the firm peak
+baseline) through `coordinated_ideal` (perfect communications) to the
+degraded-comms cases.
 
-## Running It
+## Running it
 
 ```bash
 uv run gridalyn-project run projects/admm_thermal_consensus
@@ -55,14 +37,27 @@ uv run gridalyn-project run projects/admm_thermal_consensus
 The study is heavy and is **not** executed in CI; its regression baseline is
 operator-verified.
 
-!!! note "Test placement"
-    This project's unit tests currently live inside the project
-    (`scripts/admm/test_consensus.py`, `scripts/admm/test_cvxpy_reference.py`,
-    `scripts/forecast/test_imputer.py`) rather than under `tests/`. There is no
-    `testpaths` configuration, so pytest collects them from the repository root
-    incidentally rather than by design.
+## What it produces
 
-## Limitations
+Fourteen stages of governed artifacts under `outputs/`, ending in the scenario
+comparison the study is written around. `realized_peak_kw_at_rep` is the metric
+to read across imputation methods — see the saturation warning below before
+using the probability-of-violation table instead.
+
+## How it is verified
+
+Power flow is the verification: coordinated set-points are checked on the
+IEEE-33 feeder rather than accepted from the optimiser, and comfort is validated
+in its own stage rather than assumed from the constraint. The regression
+baseline is operator-verified rather than CI-run, because the study is heavy.
+
+Its unit tests currently live inside the project
+(`scripts/admm/test_consensus.py`, `scripts/admm/test_cvxpy_reference.py`,
+`scripts/forecast/test_imputer.py`) rather than under `tests/`. There is no
+`testpaths` configuration, so pytest collects them from the repository root
+incidentally rather than by design.
+
+## Scope and limits
 
 Read these before quoting a number from this study.
 
@@ -100,37 +95,42 @@ study outputs.
 homes would load a 400 kVA unit to ~150% — not a design any utility installs, so
 the scenario would have rested on an asset that does not exist.
 
-## Provenance
+## Where this sits
 
-Methodology adapted from the reja MAS/ADMM thesis and extended with power-flow
-validation.
+Methodology adapted from the reja MAS/ADMM thesis, extended with power-flow
+validation — the thesis coordinated only an aggregate signal. The design spec
+that accompanied this study lived under `docs/superpowers/`, a tree since
+deleted; the reasoning it carried is summarised above rather than linked to a
+path that no longer exists.
 
-## Project Developer API migration (Phase 19, 2026-08-17)
+It consumes the RC building agent from
+[Assets](../../docs/components/assets.md) — see that layer's generator
+comparison for why the RC model, not the EnergyPlus reference, is the right one
+for a study whose flexibility comes from thermostat cycling.
 
-This study was migrated onto the Project Developer API surface (R22) in an
+`projects/ev_hosting_flex` is its sibling: the flagship study shows that in a
+Québec all-electric feeder the winter peak is dominated by exactly this
+inflexible heating load. The two attack the same physical problem from
+different angles — hosting and deferral economics versus distributed
+coordination.
+
+### Project Developer API migration (Phase 19, 2026-08-17)
+
+Migrated onto the Project Developer API surface (R22) in an
 **identity-preserving** pass — same values, new location — so its baselines did
 not move (R7):
 
-- **Config → contract**: the study knobs formerly hardcoded in
-  `scripts/config.py` are now declared in `project.yaml` under
-  `spec.inputs.studyConfig`; `scripts/config.py` reads them. `project.yaml` is
-  the single source of truth; `config.py` remains the module the stage scripts
-  import, exposing the same names and values.
+- **Config to contract**: study knobs formerly hardcoded in `scripts/config.py`
+  are now declared in `project.yaml` under `spec.inputs.studyConfig`;
+  `scripts/config.py` reads them. `project.yaml` is the single source of truth;
+  `config.py` remains the module the stage scripts import, exposing the same
+  names and values.
 - **Boilerplate removed**: the `ROOT = Path(__file__).parents[N]` +
-  `sys.path.insert` pattern is gone from every script. Stages now run as modules
+  `sys.path.insert` pattern is gone from every script. Stages run as modules
   (`{python} -m projects.admm_thermal_consensus.scripts.pipeline.<stage>`),
   which binds the interpreter via the runner's `{python}` placeholder, puts the
   repo root on `sys.path` natively, and preserves the module identities the
   imputer pickle depends on.
-- **Governed JSON IO**: stage scripts read/write JSON through
-  `script.read_json` / `script.write_json` (ProjectScript fills) instead of
-  hand-rolled `json.dumps`/`json.loads` + path arithmetic.
-- The migration is identity-preserving: the committed `results_baseline.json`
-  values are unchanged (compared by json_path + tolerance).
-
-## Related
-
-- `projects/ev_hosting_flex` — the flagship study, which shows that in a Québec
-  all-electric feeder the winter peak is dominated by exactly this inflexible
-  heating load. The two studies attack the same physical problem from different
-  angles: hosting/deferral economics versus distributed coordination.
+- **Governed JSON IO**: stage scripts read and write JSON through
+  `script.read_json` / `script.write_json` instead of hand-rolled
+  `json.dumps`/`json.loads` plus path arithmetic.

@@ -1,94 +1,72 @@
 # DER Voltage Optimization
 
-This project demonstrates a small utility-planning workflow that mixes convex
-optimization with physical power-flow verification.
+A compact planning-and-operations study that combines convex optimization with
+physical power-flow verification. It builds a synthetic 16-bus radial feeder
+with high downstream PV, declares DER capability through Gridalyn asset models,
+runs the voltage-constrained DER dispatch operation, and then checks the
+optimized setpoints against an AC power-flow snapshot.
 
-The workflow builds a synthetic 16-bus radial feeder with high downstream PV,
-declares DER capability through Gridalyn asset models, runs Gridalyn's
-voltage-constrained DER dispatch operation, and then verifies the optimized
-setpoints with an AC power-flow snapshot.
+## What this study asks
 
-## Run
-
-```bash
-uv run gridalyn project run projects/der_voltage_optimization
-uv run gridalyn project status projects/der_voltage_optimization --check-artifacts
-```
-
-## Outputs
-
-- `outputs/data/der_assets.csv`: PV and battery assets.
-- `outputs/data/voltage_sensitivity_matrix.csv`: finite-difference voltage sensitivity used by the convex model.
-- `outputs/operations/der_dispatch.csv`: optimized PV dispatch, curtailment, and battery charging.
-- `outputs/data/pandapower_verification.csv`: before/after AC power-flow voltages.
-- `outputs/reports/der_voltage_optimization_report.json`: canonical optimization report.
-- `outputs/figures/der_voltage_optimization.png`: voltage comparison and DER setpoints.
-
-## Scope
-
-This is not a replacement for an AC OPF. It is a small reproducible example of
-how Gridalyn can combine optimization models, asset tables, and physical
-verification in one governed project workflow.
-
----
-
-<!-- Merged from the former docs/projects/der-voltage-optimization.md. The published
-documentation now covers the project CONTRACT in general; per-project
-detail lives with the project. -->
-
-`projects/der_voltage_optimization` is a compact planning and operations demo
-that combines convex optimization with physical power-flow verification.
-
-## Why This Demo Exists
-
-Gridalyn should support more than scenario replay. This project shows how a
-workflow can:
-
-- declare the concrete DER feeder and assets in `project.yaml`;
-- load that contract through Gridalyn project model-input helpers;
-- derive a linearized voltage-sensitivity model through the SDK operation;
-- solve a voltage-constrained DER dispatch problem through Gridalyn operations;
-- verify the optimized setpoints with an AC pandapower power flow;
-- publish reports, figures, and operation tables.
-
-It is a useful pattern for hosting-capacity studies, DERMS prototypes, planner
-assistants, and future optimization-backed applications.
-
-## Run It
-
-```bash
-uv run gridalyn project run projects/der_voltage_optimization
-uv run gridalyn project status projects/der_voltage_optimization --check-artifacts
-```
-
-Expected generated artifacts:
+Whether a fast convex decision survives contact with the physics it
+approximates — and it is the platform's clearest example of that loop, because
+both halves are visible in one short workflow:
 
 ```text
-projects/der_voltage_optimization/outputs/data/buses.csv
-projects/der_voltage_optimization/outputs/data/lines.csv
-projects/der_voltage_optimization/outputs/data/loads.csv
-projects/der_voltage_optimization/outputs/data/der_assets.csv
-projects/der_voltage_optimization/outputs/data/voltage_sensitivity_matrix.csv
-projects/der_voltage_optimization/outputs/data/pandapower_verification.csv
-projects/der_voltage_optimization/outputs/operations/der_dispatch.csv
-projects/der_voltage_optimization/outputs/reports/der_feeder_report.json
-projects/der_voltage_optimization/outputs/reports/der_voltage_optimization_report.json
-projects/der_voltage_optimization/outputs/figures/der_feeder_voltage_profile.png
-projects/der_voltage_optimization/outputs/figures/der_voltage_optimization.png
-projects/der_voltage_optimization/outputs/manifests/project_run_manifest.json
+asset model -> sensitivity model -> convex optimizer -> AC verification -> report
 ```
 
-## Workflow
+It exists to show that a workflow can do more than replay a scenario. Within
+one governed project it declares the feeder and assets in `project.yaml`, loads
+that contract through the typed model-input helpers, derives a linearized
+voltage-sensitivity model, solves a constrained dispatch, verifies the result
+in pandapower, and publishes reports, figures and operation tables. That is a
+useful pattern for hosting-capacity studies, DERMS prototypes and planner
+assistants.
+
+## Running it
+
+```bash
+uv run gridalyn project run projects/der_voltage_optimization
+uv run gridalyn project status projects/der_voltage_optimization --check-artifacts
+```
 
 | Stage | Purpose |
 | --- | --- |
 | `prepare_workspace` | Creates output folders. |
-| `build_der_feeder` | Loads the 16-bus DER feeder contract from `project.yaml`, applies `DERDispatchAsset` PV setpoints through Gridalyn simulation helpers, and writes feeder/DER artifacts. |
-| `solve_voltage_optimization` | Calls the Gridalyn DER voltage-dispatch operation, persists sensitivity, dispatch, verification, report, and figure artifacts. |
+| `build_der_feeder` | Loads the 16-bus DER feeder contract from `project.yaml`, applies `DERDispatchAsset` PV setpoints through the simulation helpers, and writes feeder/DER artifacts. |
+| `solve_voltage_optimization` | Calls the DER voltage-dispatch operation, then persists sensitivity, dispatch, verification, report and figure artifacts. |
+| `export_twin_network_model` | Exports the resulting network model back to the twin. |
 
-## Optimization Model
+## What it produces
 
-The optimization is a linearized voltage-constrained DER dispatch:
+| Artifact | What it holds |
+| --- | --- |
+| `outputs/data/der_assets.csv` | PV and battery assets |
+| `outputs/data/voltage_sensitivity_matrix.csv` | Finite-difference voltage sensitivity the convex model decides on |
+| `outputs/operations/der_dispatch.csv` | Optimized PV dispatch, curtailment and battery charging |
+| `outputs/data/pandapower_verification.csv` | Before/after AC power-flow voltages |
+| `outputs/reports/der_voltage_optimization_report.json` | The canonical optimization report |
+| `outputs/figures/der_voltage_optimization.png` | Voltage comparison and DER setpoints |
+
+Alongside these the feeder stages write `buses.csv`, `lines.csv`, `loads.csv`,
+`der_feeder_report.json`, `der_feeder_voltage_profile.png` and the run
+manifest.
+
+## How it is verified
+
+Three layers, and they answer different questions. The AC power flow in
+`pandapower_verification.csv` asks whether the convex decision holds
+physically — it is the study's own subject, not a formality.
+`gridalyn project status --check-artifacts` asks whether every declared
+artifact appeared. `gridalyn project regression` asks whether the numbers moved
+against `baselines/results_baseline.json`. The study runs end to end in CI as
+one of the six governed fixtures.
+
+## Scope and limits
+
+This is not a replacement for an AC OPF. The optimization is a linearized,
+voltage-constrained DER dispatch:
 
 ```text
 minimize   PV curtailment + small battery charging penalty + voltage deviation penalty
@@ -97,13 +75,15 @@ subject to 0 <= PV dispatch <= PV available
            0.95 <= V_base + S * (PV dispatch - battery charge) <= 1.05
 ```
 
-`S` is computed from finite-difference perturbations in the Gridalyn operation.
-The optimized setpoints are then applied back to an AC model for verification.
-This keeps the demo simple while preserving the essential platform pattern:
+`S` comes from finite-difference perturbations inside the operation. The
+linearization is what makes the problem convex and the demo transparent; it is
+also why the AC verification step is not optional.
 
-```text
-asset model -> sensitivity model -> convex optimizer -> AC verification -> report
-```
+## Where this sits
 
-This is not a full AC OPF. It is a transparent and reproducible bridge between
-fast convex planning logic and physical validation.
+It builds on [Assets](../../docs/components/assets.md) for the DER specs and on
+[Operations](../../docs/components/operations.md) for the dispatch itself, and
+returns its result to the twin through `export_twin_network_model`. For the
+same convex-decision-checked-against-physics pattern applied to a surrogate
+rather than a dispatch, see the error-bound contract in
+[Simulation](../../docs/components/simulation.md).

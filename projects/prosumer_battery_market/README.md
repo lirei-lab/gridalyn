@@ -1,159 +1,94 @@
 # Prosumer Battery Market
 
-This project is a compact, reproducible example of Gridalyn as an operations
-platform rather than a single flexibility study. It builds a small synthetic
-radial feeder, places a few PV+battery prosumers on downstream buses, and runs a
-deterministic real-time local market for battery discharge.
+A compact study of Gridalyn as an operations platform rather than a single
+flexibility analysis. It builds a small synthetic radial feeder, places PV+
+battery prosumers on downstream buses, and runs a deterministic real-time local
+market for battery discharge.
 
-The market product is simple: when the feeder import forecast exceeds an
-operating limit, prosumers offer battery discharge in 5-minute intervals. The
-clearing engine ranks offers by price with a small locational preference for
-downstream resources, dispatches batteries until the import requirement is met,
-and verifies the resulting feeder state with pandapower.
+## What this study asks
 
-## Run
+Whether participants, operational constraints, dispatch, verification and
+reports fit inside one reproducible project — the operations loop, at a size
+that stays inspectable.
 
-```bash
-uv run gridalyn project run projects/prosumer_battery_market
-uv run gridalyn project status projects/prosumer_battery_market --check-artifacts
-```
+The market product is deliberately simple: when the feeder import forecast
+exceeds an operating limit, prosumers offer battery discharge in five-minute
+intervals. The clearing engine ranks offers by price with a small locational
+preference for downstream resources, dispatches batteries until the import
+requirement is met, and verifies the resulting feeder state with pandapower.
 
-## Outputs
-
-- `outputs/data/buses.csv`, `lines.csv`, `loads.csv`: synthetic feeder tables.
-- `outputs/data/prosumers.csv`: PV+battery prosumer registry.
-- `outputs/data/realtime_market_forecast.csv`: rolling-horizon import and reduction forecast.
-- `outputs/operations/realtime_market_clearing.csv`: interval-level uniform-price clearing.
-- `outputs/operations/realtime_market_offers.csv`: prosumer offer book and accepted MW.
-- `outputs/operations/battery_dispatch.csv`: participant dispatch and SOC.
-- `outputs/data/realtime_powerflow_results.csv`: post-market power-flow metrics.
-- `outputs/reports/*.json`: canonical platform reports.
-- `outputs/figures/*.png`: voltage and market-dispatch figures.
-
-## Scope
-
-This is intentionally small: 14 buses, 13 lines, 13 loads, 5 prosumers, and 12
-real-time intervals. The market uses a rolling-horizon forecast and a
-uniform-price auction inspired by transactive-energy real-time markets and
-MPC-style DER scheduling. It is meant for demos, tests, and SDK development,
-not as a calibrated market model.
-
----
-
-<!-- Merged from the former docs/projects/prosumer-battery-market.md. The published
-documentation now covers the project CONTRACT in general; per-project
-detail lives with the project. -->
-
-`projects/prosumer_battery_market` is a compact operations demo that uses a
-synthetic feeder, distributed PV+battery prosumers, and a deterministic
-real-time local market.
-
-## Why This Demo Exists
-
-The IEEE 33-bus demo shows the basic model-simulation-report loop. The
-EV Hosting Flexibility project shows a larger network-aware flexibility workflow. This
-prosumer demo sits between them: it is small enough for fast tests but includes
-market participants, offers, dispatch, battery state of charge, and post-market
-power-flow verification.
-
-It exercises:
-
-- project manifests;
-- synthetic feeder generation;
-- prosumer and battery registries;
-- real-time market clearing;
-- operational dispatch artifacts;
-- pandapower verification after dispatch;
-- canonical JSON reports and figures.
-
-## Run It
+## Running it
 
 ```bash
 uv run gridalyn project run projects/prosumer_battery_market
 uv run gridalyn project status projects/prosumer_battery_market --check-artifacts
 ```
-
-Expected generated artifacts:
-
-```text
-projects/prosumer_battery_market/outputs/data/buses.csv
-projects/prosumer_battery_market/outputs/data/lines.csv
-projects/prosumer_battery_market/outputs/data/loads.csv
-projects/prosumer_battery_market/outputs/data/prosumers.csv
-projects/prosumer_battery_market/outputs/data/realtime_market_forecast.csv
-projects/prosumer_battery_market/outputs/data/realtime_powerflow_results.csv
-projects/prosumer_battery_market/outputs/operations/realtime_market_clearing.csv
-projects/prosumer_battery_market/outputs/operations/realtime_market_offers.csv
-projects/prosumer_battery_market/outputs/operations/battery_dispatch.csv
-projects/prosumer_battery_market/outputs/reports/synthetic_feeder_report.json
-projects/prosumer_battery_market/outputs/reports/prosumer_realtime_market_report.json
-projects/prosumer_battery_market/outputs/figures/synthetic_feeder_voltage_profile.png
-projects/prosumer_battery_market/outputs/figures/prosumer_market_dispatch.png
-projects/prosumer_battery_market/outputs/manifests/project_run_manifest.json
-```
-
-## What It Demonstrates
-
-The workflow has three stages:
 
 | Stage | Purpose |
 | --- | --- |
 | `prepare_workspace` | Creates output folders. |
-| `build_synthetic_feeder` | Builds a 14-bus radial feeder, runs the base power flow, writes feeder/prosumer tables, a report, and a voltage figure. |
-| `run_realtime_prosumer_market` | Clears 12 five-minute market intervals for five PV+battery prosumers using a rolling-horizon forecast and uniform-price auction, then writes dispatch, offer, power-flow, report, and figure outputs. |
+| `build_synthetic_feeder` | Builds a 14-bus radial feeder, runs the base power flow, writes feeder/prosumer tables, a report and a voltage figure. |
+| `run_realtime_prosumer_market` | Clears 12 five-minute intervals for five prosumers using a rolling-horizon forecast and uniform-price auction, then writes dispatch, offer, power-flow, report and figure outputs. |
+| `export_twin_network_model` | Exports the resulting network model to the twin. |
 
-## Asset Modeling Strategy
+## What it produces
 
-The project owns its concrete feeder and prosumer parameters in `project.yaml`.
-The project-local `network_model.py` loads that declarative contract through
-`gridalyn.projects` helpers and passes the resulting SDK contracts into
-Gridalyn simulation builders.
+| Artifact | What it holds |
+| --- | --- |
+| `outputs/data/buses.csv`, `lines.csv`, `loads.csv` | Synthetic feeder tables |
+| `outputs/data/prosumers.csv` | PV+battery prosumer registry |
+| `outputs/data/realtime_market_forecast.csv` | Rolling-horizon import and reduction forecast |
+| `outputs/operations/realtime_market_clearing.csv` | Interval-level uniform-price clearing |
+| `outputs/operations/realtime_market_offers.csv` | Offer book and accepted MW |
+| `outputs/operations/battery_dispatch.csv` | Participant dispatch and state of charge |
+| `outputs/data/realtime_powerflow_results.csv` | Post-market power-flow metrics |
 
-The reusable SDK contracts are:
+Plus the canonical platform reports under `outputs/reports/` and voltage and
+market-dispatch figures under `outputs/figures/`.
 
-- `ProsumerAsset`;
-- `PVAsset`;
-- `BatteryAsset`;
-- `prosumer_assets_to_frame`.
+## How it is verified
 
-The feeder is built through `gridalyn.simulation.build_radial_pandapower_feeder`.
-Market dispatch maps the asset contracts into a solver network through
-`gridalyn.simulation.apply_pv_generation_to_pandapower` and
-`gridalyn.simulation.apply_battery_dispatch_to_pandapower`.
+The market's own last step is verification: pandapower checks the
+post-dispatch feeder state, so a clearing that satisfies the market but
+violates the network is visible rather than reported as success. Around that,
+`gridalyn project status --check-artifacts` confirms the artifacts appeared,
+`gridalyn project regression` compares against
+`baselines/results_baseline.json`, and the study runs in CI as one of the six
+governed fixtures.
 
-That keeps the project focused on scenario setup and market orchestration. The
-asset identity and tabular contract can be reused by other projects, dashboards,
-semantic-graph exporters, or future service APIs while solver mappings remain
-in the simulation layer.
+## Scope and limits
 
-## Market Logic
-
-The market product is battery discharge to reduce feeder import above a
-real-time operating limit. The current implementation is
-`rolling_horizon_uniform_price_auction`: a compact adaptation of
-transactive-energy real-time auctions and MPC-style forecast use. For each
+Intentionally small: 14 buses, 13 lines, 13 loads, 5 prosumers, 12 real-time
+intervals. **This is not a calibrated market design.** The clearing rule,
+`rolling_horizon_uniform_price_auction`, is a compact adaptation of
+transactive-energy real-time auctions and MPC-style forecast use — per
 interval:
 
-1. the market operator issues a four-interval load/PV/import forecast;
+1. the operator issues a four-interval load/PV/import forecast;
 2. the reduction requirement is `max(import - limit, 0)`;
-3. prosumer batteries submit offer quantities constrained by power, state of
-   charge, and a future-energy reserve from the forecast horizon;
+3. batteries submit offers constrained by power, state of charge, and a
+   future-energy reserve from the forecast horizon;
 4. offers clear by network-adjusted bid price;
-5. accepted prosumers are paid a uniform clearing price equal to the marginal
-   accepted offer;
-6. pandapower verifies the post-dispatch feeder state.
+5. accepted prosumers are paid a uniform price equal to the marginal accepted
+   offer;
+6. pandapower verifies the post-dispatch state.
 
-This is not a calibrated market design. It is a clean platform example showing
-how participants, operational constraints, dispatch, verification, and reports
-fit into one reproducible project.
+The design draws on transactive-energy systems, where market processes and
+automated device bidding drive price-based distribution-level dispatch, and on
+MPC-based DER control, which uses PV/load/price forecasts over a horizon and
+applies immediate actions in rolling fashion. It combines those ideas
+deterministically so the workflow stays fast; it does not reproduce either.
 
-## Method References
+## Where this sits
 
-- Transactive energy systems use market processes and automated device bidding
-  for price-based dispatch at distribution level; TESS describes this pattern
-  and real-time auction mechanisms.
-- MPC-based DER controllers use forecasts of PV/load and real-time prices over
-  a prediction horizon, then apply immediate control actions in rolling fashion.
+The project owns its concrete feeder and prosumer parameters in `project.yaml`;
+its local `network_model.py` loads that contract through the
+[Projects](../../docs/components/projects.md) helpers and passes SDK contracts
+into the simulation builders. Asset identity — `ProsumerAsset`, `PVAsset`,
+`BatteryAsset`, `prosumer_assets_to_frame` — comes from
+[Assets](../../docs/components/assets.md), while solver mappings
+(`apply_pv_generation_to_pandapower`, `apply_battery_dispatch_to_pandapower`)
+stay in [Simulation](../../docs/components/simulation.md).
 
-The demo combines those ideas in a small deterministic implementation so the
-workflow remains fast and inspectable.
+That split is what lets the same asset contracts be reused by other studies,
+dashboards and semantic-graph exporters without dragging a solver along.
