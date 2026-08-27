@@ -34,16 +34,20 @@ nav:
       - Projects: components/projects.md
       - Interfaces: components/interfaces.md
   - Guides:
+      # Ordered as the sequence a study moves through -- declare, model,
+      # design the mechanism, validate, publish -- not alphabetically. The
+      # same order is the layer import direction and the workflow stage-id
+      # verb order; see guides/overview.md.
       - Guide Overview: guides/overview.md
       - Build Your Own Project: guides/build-your-own-project.md
-      - Author A Workflow: guides/author-a-workflow.md
       - Project Template: guides/project-template.md
       - Build A Twin: guides/build-a-twin.md
       - Synthetic Networks From GeoJSON: guides/synthetic-network-from-geojson.md
+      - Author A Workflow: guides/author-a-workflow.md
+      - Reproducibility: guides/reproducibility.md
       - Reports And Figures: guides/reports-and-figures.md
       - Open The Dashboard: guides/open-the-dashboard.md
       - Write An Extension: guides/write-an-extension.md
-      - Reproducibility: guides/reproducibility.md
   - Reference:
       - Reference Overview: reference/overview.md
       - CLI: reference/cli.md
