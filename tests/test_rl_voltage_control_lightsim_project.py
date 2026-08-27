@@ -25,6 +25,7 @@ def test_rl_voltage_control_lightsim_workflow_is_small_and_explicit() -> None:
         "build_rl_feeder",
         "export_twin_network_model",
         "train_rl_voltage_agent",
+        "validate_project_outputs",
     ]
 
 
@@ -54,6 +55,7 @@ def test_rl_voltage_control_lightsim_runs_end_to_end() -> None:
         "build_rl_feeder",
         "export_twin_network_model",
         "train_rl_voltage_agent",
+        "validate_project_outputs",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

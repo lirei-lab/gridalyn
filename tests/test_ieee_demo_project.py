@@ -5,7 +5,6 @@ from gridalyn.projects import project_status, run_workflow, validate_project
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.runner import plan_stages
 
-
 PROJECT_ROOT = Path("projects/ieee_33_bus_demo")
 
 
@@ -24,6 +23,7 @@ def test_ieee_33_demo_workflow_is_small_and_explicit() -> None:
         "run_ieee33_powerflow",
         "generate_operational_scenarios",
         "run_daily_timeseries",
+        "validate_project_outputs",
     ]
 
 
@@ -49,6 +49,7 @@ def test_ieee_33_demo_runs_and_writes_expected_artifacts() -> None:
         "run_ieee33_powerflow",
         "generate_operational_scenarios",
         "run_daily_timeseries",
+        "validate_project_outputs",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

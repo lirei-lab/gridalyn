@@ -35,7 +35,7 @@ uv run gridalyn project status projects/der_voltage_optimization --check-artifac
 | --- | --- |
 | `prepare_workspace` | Creates output folders. |
 | `build_der_feeder` | Loads the 16-bus DER feeder contract from `project.yaml`, applies `DERDispatchAsset` PV setpoints through the simulation helpers, and writes feeder/DER artifacts. |
-| `solve_voltage_optimization` | Calls the DER voltage-dispatch operation, then persists sensitivity, dispatch, verification, report and figure artifacts. |
+| `run_voltage_optimization` | Calls the DER voltage-dispatch operation, then persists sensitivity, dispatch, verification, report and figure artifacts. |
 | `export_twin_network_model` | Exports the resulting network model back to the twin. |
 
 ## What it produces

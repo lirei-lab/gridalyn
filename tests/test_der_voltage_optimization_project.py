@@ -24,7 +24,8 @@ def test_der_voltage_optimization_workflow_is_small_and_explicit() -> None:
         "prepare_workspace",
         "build_der_feeder",
         "export_twin_network_model",
-        "solve_voltage_optimization",
+        "run_voltage_optimization",
+        "validate_project_outputs",
     ]
 
 
@@ -57,7 +58,8 @@ def test_der_voltage_optimization_runs_and_verifies_pandapower() -> None:
         "prepare_workspace",
         "build_der_feeder",
         "export_twin_network_model",
-        "solve_voltage_optimization",
+        "run_voltage_optimization",
+        "validate_project_outputs",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

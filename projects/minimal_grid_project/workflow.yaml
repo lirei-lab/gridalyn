@@ -23,3 +23,10 @@ spec:
         - outputs/data/loads.csv
         - outputs/reports/minimal_grid_report.json
         - outputs/figures/minimal_voltage_profile.png
+
+    - id: validate_project_outputs
+      needs:
+        - run_minimal_powerflow
+      command: "{python} -m gridalyn.interfaces.cli.project sense-check ."
+      outputs:
+        - outputs/reports/project_sense_check_report.json

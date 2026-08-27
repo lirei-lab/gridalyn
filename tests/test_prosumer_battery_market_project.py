@@ -25,6 +25,7 @@ def test_prosumer_battery_market_workflow_is_small_and_explicit() -> None:
         "build_synthetic_feeder",
         "export_twin_network_model",
         "run_realtime_prosumer_market",
+        "validate_project_outputs",
     ]
 
 
@@ -65,6 +66,7 @@ def test_prosumer_battery_market_runs_end_to_end() -> None:
         "build_synthetic_feeder",
         "export_twin_network_model",
         "run_realtime_prosumer_market",
+        "validate_project_outputs",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

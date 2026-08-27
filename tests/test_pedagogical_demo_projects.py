@@ -20,6 +20,7 @@ def test_minimal_grid_project_contract_and_workflow_are_explicit() -> None:
     assert stages == [
         "prepare_workspace",
         "run_minimal_powerflow",
+        "validate_project_outputs",
     ]
 
 
@@ -40,7 +41,11 @@ def test_minimal_grid_project_runs_end_to_end() -> None:
     lines = pd.read_csv(lines_path)
     loads = pd.read_csv(loads_path)
 
-    assert executed == ["prepare_workspace", "run_minimal_powerflow"]
+    assert executed == [
+        "prepare_workspace",
+        "run_minimal_powerflow",
+        "validate_project_outputs",
+    ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]
     assert payload["summary"]["project_intent"] == "minimal_grid_hello_world"
@@ -66,6 +71,7 @@ def test_synthetic_geojson_feeder_contract_and_workflow_are_explicit() -> None:
         "generate_building_footprints",
         "build_synthetic_feeder",
         "export_twin_network_model",
+        "validate_project_outputs",
     ]
 
 
@@ -102,6 +108,7 @@ def test_synthetic_geojson_feeder_runs_end_to_end() -> None:
         "generate_building_footprints",
         "build_synthetic_feeder",
         "export_twin_network_model",
+        "validate_project_outputs",
     ]
     assert status["valid"], status
     assert status["reports"]["ready"], status["reports"]

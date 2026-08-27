@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from network_model import build_der_feeder
 
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.operations import (
@@ -12,9 +13,6 @@ from gridalyn.operations import (
     write_der_voltage_dispatch_figure,
 )
 from gridalyn.projects.scripting import project_script
-
-from network_model import build_der_feeder
-
 
 V_MIN = 0.95
 V_MAX = 1.05
@@ -53,14 +51,18 @@ def main() -> int:
     max_after = float(summary["verified_max_voltage_after_pu"])
     valid = bool(
         result.optimized_converged
-        and result.optimization_metadata["solver_status"] in {"optimal", "optimal_inaccurate"}
+        and result.optimization_metadata["solver_status"]
+        in {"optimal", "optimal_inaccurate"}
         and max_after <= V_MAX + 1e-3
     )
     script.write_report(
         "der_voltage_optimization_report",
         inputs=[
             script.file_reference(der_assets_path),
-            {"name": "gridalyn_der_voltage_dispatch_model", "type": "optimization_model"},
+            {
+                "name": "gridalyn_der_voltage_dispatch_model",
+                "type": "optimization_model",
+            },
         ],
         artifacts=[
             script.file_reference(sensitivity_path),
@@ -71,7 +73,11 @@ def main() -> int:
         summary=summary,
         validation={
             "valid": valid,
-            "errors": [] if valid else ["optimized pandapower verification exceeded voltage limit"],
+            "errors": (
+                []
+                if valid
+                else ["optimized pandapower verification exceeded voltage limit"]
+            ),
             "warnings": [],
         },
     )

@@ -24,10 +24,10 @@ spec:
         - outputs/data/der_assets.csv
         - outputs/reports/der_feeder_report.json
         - outputs/figures/der_feeder_voltage_profile.png
-    - id: solve_voltage_optimization
+    - id: run_voltage_optimization
       needs:
         - build_der_feeder
-      command: "{python} scripts/solve_voltage_optimization.py"
+      command: "{python} scripts/run_voltage_optimization.py"
       inputs:
         - outputs/data/der_assets.csv
       outputs:
@@ -50,3 +50,10 @@ spec:
         - outputs/data/twin_network_model/metadata.json
         - outputs/data/twin_network_model/network_adapter_validation_report.json
         - outputs/reports/twin_network_model_report.json
+
+    - id: validate_project_outputs
+      needs:
+        - export_twin_network_model
+      command: "{python} -m gridalyn.interfaces.cli.project sense-check ."
+      outputs:
+        - outputs/reports/project_sense_check_report.json

@@ -41,3 +41,10 @@ spec:
         - outputs/data/daily_timeseries_results.csv
         - outputs/reports/ieee33_daily_timeseries_report.json
         - outputs/figures/ieee33_daily_voltage_envelope.png
+
+    - id: validate_project_outputs
+      needs:
+        - run_daily_timeseries
+      command: "{python} -m gridalyn.interfaces.cli.project sense-check ."
+      outputs:
+        - outputs/reports/project_sense_check_report.json

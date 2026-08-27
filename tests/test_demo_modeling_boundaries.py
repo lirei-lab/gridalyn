@@ -12,11 +12,19 @@ from gridalyn.projects import (
 
 def test_project_yaml_model_inputs_load_platform_contracts() -> None:
     minimal = load_radial_feeder_spec("projects/minimal_grid_project/project.yaml")
-    der_feeder = load_radial_feeder_spec("projects/der_voltage_optimization/project.yaml")
-    der_assets = load_der_dispatch_assets("projects/der_voltage_optimization/project.yaml")
-    prosumer_feeder = load_radial_feeder_spec("projects/prosumer_battery_market/project.yaml")
+    der_feeder = load_radial_feeder_spec(
+        "projects/der_voltage_optimization/project.yaml"
+    )
+    der_assets = load_der_dispatch_assets(
+        "projects/der_voltage_optimization/project.yaml"
+    )
+    prosumer_feeder = load_radial_feeder_spec(
+        "projects/prosumer_battery_market/project.yaml"
+    )
     prosumers = load_prosumer_assets("projects/prosumer_battery_market/project.yaml")
-    rl_feeder = load_radial_feeder_spec("projects/rl_voltage_control_lightsim/project.yaml")
+    rl_feeder = load_radial_feeder_spec(
+        "projects/rl_voltage_control_lightsim/project.yaml"
+    )
     rl_der = load_voltage_control_der_spec(
         "projects/rl_voltage_control_lightsim/project.yaml",
         feeder=rl_feeder,
@@ -80,7 +88,7 @@ def test_no_project_specific_demo_specs_in_gridalyn_package() -> None:
 
 def test_advanced_demo_scripts_delegate_modeling_to_gridalyn() -> None:
     checks = {
-        Path("projects/der_voltage_optimization/scripts/solve_voltage_optimization.py"): (
+        Path("projects/der_voltage_optimization/scripts/run_voltage_optimization.py"): (
             "import cvxpy",
             "cp.",
             "pp.create_sgen",

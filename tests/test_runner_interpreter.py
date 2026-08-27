@@ -228,8 +228,11 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # stage added to ev_hosting_flex + 5 export_twin_network_model stages
         # added to der_voltage_optimization, prosumer_battery_market,
         # rl_voltage_control_lightsim, synthetic_geojson_feeder and
-        # admm_thermal_consensus (all Milestone 14).
-        self.assertEqual(58, declared)
+        # admm_thermal_consensus (all Milestone 14) + 6 validate_project_outputs
+        # stages closing the six light governed studies, so a study's own DAG
+        # ends by checking itself rather than trusting a separate CLI call
+        # (syntgrid-h85).
+        self.assertEqual(64, declared)
 
 
 if __name__ == "__main__":
