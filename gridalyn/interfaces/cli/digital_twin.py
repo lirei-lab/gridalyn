@@ -104,6 +104,24 @@ def _set_instance_environment(args: argparse.Namespace) -> None:
     os.environ["GRIDALYN_INSTANCE"] = getattr(args, "instance", "default")
 
 
+#: One line per loop-registered subcommand, so ``--help`` explains the surface
+#: it exposes rather than listing bare verbs.
+_HELP = {
+    "scenarios": "Generate EV adoption scenarios over the twin",
+    "timeseries": "Generate EV charging time series for the scenarios",
+    "base": "Export the twin's base network model",
+    "building-models": "Generate building models for the twin's dwellings",
+    "scenario-models": "Generate per-scenario network models",
+    "powerflow": "Run power flow over the twin's EV scenarios",
+    "verify-scenarios": "Check the generated EV scenarios for contract violations",
+    "verify-timeseries": "Check the generated EV time series for contract violations",
+    "verify-powerflow": "Check the EV power-flow results for contract violations",
+    "asset-registry": "Generate the twin's device and asset registry",
+    "overload-report": "Report MV/LV transformers loaded past their rating",
+    "dashboard-catalog": "Generate the twin's dashboard catalog",
+}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -182,7 +200,7 @@ def build_parser() -> argparse.ArgumentParser:
         "timeseries": ev_timeseries.main,
     }
     for command, main_func in workflow_commands.items():
-        subcommand = subparsers.add_parser(command)
+        subcommand = subparsers.add_parser(command, help=_HELP[command])
         subcommand.add_argument(
             "--root",
             type=Path,
@@ -209,7 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
         "dashboard-catalog": "generate_digital_twin_dashboard_catalog.py",
     }
     for command, script_name in scripts.items():
-        subcommand = subparsers.add_parser(command)
+        subcommand = subparsers.add_parser(command, help=_HELP[command])
         subcommand.add_argument(
             "--root",
             type=Path,

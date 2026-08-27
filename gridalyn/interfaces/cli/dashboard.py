@@ -27,6 +27,13 @@ def _script_handler(script_name: str):
     return handler
 
 
+#: One line per subcommand, so ``--help`` explains the surface it exposes.
+_HELP = {
+    "catalog": "Generate the dashboard catalog from the digital twin",
+    "verify": "Check the dashboard's catalog against the twin it describes",
+}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -35,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         "verify": "verify_dashboard_consistency.py",
     }
     for command, script_name in scripts.items():
-        subcommand = subparsers.add_parser(command)
+        subcommand = subparsers.add_parser(command, help=_HELP[command])
         subcommand.set_defaults(handler=_script_handler(script_name))
     return parser
 

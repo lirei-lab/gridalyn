@@ -48,16 +48,22 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="python -m gridalyn.projects.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    validate_parser = subparsers.add_parser("validate")
+    validate_parser = subparsers.add_parser(
+        "validate", help="Check project.yaml/workflow.yaml against the schema"
+    )
     validate_parser.add_argument("project")
     validate_parser.add_argument("--check-artifacts", action="store_true")
     validate_parser.set_defaults(func=_validate)
 
-    plan_parser = subparsers.add_parser("plan")
+    plan_parser = subparsers.add_parser(
+        "plan", help="Print the stage DAG in execution order without running anything"
+    )
     plan_parser.add_argument("project")
     plan_parser.set_defaults(func=_plan)
 
-    run_parser = subparsers.add_parser("run")
+    run_parser = subparsers.add_parser(
+        "run", help="Execute the workflow stages and write governed artifacts"
+    )
     run_parser.add_argument("project")
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--manifest-path")

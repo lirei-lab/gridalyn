@@ -155,7 +155,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     from gridalyn.projects.templates import TEMPLATES
 
-    init_parser = subparsers.add_parser("init")
+    init_parser = subparsers.add_parser(
+        "init", help="Scaffold a new study directory from a template"
+    )
     init_parser.add_argument("project", nargs="?", default=".")
     init_parser.add_argument("--name")
     init_parser.add_argument(
@@ -172,16 +174,26 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--force", action="store_true")
     init_parser.set_defaults(handler=_init)
 
-    validate_parser = subparsers.add_parser("validate")
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help=(
+            "Check project.yaml/workflow.yaml against the schema "
+            "(is the contract well-formed?)"
+        ),
+    )
     validate_parser.add_argument("project")
     validate_parser.add_argument("--check-artifacts", action="store_true")
     validate_parser.set_defaults(handler=_validate)
 
-    plan_parser = subparsers.add_parser("plan")
+    plan_parser = subparsers.add_parser(
+        "plan", help="Print the stage DAG in execution order without running anything"
+    )
     plan_parser.add_argument("project")
     plan_parser.set_defaults(handler=_plan)
 
-    run_parser = subparsers.add_parser("run")
+    run_parser = subparsers.add_parser(
+        "run", help="Execute the workflow stages and write governed artifacts"
+    )
     run_parser.add_argument("project")
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--manifest-path")
@@ -197,20 +209,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_parser.set_defaults(handler=_run)
 
-    prepare_parser = subparsers.add_parser("prepare-workspace")
+    prepare_parser = subparsers.add_parser(
+        "prepare-workspace",
+        help="Create the outputs/ directories a study's stages write into",
+    )
     prepare_parser.add_argument("project")
     prepare_parser.set_defaults(handler=_prepare_workspace)
 
-    status_parser = subparsers.add_parser("status")
+    status_parser = subparsers.add_parser(
+        "status", help="Report which artifacts and reports a study has produced so far"
+    )
     status_parser.add_argument("project")
     status_parser.add_argument("--check-artifacts", action="store_true")
     status_parser.set_defaults(handler=_status)
 
-    regression_parser = subparsers.add_parser("regression")
+    regression_parser = subparsers.add_parser(
+        "regression",
+        help="Compare results against baselines/results_baseline.json (did the numbers move?)",
+    )
     regression_parser.add_argument("project")
     regression_parser.set_defaults(handler=_regression)
 
-    sense_parser = subparsers.add_parser("sense-check")
+    sense_parser = subparsers.add_parser(
+        "sense-check",
+        help="Run the study's objective plausibility checks (do the numbers make sense?)",
+    )
     sense_parser.add_argument("project")
     sense_parser.add_argument(
         "--no-write",
@@ -219,7 +242,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sense_parser.set_defaults(handler=_sense_check)
 
-    verify_parser = subparsers.add_parser("verify")
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help=(
+            "Run the ladder: contract + artifact status + sense checks, "
+            "as one payload. Excludes regression"
+        ),
+    )
     verify_parser.add_argument("project")
     verify_parser.add_argument(
         "--no-write",
@@ -229,11 +258,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_parser.set_defaults(handler=_verify)
 
-    list_parser = subparsers.add_parser("list")
+    list_parser = subparsers.add_parser(
+        "list", help="List the studies found under a workspace root"
+    )
     list_parser.add_argument("--root", default=".")
     list_parser.set_defaults(handler=_list)
 
-    verify_all_parser = subparsers.add_parser("verify-all")
+    verify_all_parser = subparsers.add_parser(
+        "verify-all",
+        help="Run the verify ladder over every study under a workspace root",
+    )
     verify_all_parser.add_argument("--root", default=".")
     verify_all_parser.add_argument(
         "--write", action="store_true", help="Write project sense-check reports."

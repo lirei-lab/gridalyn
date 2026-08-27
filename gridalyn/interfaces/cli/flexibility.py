@@ -28,6 +28,15 @@ def _script_handler(script_name: str):
     return handler
 
 
+#: One line per subcommand, so ``--help`` explains the surface it exposes.
+_HELP = {
+    "providers": "Generate the flexibility providers available on the twin",
+    "surrogate": "Fit the network-impact surrogate the clearing decides on",
+    "locational-clearing": "Clear flexibility locationally against network constraints",
+    "network-impact-catalog": "Generate the network-impact dashboard catalog",
+}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -49,7 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
         "network-impact-catalog": "generate_network_impact_dashboard_catalog.py",
     }
     for command, script_name in scripts.items():
-        subcommand = subparsers.add_parser(command)
+        subcommand = subparsers.add_parser(command, help=_HELP[command])
         subcommand.set_defaults(handler=_script_handler(script_name))
 
     return parser
