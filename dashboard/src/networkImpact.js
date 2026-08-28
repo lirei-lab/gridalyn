@@ -1,4 +1,10 @@
-const DEFAULT_CATALOG_PATH = '/instances/default/digital_twin/flexibility/network_impact_catalog.json';
+import { twinPath } from './twinSource.js';
+
+// Only reached when a scenario declares no `extensions.network_impact`. The
+// catalog names this catalog for every scenario the current SDK writes, so the
+// default is a compatibility fallback -- derived from the twin root rather
+// than carrying a second instance literal.
+const DEFAULT_CATALOG_PATH = twinPath('flexibility/network_impact_catalog.json');
 
 async function loadJsonOrNull(fetchImpl, path) {
   const res = await fetchImpl(path);

@@ -4,18 +4,33 @@ import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
 import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
 import { buildScenarioCatalog } from './scenarios';
 
+/**
+ * Per-scenario artifact kinds, and the alias each is queried under.
+ *
+ * Derived by iterating the paths a scenario declares rather than by four
+ * copied registration blocks, so a kind added to the twin's catalog becomes
+ * queryable without editing this file.
+ */
+const SCENARIO_FILE_KINDS = ['nodes', 'lines', 'power', 'transformers'];
+
 // Force MVP bundle — does NOT require SharedArrayBuffer
 // (EH/pthread bundles can hang on non-HTTPS origins like Tailscale HTTP)
-export function useDuckDB(scenarios = buildScenarioCatalog()) {
+export function useDuckDB(scenarios = buildScenarioCatalog(), geography = null) {
   const [db, setDb] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [dbError, setDbError] = useState(null);
-  const scenarioPayload = JSON.stringify(
-    scenarios.map(scenario => ({
+  const scenarioPayload = JSON.stringify({
+    scenarios: scenarios.map(scenario => ({
       id: scenario.id,
       paths: scenario.paths,
-    }))
-  );
+    })),
+    // The twin's base geo tables -- buses, lines, buildings, transformers --
+    // registered from what the catalog declares. Without these the map can
+    // only draw whatever a scenario's timeseries happens to repeat per
+    // timestamp, which is why bus coordinates were duplicated a million rows
+    // deep before the catalog named the base layer.
+    geoPaths: geography?.paths || {},
+  });
 
   useEffect(() => {
     let internalDb = null;
@@ -23,7 +38,7 @@ export function useDuckDB(scenarios = buildScenarioCatalog()) {
 
     async function initializeDuckDB() {
       try {
-        const scenarioCatalog = JSON.parse(scenarioPayload);
+        const { scenarios: scenarioCatalog, geoPaths } = JSON.parse(scenarioPayload);
         if (scenarioCatalog.length === 0) {
           setIsInitializing(false);
           setDbError(null);
@@ -44,36 +59,27 @@ export function useDuckDB(scenarios = buildScenarioCatalog()) {
         console.log('[DuckDB] WASM instantiated. Registering parquet files...');
 
         const base = window.location.origin;
+        const register = (alias, path) =>
+          internalDb.registerFileURL(
+            alias,
+            new URL(path, base).toString(),
+            duckdb.DuckDBDataProtocol.HTTP,
+            false
+          );
+
         for (const scenario of scenarioCatalog) {
-          const id = scenario.id;
           const paths = scenario.paths || {};
-          await internalDb.registerFileURL(
-            `${id}_nodes.parquet`,
-            new URL(paths.nodes, base).toString(),
-            duckdb.DuckDBDataProtocol.HTTP,
-            false
-          );
-          await internalDb.registerFileURL(
-            `${id}_lines.parquet`,
-            new URL(paths.lines, base).toString(),
-            duckdb.DuckDBDataProtocol.HTTP,
-            false
-          );
-          await internalDb.registerFileURL(
-            `${id}_power.parquet`,
-            new URL(paths.power, base).toString(),
-            duckdb.DuckDBDataProtocol.HTTP,
-            false
-          );
-          await internalDb.registerFileURL(
-            `${id}_transformers.parquet`,
-            new URL(paths.transformers, base).toString(),
-            duckdb.DuckDBDataProtocol.HTTP,
-            false
-          );
+          for (const kind of SCENARIO_FILE_KINDS) {
+            if (!paths[kind]) continue;
+            await register(`${scenario.id}_${kind}.parquet`, paths[kind]);
+          }
+        }
+        for (const [artifact, path] of Object.entries(geoPaths)) {
+          if (!path) continue;
+          await register(`${artifact}.parquet`, path);
         }
 
-        console.log('[DuckDB] Scenario files registered. Engine ready');
+        console.log('[DuckDB] Scenario and base files registered. Engine ready');
         if (!cancelled) setDb(internalDb);
       } catch (err) {
         console.error('[DuckDB] Initialization failed:', err);

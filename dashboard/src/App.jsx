@@ -7,7 +7,7 @@ import Map from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './App.css';
 import { useDuckDB } from './useDuckDB';
-import { buildScenarioCatalog, loadScenarioCatalog } from './scenarios';
+import { buildScenarioCatalog, loadTwin } from './scenarios';
 import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
@@ -225,8 +225,17 @@ function loadingColor(load, alpha = 220) {
 export default function App() {
   const [activeWorkspace, setActiveWorkspace] = useState('ieee_33_bus_demo');
   const [scenarios, setScenarios] = useState(buildScenarioCatalog());
-  const { db, isInitializing, dbError } = useDuckDB(activeWorkspace === 'digital_twin' ? scenarios : []);
-  const [selectedScenario, setSelectedScenario] = useState(scenarios[0]?.id || 'S0');
+  const [twinGeography, setTwinGeography] = useState(null);
+  const [twinNetworkModel, setTwinNetworkModel] = useState(null);
+  const [twinWarnings, setTwinWarnings] = useState([]);
+  const [twinError, setTwinError] = useState(null);
+  const { db, isInitializing, dbError } = useDuckDB(
+    activeWorkspace === 'digital_twin' ? scenarios : [],
+    activeWorkspace === 'digital_twin' ? twinGeography : null
+  );
+  // No literal scenario id: the selection follows whatever the twin declares,
+  // and stays null until it has answered.
+  const [selectedScenario, setSelectedScenario] = useState(scenarios[0]?.id ?? null);
   const [ieeeDemo, setIeeeDemo] = useState(null);
   const [ieeeDemoError, setIeeeDemoError] = useState(null);
   const [selectedIeeeScenario, setSelectedIeeeScenario] = useState('baseline');
@@ -308,11 +317,22 @@ export default function App() {
   useEffect(() => {
     async function loadScenarios() {
       try {
-        const catalog = await loadScenarioCatalog();
-        setScenarios(catalog);
+        const twin = await loadTwin();
+        setScenarios(twin.scenarios);
+        setTwinGeography(twin.geography);
+        setTwinNetworkModel(twin.networkModel);
+        setTwinWarnings(twin.warnings);
+        setTwinError(null);
       } catch (err) {
-        console.error('[App] Scenario catalog load error:', err.message || err);
-        setScenarios(buildScenarioCatalog());
+        // Surfaced, not only logged. An empty scenario list reaches the user
+        // as a blank panel, with the reason and the URLs we tried confined to
+        // the browser console.
+        console.error('[App] Twin discovery error:', err.message || err);
+        setScenarios([]);
+        setTwinGeography(null);
+        setTwinNetworkModel(null);
+        setTwinWarnings([]);
+        setTwinError(err.message || String(err));
       }
     }
     loadScenarios();
@@ -380,7 +400,7 @@ export default function App() {
 
   useEffect(() => {
     if (!scenarios.some(scenario => scenario.id === selectedScenario)) {
-      setSelectedScenario(scenarios[0]?.id || 'S0');
+      setSelectedScenario(scenarios[0]?.id ?? null);
     }
   }, [scenarios, selectedScenario]);
 
@@ -1146,6 +1166,25 @@ export default function App() {
           />
           {isInitializing && <p style={{ color: 'rgb(0,200,200)', fontSize: '0.8rem', marginTop: '10px', textShadow: '0 0 5px rgb(0,200,200)' }}>⚡ Booting WebAssembly Engine...</p>}
           {dbError && <p style={{ color: '#ff4444', fontSize: '0.75rem', marginTop: '8px', wordBreak: 'break-word' }}>⚠ Engine error: {dbError}</p>}
+          {twinError && <p style={{ color: '#ff4444', fontSize: '0.75rem', marginTop: '8px', wordBreak: 'break-word' }}>⚠ Twin not found: {twinError}</p>}
+          {twinNetworkModel && (
+            <p style={{ color: '#888', fontSize: '0.7rem', marginTop: '8px', wordBreak: 'break-word' }}>
+              {/* Which model this view is of. The dashboard renders a specific,
+                  identified snapshot; without saying which, two runs of the
+                  same page are indistinguishable. */}
+              Model {twinNetworkModel.modelVersionId || 'unidentified'}
+              {twinNetworkModel.counts?.buses != null && ` — ${twinNetworkModel.counts.buses} buses`}
+              {twinNetworkModel.validation?.valid === false && ' — integrity check FAILED'}
+            </p>
+          )}
+          {twinWarnings.map(warning => (
+            <p key={warning} style={{ color: '#ffaa33', fontSize: '0.7rem', marginTop: '8px', wordBreak: 'break-word' }}>⚠ {warning}</p>
+          ))}
+          {twinGeography?.crsAssumed && (
+            <p style={{ color: '#888', fontSize: '0.7rem', marginTop: '8px' }}>
+              CRS {twinGeography.crs} assumed — the twin declares none.
+            </p>
+          )}
         </div>
 
       </div>

@@ -1,3 +1,15 @@
+import {
+  LEGACY_MANIFEST_PATHS,
+  TWIN_CATALOG_PATH,
+  TwinDiscoveryError,
+  fetchJsonOrNull,
+  readGeography,
+  readNetworkModel,
+  schemaWarning,
+  servablePath,
+  twinPath,
+} from './twinSource.js';
+
 const FILE_KINDS = {
   nodes: 'powerflow_nodes',
   lines: 'powerflow_lines',
@@ -10,17 +22,21 @@ function scenarioSortKey(id) {
   return match ? [Number(match[1]), String(id)] : [10000, String(id)];
 }
 
-function normalizePath(path) {
-  if (!path) return null;
-  if (/^https?:\/\//.test(path)) return path;
-  return `/${String(path).replace(/^\/+/, '')}`;
-}
+const normalizePath = servablePath;
 
+/**
+ * Reconstruct a scenario's paths by naming convention.
+ *
+ * Only reached by the pre-catalog fallback below, and by a catalog that omits
+ * a path. A catalog written by the current SDK always declares all four, so
+ * this is a compatibility shim rather than the normal route -- which is why it
+ * derives from `twinPath` instead of carrying its own instance literal.
+ */
 function conventionalPaths(id) {
   return Object.fromEntries(
     Object.entries(FILE_KINDS).map(([kind, suffix]) => [
       kind,
-      `/instances/default/digital_twin/timeseries/${id}_${suffix}.parquet`,
+      twinPath(`timeseries/${id}_${suffix}.parquet`),
     ])
   );
 }
@@ -53,7 +69,7 @@ function normalizeSemanticGraph(manifest) {
     nodeCount: manifest.node_count ?? null,
     edgeCount: manifest.edge_count ?? null,
     valid: manifest.validation?.valid ?? null,
-    manifestPath: '/instances/default/digital_twin/semantic/graph_manifest.json',
+    manifestPath: LEGACY_MANIFEST_PATHS.semanticManifest,
     artifacts: manifest.artifacts || {},
   };
 }
@@ -160,7 +176,8 @@ export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetMan
 }
 
 export async function loadScenarioManifest(fetchImpl = fetch) {
-  const res = await fetchImpl('/instances/default/digital_twin/scenarios/index.json');
+  const path = LEGACY_MANIFEST_PATHS.scenarioIndex;
+  const res = await fetchImpl(path);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const manifest = await res.json();
   return {
@@ -169,22 +186,76 @@ export async function loadScenarioManifest(fetchImpl = fetch) {
   };
 }
 
-async function loadJsonOrNull(fetchImpl, path) {
-  const res = await fetchImpl(path);
-  if (!res.ok) return null;
-  return res.json();
+/**
+ * Load everything the dashboard knows about the twin.
+ *
+ * Returns the whole view -- scenarios, geography, network model, and which
+ * source answered -- rather than only the scenario array. The array alone was
+ * what kept the map from being catalog-driven: the catalog's geography and
+ * model identity were fetched and then discarded one line later.
+ *
+ * Throws `TwinDiscoveryError` when no source yields a scenario. The previous
+ * behaviour returned an empty list, which the UI rendered as a blank panel
+ * with the reason confined to the browser console.
+ */
+export async function loadTwin(fetchImpl = fetch) {
+  const [catalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] =
+    await Promise.all([
+      fetchJsonOrNull(fetchImpl, TWIN_CATALOG_PATH),
+      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.scenarioIndex),
+      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.powerflowSummary),
+      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.assetRegistry),
+      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.semanticManifest),
+    ]);
+
+  const warnings = [];
+  let scenarios = [];
+  let source = null;
+
+  if (catalog?.scenarios?.length > 0) {
+    const warning = schemaWarning(catalog);
+    if (warning) warnings.push(warning);
+    scenarios = buildDashboardScenarioCatalog(catalog, semanticManifest);
+    source = 'catalog';
+  } else {
+    scenarios = buildScenarioCatalog(
+      scenarioManifest,
+      summaryManifest,
+      assetManifest,
+      semanticManifest
+    );
+    if (scenarios.length > 0) {
+      source = 'legacy-manifests';
+      warnings.push(
+        `no twin catalog at ${TWIN_CATALOG_PATH}; scenarios were reconstructed ` +
+          'from the pre-catalog manifests, so geography and model identity are ' +
+          'unavailable. Regenerate it with `gridalyn dashboard catalog`.'
+      );
+    }
+  }
+
+  if (scenarios.length === 0) {
+    const attempted = [TWIN_CATALOG_PATH, ...Object.values(LEGACY_MANIFEST_PATHS)];
+    throw new TwinDiscoveryError(
+      'no digital twin found: none of the twin manifests declared a scenario. ' +
+        `Looked in ${attempted.join(', ')}. Build a twin with ` +
+        '`gridalyn twin build`, then publish its catalog with ' +
+        '`gridalyn dashboard catalog`.',
+      { attempted }
+    );
+  }
+
+  return {
+    scenarios,
+    geography: readGeography(catalog),
+    networkModel: readNetworkModel(catalog),
+    source,
+    warnings,
+  };
 }
 
+/** Back-compatible shim returning only the scenario array. */
 export async function loadScenarioCatalog(fetchImpl = fetch) {
-  const [dashboardCatalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] = await Promise.all([
-    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/dashboard/catalog.json'),
-    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/scenarios/index.json'),
-    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/timeseries/powerflow_smoke_summary.json'),
-    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/scenarios/asset_registry_summary.json'),
-    loadJsonOrNull(fetchImpl, '/instances/default/digital_twin/semantic/graph_manifest.json'),
-  ]);
-  if (dashboardCatalog?.scenarios?.length > 0) {
-    return buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest);
-  }
-  return buildScenarioCatalog(scenarioManifest, summaryManifest, assetManifest, semanticManifest);
+  const twin = await loadTwin(fetchImpl);
+  return twin.scenarios;
 }
