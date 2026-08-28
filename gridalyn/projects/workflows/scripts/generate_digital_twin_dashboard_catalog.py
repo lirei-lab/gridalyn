@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -17,6 +18,7 @@ from gridalyn.projects.dashboard_catalog import (  # noqa: E402
     build_dashboard_catalog,
     write_dashboard_catalog,
 )
+from gridalyn.projects.loader import load_project  # noqa: E402
 from gridalyn.twin.network import NetworkModelRepository  # noqa: E402
 
 DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
@@ -29,6 +31,27 @@ DEFAULT_EXTENSIONS = {
     / "flexibility_clearing_scorecard.json",
     "operations": DEFAULT_LAYOUT.operations / "operations_catalog.json",
 }
+
+
+def _discover_projects(root: Path) -> list:
+    """Load every governed study under ``projects/``, skipping broken ones.
+
+    A study whose ``project.yaml`` will not parse must not take the whole
+    catalog down with it: the twin's scenarios and geography are unrelated to
+    it. The failure is echoed to stderr rather than swallowed, so a study that
+    silently stops appearing in the dashboard still says why.
+    """
+    projects = []
+    for manifest in sorted((root / "projects").glob("*/project.yaml")):
+        try:
+            projects.append(load_project(manifest))
+        except Exception as error:  # noqa: BLE001 - reported, not hidden
+            print(
+                f"warning: skipping {manifest}: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
+    return projects
 
 
 def _load_json(path: Path) -> dict:
@@ -63,6 +86,7 @@ def main() -> int:
         optional_extensions=DEFAULT_EXTENSIONS,
         root=ROOT,
         network_repository=NetworkModelRepository.from_parquet(args.base_dir),
+        projects=_discover_projects(ROOT),
     )
     write_dashboard_catalog(args.out, catalog)
     print(

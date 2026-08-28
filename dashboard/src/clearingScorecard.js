@@ -1,6 +1,4 @@
-import { operationalKpiReportPath } from './projectSource.js';
 
-// Resolved per call, not frozen at import (see projectSource.js).
 
 async function loadJsonOrNull(fetchImpl, path) {
   const res = await fetchImpl(path);
@@ -8,7 +6,7 @@ async function loadJsonOrNull(fetchImpl, path) {
   return res.json();
 }
 
-export function normalizeClearingScorecard(report = null, path = operationalKpiReportPath()) {
+export function normalizeClearingScorecard(report = null, path = null) {
   if (!report) return null;
   return {
     scenarioId: report.scenario_id || null,
@@ -20,7 +18,15 @@ export function normalizeClearingScorecard(report = null, path = operationalKpiR
   };
 }
 
-export async function loadClearingScorecard(fetchImpl = fetch, path = operationalKpiReportPath()) {
+/**
+ * Load the clearing scorecard a scenario declares.
+ *
+ * As with the operations catalog, there is no default path: it comes from
+ * `scenarios[].extensions.clearing_scorecard`, and an absent declaration means
+ * this twin has no scorecard, not that it has some other study's.
+ */
+export async function loadClearingScorecard(fetchImpl = fetch, path = null) {
+  if (!path) return null;
   const report = await loadJsonOrNull(fetchImpl, path);
   return normalizeClearingScorecard(report, path);
 }

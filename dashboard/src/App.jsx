@@ -11,8 +11,7 @@ import { buildScenarioCatalog, loadTwin } from './scenarios';
 import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
-import { WORKSPACES, loadIeee33Dashboard } from './projectDashboards';
-import { operatingProject } from './projectSource';
+import { deriveWorkspaces, loadProjectReports, summaryRows } from './projectCatalog';
 
 // Base map style (Carto Dark Matter equivalent in Open Standard)
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -43,19 +42,7 @@ function signedFmt(value, digits = 2) {
   return `${number > 0 ? '+' : ''}${number.toFixed(digits)}`;
 }
 
-const IEEE_SCENARIO_COLORS = {
-  baseline: '#72d6ff',
-  load_growth_20: '#ffbf69',
-  pv_midday: '#72e06a',
-  ev_evening_peak: '#ff5c7a',
-  pv_plus_ev: '#c9a7ff',
-};
-
-function compactScenarioLabel(id) {
-  return String(id || '').replaceAll('_', ' ');
-}
-
-function WorkspaceSelector({ activeWorkspace, onChange }) {
+function WorkspaceSelector({ activeWorkspace, onChange, workspaces = [] }) {
   return (
     <div className="workspace-switcher">
       <label htmlFor="workspace-select">Workspace</label>
@@ -64,9 +51,10 @@ function WorkspaceSelector({ activeWorkspace, onChange }) {
         value={activeWorkspace}
         onChange={event => onChange(event.target.value)}
       >
-        {WORKSPACES.map(workspace => (
+        {workspaces.map(workspace => (
           <option key={workspace.id} value={workspace.id}>
             {workspace.label}
+            {workspace.available === false ? ' (not run)' : ''}
           </option>
         ))}
       </select>
@@ -74,134 +62,96 @@ function WorkspaceSelector({ activeWorkspace, onChange }) {
   );
 }
 
-function IeeeDemoDashboard({ data, error, selectedScenario, onScenarioChange, activeWorkspace, onWorkspaceChange }) {
-  const selected = data?.scenarios?.find(item => item.scenarioId === selectedScenario) || data?.scenarios?.[0] || null;
-  const chartScenarioIds = data?.scenarioSummary?.scenario_ids || data?.scenarios?.map(item => item.scenarioId) || [];
+/**
+ * Render any governed study, from what the catalog declares about it.
+ *
+ * Replaces a 131-line component dedicated to one study. Nothing here knows a
+ * study by name: the panel lists the reports the catalog says a project
+ * declares, renders each one's `summary` as label/value rows through the
+ * platform report contract, and links whatever tables the study ships. A study
+ * added to `projects/` appears with no edit to this file.
+ *
+ * What this deliberately does NOT do is draw a study-specific chart. The old
+ * panel could, because it knew that one study's CSV column names; no declared
+ * column contract exists for a study's tables, so inventing charts from
+ * guessed columns would rebuild the coupling this removes. Tables are linked,
+ * not plotted, until a study can declare its columns.
+ */
+function ProjectDashboard({ workspace, reports, loading, activeWorkspace, onWorkspaceChange, workspaces }) {
+  const tabularArtifacts = (workspace?.artifacts || []).filter(
+    artifact => artifact.kind === 'table'
+  );
+  const missing = (workspace?.artifacts || []).filter(artifact => !artifact.exists);
 
   return (
-    <div className="project-dashboard">
-      <div className="project-dashboard__panel">
-        <div className="project-dashboard__header">
-          <div>
-            <p className="eyebrow">Gridalyn Project Dashboard</p>
-            <h1>IEEE 33-Bus Demo</h1>
-            <p>
-              A compact distribution feeder demo with deterministic load growth, PV, EV peak,
-              and mixed operating scenarios.
-            </p>
-          </div>
-          <WorkspaceSelector activeWorkspace={activeWorkspace} onChange={onWorkspaceChange} />
+    <div className="project-dashboard" style={{ padding: '24px', overflowY: 'auto', height: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>{workspace?.label || activeWorkspace}</h1>
+          {workspace?.description && (
+            <p style={{ color: '#aaa', marginTop: '6px', maxWidth: '70ch' }}>{workspace.description}</p>
+          )}
         </div>
-
-        {error && (
-          <div className="project-dashboard__notice">
-            IEEE demo artifacts are unavailable: {error}
-          </div>
-        )}
-
-        {!data && !error && (
-          <div className="project-dashboard__notice">Loading IEEE 33-bus project artifacts...</div>
-        )}
-
-        {data && (
-          <>
-            <section className="project-dashboard__cards">
-              <div>
-                <span>Base buses</span>
-                <strong>{data.powerflow.bus_count ?? 'n/a'}</strong>
-              </div>
-              <div>
-                <span>Base load</span>
-                <strong>{fmt(data.powerflow.total_load_mw)} MW</strong>
-              </div>
-              <div>
-                <span>Base min voltage</span>
-                <strong>{fmt(data.powerflow.min_voltage_pu, 4)} p.u.</strong>
-              </div>
-              <div>
-                <span>Scenarios</span>
-                <strong>{data.scenarioSummary.scenario_count ?? data.scenarios.length}</strong>
-              </div>
-              <div>
-                <span>Best voltage</span>
-                <strong>{compactScenarioLabel(data.scenarioSummary.best_voltage_scenario)}</strong>
-              </div>
-              <div>
-                <span>Worst voltage</span>
-                <strong>{compactScenarioLabel(data.scenarioSummary.worst_voltage_scenario)}</strong>
-              </div>
-            </section>
-
-            <section className="project-dashboard__content">
-              <div className="project-dashboard__scenario">
-                <label htmlFor="ieee-scenario-select">Scenario</label>
-                <select
-                  id="ieee-scenario-select"
-                  value={selected?.scenarioId || ''}
-                  onChange={event => onScenarioChange(event.target.value)}
-                >
-                  {data.scenarios.map(scenario => (
-                    <option key={scenario.scenarioId} value={scenario.scenarioId}>
-                      {compactScenarioLabel(scenario.scenarioId)}
-                    </option>
-                  ))}
-                </select>
-                {selected && (
-                  <div className="project-dashboard__scenario-grid">
-                    <span>Net demand <strong>{fmt(selected.netDemandMw)} MW</strong></span>
-                    <span>PV gen. <strong>{fmt(selected.totalGenerationMw)} MW</strong></span>
-                    <span>Losses <strong>{fmt(selected.lineLossMw)} MW</strong></span>
-                    <span>Min V <strong>{fmt(selected.minVoltagePu, 4)} p.u.</strong></span>
-                    <span>Max line <strong>{fmt(selected.maxLineLoadingPercent, 4)}%</strong></span>
-                    <span>Violations <strong>{selected.voltageViolationCount ?? 'n/a'}</strong></span>
-                  </div>
-                )}
-              </div>
-
-              <div className="project-dashboard__chart">
-                <div className="project-dashboard__chart-title">
-                  <h2>Voltage Profile Comparison</h2>
-                  <span>Per-unit voltage by bus</span>
-                </div>
-                <ResponsiveContainer width="100%" height={360}>
-                  <ComposedChart data={data.voltageChartRows} margin={{ top: 12, right: 24, bottom: 8, left: 0 }}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.12)" />
-                    <XAxis dataKey="busId" stroke="#b7c8d8" tick={{ fontSize: 12 }} />
-                    <YAxis domain={[0.86, 1.01]} stroke="#b7c8d8" tick={{ fontSize: 12 }} />
-                    <RechartsTooltip
-                      contentStyle={{ background: '#151922', border: '1px solid #394452', borderRadius: 6 }}
-                      labelStyle={{ color: '#fff' }}
-                    />
-                    <Legend />
-                    <ReferenceLine y={0.95} stroke="#ff5c7a" strokeDasharray="4 4" />
-                    {chartScenarioIds.map(scenarioId => (
-                      <Line
-                        key={scenarioId}
-                        type="monotone"
-                        dataKey={scenarioId}
-                        stroke={IEEE_SCENARIO_COLORS[scenarioId] || '#ffffff'}
-                        strokeWidth={scenarioId === selected?.scenarioId ? 3 : 1.7}
-                        dot={false}
-                        name={compactScenarioLabel(scenarioId)}
-                      />
-                    ))}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-
-            <section className="project-dashboard__artifacts">
-              <h2>Generated Artifacts</h2>
-              <div>
-                <a href={data.artifacts.powerflowReport}>Powerflow report</a>
-                <a href={data.artifacts.scenarioReport}>Scenario report</a>
-                <a href={data.artifacts.scenarioResults}>Scenario results CSV</a>
-                <a href={data.artifacts.voltageProfiles}>Voltage profiles CSV</a>
-              </div>
-            </section>
-          </>
-        )}
+        <WorkspaceSelector
+          activeWorkspace={activeWorkspace}
+          onChange={onWorkspaceChange}
+          workspaces={workspaces}
+        />
       </div>
+
+      {loading && <p style={{ color: 'rgb(0,200,200)' }}>Loading declared artifacts...</p>}
+
+      {!loading && missing.length > 0 && (
+        <p style={{ color: '#ffaa33', fontSize: '0.8rem' }}>
+          {/* Said, not hidden: the two heavy studies gitignore their outputs,
+              so an empty panel here is expected rather than a fault. */}
+          ⚠ {missing.length} declared artifact{missing.length === 1 ? '' : 's'} not on disk.
+          Run this study with `gridalyn project run projects/{workspace?.id}`.
+        </p>
+      )}
+
+      {!loading && reports.length === 0 && missing.length === 0 && (
+        <p style={{ color: '#aaa' }}>This study declares no governed reports to show.</p>
+      )}
+
+      {reports.map(({ artifact, report, error }) => (
+        <section key={artifact.path} style={{ marginTop: '24px', borderTop: '1px solid #333', paddingTop: '16px' }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: '1.05rem' }}>
+            {artifact.report_id || artifact.relative}
+          </h2>
+          <p style={{ color: '#777', fontSize: '0.75rem', margin: '0 0 12px' }}>
+            {artifact.source_domain && `${artifact.source_domain} · `}
+            <a href={artifact.path} style={{ color: '#4aa' }}>{artifact.relative}</a>
+            {report?.validation?.valid === false && (
+              <span style={{ color: '#ff4444' }}> · validation FAILED</span>
+            )}
+          </p>
+          {error && <p style={{ color: '#ff4444', fontSize: '0.8rem' }}>⚠ {error}</p>}
+          {report && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+              {summaryRows(report.summary).map(row => (
+                <div key={row.key} style={{ background: '#1a1a1a', padding: '10px 12px', borderRadius: '4px' }}>
+                  <div style={{ color: '#888', fontSize: '0.7rem', textTransform: 'uppercase' }}>{row.label}</div>
+                  <div style={{ fontSize: '1.05rem', wordBreak: 'break-word' }}>{row.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+
+      {tabularArtifacts.length > 0 && (
+        <section style={{ marginTop: '28px', borderTop: '1px solid #333', paddingTop: '16px' }}>
+          <h2 style={{ fontSize: '1.05rem' }}>Tables</h2>
+          <ul>
+            {tabularArtifacts.map(artifact => (
+              <li key={artifact.path}>
+                <a href={artifact.path} style={{ color: '#4aa' }}>{artifact.relative}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -223,7 +173,13 @@ function loadingColor(load, alpha = 220) {
 }
 
 export default function App() {
-  const [activeWorkspace, setActiveWorkspace] = useState('ieee_33_bus_demo');
+  // The twin is the subject; studies are sources it draws on. Defaulting to a
+  // study made one of them a peer of the twin, which is the framing this
+  // dashboard exists to drop.
+  const [activeWorkspace, setActiveWorkspace] = useState('digital_twin');
+  const [twinProjects, setTwinProjects] = useState([]);
+  const [projectReports, setProjectReports] = useState([]);
+  const [projectReportsLoading, setProjectReportsLoading] = useState(false);
   const [scenarios, setScenarios] = useState(buildScenarioCatalog());
   const [twinGeography, setTwinGeography] = useState(null);
   const [twinNetworkModel, setTwinNetworkModel] = useState(null);
@@ -236,9 +192,6 @@ export default function App() {
   // No literal scenario id: the selection follows whatever the twin declares,
   // and stays null until it has answered.
   const [selectedScenario, setSelectedScenario] = useState(scenarios[0]?.id ?? null);
-  const [ieeeDemo, setIeeeDemo] = useState(null);
-  const [ieeeDemoError, setIeeeDemoError] = useState(null);
-  const [selectedIeeeScenario, setSelectedIeeeScenario] = useState('baseline');
   const [timestamps, setTimestamps] = useState([]);
   const [timeIndex, setTimeIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -295,24 +248,37 @@ export default function App() {
     || scenarioExtensions.operations
   );
 
+  const workspaces = deriveWorkspaces(twinProjects);
+  const activeProject = workspaces.find(
+    workspace => workspace.id === activeWorkspace && workspace.kind === 'project'
+  );
+
   useEffect(() => {
-    async function loadProjectDashboard() {
-      if (activeWorkspace !== 'ieee_33_bus_demo') return;
-      try {
-        const dashboard = await loadIeee33Dashboard(fetch);
-        setIeeeDemo(dashboard);
-        setIeeeDemoError(null);
-        if (!dashboard.scenarios.some(item => item.scenarioId === selectedIeeeScenario)) {
-          setSelectedIeeeScenario(dashboard.scenarios[0]?.scenarioId || 'baseline');
-        }
-      } catch (err) {
-        console.error('[App] IEEE 33 demo load error:', err.message || err);
-        setIeeeDemo(null);
-        setIeeeDemoError(err.message || String(err));
+    let cancelled = false;
+    async function loadReports() {
+      // Resolved inside the effect, from the two values it genuinely depends
+      // on. `deriveWorkspaces` rebuilds its entries every render, so depending
+      // on the derived object would refetch every report on every render.
+      const project = twinProjects.find(entry => entry.project_id === activeWorkspace);
+      if (!project) {
+        setProjectReports([]);
+        return;
+      }
+      setProjectReportsLoading(true);
+      const loaded = await loadProjectReports(
+        { artifacts: project.artifacts || [] },
+        fetch
+      );
+      if (!cancelled) {
+        setProjectReports(loaded);
+        setProjectReportsLoading(false);
       }
     }
-    loadProjectDashboard();
-  }, [activeWorkspace, selectedIeeeScenario]);
+    loadReports();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace, twinProjects]);
 
   useEffect(() => {
     async function loadScenarios() {
@@ -321,6 +287,7 @@ export default function App() {
         setScenarios(twin.scenarios);
         setTwinGeography(twin.geography);
         setTwinNetworkModel(twin.networkModel);
+        setTwinProjects(twin.projects);
         setTwinWarnings(twin.warnings);
         setTwinError(null);
       } catch (err) {
@@ -331,6 +298,7 @@ export default function App() {
         setScenarios([]);
         setTwinGeography(null);
         setTwinNetworkModel(null);
+        setTwinProjects([]);
         setTwinWarnings([]);
         setTwinError(err.message || String(err));
       }
@@ -792,15 +760,15 @@ export default function App() {
     })
   ];
 
-  if (activeWorkspace === 'ieee_33_bus_demo') {
+  if (activeProject) {
     return (
-      <IeeeDemoDashboard
-        data={ieeeDemo}
-        error={ieeeDemoError}
-        selectedScenario={selectedIeeeScenario}
-        onScenarioChange={setSelectedIeeeScenario}
+      <ProjectDashboard
+        workspace={activeProject}
+        reports={projectReports}
+        loading={projectReportsLoading}
         activeWorkspace={activeWorkspace}
         onWorkspaceChange={setActiveWorkspace}
+        workspaces={workspaces}
       />
     );
   }
@@ -843,10 +811,12 @@ export default function App() {
         minWidth: '320px',
         boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
       }}>
-        <WorkspaceSelector activeWorkspace={activeWorkspace} onChange={setActiveWorkspace} />
+        <WorkspaceSelector activeWorkspace={activeWorkspace} onChange={setActiveWorkspace} workspaces={workspaces} />
         <h2 style={{ margin: '14px 0 5px 0', fontSize: '1.4rem' }}>Gridalyn Digital Twin</h2>
+        {/* The twin identifies itself by its model version, not by a project
+            name the dashboard guessed. */}
         <p style={{ margin: '0 0 4px 0', color: '#666666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Project: {operatingProject()}
+          {twinNetworkModel?.modelVersionId || 'model unidentified'}
         </p>
         <p style={{ margin: '0 0 20px 0', color: '#aaaaaa', fontSize: '0.9rem' }}>Scenario {scenarioSummary?.label || selectedScenario} · Heatmap: {heatmapTitle(heatmapMode)}</p>
 

@@ -1,3 +1,4 @@
+import { readProjects } from './projectCatalog.js';
 import {
   LEGACY_MANIFEST_PATHS,
   TWIN_CATALOG_PATH,
@@ -249,6 +250,9 @@ export async function loadTwin(fetchImpl = fetch) {
     scenarios,
     geography: readGeography(catalog),
     networkModel: readNetworkModel(catalog),
+    // Studies as SOURCES the twin draws on, described by their declared
+    // artifacts. Absent from a pre-catalog twin, hence the empty default.
+    projects: readProjects(catalog),
     source,
     warnings,
   };

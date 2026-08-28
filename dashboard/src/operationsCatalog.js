@@ -1,4 +1,3 @@
-import { operationsCatalogPath } from './projectSource.js';
 
 // Resolved per call, not frozen at import: the operating project is
 // configuration, so a runtime override must be able to win.
@@ -24,7 +23,7 @@ function normalizeScenarioOperation(scenarioId, spec = {}) {
   };
 }
 
-export function normalizeOperationsCatalog(catalog = null, path = operationsCatalogPath()) {
+export function normalizeOperationsCatalog(catalog = null, path = null) {
   if (!catalog?.scenarios) return null;
   const scenarios = {};
   for (const [scenarioId, spec] of Object.entries(catalog.scenarios || {})) {
@@ -42,7 +41,16 @@ export function normalizeOperationsCatalog(catalog = null, path = operationsCata
   };
 }
 
-export async function loadOperationsCatalog(fetchImpl = fetch, path = operationsCatalogPath()) {
+/**
+ * Load the operations catalog a scenario declares.
+ *
+ * `path` is required in practice: it comes from the catalog's
+ * `scenarios[].extensions.operations`. There is deliberately no default -- the
+ * previous one pointed at a named study, so a twin that declared no operations
+ * catalog silently read one study's artifacts instead of showing nothing.
+ */
+export async function loadOperationsCatalog(fetchImpl = fetch, path = null) {
+  if (!path) return null;
   const catalog = await loadJsonOrNull(fetchImpl, path);
   return normalizeOperationsCatalog(catalog, path);
 }

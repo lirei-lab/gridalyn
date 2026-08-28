@@ -335,10 +335,22 @@ class DashboardCatalogGeographyTest(unittest.TestCase):
         self.assertEqual(derived["grid_lines"], ["from_bus", "to_bus"])
         self.assertEqual(derived["grid_transformers"], ["hv_bus", "lv_bus"])
 
-    def test_geography_is_additive_so_every_1_0_key_survives(self):
+    def test_every_bump_stays_additive_so_a_1_0_reader_still_works(self):
+        """Pins the property, not the number.
+
+        An earlier version of this test asserted ``== "1.1"`` and duly failed
+        on the next additive bump, which is the wrong failure: the contract is
+        that every 1.0 key keeps its name, shape and meaning, not that the
+        version stops moving. The version is checked against the verifier's
+        supported set so the two cannot drift apart.
+        """
+        from gridalyn.projects.workflows.scripts.verify_dashboard_consistency import (
+            SUPPORTED_SCHEMA_VERSIONS,
+        )
+
         with tempfile.TemporaryDirectory() as tmp:
             catalog = self._catalog(tmp)
-        self.assertEqual(catalog["schema_version"], "1.1")
+        self.assertIn(catalog["schema_version"], SUPPORTED_SCHEMA_VERSIONS)
         self.assertEqual(catalog["report_id"], "digital_twin_dashboard_catalog")
         for key in ("counts", "model_version_id", "model_version", "validation"):
             self.assertIn(key, catalog["network_model"])

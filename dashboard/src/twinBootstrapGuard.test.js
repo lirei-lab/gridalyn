@@ -46,6 +46,31 @@ test('the bootstrap names exactly one instance root', () => {
   );
 });
 
+test('no module names a shipped study', () => {
+  // Read from `projects/` rather than from a list kept here, so a study added
+  // to the repo is covered without editing this test. The dashboard reads a
+  // study's artifacts as a SOURCE described by the catalog; naming one is what
+  // made a single study a first-class mode and required a bespoke component.
+  const projectsDir = join(SRC, '..', '..', 'projects');
+  const studies = readdirSync(projectsDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && !entry.name.startsWith('_'))
+    .map(entry => entry.name);
+  assert.ok(studies.length >= 6, `expected the shipped studies, found ${studies.length}`);
+
+  const offenders = [];
+  for (const name of sourceFiles()) {
+    const source = read(name);
+    for (const study of studies) {
+      if (source.includes(study)) offenders.push(`${name} -> ${study}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these modules name a study instead of reading it from the catalog: ${offenders.join(', ')}`
+  );
+});
+
 test('no module hardcodes a scenario id', () => {
   // `S<digits>` in quotes. Scenario ids come from the catalog; a literal one
   // is a study leaking into a twin-generic view.

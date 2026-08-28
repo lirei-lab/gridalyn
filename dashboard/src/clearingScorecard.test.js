@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadClearingScorecard, normalizeClearingScorecard } from './clearingScorecard.js';
-import { FALLBACK_PROJECT, operatingProject, operationalKpiReportPath } from './projectSource.js';
 
 test('normalizeClearingScorecard exposes scenario policies and summary', () => {
   const normalized = normalizeClearingScorecard({
@@ -28,7 +27,7 @@ test('normalizeClearingScorecard exposes scenario policies and summary', () => {
   assert.deepEqual(normalized.constraintIds, ['transformer:64']);
 });
 
-test('loadClearingScorecard loads the canonical report path', async () => {
+test('loadClearingScorecard fetches exactly the path it is given', async () => {
   const requested = [];
   const fetchImpl = async path => {
     requested.push(path);
@@ -41,21 +40,24 @@ test('loadClearingScorecard loads the canonical report path', async () => {
     };
   };
 
-  const loaded = await loadClearingScorecard(fetchImpl);
+  const declared = '/projects/whatever_study/outputs/reports/operational_kpi_report.json';
+  const loaded = await loadClearingScorecard(fetchImpl, declared);
 
   assert.equal(loaded.scenarioId, 'S4');
-  // Asserts the RESOLUTION, not a literal project. This test previously
-  // pinned the path to one study by name, which is what kept the dashboard
-  // wired to it: changing the operating project meant changing this file.
-  assert.deepEqual(requested, [operationalKpiReportPath()]);
-  assert.ok(requested[0].startsWith(`/projects/${FALLBACK_PROJECT}/`));
+  assert.deepEqual(requested, [declared]);
 });
 
-test('the operating project is configurable, not baked in', () => {
-  assert.equal(
-    operationalKpiReportPath('some_other_study'),
-    '/projects/some_other_study/outputs/reports/operational_kpi_report.json',
-  );
-  assert.equal(operatingProject({ VITE_GRIDALYN_PROJECT: 'from_env' }), 'from_env');
-  assert.equal(operatingProject({}), FALLBACK_PROJECT);
+test('with no declared path it loads nothing rather than guessing a study', async () => {
+  // The default used to resolve to a NAMED study, so a twin that declared no
+  // scorecard silently rendered one particular study's numbers as its own.
+  // The path now comes from the catalog's
+  // `scenarios[].extensions.clearing_scorecard`; absent means absent.
+  let called = false;
+  const loaded = await loadClearingScorecard(async () => {
+    called = true;
+    return { ok: true, json: async () => ({ scenario_id: 'X' }) };
+  });
+
+  assert.equal(loaded, null);
+  assert.equal(called, false, 'no path was declared, so nothing should be fetched');
 });

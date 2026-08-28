@@ -6,8 +6,9 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
+from gridalyn.projects.project_catalog import build_project_catalog
 from gridalyn.twin.network import (
     BASE_TABLE_FILENAMES,
     NetworkModelRepository,
@@ -116,8 +117,26 @@ def build_dashboard_catalog(
     optional_extensions: dict[str, Path] | None,
     root: Path,
     network_repository: NetworkModelRepository | None = None,
+    projects: Iterable[Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a study-agnostic scenario catalog for the dashboard."""
+    """Build a study-agnostic scenario catalog for the dashboard.
+
+    Args:
+        scenario_index: Parsed scenario index.
+        powerflow_summary: Parsed powerflow summary.
+        optional_extensions: Onward catalogs to link, by key.
+        root: Workspace root that served paths are expressed relative to.
+        network_repository: Base snapshot to describe, or ``None``.
+        projects: Loaded ``StudyProject`` objects whose declared result
+            artifacts should be catalogued. ``None`` records an empty list.
+            Studies are described, not embedded: the dashboard reads a
+            project's artifacts as a *source*, which is why this belongs here
+            -- the catalog is written by the ``projects`` layer, which may
+            legitimately see both a twin and a study.
+
+    Returns:
+        The catalog payload.
+    """
     scenario_items = _scenario_by_id(scenario_index.get("scenarios"))
     summary_items = _scenario_by_id(powerflow_summary.get("scenarios"))
     scenario_ids = sorted(set(scenario_items) | set(summary_items))
@@ -171,11 +190,14 @@ def build_dashboard_catalog(
         "report_id": "digital_twin_dashboard_catalog",
         # 1.1 adds network_model.geography: the CRS, the extent, the base
         # artifact paths, and which geometries are derived from bus endpoints.
-        # Additive only -- every 1.0 key keeps its name, shape and meaning, so
-        # a reader written against 1.0 is unaffected.
-        "schema_version": "1.1",
+        # 1.2 adds projects: each study's declared result artifacts, classified
+        # so a viewer renders them from the report contract instead of from
+        # per-study code. Both additive -- every 1.0 key keeps its name, shape
+        # and meaning, so a reader written against 1.0 is unaffected.
+        "schema_version": "1.2",
         "title": "Gridalyn Digital Twin",
         "network_model": network_model,
+        "projects": build_project_catalog(projects or (), root=root),
         "scenarios": scenarios,
     }
 

@@ -13,7 +13,7 @@ ROOT = find_workspace_root(__file__)
 LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_CATALOG = LAYOUT.dashboard / "catalog.json"
 
-SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = ("1.0", "1.1")
+SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = ("1.0", "1.1", "1.2")
 """Catalog schema versions this verifier accepts, oldest first.
 
 A *set* rather than a single literal, because the checks below read only the
