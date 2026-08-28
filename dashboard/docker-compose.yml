@@ -6,11 +6,13 @@ services:
     container_name: gridalyn-dashboard
     ports:
       - "8081:80"
-    environment:
-      # Which governed project the dashboard reads. Any project under
-      # `projects/` that emits operational artifacts works; see
-      # `dashboard/src/projectSource.js`.
-      VITE_GRIDALYN_PROJECT: "${GRIDALYN_PROJECT:-ev_hosting_flex}"
+    # No project is configured here any more. The dashboard used to be pointed
+    # at one study through VITE_GRIDALYN_PROJECT, read by a
+    # `dashboard/src/projectSource.js` that no longer exists: every governed
+    # study is now discovered from the twin catalog's `projects` block and
+    # chosen in the workspace selector at runtime. Setting a project at build
+    # time would freeze in the image the one thing that is meant to be picked
+    # while looking at it.
     volumes:
       - ../instances/default/digital_twin:/usr/share/nginx/html/instances/default/digital_twin:ro
       # The WHOLE projects tree, read-only. Mounting one project per line meant
