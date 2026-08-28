@@ -22,8 +22,16 @@ export const LEGACY_MANIFEST_PATHS = {
   semanticManifest: `${TWIN_ROOT}/semantic/graph_manifest.json`,
 };
 
-/** Catalog schema versions this client understands, oldest first. */
-export const SUPPORTED_SCHEMA_VERSIONS = ['1.0', '1.1'];
+/**
+ * Catalog schema versions this client understands, oldest first.
+ *
+ * Must track the SDK's `SUPPORTED_SCHEMA_VERSIONS` in
+ * `verify_dashboard_consistency.py`. It did not: 1.2 shipped on the Python
+ * side and this list was left at 1.1, so the client warned that the catalog
+ * the repo itself ships was unreadable. `twinBootstrapGuard.test.js` now reads
+ * the tracked catalog and fails if this list cannot read it.
+ */
+export const SUPPORTED_SCHEMA_VERSIONS = ['1.0', '1.1', '1.2'];
 
 /**
  * A twin that could not be discovered, reported with where we looked.

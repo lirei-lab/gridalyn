@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-05-19T11:33:18.303819+00:00",
+  "created_at": "2026-08-28T16:16:13.941282+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -9,14 +9,590 @@
       "loads": 3235,
       "transformers": 163
     },
-    "model_version": {},
-    "model_version_id": null,
+    "geography": {
+      "crs": "EPSG:4326",
+      "crs_source": "assumed",
+      "derived_geometry": {
+        "grid_lines": [
+          "from_bus",
+          "to_bus"
+        ],
+        "grid_transformers": [
+          "hv_bus",
+          "lv_bus"
+        ]
+      },
+      "extent": {
+        "bbox": [
+          -72.62038121024402,
+          46.33148489812852,
+          -72.5877819981624,
+          46.354373975078275
+        ],
+        "center": {
+          "lat": 46.3429294366034,
+          "lon": -72.6040816042032
+        }
+      },
+      "located": true,
+      "located_artifacts": {
+        "buildings": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "grid_buses": {
+          "latitude": "lat",
+          "longitude": "lon"
+        }
+      },
+      "paths": {
+        "building_grid_connectivity": "/instances/default/digital_twin/base/building_grid_connectivity.parquet",
+        "buildings": "/instances/default/digital_twin/base/buildings.parquet",
+        "grid_buses": "/instances/default/digital_twin/base/grid_buses.parquet",
+        "grid_lines": "/instances/default/digital_twin/base/grid_lines.parquet",
+        "grid_transformers": "/instances/default/digital_twin/base/grid_transformers.parquet"
+      }
+    },
+    "model_version": {
+      "artifact_hashes": {
+        "building_grid_connectivity": "bb721ab7c63c03617783f79e538161166111e49b479f878485bbf7f756bbf9ac",
+        "buildings": "1b0831a652e4b9c01f1fa4d754f6226ee2a5b0594e58e6f9339442274df434dc",
+        "grid_buses": "045deb1d1b7092eab0114d88bfae46998a2b90ca092dddb426f1834c8770476e",
+        "grid_lines": "5e7c9f36028c91e8aeb5d032684f1c06ad08431799d3e345302f4b6a62531260",
+        "grid_transformers": "2194f3a83b83f8f6b17686d3067df9264717ef84a73857e2143ff61e7275a0f3"
+      },
+      "counts": {
+        "buildings": 3235,
+        "buses": 3562,
+        "connectivity": 3235,
+        "lines": 3398,
+        "loads": 3235,
+        "transformers": 163
+      },
+      "created_at": "2026-08-12T14:10:53.931227+00:00",
+      "id": "model:sha256:0b4ee802edf44e52e55e4fbf243da9fe0e90a03e75c3d2b11e8a69c12bedef59",
+      "lineage": {
+        "base_dir": "instances/default/digital_twin/base",
+        "cache_dir": null,
+        "config_hash": "a5984a0de453a87b2a8909f9d437a54b597243e9193e3062b8ef0e20fcb8631c",
+        "config_path": "configs/grid/config.json"
+      },
+      "schema_version": "1.0",
+      "source_adapter": "SyntheticPandapowerAdapter",
+      "source_format": "pandapower-cache",
+      "source_standard": "pandapower",
+      "source_system": "synthetic_pandapower",
+      "validation_status": "valid"
+    },
+    "model_version_id": "model:sha256:0b4ee802edf44e52e55e4fbf243da9fe0e90a03e75c3d2b11e8a69c12bedef59",
     "validation": {
       "errors": [],
       "valid": true,
       "warnings": []
     }
   },
+  "projects": [
+    {
+      "artifacts": [
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/agents_report.json",
+          "relative": "outputs/reports/agents_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/network_report.json",
+          "relative": "outputs/reports/network_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/forecast_report.json",
+          "relative": "outputs/reports/forecast_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/admm_report.json",
+          "relative": "outputs/reports/admm_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/powerflow_report.json",
+          "relative": "outputs/reports/powerflow_report.json"
+        }
+      ],
+      "base_path": "/.",
+      "description": "Network-validated distributed ADMM coordination of cold-climate electric- heating homes with ML imputation of communication-failed agents, validated on the IEEE-33 feeder with pandapower.",
+      "label": "Admm Thermal Consensus",
+      "project_id": "admm_thermal_consensus"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/der_voltage_optimization/outputs/reports/der_feeder_report.json",
+          "relative": "outputs/reports/der_feeder_report.json",
+          "report_id": "der_feeder_report",
+          "schema_version": "1.0",
+          "source_domain": "der_voltage_optimization",
+          "summary_keys": [
+            "bus_count",
+            "converged",
+            "der_count",
+            "full_pv_mw",
+            "line_count",
+            "load_count",
+            "max_line_loading_full_pv_percent",
+            "max_line_loading_percent",
+            "max_voltage_full_pv_pu",
+            "max_voltage_pu",
+            "min_voltage_full_pv_pu",
+            "min_voltage_pu",
+            "network",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/der_voltage_optimization/outputs/reports/der_voltage_optimization_report.json",
+          "relative": "outputs/reports/der_voltage_optimization_report.json",
+          "report_id": "der_voltage_optimization_report",
+          "schema_version": "1.0",
+          "source_domain": "der_voltage_optimization",
+          "summary_keys": [
+            "algorithm",
+            "der_count",
+            "objective_value",
+            "solver",
+            "solver_status",
+            "total_battery_charge_mw",
+            "total_pv_available_mw",
+            "total_pv_curtailment_mw",
+            "total_pv_dispatch_mw",
+            "verified_max_voltage_after_pu",
+            "verified_max_voltage_before_pu",
+            "verified_min_voltage_after_pu"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/der_voltage_optimization/outputs/operations/der_dispatch.csv",
+          "relative": "outputs/operations/der_dispatch.csv"
+        }
+      ],
+      "base_path": "/projects/der_voltage_optimization",
+      "description": "Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification.",
+      "label": "Der Voltage Optimization",
+      "project_id": "der_voltage_optimization"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/topology_cache_report.json",
+          "relative": "outputs/reports/topology_cache_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/annual_mc_report.json",
+          "relative": "outputs/reports/annual_mc_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/fleet_triage_report.json",
+          "relative": "outputs/reports/fleet_triage_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/annual_congestion_report.json",
+          "relative": "outputs/reports/annual_congestion_report.json"
+        },
+        {
+          "exists": false,
+          "kind": "governed_report",
+          "path": "/./outputs/reports/curtailment_contracts_report.json",
+          "relative": "outputs/reports/curtailment_contracts_report.json"
+        }
+      ],
+      "base_path": "/.",
+      "description": "EV hosting capacity and flexibility across a 540-transformer distribution fleet, with the transformer rating convention as a declared axis.",
+      "label": "Ev Hosting Flex",
+      "project_id": "ev_hosting_flex"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/ieee_33_bus_demo/outputs/reports/ieee33_powerflow_report.json",
+          "relative": "outputs/reports/ieee33_powerflow_report.json",
+          "report_id": "ieee33_powerflow_report",
+          "schema_version": "1.0",
+          "source_domain": "ieee_33_bus_demo",
+          "summary_keys": [
+            "bus_count",
+            "converged",
+            "line_count",
+            "load_count",
+            "max_line_loading_percent",
+            "max_voltage_pu",
+            "min_voltage_pu",
+            "network",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/ieee_33_bus_demo/outputs/reports/ieee33_scenario_comparison_report.json",
+          "relative": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "report_id": "ieee33_scenario_comparison_report",
+          "schema_version": "1.0",
+          "source_domain": "ieee_33_bus_demo",
+          "summary_keys": [
+            "best_voltage_scenario",
+            "max_line_loading_percent",
+            "max_voltage_pu",
+            "max_voltage_violation_count",
+            "min_voltage_pu",
+            "scenario_count",
+            "scenario_ids",
+            "worst_voltage_scenario"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+          "relative": "outputs/data/scenario_results.csv"
+        }
+      ],
+      "base_path": "/projects/ieee_33_bus_demo",
+      "description": "Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.",
+      "label": "Ieee 33 Bus Demo",
+      "project_id": "ieee_33_bus_demo"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/minimal_grid_project/outputs/reports/minimal_grid_report.json",
+          "relative": "outputs/reports/minimal_grid_report.json",
+          "report_id": "minimal_grid_report",
+          "schema_version": "1.0",
+          "source_domain": "minimal_grid_project",
+          "summary_keys": [
+            "bus_count",
+            "converged",
+            "line_count",
+            "load_count",
+            "max_line_loading_pct",
+            "max_line_loading_percent",
+            "max_voltage_pu",
+            "min_voltage_pu",
+            "powerflow_converged",
+            "project_intent",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/minimal_grid_project/outputs/data/buses.csv",
+          "relative": "outputs/data/buses.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/minimal_grid_project/outputs/data/lines.csv",
+          "relative": "outputs/data/lines.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/minimal_grid_project/outputs/data/loads.csv",
+          "relative": "outputs/data/loads.csv"
+        }
+      ],
+      "base_path": "/projects/minimal_grid_project",
+      "description": "Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.",
+      "label": "Minimal Grid Project",
+      "project_id": "minimal_grid_project"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/prosumer_battery_market/outputs/reports/synthetic_feeder_report.json",
+          "relative": "outputs/reports/synthetic_feeder_report.json",
+          "report_id": "synthetic_feeder_report",
+          "schema_version": "1.0",
+          "source_domain": "prosumer_battery_market",
+          "summary_keys": [
+            "bus_count",
+            "converged",
+            "line_count",
+            "load_count",
+            "max_line_loading_percent",
+            "max_voltage_pu",
+            "min_voltage_pu",
+            "network",
+            "prosumer_count",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/prosumer_battery_market/outputs/reports/prosumer_realtime_market_report.json",
+          "relative": "outputs/reports/prosumer_realtime_market_report.json",
+          "report_id": "prosumer_realtime_market_report",
+          "schema_version": "1.0",
+          "source_domain": "prosumer_battery_market",
+          "summary_keys": [
+            "algorithm",
+            "forecast_horizon_intervals",
+            "import_limit_mw",
+            "interval_count",
+            "interval_minutes",
+            "max_line_loading_after_percent",
+            "min_voltage_after_pu",
+            "peak_import_after_mw",
+            "peak_import_before_mw",
+            "prosumer_count",
+            "published_method_family",
+            "total_cleared_mwh",
+            "total_market_cost_usd",
+            "total_required_mwh",
+            "unserved_reduction_mwh"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/prosumer_battery_market/outputs/operations/battery_dispatch.csv",
+          "relative": "outputs/operations/battery_dispatch.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/prosumer_battery_market/outputs/data/prosumers.csv",
+          "relative": "outputs/data/prosumers.csv"
+        }
+      ],
+      "base_path": "/projects/prosumer_battery_market",
+      "description": "Small synthetic feeder with distributed prosumers, batteries, and a real-time local market.",
+      "label": "Prosumer Battery Market",
+      "project_id": "prosumer_battery_market"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/rl_voltage_control_lightsim/outputs/reports/rl_feeder_report.json",
+          "relative": "outputs/reports/rl_feeder_report.json",
+          "report_id": "rl_feeder_report",
+          "schema_version": "1.0",
+          "source_domain": "rl_voltage_control_lightsim",
+          "summary_keys": [
+            "bus_count",
+            "converged",
+            "line_count",
+            "load_count",
+            "max_line_loading_percent",
+            "max_voltage_midday_pu",
+            "max_voltage_pu",
+            "min_voltage_midday_pu",
+            "min_voltage_pu",
+            "modeling_contract",
+            "network",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/rl_voltage_control_lightsim/outputs/reports/rl_voltage_control_report.json",
+          "relative": "outputs/reports/rl_voltage_control_report.json",
+          "report_id": "rl_voltage_control_report",
+          "schema_version": "1.0",
+          "source_domain": "rl_voltage_control_lightsim",
+          "summary_keys": [
+            "action_space_mw",
+            "algorithm",
+            "controlled_voltage_deviation_sum",
+            "episode_count",
+            "evaluation_step_count",
+            "max_voltage_controlled_pu",
+            "max_voltage_uncontrolled_pu",
+            "simulation_engine",
+            "total_reward_first_episode",
+            "total_reward_last_episode",
+            "uncontrolled_voltage_deviation_sum",
+            "voltage_violation_count_controlled",
+            "voltage_violation_count_uncontrolled"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/rl_voltage_control_lightsim/outputs/operations/q_table.csv",
+          "relative": "outputs/operations/q_table.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/rl_voltage_control_lightsim/outputs/operations/learned_policy.csv",
+          "relative": "outputs/operations/learned_policy.csv"
+        }
+      ],
+      "base_path": "/projects/rl_voltage_control_lightsim",
+      "description": "Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.",
+      "label": "Rl Voltage Control Lightsim",
+      "project_id": "rl_voltage_control_lightsim"
+    },
+    {
+      "artifacts": [
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/synthetic_geojson_feeder/outputs/reports/building_footprints_report.json",
+          "relative": "outputs/reports/building_footprints_report.json",
+          "report_id": "building_footprints_report",
+          "schema_version": "1.0",
+          "source_domain": "synthetic_geojson_feeder",
+          "summary_keys": [
+            "building_count",
+            "project_intent",
+            "source_crs"
+          ],
+          "valid": false
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/synthetic_geojson_feeder/outputs/reports/synthetic_geojson_feeder_report.json",
+          "relative": "outputs/reports/synthetic_geojson_feeder_report.json",
+          "report_id": "synthetic_geojson_feeder_report",
+          "schema_version": "1.0",
+          "source_domain": "synthetic_geojson_feeder",
+          "summary_keys": [
+            "building_count",
+            "bus_count",
+            "converged",
+            "line_count",
+            "load_count",
+            "max_line_loading_pct",
+            "max_line_loading_percent",
+            "max_voltage_pu",
+            "min_voltage_pu",
+            "pandapower_bus_count",
+            "pandapower_line_count",
+            "pandapower_load_count",
+            "pandapower_transformer_count",
+            "powerflow_converged",
+            "project_intent",
+            "sgen_count",
+            "simulation_engine",
+            "slack_count",
+            "total_generation_mw",
+            "total_line_loss_mw",
+            "total_load_mvar",
+            "total_load_mw",
+            "transformer_count"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "unknown",
+          "note": "JSON under reports/ that does not carry the required report fields; not a governed report",
+          "path": "/projects/synthetic_geojson_feeder/outputs/reports/synthetic_network_validation_report.json",
+          "relative": "outputs/reports/synthetic_network_validation_report.json"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/synthetic_geojson_feeder/outputs/data/buses.csv",
+          "relative": "outputs/data/buses.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/synthetic_geojson_feeder/outputs/data/lines.csv",
+          "relative": "outputs/data/lines.csv"
+        },
+        {
+          "exists": true,
+          "kind": "table",
+          "path": "/projects/synthetic_geojson_feeder/outputs/data/loads.csv",
+          "relative": "outputs/data/loads.csv"
+        }
+      ],
+      "base_path": "/projects/synthetic_geojson_feeder",
+      "description": "Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.",
+      "label": "Synthetic Geojson Feeder",
+      "project_id": "synthetic_geojson_feeder"
+    }
+  ],
   "report_id": "digital_twin_dashboard_catalog",
   "scenarios": [
     {
@@ -175,6 +751,6 @@
       }
     }
   ],
-  "schema_version": "1.0",
+  "schema_version": "1.2",
   "title": "Gridalyn Digital Twin"
 }

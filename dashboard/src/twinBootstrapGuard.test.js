@@ -97,3 +97,27 @@ test('no module builds an absolute twin artifact path', () => {
       `through the catalog or twinPath(): ${offenders.join(', ')}`
   );
 });
+
+test('the client can read the catalog this repo actually ships', async () => {
+  // Cross-language drift is invisible to either side's own tests: the SDK
+  // bumped the catalog to 1.2 while this client still declared 1.0/1.1, so the
+  // dashboard warned that the repo's own catalog was unreadable. Reading the
+  // tracked artifact is what makes the two sides fail together.
+  const { SUPPORTED_SCHEMA_VERSIONS } = await import('./twinSource.js');
+  const catalogPath = join(
+    SRC,
+    '..',
+    '..',
+    'instances',
+    'default',
+    'digital_twin',
+    'dashboard',
+    'catalog.json'
+  );
+  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
+  assert.ok(
+    SUPPORTED_SCHEMA_VERSIONS.includes(catalog.schema_version),
+    `the shipped catalog is schema ${catalog.schema_version}, which this client ` +
+      `does not declare support for (${SUPPORTED_SCHEMA_VERSIONS.join(', ')})`
+  );
+});
