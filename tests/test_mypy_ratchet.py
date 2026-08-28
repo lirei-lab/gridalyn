@@ -61,11 +61,34 @@ _REPORT = re.compile(
 )
 
 
-def _projects_error_count() -> tuple[int, int]:
-    """Return ``(baseline, measured)`` error counts for the ``projects`` target.
+#: Every ratchet CI runs, as ``(name, extra CLI args)``.
+#:
+#: Declared once and iterated, rather than one helper per target. The slack
+#: check below covered ``projects`` alone while three ratchets were wired, and
+#: the uncovered ones were where the slack actually was: ``.mypy-baseline-twin``
+#: recorded 21 against a measured 12 for weeks, over the layer that was being
+#: edited most. A per-target helper is how that asymmetry survived.
+RATCHET_TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("gridalyn", ()),
+    (
+        "projects",
+        ("--target", "projects", "--baseline-file", ".mypy-baseline-projects"),
+    ),
+    (
+        "gridalyn/twin",
+        ("--target", "gridalyn/twin", "--baseline-file", ".mypy-baseline-twin"),
+    ),
+)
+
+
+def _error_count(*args: str) -> tuple[int, int]:
+    """Return ``(baseline, measured)`` error counts for one ratchet target.
 
     Parsed from the ratchet's own report line rather than re-running mypy here,
     so the numbers are the ones the gate itself acts on.
+
+    Args:
+        *args: The target's CLI arguments, from :data:`RATCHET_TARGETS`.
 
     Returns:
         The baseline the ratchet read, and the count mypy reported for this
@@ -77,15 +100,20 @@ def _projects_error_count() -> tuple[int, int]:
         AssertionError: If the ratchet printed no recognisable report line,
             which means it crashed rather than measured.
     """
-    result = _run_ratchet(
-        "--target", "projects", "--baseline-file", ".mypy-baseline-projects"
-    )
+    result = _run_ratchet(*args)
     match = _REPORT.search(result.stdout)
     assert match is not None, (
-        "the projects ratchet printed no report line, so nothing can be "
-        f"measured from it:\n{result.stdout}{result.stderr}"
+        "the ratchet printed no report line, so nothing can be measured from "
+        f"it:\n{result.stdout}{result.stderr}"
     )
     return int(match.group("baseline")), int(match.group("count"))
+
+
+def _projects_error_count() -> tuple[int, int]:
+    """Return ``(baseline, measured)`` for ``projects``, for the mutation test."""
+    return _error_count(
+        "--target", "projects", "--baseline-file", ".mypy-baseline-projects"
+    )
 
 
 class MypyRatchetCliTests(unittest.TestCase):
@@ -124,8 +152,8 @@ class MypyBaselinesMatchTheTreeTests(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
-    def test_projects_baseline_slack_is_reported_not_hidden(self) -> None:
-        """Record how far the baseline sits above what mypy actually reports.
+    def test_every_baseline_slack_is_reported_not_hidden(self) -> None:
+        """Record how far each baseline sits above what mypy actually reports.
 
         ``test_projects_ratchet_does_not_report_a_rise`` passes on any count at
         or below the baseline, so a baseline measured on one machine and run on
@@ -134,24 +162,57 @@ class MypyBaselinesMatchTheTreeTests(unittest.TestCase):
         regression into. This does not fail on slack, because whether to
         re-measure is a human decision; it names the number so the decision is
         made against evidence rather than rediscovered from a mute failure.
+
+        Covers every entry in :data:`RATCHET_TARGETS`. It previously covered
+        ``projects`` only, which is how ``.mypy-baseline-twin`` came to record
+        21 against a measured 12 -- nine errors of headroom on the layer under
+        the most change, reported by the tool on every run and by no gate.
         """
-        baseline, measured = _projects_error_count()
-        self.assertLessEqual(
-            measured,
-            baseline,
-            f"projects ratchet reports a rise: {measured} > baseline {baseline}",
+        for name, args in RATCHET_TARGETS:
+            with self.subTest(target=name):
+                baseline, measured = _error_count(*args)
+                self.assertLessEqual(
+                    measured,
+                    baseline,
+                    f"{name} ratchet reports a rise: {measured} > "
+                    f"baseline {baseline}",
+                )
+                if measured < baseline:
+                    # A warning, not a print: CI runs `pytest -q` without `-s`,
+                    # which swallows stdout from a passing test but still
+                    # renders the warnings summary. A finding nobody can see is
+                    # not reported.
+                    warnings.warn(
+                        f"{name} baseline slack: mypy reports {measured}, "
+                        f"baseline records {baseline} "
+                        f"({baseline - measured} absorbed). The ratchet would "
+                        "let a regression of that size through here. "
+                        "Re-measure the baseline in the environment CI uses.",
+                        stacklevel=2,
+                    )
+
+    def test_every_wired_ratchet_is_covered_by_the_slack_check(self) -> None:
+        """The declared target list must match what CI actually runs.
+
+        A ratchet added to the workflow and not to :data:`RATCHET_TARGETS`
+        would silently escape the slack check -- exactly how the twin baseline
+        went unwatched.
+        """
+        workflow = (_REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
         )
-        if measured < baseline:
-            # A warning, not a print: CI runs `pytest -q` without `-s`, which
-            # swallows stdout from a passing test but still renders the warnings
-            # summary. A finding nobody can see is not reported.
-            warnings.warn(
-                f"projects baseline slack: mypy reports {measured}, baseline "
-                f"records {baseline} ({baseline - measured} absorbed). The "
-                "ratchet would let a regression of that size through here. "
-                "Re-measure .mypy-baseline-projects in the environment CI uses.",
-                stacklevel=2,
-            )
+        wired = set(re.findall(r"--baseline-file (\S+)", workflow))
+        declared = {
+            args[args.index("--baseline-file") + 1]
+            for _, args in RATCHET_TARGETS
+            if "--baseline-file" in args
+        }
+        self.assertEqual(
+            wired,
+            declared,
+            "CI runs a ratchet this test does not check (or vice versa); add it "
+            "to RATCHET_TARGETS so its slack is measured",
+        )
 
 
 class MypyRatchetCatchesARealRegressionTests(unittest.TestCase):
