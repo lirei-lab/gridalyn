@@ -84,7 +84,29 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
         # The checker reads those artifacts, so running it with any of them
         # absent would replace a located 'missing_objective_artifact' with a
         # FileNotFoundError traceback.
+        before = len(checks)
         checker(project, checks)
+        if len(checks) == before:
+            # A registered checker that records nothing used to yield
+            # valid=True with score 1.00 -- a PERFECT report from a study that
+            # checked nothing. `project_has_registered_sense_checks` above only
+            # fires when no checker is declared at all, so a checker that
+            # silently stopped checking (an early return, a renamed artifact
+            # key, an exception swallowed upstream) passed more convincingly
+            # than one that ran. A study must not pass vacuously, and declaring
+            # a checker is not the same as running one.
+            _record(
+                checks,
+                "project_checker_recorded_no_checks",
+                False,
+                "error",
+                0,
+                "at least one check recorded by the declared senseChecker",
+                "The declared senseChecker ran and recorded nothing. Have it "
+                "call record_check at least once, or remove "
+                "spec.validation.senseChecker and declare "
+                "spec.validation.senseChecks instead.",
+            )
 
     error_failures = [
         item for item in checks if item["severity"] == "error" and not item["passed"]
