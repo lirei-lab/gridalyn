@@ -13,6 +13,17 @@ ROOT = find_workspace_root(__file__)
 LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_CATALOG = LAYOUT.dashboard / "catalog.json"
 
+SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = ("1.0", "1.1")
+"""Catalog schema versions this verifier accepts, oldest first.
+
+A *set* rather than a single literal, because the checks below read only the
+keys 1.0 introduced. Pinning one version turned every additive bump into a
+false failure -- 1.1 added ``network_model.geography`` and changed nothing this
+function reads, yet the equality check would have rejected it. A version that
+genuinely removes or repurposes a key that is read here should be left out of
+this tuple, which is what makes the omission meaningful.
+"""
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -20,6 +31,39 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _existing_repo_path(web_path: str) -> Path:
     return ROOT / web_path.lstrip("/")
+
+
+def _scenario_path_errors(scenario_id: str, paths: Any) -> list[str]:
+    """Return every problem with one scenario's declared artifact paths.
+
+    Split out of :func:`verify_dashboard_catalog` so that function stays under
+    the complexity ceiling; the checks themselves are unchanged.
+
+    Args:
+        scenario_id: Scenario the paths belong to, used to locate each message.
+        paths: The scenario's ``paths`` value, validated here rather than
+            assumed to be a mapping.
+
+    Returns:
+        Located error strings, empty when every declared path resolves.
+    """
+    if not isinstance(paths, dict):
+        return [f"scenario {scenario_id} paths must be a mapping"]
+    errors: list[str] = []
+    for kind in ("nodes", "lines", "power", "transformers"):
+        value = paths.get(kind)
+        if not value:
+            errors.append(f"scenario {scenario_id} missing {kind} path")
+        elif "dashboard/public" in str(value):
+            errors.append(
+                f"scenario {scenario_id} uses removed dashboard/public "
+                f"path: {value}"
+            )
+        elif not _existing_repo_path(str(value)).exists():
+            errors.append(
+                f"scenario {scenario_id} missing referenced {kind} file: {value}"
+            )
+    return errors
 
 
 def verify_dashboard_catalog(path: Path = DEFAULT_CATALOG) -> dict[str, Any]:
@@ -36,8 +80,13 @@ def verify_dashboard_catalog(path: Path = DEFAULT_CATALOG) -> dict[str, Any]:
     catalog = _load_json(path)
     if catalog.get("report_id") != "digital_twin_dashboard_catalog":
         errors.append("catalog report_id must be digital_twin_dashboard_catalog")
-    if catalog.get("schema_version") != "1.0":
-        errors.append("catalog schema_version must be 1.0")
+    schema_version = catalog.get("schema_version")
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
+        errors.append(
+            f"catalog schema_version {schema_version!r} is not supported "
+            f"(supported: {', '.join(SUPPORTED_SCHEMA_VERSIONS)}); regenerate "
+            "the catalog with `gridalyn dashboard catalog`"
+        )
 
     scenarios = catalog.get("scenarios")
     if not isinstance(scenarios, list) or not scenarios:
@@ -51,22 +100,15 @@ def verify_dashboard_catalog(path: Path = DEFAULT_CATALOG) -> dict[str, Any]:
             errors.append(f"scenario[{index}] missing scenario_id")
             continue
         scenario_ids.append(scenario_id)
-        paths = scenario.get("paths")
-        if not isinstance(paths, dict):
-            errors.append(f"scenario {scenario_id} paths must be a mapping")
-            continue
-        for kind in ("nodes", "lines", "power", "transformers"):
-            value = paths.get(kind)
-            if not value:
-                errors.append(f"scenario {scenario_id} missing {kind} path")
-                continue
-            if "dashboard/public" in str(value):
-                errors.append(f"scenario {scenario_id} uses removed dashboard/public path: {value}")
-                continue
-            if not _existing_repo_path(str(value)).exists():
-                errors.append(f"scenario {scenario_id} missing referenced {kind} file: {value}")
+        errors.extend(_scenario_path_errors(scenario_id, scenario.get("paths")))
 
-    duplicates = sorted({scenario_id for scenario_id in scenario_ids if scenario_ids.count(scenario_id) > 1})
+    duplicates = sorted(
+        {
+            scenario_id
+            for scenario_id in scenario_ids
+            if scenario_ids.count(scenario_id) > 1
+        }
+    )
     for scenario_id in duplicates:
         errors.append(f"duplicate scenario_id: {scenario_id}")
 

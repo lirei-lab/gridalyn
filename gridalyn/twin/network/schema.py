@@ -51,6 +51,8 @@ ROLE_TRANSFORMER = "transformer"
 ROLE_FEEDER = "feeder"
 ROLE_FEEDER_HEAD_BUS = "feeder_head_bus"
 ROLE_FEEDER_CLUSTER = "feeder_cluster"
+ROLE_LATITUDE = "latitude"
+ROLE_LONGITUDE = "longitude"
 
 ColumnDtype = Literal["string", "integer"]
 
@@ -259,7 +261,23 @@ def _present_columns(frame: pd.DataFrame) -> str:
 BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
     GRID_BUSES: TableSchema(
         artifact=GRID_BUSES,
-        columns=(ColumnSpec(ROLE_IDENTITY, ("bus_id",), required=True),),
+        columns=(
+            ColumnSpec(ROLE_IDENTITY, ("bus_id",), required=True),
+            # One spelling each. Both in-repo producers -- SyntheticPandapower
+            # Adapter and CimParquetAdapter -- write `lat`/`lon`; the
+            # `latitude`/`longitude` pair in the CIM adapter is an alias it
+            # *reads* off the source frame, never one it writes, so carrying it
+            # here would be tolerance rather than evidence.
+            #
+            # Deliberately not required: an electrical model is complete
+            # without geography, and `validate_integrity` should not start
+            # failing a base that never claimed to be located. Absent
+            # coordinates are reported by `resolve_network_geography` as an
+            # unlocated model, which is a different statement from an invalid
+            # one.
+            ColumnSpec(ROLE_LATITUDE, ("lat",)),
+            ColumnSpec(ROLE_LONGITUDE, ("lon",)),
+        ),
     ),
     GRID_LINES: TableSchema(
         artifact=GRID_LINES,
@@ -300,6 +318,14 @@ BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
                 ("lv_bus_id", "load_bus_id", "bus_id"),
                 references=GRID_BUSES,
             ),
+            # Building POINTS, not footprints. The GeoJSON ingest starts from
+            # Polygon/MultiPolygon features (`PowerGridGraph.extract_building_
+            # centers_and_areas` filters on exactly that), but only the
+            # centroid and the area survive into this table. A consumer that
+            # wants footprints must go back to the source layer; nothing
+            # downstream of the base snapshot can reconstruct them.
+            ColumnSpec(ROLE_LATITUDE, ("lat",)),
+            ColumnSpec(ROLE_LONGITUDE, ("lon",)),
         ),
     ),
     BUILDING_GRID_CONNECTIVITY: TableSchema(

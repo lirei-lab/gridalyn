@@ -223,6 +223,129 @@ class DashboardCatalogTest(unittest.TestCase):
         self.assertEqual(catalog["scenarios"][0]["topology_counts"]["n_loads"], 1)
 
 
+class DashboardCatalogGeographyTest(unittest.TestCase):
+    """The catalog must reach the twin's geography, not only its timeseries.
+
+    Before this block the catalog named per-scenario timeseries artifacts and
+    nothing else: no CRS, no extent, and no path to `grid_buses`, `grid_lines`,
+    `buildings` or `grid_transformers`. A geo-centred dashboard driven by the
+    catalog was therefore impossible -- the only route to the network's
+    geography was to hardcode the base paths, which is what a catalog exists to
+    prevent.
+    """
+
+    def _catalog(self, tmp, *, lat=46.33, crs=None):
+        base = Path(tmp) / "instances" / "default" / "digital_twin" / "base"
+        base.mkdir(parents=True)
+        pd.DataFrame(
+            [
+                {"bus_id": "bus:0", "lat": lat, "lon": -72.62},
+                {"bus_id": "bus:1", "lat": 46.35, "lon": -72.60},
+            ]
+        ).to_parquet(base / "grid_buses.parquet")
+        pd.DataFrame(
+            [{"line_id": "line:0", "from_bus_id": "bus:0", "to_bus_id": "bus:1"}]
+        ).to_parquet(base / "grid_lines.parquet")
+        pd.DataFrame(
+            [
+                {
+                    "transformer_id": "transformer:0",
+                    "hv_bus_id": "bus:1",
+                    "lv_bus_id": "bus:0",
+                }
+            ]
+        ).to_parquet(base / "grid_transformers.parquet")
+        pd.DataFrame(
+            [
+                {
+                    "building_id": "building:0",
+                    "load_id": "load:0",
+                    "lat": 46.34,
+                    "lon": -72.61,
+                }
+            ]
+        ).to_parquet(base / "buildings.parquet")
+        pd.DataFrame(
+            [
+                {
+                    "building_id": "building:0",
+                    "load_id": "load:0",
+                    "load_bus_id": "bus:0",
+                }
+            ]
+        ).to_parquet(base / "building_grid_connectivity.parquet")
+        metadata = {"model_version_id": "model:sha256:test"}
+        if crs is not None:
+            metadata["crs"] = crs
+        (base / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+        return build_dashboard_catalog(
+            scenario_index={"scenarios": [{"scenario_id": "S0"}]},
+            powerflow_summary={"scenarios": [{"scenario_id": "S0"}]},
+            optional_extensions={},
+            root=Path(tmp),
+            network_repository=NetworkModelRepository.from_parquet(base),
+        )
+
+    def test_catalog_names_every_base_artifact_that_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp)
+        paths = catalog["network_model"]["geography"]["paths"]
+        self.assertEqual(
+            sorted(paths),
+            [
+                "building_grid_connectivity",
+                "buildings",
+                "grid_buses",
+                "grid_lines",
+                "grid_transformers",
+            ],
+        )
+        self.assertEqual(
+            paths["grid_buses"],
+            "/instances/default/digital_twin/base/grid_buses.parquet",
+        )
+
+    def test_catalog_carries_an_extent_and_a_centre_to_open_the_map_on(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp)
+        geography = catalog["network_model"]["geography"]
+        self.assertTrue(geography["located"])
+        self.assertEqual(geography["extent"]["bbox"], [-72.62, 46.33, -72.60, 46.35])
+        self.assertAlmostEqual(geography["extent"]["center"]["lat"], 46.34)
+
+    def test_an_undeclared_crs_is_published_as_assumed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp)
+        geography = catalog["network_model"]["geography"]
+        self.assertEqual(geography["crs"], "EPSG:4326")
+        self.assertEqual(geography["crs_source"], "assumed")
+
+    def test_a_declared_crs_is_published_as_declared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp, crs="EPSG:32618")
+        geography = catalog["network_model"]["geography"]
+        self.assertEqual(geography["crs"], "EPSG:32618")
+        self.assertEqual(geography["crs_source"], "declared")
+
+    def test_catalog_states_that_line_geometry_is_derived(self):
+        """Otherwise every consumer rediscovers it by finding no coordinates."""
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp)
+        derived = catalog["network_model"]["geography"]["derived_geometry"]
+        self.assertEqual(derived["grid_lines"], ["from_bus", "to_bus"])
+        self.assertEqual(derived["grid_transformers"], ["hv_bus", "lv_bus"])
+
+    def test_geography_is_additive_so_every_1_0_key_survives(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            catalog = self._catalog(tmp)
+        self.assertEqual(catalog["schema_version"], "1.1")
+        self.assertEqual(catalog["report_id"], "digital_twin_dashboard_catalog")
+        for key in ("counts", "model_version_id", "model_version", "validation"):
+            self.assertIn(key, catalog["network_model"])
+        self.assertIn("paths", catalog["scenarios"][0])
+        self.assertIn("metrics", catalog["scenarios"][0])
+
+
 class DashboardCatalogPathAnchoringTest(unittest.TestCase):
     """Declared parquet paths must reach the dashboard as servable URLs.
 

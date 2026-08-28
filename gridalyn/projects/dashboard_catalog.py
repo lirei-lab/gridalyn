@@ -8,7 +8,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from gridalyn.twin.network import NetworkModelRepository
+from gridalyn.twin.network import (
+    BASE_TABLE_FILENAMES,
+    NetworkModelRepository,
+    resolve_network_geography,
+)
 
 FILE_KINDS = {
     "nodes": "powerflow_nodes",
@@ -136,6 +140,7 @@ def build_dashboard_catalog(
                 "errors": list(integrity.errors),
                 "warnings": list(integrity.warnings),
             },
+            "geography": _geography(network_repository, metadata, root),
         }
     extensions = {
         key: _web_path(path, root)
@@ -164,11 +169,57 @@ def build_dashboard_catalog(
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "digital_twin_dashboard_catalog",
-        "schema_version": "1.0",
+        # 1.1 adds network_model.geography: the CRS, the extent, the base
+        # artifact paths, and which geometries are derived from bus endpoints.
+        # Additive only -- every 1.0 key keeps its name, shape and meaning, so
+        # a reader written against 1.0 is unaffected.
+        "schema_version": "1.1",
         "title": "Gridalyn Digital Twin",
         "network_model": network_model,
         "scenarios": scenarios,
     }
+
+
+def _geography(
+    repository: NetworkModelRepository,
+    metadata: dict[str, Any],
+    root: Path,
+) -> dict[str, Any]:
+    """Publish where the snapshot sits and which artifacts carry its geometry.
+
+    The catalog previously named only the per-scenario timeseries artifacts, so
+    a consumer could reach a scenario's voltages but not the base tables that
+    say where any of it is. That made a geo-centred view impossible to drive
+    from the catalog: the only route to the network's geography was to hardcode
+    the base paths, which is exactly what a catalog exists to prevent.
+
+    Args:
+        repository: Loaded base-snapshot repository.
+        metadata: Parsed base ``metadata.json``, consulted for a declared CRS.
+        root: Workspace root that published paths are served relative to.
+
+    Returns:
+        The resolved geography payload, extended with a ``paths`` block naming
+        every canonical base artifact that exists on disk.
+    """
+    model = repository.load_model()
+    geography = resolve_network_geography(
+        frames={
+            "grid_buses": model.buses,
+            "grid_lines": model.lines,
+            "grid_transformers": model.transformers,
+            "buildings": model.buildings,
+            "building_grid_connectivity": model.connectivity,
+        },
+        metadata=metadata,
+    )
+    payload = geography.to_dict()
+    payload["paths"] = {
+        artifact: _web_path(repository.base_dir / filename, root)
+        for artifact, filename in BASE_TABLE_FILENAMES.items()
+        if (repository.base_dir / filename).exists()
+    }
+    return payload
 
 
 def _load_network_metadata(base_dir: Path) -> dict[str, Any]:

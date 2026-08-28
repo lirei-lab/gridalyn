@@ -55,6 +55,7 @@ def build_base_metadata(
     model_authority: Mapping[str, Any] | None = None,
     operational_state: OperationalState | None = None,
     created_at: str | None = None,
+    crs: str | None = None,
 ) -> dict[str, Any]:
     """Build a repository-centric manifest for a canonical digital-twin snapshot.
 
@@ -72,6 +73,15 @@ def build_base_metadata(
         adapter_capabilities: Capabilities the producing adapter declares.
         adapter_validation_report: Path of the adapter validation report.
         notes: Free-text provenance notes recorded verbatim.
+        crs: Coordinate reference system the snapshot's ``lat``/``lon`` columns
+            are measured in, e.g. ``"EPSG:4326"``. ``None`` (the default)
+            records no key, which a reader resolves to
+            :data:`~gridalyn.twin.network.geography.DEFAULT_GEOGRAPHIC_CRS`
+            and reports as *assumed* rather than declared. A producer that
+            knows its source CRS should pass it: the value is recoverable at
+            build time -- ``PowerGridGraph.extract_building_centers_and_areas``
+            already captures it as ``source_crs`` -- and dropping it is what
+            forces every downstream consumer to guess.
         model_authority: The producing adapter's Model Authority Sets and
             profiles, already rendered JSON-native by
             :func:`gridalyn.twin.adapters.authority.model_authority_payload`.
@@ -177,6 +187,8 @@ def build_base_metadata(
         "model_authority": dict(model_authority) if model_authority else None,
         "notes": notes or [],
     }
+    if crs is not None:
+        metadata["crs"] = crs
     if operational_state is not None:
         metadata["operational_state"] = operational_state
     if adapter_validation_report is not None:
@@ -203,6 +215,7 @@ def write_base_metadata(
     model_authority: Mapping[str, Any] | None = None,
     operational_state: OperationalState | None = None,
     created_at: str | None = None,
+    crs: str | None = None,
 ) -> Path:
     """Write `metadata.json` for a base digital-twin snapshot.
 
@@ -219,6 +232,15 @@ def write_base_metadata(
         adapter_capabilities: Capabilities the producing adapter declares.
         adapter_validation_report: Path of the adapter validation report.
         notes: Free-text provenance notes recorded verbatim.
+        crs: Coordinate reference system the snapshot's ``lat``/``lon`` columns
+            are measured in, e.g. ``"EPSG:4326"``. ``None`` (the default)
+            records no key, which a reader resolves to
+            :data:`~gridalyn.twin.network.geography.DEFAULT_GEOGRAPHIC_CRS`
+            and reports as *assumed* rather than declared. A producer that
+            knows its source CRS should pass it: the value is recoverable at
+            build time -- ``PowerGridGraph.extract_building_centers_and_areas``
+            already captures it as ``source_crs`` -- and dropping it is what
+            forces every downstream consumer to guess.
         model_authority: The producing adapter's Model Authority Sets and
             profiles, JSON-native. See :func:`build_base_metadata`.
         operational_state: Operational state the snapshot represents, recorded
@@ -256,6 +278,7 @@ def write_base_metadata(
         model_authority=model_authority,
         operational_state=operational_state,
         created_at=created_at,
+        crs=crs,
     )
     path = base_dir / "metadata.json"
     path.write_text(json.dumps(metadata, indent=2, sort_keys=True))
