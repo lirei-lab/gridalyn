@@ -73,6 +73,20 @@ appeared, `gridalyn project regression` compares against
 `baselines/results_baseline.json`, and the study runs end to end in CI as one
 of the six governed fixtures.
 
+**What this study cannot check, and why.** Line loading is not pinned here.
+`pandapower.networks.case33bw()` declares `max_i_ka = 99999` because the
+canonical IEEE-33 dataset (Baran & Wu, 1989) specifies no ampacities, so
+`loading_percent` on this feeder is current divided by an effectively infinite
+rating — 0.00026% against a real 210 A. The baseline pinned that number until
+2026-08-28 with a tolerance of 0.01, which is 3877% of the value: it could move
+by a factor of 38 and pass. Giving the benchmark invented ratings would make
+the study's numbers depend on a parameter the standard does not define, so the
+metric was replaced by `max_voltage_violation_count` and
+`best_voltage_scenario`, which the scenario-comparison stage actually computes.
+Voltage, not thermal loading, is what this feeder can speak to.
+`tests/test_regression_baseline_tolerances.py` now fails any baseline metric
+whose tolerance exceeds 10% of its own expected value.
+
 ## Scope and limits
 
 The magnitudes are the benchmark's, not a measured stock — that is the point of

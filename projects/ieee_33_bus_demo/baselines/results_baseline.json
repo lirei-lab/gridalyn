@@ -34,14 +34,24 @@
       "tolerance": 0.001
     },
     {
-      "expected": 0.00025788234982032225,
-      "id": "summary.max_line_loading_percent",
+      "expected": 21,
+      "id": "summary.max_voltage_violation_count",
       "json_path": [
         "summary",
-        "max_line_loading_percent"
+        "max_voltage_violation_count"
       ],
       "source": "outputs/reports/ieee33_scenario_comparison_report.json",
-      "tolerance": 0.01
+      "tolerance": 0
+    },
+    {
+      "expected": "pv_midday",
+      "id": "summary.best_voltage_scenario",
+      "json_path": [
+        "summary",
+        "best_voltage_scenario"
+      ],
+      "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+      "tolerance": 0
     },
     {
       "expected": 24,
