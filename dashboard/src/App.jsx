@@ -1,9 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import DeckGL from '@deck.gl/react';
-import { GeoJsonLayer, ScatterplotLayer } from '@deck.gl/layers';
-import { HeatmapLayer } from '@deck.gl/aggregation-layers';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts';
-import Map from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './App.css';
 import { useDuckDB } from './useDuckDB';
@@ -12,35 +8,9 @@ import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
 import { deriveWorkspaces, loadProjectReports, summaryRows } from './projectCatalog';
-
-// Base map style (Carto Dark Matter equivalent in Open Standard)
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
-// Exact spatial bounding box centroid for the synthetic grid network
-const INITIAL_VIEW_STATE = {
-  longitude: -72.604,
-  latitude: 46.342,
-  zoom: 14.5,
-  pitch: 45,
-  bearing: -10
-};
-
-function fmt(value, digits = 2) {
-  if (value === undefined || value === null || Number.isNaN(Number(value))) return 'n/a';
-  return Number(value).toFixed(digits);
-}
-
-function heatmapTitle(mode) {
-  if (mode === 'nodes') return 'Nodal Voltage Drop';
-  if (mode === 'lines') return 'Cable Thermal Overload';
-  return 'Transformer Thermal Overload';
-}
-
-function signedFmt(value, digits = 2) {
-  if (value === undefined || value === null || Number.isNaN(Number(value))) return 'n/a';
-  const number = Number(value);
-  return `${number > 0 ? '+' : ''}${number.toFixed(digits)}`;
-}
+import TwinMap from './TwinMap';
+import StudyExtensionPanels from './StudyExtensionPanels';
+import { fmt, heatmapTitle } from './format';
 
 function WorkspaceSelector({ activeWorkspace, onChange, workspaces = [] }) {
   return (
@@ -162,14 +132,6 @@ function transformerKind(row) {
   if (hv >= 100 && lv >= 20) return 'HV/MV';
   if (hv >= 20 && lv < 1) return 'MV/LV';
   return `${fmt(hv, 1)}/${fmt(lv, 1)} kV`;
-}
-
-function loadingColor(load, alpha = 220) {
-  if (load > 100) return [255, 0, 40, alpha];
-  if (load > 90) return [255, 100, 0, alpha];
-  if (load > 80) return [255, 200, 0, alpha];
-  if (load > 50) return [120, 230, 70, alpha];
-  return [0, 190, 210, alpha];
 }
 
 export default function App() {
@@ -602,163 +564,18 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isPlaying, timestamps]);
 
-  const layers = [
-    // Renders the Grid Cables
-    new GeoJsonLayer({
-      id: 'grid-lines-layer',
-      data: linesFeatures,
-      pickable: true,
-      stroked: false,
-      filled: false,
-      extruded: false,
-      lineWidthScale: 1,
-      lineWidthMinPixels: 2,
-      getLineColor: d => {
-        const load = d.properties.loading_percent || 0;
-        // Thermal dynamic color mapping for Cables based on loading %
-        if (load > 100) return [255, 0, 40, 255];       // Critical Red
-        if (load > 80) return [255, 100, 0, 200];       // Danger Orange
-        if (load > 50) return [255, 200, 0, 150];       // Warning Yellow
-        return [25, 100, 255, 100];                     // Safe Blue
-      },
-      getLineWidth: d => {
-        const load = d.properties.loading_percent || 0;
-        return load > 100 ? 5 : (load > 50 ? 3 : 2);
-      },
-      onHover: info => {
-        if (info.object) {
-          // Debug hook (optional)
-        }
-      }
+  // What the map draws comes from the registry in `mapLayers.js`. Adding a
+  // layer touches that file; this component only supplies the context.
+  // Grouped once rather than rebuilt inside the map on every render: a new
+  // object identity there would defeat any memoisation downstream.
+  const mapFeatures = useMemo(
+    () => ({
+      nodes: nodesFeatures,
+      lines: linesFeatures,
+      transformers: transformerFeatures,
     }),
-    
-    // Renders physical click-box points of actual Nodes
-    new ScatterplotLayer({
-      id: 'scatter-nodes-layer',
-      data: nodesFeatures,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: [255, 255, 0, 200],
-      onClick: info => {
-        if (info.object && info.object.properties.bus_idx !== undefined) {
-           setSelectedNode(info.object);
-        } else {
-           setSelectedNode(null);
-        }
-      },
-      getPosition: d => d.geometry.coordinates,
-      getFillColor: d => d.properties.category === 'MV' ? [255, 255, 255, 180] : [200, 200, 200, 90],
-      getRadius: d => d.properties.category === 'MV' ? 12 : 5,
-      radiusMinPixels: 2,
-      radiusMaxPixels: 6
-    }),
-
-    // Multi-Dimensional Heatmap (Gaussian Interpolation of Network Stress)
-    new HeatmapLayer({
-      id: 'heatmap-nodes-layer',
-      data: heatmapMode === 'nodes' ? nodesFeatures : (heatmapMode === 'lines' ? linesFeatures : []),
-      pickable: false,
-      getPosition: d => {
-        if (heatmapMode === 'nodes') {
-          return d.geometry.coordinates; // Exact physical Bus geometry
-        } else if (heatmapMode === 'lines') {
-          // Heat source emanates from the exact midpoint of the overloaded cable
-          const p1 = d.geometry.coordinates[0];
-          const p2 = d.geometry.coordinates[1];
-          return [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
-        }
-        return [0, 0];
-      },
-      getWeight: d => {
-        if (heatmapMode === 'nodes') {
-           // We square the voltage deficit so extreme voltage drops exponentially dominate the heat blur
-           const v = d.properties.vm_pu || 1.0;
-           const drop = Math.max(0, 1.0 - v);
-           return Math.pow(drop * 10, 2);
-        } else if (heatmapMode === 'lines') {
-           // We isolate physical congestion above warning levels (50%+)
-           const load = d.properties.loading_percent || 0;
-           return load > 50 ? Math.pow(load / 50, 2) : 0;
-        }
-        return 0;
-      },
-      radiusPixels: heatmapMode === 'nodes' ? 60 : 40,
-      intensity: heatmapMode === 'nodes' ? 0.8 : 1.5,
-      threshold: 0.03,
-      // Standard 6-color thermal scale expected by Deck.gl for smooth interpolation
-      colorRange: [
-        [25, 100, 255, 60],     // 1. Safe Deep Blue
-        [0, 200, 200, 120],     // 2. Cyan / Safe Margin
-        [150, 255, 50, 180],    // 3. Green-Yellow Transition
-        [255, 200, 0, 200],     // 4. Warning Yellow
-        [255, 100, 0, 230],     // 5. Danger Orange
-        [255, 0, 40, 255]       // 6. Critical Red Core
-      ],
-      aggregation: 'SUM'
-    }),
-
-    new HeatmapLayer({
-      id: 'transformer-loading-heatmap-layer',
-      data: heatmapMode === 'transformers' ? transformerFeatures : [],
-      pickable: false,
-      getPosition: d => d.geometry.coordinates,
-      getWeight: d => {
-        const load = d.properties.loading_percent || 0;
-        return Math.pow(Math.max(load, 20) / 100, 2.2);
-      },
-      radiusPixels: 58,
-      intensity: 1.25,
-      threshold: 0.01,
-      colorRange: [
-        [25, 100, 255, 55],
-        [0, 200, 200, 110],
-        [150, 255, 50, 170],
-        [255, 200, 0, 210],
-        [255, 100, 0, 235],
-        [255, 0, 40, 255]
-      ],
-      aggregation: 'SUM'
-    }),
-
-    new ScatterplotLayer({
-      id: 'transformer-overload-halo-layer',
-      data: heatmapMode === 'transformers' ? transformerFeatures.filter(d => (d.properties.loading_percent || 0) > 100) : [],
-      pickable: false,
-      stroked: true,
-      filled: true,
-      getPosition: d => d.geometry.coordinates,
-      getFillColor: [255, 0, 40, 45],
-      getLineColor: [255, 255, 255, 180],
-      getLineWidth: 2,
-      getRadius: d => d.properties.transformer_kind === 'HV/MV' ? 70 : 38,
-      radiusMinPixels: 7,
-      radiusMaxPixels: 18,
-      lineWidthMinPixels: 1,
-      lineWidthMaxPixels: 3
-    }),
-
-    new ScatterplotLayer({
-      id: 'transformer-markers-layer',
-      data: transformerFeatures,
-      pickable: true,
-      stroked: true,
-      filled: true,
-      autoHighlight: true,
-      highlightColor: [255, 255, 255, 220],
-      getPosition: d => d.geometry.coordinates,
-      getFillColor: d => {
-        const load = d.properties.loading_percent || 0;
-        return loadingColor(load, d.properties.transformer_kind === 'HV/MV' ? 245 : 210);
-      },
-      getLineColor: d => d.properties.transformer_kind === 'HV/MV' ? [255, 255, 255, 255] : [20, 20, 20, 230],
-      getLineWidth: d => d.properties.transformer_kind === 'HV/MV' ? 3 : 1,
-      getRadius: d => d.properties.transformer_kind === 'HV/MV' ? 45 : 18,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 14,
-      lineWidthMinPixels: 1,
-      lineWidthMaxPixels: 3
-    })
-  ];
+    [nodesFeatures, linesFeatures, transformerFeatures]
+  );
 
   if (activeProject) {
     return (
@@ -775,28 +592,12 @@ export default function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0 }}>
-      {/* DeckGL acts as the primary webGL overlay Engine */}
-      <DeckGL
-        initialViewState={INITIAL_VIEW_STATE}
-        controller={true}
-        layers={layers}
-        getTooltip={({ object }) => {
-          if (!object) return null;
-          if (object.properties.trafo_idx !== undefined) {
-             return `Transformer: ${object.properties.trafo_idx} | ${object.properties.transformer_kind} | Load: ${object.properties.loading_percent.toFixed(1)}% | Rating: ${object.properties.sn_mva.toFixed(2)} MVA`;
-          }
-          if (object.properties.line_idx !== undefined) {
-             return `Cable: ${object.properties.line_idx} | Load: ${object.properties.loading_percent.toFixed(1)}% | Cat: ${object.properties.category}`;
-          }
-          if (object.properties.bus_idx !== undefined) {
-             return `Bus: ${object.properties.bus_idx} | Voltage: ${object.properties.vm_pu.toFixed(3)} p.u. | Cat: ${object.properties.category}`;
-          }
-          return null;
-        }}
-      >
-        {/* Mapbox/MapLibre acts as the 2D background tile provider */}
-        <Map reuseMaps mapStyle={MAP_STYLE} />
-      </DeckGL>
+      <TwinMap
+        features={mapFeatures}
+        geography={twinGeography}
+        heatmapMode={heatmapMode}
+        onSelectNode={setSelectedNode}
+      />
 
       {/* UI overlay */}
       <div style={{
@@ -871,140 +672,26 @@ export default function App() {
               <span>Edges: <strong>{scenarioSummary.semanticGraph.edgeCount ?? 'n/a'}</strong></span>
             </div>
           )}
-          {hasStudyExtensions && <button
-            type="button"
-            onClick={() => setShowStudyExtensions(!showStudyExtensions)}
-            style={{
-              width: '100%',
-              marginTop: '12px',
-              padding: '8px 10px',
-              border: '1px solid #333',
-              background: 'rgba(255,255,255,0.06)',
-              color: '#d7eeee',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontSize: '0.78rem',
-              fontWeight: 'bold',
-            }}
-          >
-            {showStudyExtensions ? 'Hide' : 'Show'} Optional Study Extensions
-          </button>}
-          {showStudyExtensions && scenarioNetworkImpact && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 8px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Network Impact</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.76rem', color: '#e6f7f7' }}>
-                <span>Samples: <strong>{scenarioNetworkImpact.labels?.n_samples ?? 'n/a'}</strong></span>
-                <span>Providers: <strong>{scenarioNetworkImpact.labels?.provider_count ?? 'n/a'}</strong></span>
-                <span>Pairs: <strong>{scenarioNetworkImpact.surrogate?.n_supervised_pairs ?? 'n/a'}</strong></span>
-                <span>Predictions: <strong>{scenarioNetworkImpact.surrogate?.n_positive_predictions ?? 'n/a'}</strong></span>
-                <span>Delivered: <strong>{fmt(scenarioNetworkImpact.physics?.total_delivered_mwh)} MWh</strong></span>
-                <span>Shortfall: <strong>{fmt(scenarioNetworkImpact.physics?.total_shortfall_mwh)} MWh</strong></span>
-                <span>Trafo relief: <strong>{fmt(scenarioNetworkImpact.physicsComparison?.trafo_max_loading_reduction_pctpt)} pct-pt</strong></span>
-                <span>Overloads: <strong>{signedFmt(scenarioNetworkImpact.physicsComparison?.trafo_overload_delta, 0)}</strong></span>
-              </div>
-              {scenarioNetworkImpact.constraints?.length > 0 && (
-                <p style={{ margin: '8px 0 0 0', color: '#b7dede', fontSize: '0.68rem', lineHeight: 1.35 }}>
-                  Constraints: {scenarioNetworkImpact.constraints.slice(0, 3).join(', ')}
-                  {scenarioNetworkImpact.constraints.length > 3 ? ` +${scenarioNetworkImpact.constraints.length - 3}` : ''}
-                </p>
-              )}
-            </div>
-          )}
-          {showStudyExtensions && networkImpact && !scenarioNetworkImpact && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 6px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Network Impact</p>
-              <p style={{ margin: 0, color: '#b7dede', fontSize: '0.72rem', lineHeight: 1.35 }}>
-                {selectedNetworkImpact?.status === 'not_generated'
-                  ? `Not generated for ${selectedScenario}.`
-                  : `No report for ${selectedScenario}.`}
-                {availableNetworkImpactLabels.length > 0 ? ` Available for ${availableNetworkImpactLabels.join(', ')}.` : ''}
-              </p>
-            </div>
-          )}
-          {showStudyExtensions && networkImpactError && (
-            <p style={{ margin: '10px 0 0 0', color: '#ffb347', fontSize: '0.72rem' }}>
-              Network impact unavailable
-            </p>
-          )}
-          {showStudyExtensions && scenarioOperation && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 8px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Flexibility Operation</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.76rem', color: '#e6f7f7' }}>
-                <span>Constraints: <strong>{scenarioOperation.summary?.active_constraint_count ?? 'n/a'}</strong></span>
-                <span>Providers: <strong>{scenarioOperation.summary?.selected_provider_count ?? 'n/a'}</strong></span>
-                <span>Delivered: <strong>{fmt(scenarioOperation.summary?.delivered_mwh)} MWh</strong></span>
-                <span>Shortfall: <strong>{fmt(scenarioOperation.summary?.shortfall_mwh)} MWh</strong></span>
-                <span>Settlement: <strong>${fmt(scenarioOperation.summary?.settlement_usd, 0)}</strong></span>
-                <span>Delivery: <strong>{fmt((scenarioOperation.summary?.delivery_ratio ?? 0) * 100, 0)}%</strong></span>
-                <span>Agg. conc.: <strong>{fmt((scenarioOperation.summary?.aggregator_concentration_top1_pct ?? 0) * 100, 0)}%</strong></span>
-                <span>Topo conc.: <strong>{fmt((scenarioOperation.summary?.topological_concentration_top1_pct ?? 0) * 100, 0)}%</strong></span>
-              </div>
-              {scenarioOperation.clearingMethod && (
-                <p style={{ margin: '8px 0 0 0', color: '#b7dede', fontSize: '0.68rem', lineHeight: 1.35 }}>
-                  Status: {scenarioOperation.status} · Method: {scenarioOperation.clearingMethod}
-                  {scenarioOperation.operationId ? ` · ${scenarioOperation.operationId}` : ''}
-                </p>
-              )}
-            </div>
-          )}
-          {showStudyExtensions && operationsCatalog && !scenarioOperation && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 6px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Flexibility Operation</p>
-              <p style={{ margin: 0, color: '#b7dede', fontSize: '0.72rem', lineHeight: 1.35 }}>
-                {selectedOperation?.status === 'not_generated'
-                  ? `Not generated for ${selectedScenario}.`
-                  : `No operation for ${selectedScenario}.`}
-                {availableOperationLabels.length > 0 ? ` Available for ${availableOperationLabels.join(', ')}.` : ''}
-              </p>
-            </div>
-          )}
-          {showStudyExtensions && operationsCatalogError && (
-            <p style={{ margin: '10px 0 0 0', color: '#ffb347', fontSize: '0.72rem' }}>
-              Flexibility operation unavailable
-            </p>
-          )}
-          {showStudyExtensions && scenarioClearingScorecard && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 8px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Clearing Scorecard</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px', fontSize: '0.72rem', color: '#d7eeee' }}>
-                <span>Best delivery: <strong>{scenarioClearingScorecard.summary?.best_delivery_policy_id || 'n/a'}</strong></span>
-                <span>Best overload: <strong>{scenarioClearingScorecard.summary?.best_overload_policy_id || 'n/a'}</strong></span>
-              </div>
-              <div style={{ display: 'grid', gap: '5px', fontSize: '0.68rem', color: '#e6f7f7' }}>
-                {clearingRows.map(policy => (
-                  <div
-                    key={policy.policy_id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1.2fr 0.7fr 0.7fr 0.7fr',
-                      gap: '6px',
-                      alignItems: 'center',
-                    }}
-                    title={policy.intelligence_layer}
-                  >
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{policy.policy_label}</span>
-                    <span>{fmt(policy.total_delivered_mwh)} MWh</span>
-                    <span>{fmt(policy.total_shortfall_mwh)} sh</span>
-                    <span>{signedFmt(policy.trafo_overload_delta, 0)} ovl</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {showStudyExtensions && clearingScorecard && !scenarioClearingScorecard && (
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 6px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Clearing Scorecard</p>
-              <p style={{ margin: 0, color: '#b7dede', fontSize: '0.72rem', lineHeight: 1.35 }}>
-                Not generated for {selectedScenario}. Available for {clearingScorecard.scenarioId || 'another scenario'}.
-              </p>
-            </div>
-          )}
-          {showStudyExtensions && clearingScorecardError && (
-            <p style={{ margin: '10px 0 0 0', color: '#ffb347', fontSize: '0.72rem' }}>
-              Clearing scorecard unavailable
-            </p>
-          )}
+          <StudyExtensionPanels
+            hasStudyExtensions={hasStudyExtensions}
+            showStudyExtensions={showStudyExtensions}
+            onToggle={() => setShowStudyExtensions(!showStudyExtensions)}
+            scenarioNetworkImpact={scenarioNetworkImpact}
+            networkImpact={networkImpact}
+            networkImpactError={networkImpactError}
+            scenarioOperation={scenarioOperation}
+            operationsCatalog={operationsCatalog}
+            operationsCatalogError={operationsCatalogError}
+            scenarioClearingScorecard={scenarioClearingScorecard}
+            clearingScorecard={clearingScorecard}
+            clearingScorecardError={clearingScorecardError}
+            selectedScenario={selectedScenario}
+            selectedNetworkImpact={selectedNetworkImpact}
+            availableNetworkImpactLabels={availableNetworkImpactLabels}
+            selectedOperation={selectedOperation}
+            availableOperationLabels={availableOperationLabels}
+            clearingRows={clearingRows}
+          />
         </div>
 
         {/* Color Gradient Legend */}

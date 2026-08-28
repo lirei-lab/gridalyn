@@ -121,3 +121,25 @@ test('the client can read the catalog this repo actually ships', async () => {
       `does not declare support for (${SUPPORTED_SCHEMA_VERSIONS.join(', ')})`
   );
 });
+
+test('map layers are created only in the registry', () => {
+  // "Adding a layer touches the registry, not the app component" is the point
+  // of the layer model; a `new SomethingLayer(...)` anywhere else silently
+  // reintroduces a layer that cannot be listed, toggled or described.
+  const offenders = sourceFiles()
+    .filter(name => name !== 'mapLayers.js')
+    .filter(name => /new\s+\w*Layer\s*\(/.test(read(name)));
+  assert.deepEqual(
+    offenders,
+    [],
+    `these modules instantiate a deck.gl layer outside mapLayers.js: ${offenders.join(', ')}`
+  );
+});
+
+test('the app component composes rather than renders the map', () => {
+  // App.jsx held the map, its six layers, its tooltip and its viewport inline.
+  // The specific ceiling matters less than the direction: it was 1228 lines
+  // and must not silently grow back.
+  const app = read('App.jsx').split('\n').length;
+  assert.ok(app < 1000, `App.jsx is ${app} lines; it was extracted down from 1228`);
+});
