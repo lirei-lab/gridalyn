@@ -11,6 +11,7 @@ declared derived rather than left to be discovered by reading a file.
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
@@ -161,6 +162,65 @@ class ResolveNetworkGeographyTest(unittest.TestCase):
         box = BoundingBox(min_lon=-2.0, min_lat=10.0, max_lon=2.0, max_lat=20.0)
         self.assertEqual(box.center, (0.0, 15.0))
         self.assertEqual(box.to_list(), [-2.0, 10.0, 2.0, 20.0])
+
+
+class AdapterDeclaredCrsTest(unittest.TestCase):
+    """An adapter declares the CRS it PRODUCES, or declares nothing.
+
+    Same epistemic status as ``source_standard`` and ``source_format``, which
+    are already class-level contract declarations: a statement about the
+    adapter's own output, not an inference about data it happened to read.
+    """
+
+    def test_the_synthetic_adapter_declares_lon_lat(self):
+        from gridalyn.twin.adapters.network import SyntheticPandapowerAdapter
+
+        self.assertEqual(
+            SyntheticPandapowerAdapter.geographic_crs, DEFAULT_GEOGRAPHIC_CRS
+        )
+
+    def test_the_topology_adapter_declares_nothing_because_its_coords_are_schematic(
+        self,
+    ):
+        """Its feeders sit at (0,0), (1,0.2), (2,0.4).
+
+        `der_voltage_optimization`, `prosumer_battery_market` and
+        `rl_voltage_control_lightsim` all go through this adapter and write
+        layout coordinates, not geography. Declaring EPSG:4326 for them would
+        put the feeder in the Gulf of Guinea -- the same failure
+        `test_rows_missing_a_coordinate_are_dropped_not_read_as_zero` guards.
+        """
+        from gridalyn.twin.adapters.network import PandapowerTopologyAdapter
+
+        self.assertIsNone(PandapowerTopologyAdapter.geographic_crs)
+
+    def test_the_cim_adapter_defers_to_its_source(self):
+        """The CRS of caller-supplied CIM parquet is the source's to declare."""
+        from gridalyn.twin.adapters.cim import CimParquetAdapter
+
+        self.assertIsNone(CimParquetAdapter.geographic_crs)
+        located = CimParquetAdapter(source_dir=Path("."), geographic_crs="EPSG:2950")
+        self.assertEqual(located.geographic_crs, "EPSG:2950")
+
+    def test_the_descriptor_carries_the_declaration(self):
+        from gridalyn.twin.adapters.network import (
+            SyntheticPandapowerAdapter,
+            describe_network_source_adapter,
+        )
+
+        descriptor = describe_network_source_adapter(SyntheticPandapowerAdapter)
+        self.assertEqual(descriptor.geographic_crs, DEFAULT_GEOGRAPHIC_CRS)
+
+    def test_an_adapter_that_declares_no_crs_still_describes_cleanly(self):
+        """A third-party adapter predating this field must not break describe()."""
+        from gridalyn.twin.adapters.network import describe_network_source_adapter
+
+        class _Legacy:
+            adapter_id = "legacy"
+            source_adapter = "LegacyAdapter"
+            source_standard = "custom"
+
+        self.assertIsNone(describe_network_source_adapter(_Legacy).geographic_crs)
 
 
 if __name__ == "__main__":

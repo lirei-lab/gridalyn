@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-08-28T16:16:13.941282+00:00",
+  "created_at": "2026-08-28T18:44:24.374273+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -11,7 +11,7 @@
     },
     "geography": {
       "crs": "EPSG:4326",
-      "crs_source": "assumed",
+      "crs_source": "declared",
       "derived_geometry": {
         "grid_lines": [
           "from_bus",

@@ -61,6 +61,12 @@ class CimParquetAdapter:
     source_standard: str = "cim"
     source_format: str = "cim-parquet"
     capabilities: tuple[str, ...] = DEFAULT_NETWORK_ADAPTER_CAPABILITIES
+    # Unset by default, and that is the honest default: the source is CIM
+    # parquet the caller supplies, so its CRS is the SOURCE's to declare, not
+    # this adapter's to infer. CGMES carries coordinate-system information the
+    # adapter does not read today; a caller who knows their export's CRS passes
+    # it here and the snapshot records it as declared rather than assumed.
+    geographic_crs: str | None = None
 
     def describe(self) -> NetworkAdapterDescriptor:
         """Return stable adapter identity and capability metadata."""
@@ -143,6 +149,7 @@ class CimParquetAdapter:
             source_standard=self.source_standard,
             source_format=self.source_format,
             adapter_capabilities=self.capabilities,
+            crs=self.geographic_crs,
             adapter_validation_report=out_dir
             / "network_adapter_validation_report.json",
             notes=self._export_notes(),

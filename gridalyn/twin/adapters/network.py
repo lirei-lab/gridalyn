@@ -26,6 +26,7 @@ from gridalyn.twin.adapters.authority import (
 from gridalyn.twin.adapters.pandapower_builder import build_power_grid_and_network
 from gridalyn.twin.adapters.validation import write_network_adapter_validation_report
 from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.twin.network.geography import DEFAULT_GEOGRAPHIC_CRS
 from gridalyn.twin.network.metadata import write_base_metadata
 from gridalyn.twin.network.model import (
     BASE_TABLE_FILENAMES,
@@ -76,6 +77,7 @@ class NetworkAdapterDescriptor:
     source_standard: str
     source_format: str
     capabilities: tuple[str, ...]
+    geographic_crs: str | None = None
     contract_version: str = "1"
 
 
@@ -109,6 +111,18 @@ class NetworkSourceAdapter(Protocol):
     @property
     def capabilities(self) -> tuple[str, ...]:
         """Capabilities this adapter declares."""
+
+    @property
+    def geographic_crs(self) -> str | None:
+        """CRS the ``lat``/``lon`` columns this adapter writes are measured in.
+
+        A declaration of what the adapter *produces*, exactly like
+        :attr:`source_standard` and :attr:`source_format`, not an inference
+        about the data it happened to read. ``None`` means the adapter makes no
+        claim, and a reader then falls back to
+        :data:`~gridalyn.twin.network.geography.DEFAULT_GEOGRAPHIC_CRS` and
+        reports the value as *assumed* rather than declared.
+        """
 
     def load_snapshot(self) -> NetworkModel:
         """Load a source model into the canonical in-memory tables."""
@@ -200,6 +214,13 @@ class SyntheticPandapowerAdapter:
     source_standard: str = "pandapower"
     source_format: str = "pandapower-cache"
     capabilities: tuple[str, ...] = DEFAULT_NETWORK_ADAPTER_CAPABILITIES
+    # Longitude/latitude degrees. Measured, not assumed: the geoprocess layer
+    # sets or asserts EPSG:4326 on every ingest path, the synthetic generator
+    # stamps CRS84 into the GeoJSON it emits, and
+    # `build_pandapower_from_geojson` documents that graph geodata stays
+    # lon/lat while clustering happens in a projected CRS. An adapter fed a
+    # differently-projected source overrides this on construction.
+    geographic_crs: str | None = DEFAULT_GEOGRAPHIC_CRS
 
     def describe(self) -> NetworkAdapterDescriptor:
         """Return stable adapter identity and capability metadata."""
@@ -298,6 +319,7 @@ class SyntheticPandapowerAdapter:
             source_format=self.source_format,
             adapter_capabilities=self.capabilities,
             adapter_validation_report=validation_report_path,
+            crs=self.geographic_crs,
             notes=self._export_notes(),
             model_authority=model_authority_payload(
                 self.authority_sets(), self.profiles()
@@ -371,6 +393,13 @@ class PandapowerTopologyAdapter:
 
     net: pp.pandapowerNet
     config_path: Path
+    # No geographic claim, deliberately. This adapter serves feeders with no
+    # footprint layer -- RadialFeederSpec and hand-rolled pandapower -- whose
+    # coordinates are SCHEMATIC: `der_voltage_optimization` writes buses at
+    # (0,0), (1,0.2), (2,0.4), (3,0). Calling those EPSG:4326 would place the
+    # feeder in the Gulf of Guinea. `None` makes a reader report the snapshot
+    # as unlocated, which is the truth.
+    geographic_crs: str | None = None
     adapter_id: str = "pandapower_topology"
     source_adapter: str = "PandapowerTopologyAdapter"
     source_standard: str = "pandapower"
@@ -445,6 +474,7 @@ class PandapowerTopologyAdapter:
             source_format=self.source_format,
             adapter_capabilities=self.capabilities,
             adapter_validation_report=validation_report_path,
+            crs=self.geographic_crs,
             notes=self._export_notes(),
             model_authority=model_authority_payload(
                 self.authority_sets(), self.profiles()
@@ -540,6 +570,7 @@ def describe_network_source_adapter(
         capabilities=tuple(
             getattr(adapter, "capabilities", DEFAULT_NETWORK_ADAPTER_CAPABILITIES)
         ),
+        geographic_crs=getattr(adapter, "geographic_crs", None),
     )
 
 
