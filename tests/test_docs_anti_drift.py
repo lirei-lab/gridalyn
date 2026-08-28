@@ -39,8 +39,10 @@ Four checks
   ``.md`` file under ``docs/`` is covered by ``nav`` or ``exclude_docs`` (the
   structural half ``test_doc_nav_structure`` already owns) **and** every page
   not itself excluded carries at least one inbound link from another page
-  (the orphan-page defect measured at 23 pages before this milestone,
-  ``.legion/project/workflow/explore/.../design.md``).
+  (the orphan-page defect measured at 23 pages before this milestone; the
+  measurement was recorded in the Legion working tree, which was removed from
+  this repo on 2026-08-28 and archived as
+  ``~/lirei/syntgrid-legion-archive-20260828.tar.gz``).
 * :meth:`AntiDriftTests.test_redirect_map_has_no_dangling_target` -- every
   ``redirect_maps`` entry in ``docs/mkdocs.yml`` points at a real, currently
   published page.
