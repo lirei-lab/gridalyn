@@ -46,6 +46,7 @@ from typing import Any
 
 from gridalyn.foundation.platform.extensions import (
     SUPPORTED_CONTRACT_VERSIONS,
+    ExtensionSource,
     UnsupportedContractVersionError,
 )
 from gridalyn.simulation.policies.contract import (
@@ -63,10 +64,27 @@ class UnknownPolicyError(KeyError):
 
 @dataclass(frozen=True)
 class PolicyRegistration:
-    """Factory and descriptor for a registered policy."""
+    """Factory, descriptor and registration source for a registered policy.
+
+    Attributes:
+        descriptor: What the registry records about the policy.
+        factory: Callable producing a policy instance.
+        source: Where the registration came from: ``"core"`` for the shipped
+            defaults, ``"host"`` when registered through the host extension
+            API. Recorded so a governed manifest can name WHICH extension
+            served the role rather than only that one exists -- the
+            discriminator ``bind_project_components`` needs before ``consume``
+            can answer honestly for a project-registered component.
+        version: Optional semantic version recorded by a host extension;
+            ``None`` for shipped policys and for registrations that do not
+            declare one. Role descriptors have no version field, so this is
+            the only place a version can be recorded.
+    """
 
     descriptor: PolicyDescriptor
     factory: Callable[..., Policy]
+    source: ExtensionSource = "core"
+    version: str | None = None
 
 
 class PolicyRegistry:
@@ -82,6 +100,8 @@ class PolicyRegistry:
         *,
         descriptor: PolicyDescriptor | None = None,
         replace: bool = False,
+        source: ExtensionSource = "core",
+        version: str | None = None,
     ) -> None:
         """Register a policy factory under its descriptor's ID.
 
@@ -110,9 +130,21 @@ class PolicyRegistry:
                 f"policy already registered: {policy_id} "
                 "(pass replace=True to override it deliberately)"
             )
+        valid_sources: tuple[ExtensionSource, ...] = (
+            "core",
+            "host",
+            "entry_point",
+        )
+        if source not in valid_sources:
+            raise ValueError(
+                f"policy {policy_id!r} declares unknown source {source!r} "
+                f"(expected one of: {', '.join(valid_sources)})"
+            )
         self._registrations[policy_id] = PolicyRegistration(
             descriptor=policy_descriptor,
             factory=factory,
+            source=source,
+            version=version,
         )
 
     def get_descriptor(self, policy_id: str) -> PolicyDescriptor:
@@ -125,6 +157,30 @@ class PolicyRegistry:
             The registered descriptor.
         """
         return self._registration(policy_id).descriptor
+
+    def registration_source(self, policy_id: str) -> ExtensionSource:
+        """Return the source a policy was registered under.
+
+        Args:
+            policy_id: The registered ID.
+
+        Returns:
+            ``"core"`` for the shipped defaults, ``"host"`` for a host
+            extension registration.
+        """
+        return self._registration(policy_id).source
+
+    def registration_version(self, policy_id: str) -> str | None:
+        """Return the semantic version an extension recorded, if any.
+
+        Args:
+            policy_id: The registered ID.
+
+        Returns:
+            The recorded version, or ``None`` when the registration did not
+            supply one.
+        """
+        return self._registration(policy_id).version
 
     def list_descriptors(self) -> list[PolicyDescriptor]:
         """Return registered policy descriptors sorted by policy ID.

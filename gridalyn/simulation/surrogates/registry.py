@@ -27,6 +27,7 @@ from typing import Any
 
 from gridalyn.foundation.platform.extensions import (
     SUPPORTED_CONTRACT_VERSIONS,
+    ExtensionSource,
     UnsupportedContractVersionError,
 )
 from gridalyn.simulation.analytics.network_impact.physics_model import (
@@ -60,10 +61,27 @@ class UnboundedSurrogateError(ValueError):
 
 @dataclass(frozen=True)
 class SurrogateRegistration:
-    """Factory and descriptor for a registered surrogate."""
+    """Factory, descriptor and registration source for a registered surrogate.
+
+    Attributes:
+        descriptor: What the registry records about the surrogate.
+        factory: Callable producing a surrogate instance.
+        source: Where the registration came from: ``"core"`` for the shipped
+            defaults, ``"host"`` when registered through the host extension
+            API. Recorded so a governed manifest can name WHICH extension
+            served the role rather than only that one exists -- the
+            discriminator ``bind_project_components`` needs before ``consume``
+            can answer honestly for a project-registered component.
+        version: Optional semantic version recorded by a host extension;
+            ``None`` for shipped surrogates and for registrations that do not
+            declare one. Role descriptors have no version field, so this is
+            the only place a version can be recorded.
+    """
 
     descriptor: SurrogateDescriptor
     factory: Callable[..., Surrogate]
+    source: ExtensionSource = "core"
+    version: str | None = None
 
 
 class SurrogateRegistry:
@@ -79,6 +97,8 @@ class SurrogateRegistry:
         *,
         descriptor: SurrogateDescriptor | None = None,
         replace: bool = False,
+        source: ExtensionSource = "core",
+        version: str | None = None,
     ) -> None:
         """Register a surrogate factory under its descriptor's ID.
 
@@ -118,9 +138,21 @@ class SurrogateRegistry:
                 f"surrogate already registered: {surrogate_id} "
                 "(pass replace=True to override it deliberately)"
             )
+        valid_sources: tuple[ExtensionSource, ...] = (
+            "core",
+            "host",
+            "entry_point",
+        )
+        if source not in valid_sources:
+            raise ValueError(
+                f"surrogate {surrogate_id!r} declares unknown source {source!r} "
+                f"(expected one of: {', '.join(valid_sources)})"
+            )
         self._registrations[surrogate_id] = SurrogateRegistration(
             descriptor=surrogate_descriptor,
             factory=factory,
+            source=source,
+            version=version,
         )
 
     def get_descriptor(self, surrogate_id: str) -> SurrogateDescriptor:
@@ -133,6 +165,30 @@ class SurrogateRegistry:
             The registered descriptor, including its stated error bound.
         """
         return self._registration(surrogate_id).descriptor
+
+    def registration_source(self, surrogate_id: str) -> ExtensionSource:
+        """Return the source a surrogate was registered under.
+
+        Args:
+            surrogate_id: The registered ID.
+
+        Returns:
+            ``"core"`` for the shipped defaults, ``"host"`` for a host
+            extension registration.
+        """
+        return self._registration(surrogate_id).source
+
+    def registration_version(self, surrogate_id: str) -> str | None:
+        """Return the semantic version an extension recorded, if any.
+
+        Args:
+            surrogate_id: The registered ID.
+
+        Returns:
+            The recorded version, or ``None`` when the registration did not
+            supply one.
+        """
+        return self._registration(surrogate_id).version
 
     def list_descriptors(self) -> list[SurrogateDescriptor]:
         """Return registered surrogate descriptors sorted by surrogate ID.
