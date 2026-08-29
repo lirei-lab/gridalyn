@@ -1,12 +1,14 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from gridalyn.assets.datagen.agents.buildings import Building
+
 
 def make_buildings(n: int, seed: int = 0) -> list[Building]:
     """Construct n Building objects with reproducible diversity."""
     rngs = [np.random.default_rng(seed + i) for i in range(n)]
     return [Building(unit_id=i, rng=rngs[i]) for i in range(n)]
+
 
 def simulate_buildings(
     buildings: list[Building],
@@ -39,23 +41,22 @@ def simulate_buildings(
     """
     if caps is None:
         caps = {}
-        
+
     n_houses = len(buildings)
-    
+
     # Pre-generate synthetic appliance backgrounds at the requested frequency.
     from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
+
     gen = ParametricArxGenerator(random_seed=random_seed)
     gen.load()
     _, bg_matrix_kw = gen.generate(temp_out_series=t_out_series, n_houses=n_houses)
 
     # ── Burn-in: run burnin_hours × 60 steps BEFORE recording to decorrelate states
     if burnin_hours > 0:
-        t_burn = float(t_out_series.iloc[0])   # use first outdoor temp for warm-up
+        t_burn = float(t_out_series.iloc[0])  # use first outdoor temp for warm-up
         burnin_steps = burnin_hours * 60
         # Burn-in starts at the same local time minus burnin_hours
-        start_minute = (
-            t_out_series.index[0].hour * 60 + t_out_series.index[0].minute
-        )
+        start_minute = t_out_series.index[0].hour * 60 + t_out_series.index[0].minute
         for step_k in range(burnin_steps):
             min_of_day = (start_minute - burnin_steps + step_k) % 1440
             # For burn-in, use a cyclic background loop or simply the first hour expectation
@@ -84,8 +85,8 @@ def simulate_buildings(
             cap = caps.get(b.unit_id)
             cap_val = float(cap.iloc[k]) if cap is not None else None
             row = b.step(
-                t_out=t_out, 
-                minute_of_day=minute_of_day, 
+                t_out=t_out,
+                minute_of_day=minute_of_day,
                 p_bg_kw=bg_slice[i],
                 p_cap_kw=cap_val,
                 dt_min=dt_min,

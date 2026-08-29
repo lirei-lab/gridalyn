@@ -129,7 +129,9 @@ class TransformerThermalModel:
             + self._ultimate_hs_rise(load_ratio)
         )
 
-    def max_load_for_temp(self, ambient_c: float, theta_max: float | None = None) -> float:
+    def max_load_for_temp(
+        self, ambient_c: float, theta_max: float | None = None
+    ) -> float:
         """
         Find the maximum sustained load (kW) that keeps θ_H ≤ θ_max
         at a given ambient temperature (steady-state).
@@ -175,11 +177,17 @@ class TransformerThermalModel:
         theta_h_profile : array of hottest-spot temperatures (°C)
         """
         n = len(load_profile_kw)
-        assert len(ambient_profile_c) == n, "Load and ambient profiles must have same length"
+        assert (
+            len(ambient_profile_c) == n
+        ), "Load and ambient profiles must have same length"
 
         # Initialize to steady-state at the starting conditions
-        init_load = initial_load_kw if initial_load_kw is not None else load_profile_kw[0]
-        init_amb = initial_ambient_c if initial_ambient_c is not None else ambient_profile_c[0]
+        init_load = (
+            initial_load_kw if initial_load_kw is not None else load_profile_kw[0]
+        )
+        init_amb = (
+            initial_ambient_c if initial_ambient_c is not None else ambient_profile_c[0]
+        )
         self.reset(init_amb, init_load)
 
         theta_h = np.zeros(n)
@@ -195,8 +203,10 @@ TRANSFORMER_THERMAL = TransformerThermalModel()
 
 if __name__ == "__main__":
     model = TransformerThermalModel()
-    print(f"Transformer: {model.s_rated_kva/1000:.0f} MVA, "
-          f"P_rated={model.p_rated_kw/1000:.1f} MW")
+    print(
+        f"Transformer: {model.s_rated_kva / 1000:.0f} MVA, "
+        f"P_rated={model.p_rated_kw / 1000:.1f} MW"
+    )
     print(f"Thermal limits: θ_max={model.theta_max}°C")
     print(f"Time constants: τ_TO={model.tau_to_min} min, τ_HS={model.tau_hs_min} min")
     print()
@@ -205,5 +215,7 @@ if __name__ == "__main__":
     for amb in [-20, -10, 0, 10, 20, 30]:
         p_max = model.max_load_for_temp(amb) / 1000
         theta_at_rated = model.steady_state(model.p_rated_kw, amb)
-        print(f"  Ambient={amb:+3d}°C → θ_H@rated={theta_at_rated:.1f}°C  "
-              f"P_max(θ_H≤{model.theta_max}°C)={p_max:.2f} MW")
+        print(
+            f"  Ambient={amb:+3d}°C → θ_H@rated={theta_at_rated:.1f}°C  "
+            f"P_max(θ_H≤{model.theta_max}°C)={p_max:.2f} MW"
+        )

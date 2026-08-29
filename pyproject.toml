@@ -187,6 +187,14 @@ dev = [
     "contextily>=1.7.0",
     "cvxpy>=1.8.2",
     "flake8>=3.9.0",
+    # The two plugins the pre-commit gate loads. Declared here as well, because
+    # without them a `pip install -e ".[dev]"` environment runs a WEAKER flake8
+    # than the gate: measured 2026-08-29, the tree reported 0 violations
+    # locally and 67 under the gate's configuration -- B950/B905/B008 findings
+    # the plugin-less build cannot see. Two versions, two truths, and a local
+    # check that approves what the gate rejects.
+    "flake8-bugbear",
+    "flake8-docstrings",
     "folium<1.0.0,>=0.19.4",
     "geopandas>=0.9.0",
     "geopy>=2.2.0",

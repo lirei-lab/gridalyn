@@ -39,7 +39,6 @@ Three ways, and they are not equivalent:
 | `flagship_verify.py` (337 lines) | pytest-gated (`tests/test_flagship_verify.py`) | A shape-covering representative subset of the flagship `ev_hosting_flex` study's reproduce-and-pin protocol — the fast check; the full ~6 h regen is operator-only, receipted separately. |
 | `r7_twin_consumer_identity.py` (535 lines) | Operator-only, receipted | Two-ref verdict tool for the R7 guardrail (studies untouched by a twin-layer change): `tool.py <ref1> <ref2>` diffs the twin's real consumers' output. The no-arg form only snapshots — it is not a verdict. |
 | `measured_ingest_proof.py` (391 lines) | Operator-only, receipted | At-scale proof of the measured-state ingest path against `datasets/hq`'s real 35,041×1000 axis. Needs that dataset on disk (544 MB, gitignored, undistributable) — CI genuinely cannot run this one. |
-| `check_congestion_retarget_contract.py` (77 lines) | Operator-only, no receipt | Static source-contract check for one historical `ev_hosting_flex` stage retarget (Phase 14). Narrow and dated by design — re-run it if that stage's source changes, not on a schedule. |
 | `render_hero_network.py` (206 lines) | Operator-only, no receipt | Regenerates the documentation homepage's hero image from the digital twin's real Trois-Rivières feeder. Run it after a change to the twin's geometry or styling; nothing else depends on its output being fresh. |
 
 ## `ochre_calibration/`

@@ -14,7 +14,9 @@ from gridalyn.foundation import ArtifactLayout
 
 SCENARIO_SOURCE_STANDARD = "pycity-inspired-scenario-overlay"
 DEFAULT_LAYOUT = ArtifactLayout(Path("."))
-ASSET_REGISTRY_SOURCE_TABLE = (DEFAULT_LAYOUT.scenarios / "asset_registry.parquet").as_posix()
+ASSET_REGISTRY_SOURCE_TABLE = (
+    DEFAULT_LAYOUT.scenarios / "asset_registry.parquet"
+).as_posix()
 
 
 def _bool_value(value: object) -> bool:
@@ -60,7 +62,9 @@ def _scenario_ids(asset_registry: pd.DataFrame, scenario_id: str | None) -> list
         raise ValueError("asset_registry must include scenario_id")
     if scenario_id:
         return [scenario_id]
-    return sorted(str(value) for value in asset_registry["scenario_id"].dropna().unique())
+    return sorted(
+        str(value) for value in asset_registry["scenario_id"].dropna().unique()
+    )
 
 
 def _base_hvac_devices(base_device_registry: pd.DataFrame) -> pd.DataFrame:
@@ -82,14 +86,19 @@ def _soft_device_records(
         return []
     max_soft_kw = _float_value(asset_row.get("max_soft_kw"))
     total_rated_kw = max(float(building_devices["rated_power_kw"].sum()), 0.0)
-    aggregator_id = _text_or_none(asset_row.get("aggregator_id")) or f"aggregator:{scenario_id}:default"
+    aggregator_id = (
+        _text_or_none(asset_row.get("aggregator_id"))
+        or f"aggregator:{scenario_id}:default"
+    )
     provider_id = f"provider:{scenario_id}:{asset_row['building_id']}:soft_cls"
 
     records: list[dict[str, object]] = []
     for device in building_devices.to_dict("records"):
         rated_power_kw = _float_value(device.get("rated_power_kw"))
         if max_soft_kw > 0 and total_rated_kw > 0:
-            available_kw = min(rated_power_kw, max_soft_kw * rated_power_kw / total_rated_kw)
+            available_kw = min(
+                rated_power_kw, max_soft_kw * rated_power_kw / total_rated_kw
+            )
         else:
             available_kw = rated_power_kw
         records.append(
@@ -101,14 +110,19 @@ def _soft_device_records(
                 "building_id": str(device["building_id"]),
                 "load_id": _text_or_none(building_model.get("load_id")),
                 "load_bus_id": _text_or_none(building_model.get("load_bus_id")),
-                "constraint_zone_id": _text_or_none(building_model.get("lv_transformer_id")),
-                "lv_transformer_id": _text_or_none(building_model.get("lv_transformer_id")),
+                "constraint_zone_id": _text_or_none(
+                    building_model.get("lv_transformer_id")
+                ),
+                "lv_transformer_id": _text_or_none(
+                    building_model.get("lv_transformer_id")
+                ),
                 "device_type": str(device["device_type"]),
                 "rated_power_kw": round(rated_power_kw, 6),
                 "available_kw": round(float(available_kw), 6),
                 "controllable": bool(device.get("controllable", True)),
                 "contract_role": "soft_cls_provider",
-                "contract_type": _text_or_none(asset_row.get("contract_type")) or "soft_building",
+                "contract_type": _text_or_none(asset_row.get("contract_type"))
+                or "soft_building",
                 "aggregator_id": aggregator_id,
                 "provider_id": provider_id,
                 "ev_id": None,
@@ -130,9 +144,14 @@ def _evse_device_record(
         return None
     building_id = str(asset_row["building_id"])
     rated_power_kw = _float_value(asset_row.get("charger_kw"))
-    available_kw = _float_value(asset_row.get("max_hard_kw"), rated_power_kw) or rated_power_kw
+    available_kw = (
+        _float_value(asset_row.get("max_hard_kw"), rated_power_kw) or rated_power_kw
+    )
     device_id = f"device:{building_id}:evse_l2"
-    aggregator_id = _text_or_none(asset_row.get("aggregator_id")) or f"aggregator:{scenario_id}:default"
+    aggregator_id = (
+        _text_or_none(asset_row.get("aggregator_id"))
+        or f"aggregator:{scenario_id}:default"
+    )
     return {
         "scenario_id": scenario_id,
         "scenario_device_id": f"scenario_device:{scenario_id}:{device_id}",
@@ -157,6 +176,35 @@ def _evse_device_record(
     }
 
 
+#: Resolved once at import rather than in a default argument. A call in a
+#: default is evaluated at DEFINITION time, so every caller would share one
+#: value computed against whatever layout happened to be active when the module
+#: was first imported -- which is precisely what a per-instance layout must not
+#: do (B008).
+_DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.models / "scenarios"
+
+#: Same reasoning as above: `Path(".")` in a default is a call evaluated once at
+#: definition time.
+_CWD = Path(".")
+
+
+def _require_columns(frame: pd.DataFrame, columns: tuple[str, ...], name: str) -> None:
+    """Check that a frame carries every required column.
+
+    Args:
+        frame: The table to check.
+        columns: Column names the caller depends on.
+        name: The frame's name, used to locate the failure.
+
+    Raises:
+        ValueError: Naming the first missing column and the frame it belongs
+            to, so the message says which of two inputs was wrong.
+    """
+    for column in columns:
+        if column not in frame.columns:
+            raise ValueError(f"{name} must include {column}")
+
+
 def synthesize_scenario_device_tables(
     building_models: pd.DataFrame,
     base_device_registry: pd.DataFrame,
@@ -166,12 +214,8 @@ def synthesize_scenario_device_tables(
 ) -> dict[str, pd.DataFrame]:
     """Create scenario-specific device overlays from model and asset tables."""
 
-    for column in ["building_id", "model_id"]:
-        if column not in building_models.columns:
-            raise ValueError(f"building_models must include {column}")
-    for column in ["scenario_id", "building_id"]:
-        if column not in asset_registry.columns:
-            raise ValueError(f"asset_registry must include {column}")
+    _require_columns(building_models, ("building_id", "model_id"), "building_models")
+    _require_columns(asset_registry, ("scenario_id", "building_id"), "asset_registry")
 
     models_by_building = {
         str(row["building_id"]): row for row in building_models.to_dict("records")
@@ -185,7 +229,9 @@ def synthesize_scenario_device_tables(
     device_records: list[dict[str, object]] = []
     summary_records: list[dict[str, object]] = []
     for sid in _scenario_ids(asset_registry, scenario_id):
-        scenario_assets = asset_registry[asset_registry["scenario_id"].astype(str) == sid]
+        scenario_assets = asset_registry[
+            asset_registry["scenario_id"].astype(str) == sid
+        ]
         for asset_row in scenario_assets.to_dict("records"):
             building_id = str(asset_row["building_id"])
             building_model = models_by_building.get(building_id)
@@ -196,11 +242,15 @@ def synthesize_scenario_device_tables(
                     _soft_device_records(
                         scenario_id=sid,
                         asset_row=asset_row,
-                        building_devices=devices_by_building.get(building_id, pd.DataFrame()),
+                        building_devices=devices_by_building.get(
+                            building_id, pd.DataFrame()
+                        ),
                         building_model=building_model,
                     )
                 )
-            if _bool_value(asset_row.get("hard_cls_enabled")) and _bool_value(asset_row.get("has_ev")):
+            if _bool_value(asset_row.get("hard_cls_enabled")) and _bool_value(
+                asset_row.get("has_ev")
+            ):
                 evse_record = _evse_device_record(
                     scenario_id=sid,
                     asset_row=asset_row,
@@ -209,32 +259,61 @@ def synthesize_scenario_device_tables(
                 if evse_record:
                     device_records.append(evse_record)
 
-        scenario_devices = [record for record in device_records if record["scenario_id"] == sid]
+        scenario_devices = [
+            record for record in device_records if record["scenario_id"] == sid
+        ]
         summary_records.append(
             {
                 "scenario_id": sid,
                 "scenario_devices": len(scenario_devices),
-                "ev_buildings": int(scenario_assets["has_ev"].map(_bool_value).sum())
-                if "has_ev" in scenario_assets.columns
-                else 0,
-                "soft_cls_buildings": int(scenario_assets["soft_cls_participant"].map(_bool_value).sum())
-                if "soft_cls_participant" in scenario_assets.columns
-                else 0,
-                "hard_cls_evs": int(scenario_assets["hard_cls_enabled"].map(_bool_value).sum())
-                if "hard_cls_enabled" in scenario_assets.columns
-                else 0,
-                "hard_only_evs": int((scenario_assets["contract_type"].astype(str) == "hard_ev").sum())
-                if "contract_type" in scenario_assets.columns
-                else 0,
-                "soft_hard_overlap": int((scenario_assets["contract_type"].astype(str) == "soft+hard_ev").sum())
-                if "contract_type" in scenario_assets.columns
-                else 0,
-                "evse_devices": sum(1 for record in scenario_devices if record["device_type"] == "evse_l2"),
+                "ev_buildings": (
+                    int(scenario_assets["has_ev"].map(_bool_value).sum())
+                    if "has_ev" in scenario_assets.columns
+                    else 0
+                ),
+                "soft_cls_buildings": (
+                    int(scenario_assets["soft_cls_participant"].map(_bool_value).sum())
+                    if "soft_cls_participant" in scenario_assets.columns
+                    else 0
+                ),
+                "hard_cls_evs": (
+                    int(scenario_assets["hard_cls_enabled"].map(_bool_value).sum())
+                    if "hard_cls_enabled" in scenario_assets.columns
+                    else 0
+                ),
+                "hard_only_evs": (
+                    int(
+                        (
+                            scenario_assets["contract_type"].astype(str) == "hard_ev"
+                        ).sum()
+                    )
+                    if "contract_type" in scenario_assets.columns
+                    else 0
+                ),
+                "soft_hard_overlap": (
+                    int(
+                        (
+                            scenario_assets["contract_type"].astype(str)
+                            == "soft+hard_ev"
+                        ).sum()
+                    )
+                    if "contract_type" in scenario_assets.columns
+                    else 0
+                ),
+                "evse_devices": sum(
+                    1
+                    for record in scenario_devices
+                    if record["device_type"] == "evse_l2"
+                ),
                 "soft_device_rows": sum(
-                    1 for record in scenario_devices if record["contract_role"] == "soft_cls_provider"
+                    1
+                    for record in scenario_devices
+                    if record["contract_role"] == "soft_cls_provider"
                 ),
                 "hard_device_rows": sum(
-                    1 for record in scenario_devices if record["contract_role"] == "hard_cls_backstop"
+                    1
+                    for record in scenario_devices
+                    if record["contract_role"] == "hard_cls_backstop"
                 ),
                 "available_soft_kw": round(
                     sum(
@@ -266,8 +345,8 @@ def write_scenario_model_artifacts(
     base_device_registry: pd.DataFrame,
     asset_registry: pd.DataFrame,
     *,
-    out_dir: Path = DEFAULT_LAYOUT.models / "scenarios",
-    root: Path = Path("."),
+    out_dir: Path = _DEFAULT_SCENARIO_DIR,
+    root: Path = _CWD,
     scenario_id: str | None = None,
 ) -> dict[str, Any]:
     """Write scenario model overlay Parquet files and manifest."""
@@ -335,7 +414,9 @@ def write_scenario_model_artifacts(
         "scenario_counts": scenario_counts,
         "inputs": {
             "building_models": "instances/default/digital_twin/models/building_models.parquet",
-            "base_device_registry": "instances/default/digital_twin/models/device_registry.parquet",
+            "base_device_registry": (
+                "instances/default/digital_twin/models/device_registry.parquet"
+            ),
             "asset_registry": ASSET_REGISTRY_SOURCE_TABLE,
         },
         "artifacts": artifacts,

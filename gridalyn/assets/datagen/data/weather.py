@@ -23,7 +23,6 @@ import numpy as np
 import pandas as pd
 import pvlib
 
-
 WeatherSource = Literal["auto", "pvgis", "synthetic"]
 
 # Trois-Rivières, QC  (WMO 717200)
@@ -80,7 +79,9 @@ def download_tmy(
             cached_tmy = pickle.load(f)
         if _is_valid_cached_tmy(cached_tmy):
             return cached_tmy
-        print("  Cached TMY is legacy or outside expected temperature bounds; refreshing …")
+        print(
+            "  Cached TMY is legacy or outside expected temperature bounds; refreshing …"
+        )
 
     print("Fetching TMY data from PVGIS for Trois-Rivières …")
     try:
@@ -99,7 +100,8 @@ def download_tmy(
     except Exception as exc:
         if source == "pvgis":
             raise RuntimeError(
-                f"PVGIS download failed and source='pvgis' forbids the synthetic fallback: {exc}"
+                "PVGIS download failed and source='pvgis' forbids the "
+                f"synthetic fallback: {exc}"
             ) from exc
         print(f"  PVGIS unavailable ({exc}), generating synthetic winter profile …")
         tmy = _synthetic_winter_tmy()
@@ -134,8 +136,7 @@ def _is_valid_cached_tmy(tmy: object) -> bool:
     if temp.isna().any():
         return False
     return bool(
-        temp.min() >= _MIN_REASONABLE_TEMP_C
-        and temp.max() <= _MAX_REASONABLE_TEMP_C
+        temp.min() >= _MIN_REASONABLE_TEMP_C and temp.max() <= _MAX_REASONABLE_TEMP_C
     )
 
 
@@ -147,16 +148,28 @@ def _synthetic_winter_tmy() -> pd.DataFrame:
     Oct 7.2, Nov 0.8, Dec -8.5
     """
     monthly_mean = {
-        1: -12.1, 2: -10.6, 3: -4.1, 4: 5.0,
-        5: 12.0, 6: 17.5, 7: 20.2, 8: 19.4,
-        9: 13.8, 10: 7.2, 11: 0.8, 12: -8.5,
+        1: -12.1,
+        2: -10.6,
+        3: -4.1,
+        4: 5.0,
+        5: 12.0,
+        6: 17.5,
+        7: 20.2,
+        8: 19.4,
+        9: 13.8,
+        10: 7.2,
+        11: 0.8,
+        12: -8.5,
     }
     rng = pd.date_range("2023-01-01", periods=8760, freq="h", tz="America/Toronto")
     rng_gen = np.random.default_rng(42)
 
     midpoint_index = pd.DatetimeIndex(
         [pd.Timestamp(2022, 12, 15, tz="America/Toronto")]
-        + [pd.Timestamp(2023, month, 15, tz="America/Toronto") for month in range(1, 13)]
+        + [
+            pd.Timestamp(2023, month, 15, tz="America/Toronto")
+            for month in range(1, 13)
+        ]
         + [pd.Timestamp(2024, 1, 15, tz="America/Toronto")]
     )
     midpoint_values = np.array(
@@ -198,7 +211,9 @@ def _synthetic_winter_tmy() -> pd.DataFrame:
     return _annotate_tmy(df, source="synthetic_climate_normals")
 
 
-def select_cold_day(tmy: pd.DataFrame, month_range: tuple[int, int] = (11, 3), duration_hours: int = 24) -> pd.DataFrame:
+def select_cold_day(
+    tmy: pd.DataFrame, month_range: tuple[int, int] = (11, 3), duration_hours: int = 24
+) -> pd.DataFrame:
     """
     Return a DataFrame (1-minute resolution) for the coldest day over the specified duration.
 
@@ -217,18 +232,20 @@ def select_cold_day(tmy: pd.DataFrame, month_range: tuple[int, int] = (11, 3), d
     winter = tmy.loc[mask, "temp_air"]
     daily_mean = winter.resample("D").mean()
     coldest_date = daily_mean.idxmin()
-    print(f"  Coldest day: {coldest_date.date()}  "
-          f"(daily mean {daily_mean.min():.1f} °C)")
+    print(
+        f"  Coldest day: {coldest_date.date()}  "
+        f"(daily mean {daily_mean.min():.1f} °C)"
+    )
 
     start_ts = pd.Timestamp(coldest_date.date(), tz=tmy.index.tz)
     # Add an extra day of buffer from the database just in case to safely interpolate
     end_ts_buffer = start_ts + pd.Timedelta(hours=duration_hours + 24)
-    
-    day_data = tmy.loc[start_ts : end_ts_buffer, ["temp_air"]]
+
+    day_data = tmy.loc[start_ts:end_ts_buffer, ["temp_air"]]
 
     # Resample / interpolate to 1-minute resolution
     day_1min = day_data.resample("1min").interpolate("linear")
-    
+
     # Ensure exact number of minutes
     idx = pd.date_range(start_ts, periods=duration_hours * 60, freq="1min")
     day_1min = day_1min.reindex(idx).interpolate("linear").ffill().bfill()
