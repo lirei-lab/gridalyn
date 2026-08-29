@@ -119,24 +119,21 @@ class VerifiersAgainstTheCommittedTwinTests(unittest.TestCase):
         report = verify_scenarios(["S0", "S1"], _TIMESERIES, _BASE)
         self.assertTrue(report["valid"], report["error"])
 
-    def test_scenario_overlay_verification_reports_its_current_state(self) -> None:
-        """Pins the OUTCOME, not a pass.
+    def test_scenario_overlay_verification_passes(self) -> None:
+        """The committed twin's overlays match the seed their documents declare.
 
-        The committed twin currently fails this verifier: its EV overlays do
-        not match the seed their scenario documents declare (syntgrid-4zd.11).
-        Asserting `valid is True` here would be asserting a fix that has not
-        happened. Asserting the shape, and that a failure names the check,
-        keeps this test honest either way -- and it will need updating when
-        4zd.11 lands, which is the point.
+        This asserted only the report's SHAPE until 2026-08-29, because the
+        committed twin failed: its assignment table had been regenerated on
+        2026-05-18 with an explicit `--assignment-seed 123` that appears in no
+        config, no default and no declaration, while every other artifact in
+        the twin -- and the scenario documents themselves -- were built from
+        the declared 1042. Regenerating from the declared seed restored
+        coherence with the 2026-05-08 powerflow results, so this can now assert
+        the outcome rather than accommodate the failure.
         """
         report = verify_scenario_overlays(base_dir=_BASE, scenario_dir=_SCENARIOS)
-        self.assertIn("valid", report)
-        if not report["valid"]:
-            self.assertIn("seed policy", report["error"])
-            self.assertTrue(
-                report["lines"],
-                "a failing run must still show how far it got",
-            )
+        self.assertTrue(report["valid"], report["error"])
+        self.assertEqual(5, len(report["lines"]), report["lines"])
 
 
 @pytest.mark.skipif(not _HAVE_TWIN, reason=_SKIP)
