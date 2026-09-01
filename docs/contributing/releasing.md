@@ -27,7 +27,7 @@ remain simulated-or-fixture, and the measured path at scale is
 operator-receipted (protocol `measured-state-ingest`). It is not a digital
 twin (which needs both directions — a recorded non-goal). Treat
 "digital twin" in the package and directory names as a target, and see
-[Network Model](../components/twin.md#what-class-of-thing-this-is) for
+[Network Model](../components/twin.md#what-problem-this-layer-solves) for
 the measurement behind that statement.
 
 The public demos are included because they exercise different platform
