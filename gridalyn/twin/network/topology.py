@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
-from gridalyn.twin.network.model import ConnectedEquipment, DownstreamAssets, NetworkIntegrityReport
+from gridalyn.twin.network.model import (
+    ConnectedEquipment,
+    DownstreamAssets,
+    NetworkIntegrityReport,
+)
 
 __all__ = ["ConnectedEquipment", "DownstreamAssets", "NetworkIntegrityReport"]

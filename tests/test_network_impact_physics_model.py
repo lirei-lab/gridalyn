@@ -98,15 +98,19 @@ class NetworkImpactPhysicsModelTest(unittest.TestCase):
             ]
         )
 
-    def test_fit_physics_surrogate_summarizes_positive_labels_by_provider_constraint(self):
+    def test_fit_physics_surrogate_summarizes_positive_labels_by_provider_constraint(
+        self,
+    ):
         model = fit_physics_surrogate(self.training, self.labels)
 
         self.assertEqual(model["model_family"], "tabular_physics_lookup_v1")
         self.assertEqual(model["n_label_rows"], 3)
         self.assertEqual(model["n_supervised_pairs"], 2)
-        pair = model["pair_labels"].loc[
-            model["pair_labels"]["provider_id"] == "p-soft-a"
-        ].iloc[0]
+        pair = (
+            model["pair_labels"]
+            .loc[model["pair_labels"]["provider_id"] == "p-soft-a"]
+            .iloc[0]
+        )
         self.assertAlmostEqual(pair["target_relief_pct_per_kw"], 0.55)
         self.assertAlmostEqual(pair["target_delta_v_min_pu"], 0.0011)
 
@@ -136,7 +140,10 @@ class NetworkImpactPhysicsModelTest(unittest.TestCase):
 
         self.assertEqual(report["report_id"], "network_impact_physics_surrogate")
         self.assertEqual(report["model"]["model_family"], "tabular_physics_lookup_v1")
-        self.assertEqual(report["model"]["fallback_policy"], "provider_type_constraint_mean_then_topology_zero")
+        self.assertEqual(
+            report["model"]["fallback_policy"],
+            "provider_type_constraint_mean_then_topology_zero",
+        )
         self.assertEqual(report["summary"]["n_prediction_rows"], 3)
         self.assertEqual(report["summary"]["n_positive_predictions"], 2)
 

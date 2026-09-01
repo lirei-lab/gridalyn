@@ -40,7 +40,14 @@ def _write_voltage_comparison(script: ProjectScript, voltages: pd.DataFrame) -> 
     figure_path = script.figures_dir / "ieee33_scenario_voltage_comparison.png"
     fig, ax = plt.subplots(figsize=(10, 5.4))
     for scenario_id, group in voltages.groupby("scenario_id", sort=False):
-        ax.plot(group["bus_id"], group["vm_pu"], linewidth=1.7, marker="o", markersize=3, label=scenario_id)
+        ax.plot(
+            group["bus_id"],
+            group["vm_pu"],
+            linewidth=1.7,
+            marker="o",
+            markersize=3,
+            label=scenario_id,
+        )
     ax.axhline(0.95, color="#c0392b", linestyle="--", linewidth=1.2, label="0.95 p.u.")
     ax.set_title("IEEE 33-Bus Demo - Scenario Voltage Comparison")
     ax.set_xlabel("Bus index")
@@ -54,8 +61,12 @@ def _write_voltage_comparison(script: ProjectScript, voltages: pd.DataFrame) -> 
 
 
 def _summary(results: pd.DataFrame) -> dict:
-    best = results.sort_values(["min_voltage_pu", "line_loss_mw"], ascending=[False, True]).iloc[0]
-    worst = results.sort_values(["min_voltage_pu", "line_loss_mw"], ascending=[True, False]).iloc[0]
+    best = results.sort_values(
+        ["min_voltage_pu", "line_loss_mw"], ascending=[False, True]
+    ).iloc[0]
+    worst = results.sort_values(
+        ["min_voltage_pu", "line_loss_mw"], ascending=[True, False]
+    ).iloc[0]
     return {
         "scenario_count": int(len(results)),
         "scenario_ids": list(results["scenario_id"]),
@@ -91,7 +102,10 @@ def main() -> int:
         "ieee33_scenario_comparison_report",
         inputs=[
             script.file_reference(scenario_input_path),
-            {"name": IEEE_33_BUS_BENCHMARK.source_name, "type": "gridalyn_benchmark_feeder"},
+            {
+                "name": IEEE_33_BUS_BENCHMARK.source_name,
+                "type": "gridalyn_benchmark_feeder",
+            },
         ],
         artifacts=[
             script.file_reference(result_path),
@@ -101,7 +115,11 @@ def main() -> int:
         summary=_summary(results),
         validation={
             "valid": bool(results["converged"].all()),
-            "errors": [] if bool(results["converged"].all()) else ["one or more scenarios did not converge"],
+            "errors": (
+                []
+                if bool(results["converged"].all())
+                else ["one or more scenarios did not converge"]
+            ),
             "warnings": [],
         },
     )

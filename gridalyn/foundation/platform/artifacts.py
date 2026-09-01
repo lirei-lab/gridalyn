@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
-import json
 from pathlib import Path
 from typing import Any
-
 
 DEFAULT_MAX_DEMO_DATASET_BYTES = 10 * 1024 * 1024
 
@@ -60,9 +59,7 @@ DEFAULT_FORBIDDEN_TRACKED_PATTERNS = (
 # them as package-data, and without them ParametricArxGenerator silently falls
 # back to the analytical model, so a clone reproduces the fixture baselines 5.6%
 # off. Shipping them is what makes the baselines mean anything.
-DEFAULT_ALLOWED_TRACKED_PATTERNS = (
-    "gridalyn/assets/datagen/models/weights/*.pkl",
-)
+DEFAULT_ALLOWED_TRACKED_PATTERNS = ("gridalyn/assets/datagen/models/weights/*.pkl",)
 
 DEFAULT_REQUIRED_GITIGNORE_PATTERNS = (
     "_build/",
@@ -151,9 +148,7 @@ def _tracked_files(root: Path) -> list[str]:
     if result.returncode != 0:
         return []
     return [
-        line
-        for line in result.stdout.splitlines()
-        if line and (root / line).exists()
+        line for line in result.stdout.splitlines() if line and (root / line).exists()
     ]
 
 
@@ -181,13 +176,18 @@ def check_artifact_policy(
     warnings: list[str] = []
 
     gitignore_path = repo_root / ".gitignore"
-    gitignore_text = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    gitignore_text = (
+        gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
+    )
     missing_gitignore = [
         pattern
         for pattern in artifact_policy.required_gitignore_patterns
         if pattern not in gitignore_text
     ]
-    errors.extend(f".gitignore missing required pattern: {pattern}" for pattern in missing_gitignore)
+    errors.extend(
+        f".gitignore missing required pattern: {pattern}"
+        for pattern in missing_gitignore
+    )
 
     tracked = tracked_files if tracked_files is not None else _tracked_files(repo_root)
     forbidden_tracked = [
@@ -196,12 +196,16 @@ def check_artifact_policy(
         if _matches_any(path, artifact_policy.forbidden_tracked_patterns)
         and not _matches_any(path, artifact_policy.allowed_tracked_patterns)
     ]
-    errors.extend(f"forbidden generated artifact is tracked: {path}" for path in forbidden_tracked)
+    errors.extend(
+        f"forbidden generated artifact is tracked: {path}" for path in forbidden_tracked
+    )
 
     minimal_dir = repo_root / artifact_policy.minimal_dataset
     dataset_size = _directory_size(minimal_dir)
     if not minimal_dir.exists():
-        errors.append(f"minimal dataset directory is missing: {artifact_policy.minimal_dataset}")
+        errors.append(
+            f"minimal dataset directory is missing: {artifact_policy.minimal_dataset}"
+        )
     if dataset_size > artifact_policy.max_demo_dataset_bytes:
         errors.append(
             "minimal dataset exceeds size limit: "
@@ -234,7 +238,9 @@ def check_artifact_policy(
             }
             for filename in artifact_policy.required_minimal_dataset_files:
                 if filename != "manifest.json" and filename not in declared_paths:
-                    errors.append(f"minimal dataset manifest does not declare: {filename}")
+                    errors.append(
+                        f"minimal dataset manifest does not declare: {filename}"
+                    )
 
     summary = {
         "minimal_dataset": artifact_policy.minimal_dataset,
@@ -246,7 +252,9 @@ def check_artifact_policy(
         "forbidden_tracked_files": len(forbidden_tracked),
         "minimal_dataset_manifest": manifest.get("dataset_id"),
     }
-    return ArtifactPolicyReport(valid=not errors, errors=errors, warnings=warnings, summary=summary)
+    return ArtifactPolicyReport(
+        valid=not errors, errors=errors, warnings=warnings, summary=summary
+    )
 
 
 __all__ = [

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from network_model import PROSUMER_ASSETS, build_synthetic_feeder
+
 from gridalyn.assets import prosumer_assets_to_frame
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
@@ -13,8 +15,6 @@ from gridalyn.simulation import (
     write_powerflow_report,
     write_voltage_profile_figure,
 )
-
-from network_model import PROSUMER_ASSETS, build_synthetic_feeder
 
 
 def _write_tables(script: ProjectScript, net) -> dict[str, Path]:
@@ -61,7 +61,10 @@ def main() -> int:
                 figure_path,
             )
         ],
-        summary={"network": "synthetic_14_bus_radial_feeder", "prosumer_count": int(len(PROSUMER_ASSETS))},
+        summary={
+            "network": "synthetic_14_bus_radial_feeder",
+            "prosumer_count": int(len(PROSUMER_ASSETS)),
+        },
     )
     return 0
 

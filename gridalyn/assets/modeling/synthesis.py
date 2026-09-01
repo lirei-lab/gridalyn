@@ -12,8 +12,10 @@ from gridalyn.assets.modeling.archetypes import (
     select_archetype,
 )
 from gridalyn.assets.modeling.buildings import BuildingModel, EndUseLoad, ThermalZone
-from gridalyn.assets.modeling.devices import evse_device_for_building, hvac_devices_for_building
-
+from gridalyn.assets.modeling.devices import (
+    evse_device_for_building,
+    hvac_devices_for_building,
+)
 
 SOURCE_STANDARD = "pycity-inspired"
 BUILDINGS_SOURCE_TABLE = "instances/default/digital_twin/base/buildings.parquet"
@@ -62,7 +64,9 @@ def _dwelling_units(area_m2: float, default_units: int) -> int:
     return max(default_units, int(round(area_m2 / 95.0)))
 
 
-def _merge_connectivity(buildings: pd.DataFrame, connectivity: pd.DataFrame | None) -> pd.DataFrame:
+def _merge_connectivity(
+    buildings: pd.DataFrame, connectivity: pd.DataFrame | None
+) -> pd.DataFrame:
     if connectivity is None or connectivity.empty:
         return buildings.copy()
     keep = [
@@ -79,7 +83,9 @@ def _merge_connectivity(buildings: pd.DataFrame, connectivity: pd.DataFrame | No
     ]
     if "building_id" not in keep:
         return buildings.copy()
-    return buildings.merge(connectivity[keep], on="building_id", how="left", suffixes=("", "_connectivity"))
+    return buildings.merge(
+        connectivity[keep], on="building_id", how="left", suffixes=("", "_connectivity")
+    )
 
 
 def synthesize_building_model_tables(
@@ -109,16 +115,22 @@ def synthesize_building_model_tables(
         dwelling_units = _dwelling_units(area_m2, archetype.dwelling_units)
 
         heating_capacity_kw = max(
-            archetype.heating_kw_per_m2 * area_m2 * _stable_multiplier(raw, "thermal_seed_base", 0.08),
+            archetype.heating_kw_per_m2
+            * area_m2
+            * _stable_multiplier(raw, "thermal_seed_base", 0.08),
             static_p_kw * 0.35,
             0.5,
         )
         cooling_capacity_kw = max(
-            archetype.cooling_kw_per_m2 * area_m2 * _stable_multiplier(raw, "load_seed_base", 0.06),
+            archetype.cooling_kw_per_m2
+            * area_m2
+            * _stable_multiplier(raw, "load_seed_base", 0.06),
             0.25,
         )
         base_load_kw = max(
-            archetype.base_load_kw_per_m2 * area_m2 * _stable_multiplier(raw, "load_seed_base", 0.05),
+            archetype.base_load_kw_per_m2
+            * area_m2
+            * _stable_multiplier(raw, "load_seed_base", 0.05),
             static_p_kw * 0.2,
             0.05,
         )
@@ -129,7 +141,9 @@ def synthesize_building_model_tables(
         )
         thermal_capacitance = archetype.thermal_capacitance_kwh_per_c * area_m2 / 100.0
 
-        load_bus_id = _none_if_missing(raw.get("load_bus_id")) or _none_if_missing(raw.get("lv_bus_id"))
+        load_bus_id = _none_if_missing(raw.get("load_bus_id")) or _none_if_missing(
+            raw.get("lv_bus_id")
+        )
         has_ev = _bool_value(raw.get("has_ev"))
         ev_id = _none_if_missing(raw.get("ev_id"))
 

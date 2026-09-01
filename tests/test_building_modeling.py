@@ -75,14 +75,21 @@ class BuildingModelingTest(unittest.TestCase):
             profile="north_america_residential_v1",
         )
 
-        self.assertEqual(set(tables), {"building_models", "thermal_zones", "device_registry", "end_use_loads"})
+        self.assertEqual(
+            set(tables),
+            {"building_models", "thermal_zones", "device_registry", "end_use_loads"},
+        )
         self.assertEqual(len(tables["building_models"]), 2)
         self.assertEqual(len(tables["thermal_zones"]), 2)
         self.assertEqual(len(tables["end_use_loads"]), 6)
 
         model = tables["building_models"].set_index("building_id")
-        self.assertEqual(model.loc["building:1", "archetype_id"], "na_residential_small")
-        self.assertEqual(model.loc["building:2", "archetype_id"], "na_residential_multifamily")
+        self.assertEqual(
+            model.loc["building:1", "archetype_id"], "na_residential_small"
+        )
+        self.assertEqual(
+            model.loc["building:2", "archetype_id"], "na_residential_multifamily"
+        )
         self.assertEqual(model.loc["building:2", "lv_transformer_id"], "transformer:8")
         self.assertGreater(model.loc["building:1", "heating_capacity_kw"], 0.0)
         self.assertGreater(model.loc["building:1", "thermal_resistance_c_per_kw"], 0.0)
@@ -92,7 +99,12 @@ class BuildingModelingTest(unittest.TestCase):
         self.assertIn("hvac_cooling", set(devices["device_type"]))
         self.assertIn("evse_l2", set(devices["device_type"]))
         self.assertEqual(
-            len(devices[(devices["building_id"] == "building:2") & (devices["device_type"] == "evse_l2")]),
+            len(
+                devices[
+                    (devices["building_id"] == "building:2")
+                    & (devices["device_type"] == "evse_l2")
+                ]
+            ),
             1,
         )
 
@@ -115,7 +127,10 @@ class BuildingModelingTest(unittest.TestCase):
             self.assertTrue((out_dir / "end_use_loads.parquet").exists())
 
             saved = json.loads((out_dir / "building_model_manifest.json").read_text())
-            self.assertEqual(saved["artifacts"]["building_models"], "instances/default/digital_twin/models/building_models.parquet")
+            self.assertEqual(
+                saved["artifacts"]["building_models"],
+                "instances/default/digital_twin/models/building_models.parquet",
+            )
             self.assertEqual(saved["counts"]["building_models"], 2)
 
     def test_load_base_inputs_uses_network_repository(self):
@@ -133,16 +148,25 @@ class BuildingModelingTest(unittest.TestCase):
             def load_model(self):
                 return FakeModel()
 
-        with patch(
-            "gridalyn.assets.modeling.artifacts.NetworkModelRepository",
-            FakeRepository,
-            create=True,
-        ), patch.object(pd, "read_parquet", side_effect=AssertionError("raw base parquet read")):
-            buildings, connectivity = load_base_inputs(Path("instances/default/digital_twin/base"))
+        with (
+            patch(
+                "gridalyn.assets.modeling.artifacts.NetworkModelRepository",
+                FakeRepository,
+                create=True,
+            ),
+            patch.object(
+                pd, "read_parquet", side_effect=AssertionError("raw base parquet read")
+            ),
+        ):
+            buildings, connectivity = load_base_inputs(
+                Path("instances/default/digital_twin/base")
+            )
 
         self.assertEqual(list(buildings["building_id"]), ["building:1", "building:2"])
         self.assertIsNotNone(connectivity)
-        self.assertEqual(list(connectivity["lv_transformer_id"]), ["transformer:7", "transformer:8"])
+        self.assertEqual(
+            list(connectivity["lv_transformer_id"]), ["transformer:7", "transformer:8"]
+        )
 
 
 if __name__ == "__main__":

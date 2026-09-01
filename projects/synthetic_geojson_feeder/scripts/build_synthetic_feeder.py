@@ -53,7 +53,9 @@ def _write_figure(script: ProjectScript, result) -> Path:
     return figure_path
 
 
-def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure_path: Path) -> None:
+def _write_report(
+    script: ProjectScript, result, tables: dict[str, Path], figure_path: Path
+) -> None:
     net = result.net
     validation = result.validation_report
     summary = build_pandapower_summary(
@@ -75,7 +77,9 @@ def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure
     )
     artifacts = [
         script.file_reference(script.data_dir / "building_footprints.geojson"),
-        script.file_reference(script.reports_dir / "synthetic_network_validation_report.json"),
+        script.file_reference(
+            script.reports_dir / "synthetic_network_validation_report.json"
+        ),
         *(script.file_reference(path) for path in tables.values()),
         script.file_reference(figure_path),
     ]
@@ -94,7 +98,9 @@ def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure
         summary=summary,
         validation={
             "valid": bool(validation["valid"]),
-            "errors": [] if validation["valid"] else ["synthetic network validation failed"],
+            "errors": (
+                [] if validation["valid"] else ["synthetic network validation failed"]
+            ),
             "warnings": [],
         },
     )
@@ -103,7 +109,9 @@ def _write_report(script: ProjectScript, result, tables: dict[str, Path], figure
 def _generated_building_peaks_kw(script: ProjectScript) -> list[float]:
     """Per-building peaks from loadGeneration, anchored to the config envelope mean."""
     config = json.loads(
-        (script.root / "inputs/synthetic_network_config.json").read_text(encoding="utf-8")
+        (script.root / "inputs/synthetic_network_config.json").read_text(
+            encoding="utf-8"
+        )
     )
     loads = config["loads"]
     anchor_mean_kw = float(loads["max_load_per_building"]) / float(
