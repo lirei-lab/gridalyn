@@ -284,9 +284,29 @@ class Building:
             p_z = self.p_heat_max * share * self.zone_on
             if p_cap_kw is not None and p_heat_desired > 0:
                 p_z = p_z * (p_heat_actual / p_heat_desired)
-            self.zone_T = self.zone_T + (dt_min / 60.0) / c_z * (
-                (t_out - self.zone_T) / r_z + ETA_HEAT * p_z
-            )
+            # Cooling is split across zones by the same envelope share as
+            # heating, so the parallel decomposition stays exact: with
+            # c_z = C*share and p_cool_z = p_cool*share, the term reduces to
+            # p_cool/C, identical to the whole-house node. Before this, the
+            # zone update carried no cooling term at all -- the A/C was billed
+            # in p_total_kw and removed no heat, so it never satisfied its own
+            # thermostat and latched open-loop on outdoor temperature.
+            p_cool_z = p_cool_actual * share
+            if integrator == "euler":
+                self.zone_T = self.zone_T + (dt_min / 60.0) / c_z * (
+                    (t_out - self.zone_T) / r_z + ETA_HEAT * p_z - ETA_COOL * p_cool_z
+                )
+            else:
+                # Same exact-discrete form as the whole-house node, applied per
+                # zone. tau_z = r_z * c_z = (R/share)*(C*share) = R*C, so every
+                # zone shares the house time constant and only T_eq differs.
+                # Before this, `integrator` was validated and then ignored on
+                # this branch, so "exact" silently ran Euler.
+                tau = self.R * self.C
+                t_eq_z = t_out + r_z * (ETA_HEAT * p_z - ETA_COOL * p_cool_z)
+                self.zone_T = self.zone_T + (1.0 - math.exp(-(dt_min / 60.0) / tau)) * (
+                    t_eq_z - self.zone_T
+                )
             self.T_in = float(np.dot(share, self.zone_T))
         elif integrator == "euler":
             # Forward-Euler update (default, byte-identical to historical runs).

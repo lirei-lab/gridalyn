@@ -799,3 +799,90 @@ fresh `python -m` subprocesses on the migrated surface.
 This entry exists so a future reader does not mistake the config→contract move
 for a deliberate re-calibration — there is none here. Any future re-base must
 still be recorded in this file with its rationale, per repo discipline.
+
+## Cooling coupled to the thermal node (2026-09-01) — summer only, no headline change
+
+**A defect fix, not a re-calibration.** The zone branch of `Building.step()` --
+taken whenever `control="hysteresis"`, which is what this study declares
+(`project.yaml:236`) -- advanced its state with a heating term only. The air
+conditioner was computed, reported in `p_total_kw` and billed, and removed no
+heat. Because it never satisfied its own thermostat it latched open-loop on
+outdoor temperature, so it also drew far more than a working A/C would. The
+other two integrator branches carried `- ETA_COOL * p_cool_actual` correctly;
+only this one did not.
+
+Demonstration, holding a dwelling at 32 °C for 8 h with the zone state
+initialised to 32 °C: before the fix the A/C drew **24.0 kWh** and indoor
+temperature was **identical** to the same dwelling with no A/C at all. After,
+it draws 7.2 kWh and settles at 24.3 °C — and matches the `proportional`
+branch exactly, which is the cross-check that matters, since the two modes
+differ in *heating* control and share the same cooling physics.
+
+### Blast radius, measured before the fix landed
+
+Annual base trace, this study's own settings (`R_STUDY_B`, `P_HEAT_QUEBEC`,
+hysteresis, 1-min integration), 6 homes, seed 42, full TMY year:
+
+| | shipped | fixed | delta |
+|---|---|---|---|
+| annual peak kW | 73.578 | 73.578 | **0.00 %** |
+| winter peak kW | 73.578 | 73.578 | **0.00 %** |
+| P95 cold-evening kW | 49.670 | 49.653 | **−0.03 %** |
+| hours over rating | 0.0 | 0.0 | unchanged |
+| summer energy kWh | 13 586.9 | 11 005.8 | −19.0 % |
+| summer peak kW | 43.731 | 34.058 | −22.1 % |
+| annual energy kWh | 178 198.0 | 175 595.9 | −1.46 % |
+
+**The headline does not move; three congestion pins do.** This study's firm and
+flexible EV counts turn on cold evenings, where cooling never engages, and both
+are unchanged (firm 11, flexible 16, +45 % expansion).
+
+The table above was measured on the **base trace alone**, and read that way it
+is misleading: with no EV pool on top, summer never crosses the transformer
+rating, so it suggested nothing downstream could move. That was wrong. With the
+EV pool at its top adoption the inflated summer base *did* cross the rating, and
+three annual congestion pins carried it:
+
+| pin | was | now | delta |
+|---|---|---|---|
+| `annual.congested_hours_at_pool_top` | 20.25 | 19.5 | −0.75 h/yr |
+| `annual.curtailed_pct_at_pool_top` | 0.386786 | 0.362857 | −6.2 % |
+| `annual.jain_fair` | 0.995782 | 0.99535 | −0.04 % |
+
+Read plainly: **0.75 congested hours per year in the previous baseline were
+produced by an air conditioner that removed no heat.** The fix removes them.
+
+### Deliberate re-base of three pins
+
+`results_baseline.json` is updated for those three, and for nothing else — 78 of
+81 pins were value-identical before the edit. This is a re-base *behind a defect
+fix*, which is the case the cross-cutting rule allows, and it is recorded here
+rather than applied silently.
+
+Determinism was checked separately, because the annual byte-stability seal fails
+on any legitimate value change: it hashes the on-disk outputs, re-runs the
+chain, and compares. The first run therefore compared old-code outputs against
+new-code outputs and diverged, which is code-versus-code, not the run-versus-run
+non-reproducibility that test exists to catch. **Re-run with the outputs already
+regenerated, the seal passes** — two runs of the fixed code are byte-identical.
+Annual energy falls 1.46 %, entirely from summer.
+
+`admm_thermal_consensus` also declares `heatingControl: hysteresis`, and is
+**unaffected**: it runs a single cold day (−21.9 to −15.5 °C) and its total
+cooling energy over the window is exactly 0.
+
+### Also fixed here
+
+`Building.step()` accepted an `integrator` argument, validated it, and then
+ignored it on the zone branch — so `integrator="exact"` silently ran Euler in
+every shipped study. It is now honoured per zone, using the same exact-discrete
+form as the whole-house node (τ = R·C is identical for every zone, so only
+`T_eq` differs). Both studies run the default `"euler"`, so no result moves.
+Measured agreement after a full day at dt = 1 min: 7.2 × 10⁻⁵ K on the smooth
+controller, 0.081 K on the latching one — larger there because a zone that
+flips one step earlier separates the trajectories discretely.
+
+`tests/test_building_cooling.py` asserts, in **both** control modes, that a
+cooling-capable dwelling ends colder than the same dwelling without cooling.
+The defect lived in exactly one branch, so a mode-agnostic assertion is the one
+that would have caught it.
