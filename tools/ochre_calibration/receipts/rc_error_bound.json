@@ -1,0 +1,13 @@
+{
+  "metric": "mae_curtailment_relief_kw_per_home",
+  "units": "kW per dwelling",
+  "value": 5.3,
+  "sample_size": 15,
+  "status": "measured",
+  "reference": "EnergyPlus 24.x via OpenStudio-HPXML v1.9.1 on NRCan Quebec all-electric archetypes",
+  "method": "Full heating curtailment 16:00-19:00 replayed identically on both models over the coldest week. RC takes it as p_cap_kw=0; EnergyPlus as a setpoint floored below indoor temperature, because hvac_maximum_power_ratio is honoured only for variable-speed heat pumps. Measured on a 15-dwelling holdout disjoint from the 14 used to fit. COVERS shifted energy, rebound and thermal inertia. DOES NOT cover instantaneous coincidence: EnergyPlus steps >2 kW in 22.1% of 15-min intervals against 45.1% measured, so the Hydro-Quebec set is the arbiter for that axis, not this reference. Partial power caps are out of scope.",
+  "promised_kw_per_home": 3.137,
+  "delivered_kw_per_home": 8.437,
+  "fold_spread_kw": 0.089,
+  "comfort_drift_worst_c": -16.361
+}

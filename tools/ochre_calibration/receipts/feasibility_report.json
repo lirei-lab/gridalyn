@@ -1,0 +1,68 @@
+{
+  "gate": "ochre_calibration_phase1_feasibility",
+  "pins": {
+    "archetype": "ERS-EX-26701.H2K",
+    "archetype_repo_commit": "70e8fe245506f72bc6354b5aa37e51ead9bb88f3",
+    "h2k_hpxml_commit": "b7ac31f40b29f98ee465c0dcfaa32400d0f7651f",
+    "ochre": "ochre-nrel==0.9.2",
+    "openstudio": "3.9.0+c77fbb9569",
+    "openstudio_hpxml": "v1.9.1"
+  },
+  "stages": [
+    {
+      "detail": {
+        "simulate_numpy": "1.26.4",
+        "simulate_python": "/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration/venvs/simulate/bin/python",
+        "translate_numpy": "1.26.2",
+        "translate_python": "/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration/venvs/translate/bin/python"
+      },
+      "seconds": 0.235,
+      "stage": "environments",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "openstudio_cli": "/home/lirei-lenovo/.local/share/OpenStudio-3.9.0/bin/openstudio",
+        "openstudio_version": "3.9.0+c77fbb9569",
+        "os_hpxml_root": "/home/lirei-lenovo/.local/share/OpenStudio-HPXML-v1.9.1"
+      },
+      "seconds": 0.016,
+      "stage": "toolchain",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "bytes": 93384,
+        "path": "/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration/archetype/ERS-EX-26701.H2K",
+        "sha256": "90c4f24525356b425648404fe4fc7ce6ab0e053a2e1d98a991f3879cc809fdf3"
+      },
+      "seconds": 0.001,
+      "stage": "archetype",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "epw": "/home/lirei-lenovo/.local/share/OpenStudio-HPXML-v1.9.1/weather/CAN_QC_Mont.Joli.AP.717180_CWEC2020.epw",
+        "hpxml": "/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration/hpxml/ERS-EX-26701/run/in.xml",
+        "schema_version": "4.0",
+        "seconds": 10.274,
+        "sha256": "7e0b4220ddac9a2323fd4e60554e3bca2206dc622faf484e053c8185f472ed2c"
+      },
+      "seconds": 10.281,
+      "stage": "translate",
+      "status": "passed"
+    },
+    {
+      "diagnosis": "OCHRE rejected the translated HPXML: AssertionError: (no message) @     boundaries, construction = parse_hpxml_boundaries(hpxml, **house_args) |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ |   File \"/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration/venvs/simulate/lib/python3.12/site-packages/ochre/utils/hpxml.py\", line 328, in parse_hpxml_boundaries |     assert not all_rim_joists  # verifies that all boundaries are accounted for |            ^^^^^^^^^^^^^^^^^^ | AssertionError",
+      "seconds": 1.515,
+      "stage": "simulate",
+      "status": "failed"
+    },
+    {
+      "stage": "determinism",
+      "status": "not_reached"
+    }
+  ],
+  "status": "failed",
+  "workdir": "/home/lirei-lenovo/lirei/syntgrid/.ochre-calibration"
+}

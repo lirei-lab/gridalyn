@@ -41,7 +41,7 @@ single generator; the two heavy studies run on a different one.
 |---|---|---|
 | `loadGeneration` → `generate_residential_load_profiles` | Packaged LightGBM macro model over aggregates, plus an analytical fallback | The six fast governed studies |
 | `make_buildings` / `simulate_buildings` (`gridalyn/assets/datagen/agents/buildings.py`) | Per-dwelling RC air node, 3–6 independently latching zone thermostats, AR(1) background | `ev_hosting_flex`, `admm_thermal_consensus` |
-| `tools/ochre_calibration/` | EnergyPlus via OpenStudio-HPXML over real NRCan Québec archetypes | Nothing — it is a reference, not a runtime generator |
+| `tools/ochre_calibration/` | EnergyPlus via OpenStudio-HPXML over real NRCan Québec archetypes | Nothing at runtime — it is a reference, not a generator. Its measured results are published under [`tools/ochre_calibration/receipts/`](https://github.com/lirei-lab/gridalyn/tree/main/tools/ochre_calibration/receipts) |
 
 The third is deliberately outside the SDK. Its toolchain is ~1.6 GB, it cannot
 run in CI, and its dependencies pin numpy below this repo's floor, so it runs
@@ -73,6 +73,27 @@ cycling or small-group peaks, and the EnergyPlus reference for anything that
 turns on annual energy, per-end-use split or envelope response. When the two
 disagree, neither settles it — `datasets/hq` does, which is what
 `tests/test_building_diversity_vs_hq.py` already encodes.
+
+**The EnergyPlus numbers are readable without the toolchain.** The harness needs
+~1.6 GB and a numpy below this repo's floor, so it cannot run in CI — but its
+receipts are a few kilobytes and are tracked under
+`tools/ochre_calibration/receipts/`, with `receipts.py` returning the error
+bound as this platform's own `ErrorBound` so the file is validated against that
+contract. Two results worth knowing:
+
+- **Flexibility, on a disjoint holdout.** A pre-heat/curtail dispatch delivers
+  **3.777 kW/home** of relief on 15 dwellings it was not fitted on, at a
+  worst-case comfort cost of **−2.0 °C**, with rebound (1.081 kW/home) well
+  below relief. The comfort figure belongs wherever the relief is quoted.
+- **How far the RC promise sits from delivery.** Under *full* curtailment the
+  RC model promises 3.137 kW/home where EnergyPlus delivers 8.437 — an error
+  bound of **5.3 kW/home**, in the conservative direction. Large enough that
+  the model should be read as conservative rather than accurate on this axis.
+
+Quantified against the arbiter, the EnergyPlus coincidence curve tracks
+`datasets/hq` within **2–5 %** across 2…32 homes, always slightly low, which is
+the signature of its under-represented cycling: 0.656 vs 0.677 measured at 6
+homes, 0.597 vs 0.619 at 12, 0.549 vs 0.578 at 32.
 
 The parametric macro model is not characterised against the metered set here;
 `provenance.macro_model` records which variant a run used, and that record is
