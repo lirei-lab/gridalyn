@@ -78,6 +78,16 @@ The parametric macro model is not characterised against the metered set here;
 `provenance.macro_model` records which variant a run used, and that record is
 what makes two runs comparable.
 
+What that record does *not* say is what the trained variant was fitted on.
+[`gridalyn/assets/datagen/models/weights/PROVENANCE.md`](https://github.com/lirei-lab/gridalyn/blob/main/gridalyn/assets/datagen/models/weights/PROVENANCE.md)
+now does: the 1 000-dwelling Hydro-Québec set at 15 minutes over 2018-04-03 to
+2019-04-03, its four features, both sha256 digests, and the explicit note that
+the training data is private and cannot be redistributed — so the studies are
+byte-reproducible but the weights are not re-derivable outside the machines
+holding that data. It also records the consequence that matters for a cold
+climate: the fitted temperature support ends at −24.37 °C and the lowest split
+is −20.488 °C, below which predicted heating is constant.
+
 ## The contract
 
 `_LOAD_GENERATION_KEYS` is the whole accepted vocabulary for
