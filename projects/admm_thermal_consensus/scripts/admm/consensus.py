@@ -17,7 +17,7 @@ import numpy as np
 class AdmmResult:
     """Outcome of a sharing-ADMM solve."""
 
-    x: np.ndarray            # coordinated heating, shape (N, T)
+    x: np.ndarray  # coordinated heating, shape (N, T)
     iterations: int
     primal_residual: float
     dual_residual: float
@@ -181,17 +181,16 @@ def solve_sharing_admm(
         for i in np.where(~responsive)[0]:
             x[i] = project_capped_energy(f[i], lo[i], hi[i], energy[i])
 
-    bg_total = b.sum(axis=0)                       # (T,)
+    bg_total = b.sum(axis=0)  # (T,)
     c = (energy.sum() + bg_total.sum()) / horizon  # constant flattening target
 
-    z = x.mean(axis=0).copy()                      # (T,)
-    u = np.zeros(horizon)                          # scaled dual (T,)
+    z = x.mean(axis=0).copy()  # (T,)
+    u = np.zeros(horizon)  # scaled dual (T,)
     active = np.where(responsive)[0]
 
     obj_history: list[float] = []
     primal_res = dual_res = float("inf")
-    iteration = 0
-    for iteration in range(1, max_iters + 1):
+    for _ in range(1, max_iters + 1):
         xbar = x.mean(axis=0)
         # x-update for responsive agents only (batched over agents)
         centers = x[active] - xbar + (z - u)
@@ -203,7 +202,9 @@ def solve_sharing_admm(
                 "itj,ij->it", comfort_prox_inverse[active], centers - h[active]
             )
             q = h[active] + dev
-        x[active] = project_capped_energy_batch(q, lo[active], hi[active], energy[active])
+        x[active] = project_capped_energy_batch(
+            q, lo[active], hi[active], energy[active]
+        )
         xbar_new = x.mean(axis=0)
         # over-relaxation (Boyd 2011, 3.4.3): blend the new primal mean with the
         # previous z before the z/u updates; relax=1 recovers plain ADMM.
@@ -228,7 +229,7 @@ def solve_sharing_admm(
     converged = (primal_res + dual_res) < tol
     return AdmmResult(
         x=x,
-        iterations=iteration,
+        iterations=len(obj_history),
         primal_residual=primal_res,
         dual_residual=dual_res,
         converged=converged,

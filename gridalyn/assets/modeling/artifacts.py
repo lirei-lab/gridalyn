@@ -9,15 +9,14 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.foundation import ArtifactLayout
-from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.assets.modeling.archetypes import (
     NORTH_AMERICA_RESIDENTIAL_ARCHETYPES,
     NORTH_AMERICA_RESIDENTIAL_PROFILE,
 )
 from gridalyn.assets.modeling.environment import ModelingEnvironment
 from gridalyn.assets.modeling.synthesis import synthesize_building_model_tables
-
+from gridalyn.foundation import ArtifactLayout
+from gridalyn.twin.network import NetworkModelRepository
 
 TABLE_FILENAMES = {
     "building_models": "building_models.parquet",
@@ -25,7 +24,8 @@ TABLE_FILENAMES = {
     "device_registry": "device_registry.parquet",
     "end_use_loads": "end_use_loads.parquet",
 }
-DEFAULT_LAYOUT = ArtifactLayout(Path("."))
+DEFAULT_ROOT = Path(".")
+DEFAULT_LAYOUT = ArtifactLayout(DEFAULT_ROOT)
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -35,7 +35,9 @@ def _relative(path: Path, root: Path) -> str:
         return str(path)
 
 
-def load_base_inputs(base_dir: Path = DEFAULT_LAYOUT.base) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+def load_base_inputs(
+    base_dir: Path = DEFAULT_LAYOUT.base,
+) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     """Load canonical digital-twin building inputs."""
 
     model = NetworkModelRepository.from_parquet(base_dir).load_model()
@@ -48,7 +50,7 @@ def write_building_model_artifacts(
     connectivity: pd.DataFrame | None = None,
     *,
     out_dir: Path = DEFAULT_LAYOUT.models,
-    root: Path = Path("."),
+    root: Path = DEFAULT_ROOT,
     profile: str = NORTH_AMERICA_RESIDENTIAL_PROFILE,
     tables: dict[str, pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
@@ -72,7 +74,11 @@ def write_building_model_artifacts(
         counts[table_name] = int(len(table_data[table_name]))
 
     device_registry = table_data["device_registry"]
-    evse_devices = int((device_registry["device_type"] == "evse_l2").sum()) if len(device_registry) else 0
+    evse_devices = (
+        int((device_registry["device_type"] == "evse_l2").sum())
+        if len(device_registry)
+        else 0
+    )
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "building_model_manifest",
@@ -87,7 +93,10 @@ def write_building_model_artifacts(
         },
         "inputs": {
             "buildings": "instances/default/digital_twin/base/buildings.parquet",
-            "connectivity": "instances/default/digital_twin/base/building_grid_connectivity.parquet",
+            "connectivity": (
+                "instances/default/digital_twin/base/"
+                "building_grid_connectivity.parquet"
+            ),
         },
         "artifacts": artifacts,
         "root": ".",

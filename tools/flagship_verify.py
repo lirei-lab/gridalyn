@@ -48,8 +48,14 @@ class FlagshipSubsetError(RuntimeError):
     """
 
     def __init__(self, message: str, records: list[dict[str, Any]]) -> None:
-        super().__init__(message)
+        # Both args go to super() so ``args`` round-trips through copy/pickle;
+        # __str__ keeps the human message rather than the args tuple.
+        super().__init__(message, records)
         self.records = records
+
+    def __str__(self) -> str:
+        """Return the human-readable message, not the ``args`` tuple."""
+        return str(self.args[0])
 
 
 def load_stages(workspace: Path) -> list[dict[str, Any]]:

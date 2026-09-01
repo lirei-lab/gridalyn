@@ -116,7 +116,7 @@ def select_line_std_type(
     if subset.empty:
         available = sorted(catalog["voltage_rating"].dropna().unique().tolist())
         raise ValueError(
-            f"no '{family}' line catalog entry in pandapower available_std_types; "
+            f"no {family!r} line catalog entry in pandapower available_std_types; "
             f"available voltage families: {available}"
         )
 
