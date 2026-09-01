@@ -12,10 +12,14 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
+from gridalyn.foundation.platform.uncertainty import (
+    UncertaintyEstimate,
+    build_uncertainty,
+)
 from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     N_DAYS,
@@ -220,6 +224,48 @@ def _stats(samples: list[float], point: float | None = None) -> dict[str, Any]:
     return out
 
 
+#: Coverage of the P5-P95 band this stage reports. Stated here rather than
+#: left for a reader to infer from two percentile keys.
+CREDIBILITY_LEVEL = 0.90
+
+#: The pinned study seed as an ``int``. ``config.SEED`` reaches here typed
+#: ``object`` because it is read from the YAML contract -- the shape most of the
+#: projects mypy backlog is made of. Narrowed once here rather than at each use,
+#: so recording the seed in the report does not add to that backlog.
+SEED_INT: int = cast(int, SEED)
+
+
+def _estimate(
+    metric: str, stats: dict[str, Any], k: int, note: str
+) -> UncertaintyEstimate:
+    """Turn one headline's P5/P50/P95 into a contract uncertainty estimate.
+
+    Built from the percentiles the summary already carries rather than
+    recomputed, so the interval and the number it qualifies cannot drift apart
+    through rounding.
+
+    Args:
+        metric: The summary key this estimate qualifies.
+        stats: The ``_stats`` payload for that headline.
+        k: The number of realizations behind the distribution.
+        note: What the draws vary.
+
+    Returns:
+        The estimate, at :data:`CREDIBILITY_LEVEL` coverage.
+    """
+    return UncertaintyEstimate(
+        metric=metric,
+        method="monte_carlo",
+        n=k,
+        point=float(stats["p50"]),
+        low=float(stats["p05"]),
+        high=float(stats["p95"]),
+        level=CREDIBILITY_LEVEL,
+        seed=SEED_INT,
+        note=note,
+    )
+
+
 def derive_credibility(script: ProjectScript) -> dict[str, Any]:
     """Run the K-realization headline chain and summarize the distributions."""
     n_homes = feeder_home_count(script)
@@ -292,7 +338,24 @@ def derive_credibility(script: ProjectScript) -> dict[str, Any]:
         "breakeven_p50": be_stats["p50"],
         "base_peak_p50": payload["base_peak"]["p50"],
     }
-    return {"artifact_paths": [json_ref, *fig_paths], "summary": summary}
+    # The K-realization distribution behind these percentiles was previously
+    # reported as loose p05/p50/p95 keys, with the method, the sample count,
+    # the coverage and the seed left for a reader to infer. The contract block
+    # states them.
+    axes = "building seed, EV-fleet seed and a synthetic winter-severity anomaly"
+    uncertainty = build_uncertainty(
+        [
+            _estimate("firm_p50", firm_stats, k, f"varies {axes}"),
+            _estimate("flex_p50", flex_stats, k, f"varies {axes}"),
+            _estimate("breakeven_p50", be_stats, k, f"varies {axes}"),
+            _estimate("base_peak_p50", payload["base_peak"], k, f"varies {axes}"),
+        ]
+    )
+    return {
+        "artifact_paths": [json_ref, *fig_paths],
+        "summary": summary,
+        "uncertainty": uncertainty,
+    }
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
@@ -354,6 +417,7 @@ def run_stage() -> dict[str, Any]:
             for p in derived["artifact_paths"]
         ],
         summary=derived["summary"],
+        uncertainty=derived["uncertainty"],
         validation={"valid": True, "errors": [], "warnings": warnings},
     )
 

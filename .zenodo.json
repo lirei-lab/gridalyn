@@ -1,0 +1,34 @@
+{
+  "title": "Gridalyn: a governed SDK for distribution-network digital twins and flexibility studies",
+  "description": "Gridalyn models, simulates and optimizes multi-scale electric distribution systems and their distributed energy resources: flexible building loads, EV chargers and storage. Declarative YAML StudyProject and Workflow contracts drive synthetic data generation, a digital twin, pandapower/lightsim power flow and flexibility-market operations, emitting governed report artifacts with regression baselines so that a published result can be re-derived from its configuration.",
+  "upload_type": "software",
+  "license": "MIT",
+  "version": "0.1.0",
+  "creators": [
+    {
+      "name": "Henao, Nilson",
+      "affiliation": "LIREI, Universite du Quebec a Trois-Rivieres"
+    }
+  ],
+  "keywords": [
+    "distribution networks",
+    "digital twin",
+    "electric vehicles",
+    "hosting capacity",
+    "demand flexibility",
+    "power systems",
+    "reproducible research"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/lirei-lab/gridalyn",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://lirei.ca/gridalyn/",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ]
+}

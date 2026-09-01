@@ -3899,6 +3899,21 @@
       "sequence": null,
       "sha1": "6aa167387d4f33164c7efa5b4dd213c3dca33b8f",
       "verdict": "PASS-AS-WRITTEN"
+    },
+    "docs/contributing/releasing.md#1": {
+      "auto": "ILLUSTRATIVE",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "development",
+      "file": "docs/contributing/releasing.md",
+      "language": "yaml",
+      "line": 142,
+      "ordinal": 1,
+      "rationale": "fence language yaml is not executable as written",
+      "sequence": null,
+      "sha1": "0b5cf621a9ba23d57ff49343d54fdd45d0e5ae8e",
+      "verdict": "DOCUMENTED"
     }
   },
   "classified_on": "2026-08-06",
