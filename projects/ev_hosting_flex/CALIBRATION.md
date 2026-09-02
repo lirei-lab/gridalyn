@@ -6,13 +6,52 @@ It records the Québec-relevant evidence so the calibration is **traceable**, an
 corrects an earlier over-statement (that `diversity = 1` was "pessimistic, real
 1.5–2.5" — the evidence shows it is actually defensible for this load type).
 
+## Current headline figures
+
+**Read this table before quoting anything else in this file.** Every row is
+checked against `baselines/results_baseline.json` by
+`tools/check_calibration_claims.py`, at the precision shown, so a figure here
+cannot survive a re-base that moved its pin.
+
+The rest of this document is a **chronological record**. Sections carry the
+numbers that were current when they were written, and a re-base appends rather
+than revising them — so an older section may state a figure this table
+supersedes. When they disagree, this table wins.
+
+| Figure | Current value | Baseline pin |
+|---|---|---|
+| Firm hosting capacity | 11 EVs | `annual.firm_ev_count` |
+| Flexible hosting capacity | 16 EVs | `annual.flexible_ev_count` |
+| Hosting expansion | 0.4545 | `annual.hosting_expansion_percent` |
+| Firm hosting, P05 | 10.0 EVs | `cred.firm_p05` |
+| Firm hosting, P50 | 11.0 EVs | `cred.firm_p50` |
+| Firm hosting, P95 | 13.0 EVs | `cred.firm_p95` |
+| Flexible hosting, P50 | 16.0 EVs | `cred.flex_p50` |
+| Base peak, P50 | 66.10 kW | `cred.base_peak_p50` |
+| Congested hours at pool top | 19.5 h/yr | `annual.congested_hours_at_pool_top` |
+| Economic break-even | 6 EVs | `annual.econ_breakeven_ev_count` |
+| Naive-model firm overestimate | 45.45 % | `coldcoupling.firm_overestimate_percent` |
+| Insurance crossover adoption | 11 EVs | `insurance.crossover_adoption` |
+| Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
+| Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
+| corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+
 ## Evidence status — verified (adversarial votes)
 
 Gathered with the deep-research harness (5 angles, 19 sources). The adversarial
-verification pass **ran** (3-vote panel per claim). Caveat: no Québec **metered**
-per-house kW, no published HQ sizing rule, and no IEEE C57.91 threshold were found
-*directly* — the Québec figures are **inferences** from HQ consumer docs + general
-cold-climate literature (German/Belgian sources are directional, not transferable).
+verification pass **ran** (3-vote panel per claim).
+
+**Superseded on this point, 2026-08-04.** As written (2026-06-23) this section
+said no Québec metered per-house kW was found, and the *literature review*
+still stands on that footing: no published HQ sizing rule and no IEEE C57.91
+threshold were found directly, so the figures below remain inferences from HQ
+consumer docs plus cold-climate literature (German/Belgian sources are
+directional, not transferable). But the study is no longer validated only
+against literature — `datasets/hq` supplies **metered** Hydro-Québec
+consumption, and the RC building model is checked against its all-electric
+subset (n = 215, 15-minute) with the residual bias disclosed. See the latching
+thermostat entry below and `docs/components/assets.md`. A reader who stops here
+gets the opposite of the truth, in the direction that understates the work.
 
 **Confirmed:**
 - **[3-0]** HQ: cold-day heating reaches **~80 % of household electricity**; coincident
@@ -724,8 +763,11 @@ and the activation frequency, are the robust results; the dollars are illustrati
   Charge the North (Geotab/FleetCarma, >1000 CA drivers); Pollution Probe — *Consumer EV
   Charging Experience in Canada*.
 
-*Verified with a 3-vote adversarial panel (2026-06-23). Québec-specific figures remain
-inferences — no metered per-house kW or published HQ sizing rule was found directly.*
+*Verified with a 3-vote adversarial panel (2026-06-23). The Québec-specific
+figures in this list remain literature inferences — no published HQ sizing rule
+was found directly. This is a statement about the SOURCES ABOVE, not about the
+study: metered Hydro-Québec data (`datasets/hq`, n = 215 all-electric) arrived
+2026-08-04 and is what the building model is validated against.*
 
 ## Latching thermostats — diversity re-base (2026-08-04)
 
@@ -799,3 +841,90 @@ fresh `python -m` subprocesses on the migrated surface.
 This entry exists so a future reader does not mistake the config→contract move
 for a deliberate re-calibration — there is none here. Any future re-base must
 still be recorded in this file with its rationale, per repo discipline.
+
+## Cooling coupled to the thermal node (2026-09-01) — summer only, no headline change
+
+**A defect fix, not a re-calibration.** The zone branch of `Building.step()` --
+taken whenever `control="hysteresis"`, which is what this study declares
+(`project.yaml:236`) -- advanced its state with a heating term only. The air
+conditioner was computed, reported in `p_total_kw` and billed, and removed no
+heat. Because it never satisfied its own thermostat it latched open-loop on
+outdoor temperature, so it also drew far more than a working A/C would. The
+other two integrator branches carried `- ETA_COOL * p_cool_actual` correctly;
+only this one did not.
+
+Demonstration, holding a dwelling at 32 °C for 8 h with the zone state
+initialised to 32 °C: before the fix the A/C drew **24.0 kWh** and indoor
+temperature was **identical** to the same dwelling with no A/C at all. After,
+it draws 7.2 kWh and settles at 24.3 °C — and matches the `proportional`
+branch exactly, which is the cross-check that matters, since the two modes
+differ in *heating* control and share the same cooling physics.
+
+### Blast radius, measured before the fix landed
+
+Annual base trace, this study's own settings (`R_STUDY_B`, `P_HEAT_QUEBEC`,
+hysteresis, 1-min integration), 6 homes, seed 42, full TMY year:
+
+| | shipped | fixed | delta |
+|---|---|---|---|
+| annual peak kW | 73.578 | 73.578 | **0.00 %** |
+| winter peak kW | 73.578 | 73.578 | **0.00 %** |
+| P95 cold-evening kW | 49.670 | 49.653 | **−0.03 %** |
+| hours over rating | 0.0 | 0.0 | unchanged |
+| summer energy kWh | 13 586.9 | 11 005.8 | −19.0 % |
+| summer peak kW | 43.731 | 34.058 | −22.1 % |
+| annual energy kWh | 178 198.0 | 175 595.9 | −1.46 % |
+
+**The headline does not move; three congestion pins do.** This study's firm and
+flexible EV counts turn on cold evenings, where cooling never engages, and both
+are unchanged (firm 11, flexible 16, +45 % expansion).
+
+The table above was measured on the **base trace alone**, and read that way it
+is misleading: with no EV pool on top, summer never crosses the transformer
+rating, so it suggested nothing downstream could move. That was wrong. With the
+EV pool at its top adoption the inflated summer base *did* cross the rating, and
+three annual congestion pins carried it:
+
+| pin | was | now | delta |
+|---|---|---|---|
+| `annual.congested_hours_at_pool_top` | 20.25 | 19.5 | −0.75 h/yr |
+| `annual.curtailed_pct_at_pool_top` | 0.386786 | 0.362857 | −6.2 % |
+| `annual.jain_fair` | 0.995782 | 0.99535 | −0.04 % |
+
+Read plainly: **0.75 congested hours per year in the previous baseline were
+produced by an air conditioner that removed no heat.** The fix removes them.
+
+### Deliberate re-base of three pins
+
+`results_baseline.json` is updated for those three, and for nothing else — 78 of
+81 pins were value-identical before the edit. This is a re-base *behind a defect
+fix*, which is the case the cross-cutting rule allows, and it is recorded here
+rather than applied silently.
+
+Determinism was checked separately, because the annual byte-stability seal fails
+on any legitimate value change: it hashes the on-disk outputs, re-runs the
+chain, and compares. The first run therefore compared old-code outputs against
+new-code outputs and diverged, which is code-versus-code, not the run-versus-run
+non-reproducibility that test exists to catch. **Re-run with the outputs already
+regenerated, the seal passes** — two runs of the fixed code are byte-identical.
+Annual energy falls 1.46 %, entirely from summer.
+
+`admm_thermal_consensus` also declares `heatingControl: hysteresis`, and is
+**unaffected**: it runs a single cold day (−21.9 to −15.5 °C) and its total
+cooling energy over the window is exactly 0.
+
+### Also fixed here
+
+`Building.step()` accepted an `integrator` argument, validated it, and then
+ignored it on the zone branch — so `integrator="exact"` silently ran Euler in
+every shipped study. It is now honoured per zone, using the same exact-discrete
+form as the whole-house node (τ = R·C is identical for every zone, so only
+`T_eq` differs). Both studies run the default `"euler"`, so no result moves.
+Measured agreement after a full day at dt = 1 min: 7.2 × 10⁻⁵ K on the smooth
+controller, 0.081 K on the latching one — larger there because a zone that
+flips one step earlier separates the trajectories discretely.
+
+`tests/test_building_cooling.py` asserts, in **both** control modes, that a
+cooling-capable dwelling ends colder than the same dwelling without cooling.
+The defect lived in exactly one branch, so a mode-agnostic assertion is the one
+that would have caught it.
