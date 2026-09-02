@@ -100,6 +100,16 @@ That is either a defect or a deliberate re-base, and a deliberate re-base is
 recorded in the study's `CALIBRATION.md` with its rationale — never left as an
 unexplained diff.
 
+Recording it has three parts, because a `CALIBRATION.md` is a **chronological
+record**: append a dated section rather than revising earlier ones; update the
+gated tables at the top of the file, which `tools/check_calibration_claims.py`
+checks against the pins and the declared `studyConfig`; and, when the change
+*retires* code an existing section documents, banner that section as retired at
+its top. The gate covers the first two — a moved pin or knob fails it. The third
+is the one it cannot see: `ev_hosting_flex` carried a section describing four
+knobs deleted from `config.py`, citing sha256 guards and a test file that no
+longer existed, and every number in it was internally consistent.
+
 If you cannot afford step 1's six hours, run `admm_thermal_consensus` only and
 say so. A partial run recorded honestly is worth more than a full run claimed.
 
