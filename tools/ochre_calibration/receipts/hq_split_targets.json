@@ -1,0 +1,84 @@
+{
+  "calibration": {
+    "n": 108,
+    "curve": [
+      {
+        "homes": 2,
+        "cf": 0.8226,
+        "kw_per_home": 14.767
+      },
+      {
+        "homes": 3,
+        "cf": 0.7322,
+        "kw_per_home": 13.323
+      },
+      {
+        "homes": 6,
+        "cf": 0.642,
+        "kw_per_home": 11.459
+      },
+      {
+        "homes": 12,
+        "cf": 0.5817,
+        "kw_per_home": 10.505
+      },
+      {
+        "homes": 18,
+        "cf": 0.5586,
+        "kw_per_home": 10.084
+      },
+      {
+        "homes": 24,
+        "cf": 0.5485,
+        "kw_per_home": 9.823
+      },
+      {
+        "homes": 32,
+        "cf": 0.5378,
+        "kw_per_home": 9.655
+      }
+    ],
+    "median_peak_kw": 18.26
+  },
+  "validation": {
+    "n": 107,
+    "curve": [
+      {
+        "homes": 2,
+        "cf": 0.8214,
+        "kw_per_home": 14.834
+      },
+      {
+        "homes": 3,
+        "cf": 0.7415,
+        "kw_per_home": 13.003
+      },
+      {
+        "homes": 6,
+        "cf": 0.6557,
+        "kw_per_home": 11.707
+      },
+      {
+        "homes": 12,
+        "cf": 0.5968,
+        "kw_per_home": 10.66
+      },
+      {
+        "homes": 18,
+        "cf": 0.5724,
+        "kw_per_home": 10.152
+      },
+      {
+        "homes": 24,
+        "cf": 0.5621,
+        "kw_per_home": 9.908
+      },
+      {
+        "homes": 32,
+        "cf": 0.5489,
+        "kw_per_home": 9.81
+      }
+    ],
+    "median_peak_kw": 18.29
+  }
+}

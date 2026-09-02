@@ -842,6 +842,62 @@ This entry exists so a future reader does not mistake the config→contract move
 for a deliberate re-calibration — there is none here. Any future re-base must
 still be recorded in this file with its rationale, per repo discipline.
 
+## EnergyPlus validation receipts published (2026-09-01) — NO value change
+
+**Nothing in this study's numbers moves here.** This entry records evidence that
+already existed and was unreadable: the results of `tools/ochre_calibration/`,
+the EnergyPlus white-box reference for the RC building model, lived only in the
+gitignored `.ochre-calibration/` working tree. They are now published under
+`tools/ochre_calibration/receipts/`, typed by
+`tools/ochre_calibration/receipts.py`, and held in place by
+`tests/test_ochre_receipts.py`.
+
+### The flexibility result, and its comfort cost
+
+The deferral thesis this study rests on has an external validation, on dwellings
+the decision was **not** fitted on. Decision: pre-heat +1.5 °C over 13:00–16:00,
+curtail −2.0 °C over 16:00–19:00, relative to each household's own setpoint.
+
+| arm | dwellings | mean relief kW/home | rebound kW/home | worst comfort drift |
+|---|---|---|---|---|
+| fit | 14 | 4.381 | 1.255 | −2.0 °C |
+| **holdout** | **15** | **3.777** | 1.081 | **−2.0 °C** |
+
+**The comfort cost belongs beside the relief and has not been quoted with it
+before.** 3.777 kW/home of relief costs a worst-case 2.0 °C indoor depression
+during the curtail window. Relief exceeds rebound, so the dispatch removes load
+rather than merely moving it an hour later.
+
+### The RC model's error bound against EnergyPlus
+
+A separate and harsher experiment — **full** heating curtailment 16:00–19:00
+over the coldest week, not the bounded setback above:
+
+`mae_curtailment_relief_kw_per_home` = **5.3 kW/dwelling**, over the same
+15-dwelling disjoint holdout. RC **promises 3.137** kW/home; EnergyPlus
+**delivers 8.437**. The scalar is promised minus delivered, so the RC model
+**understates** the relief it gets — conservative in direction, but a bound
+larger than the promise it qualifies. Worst-case comfort drift under full
+curtailment is −16.4 °C, which is why the shipped decision uses a bounded
+setback.
+
+Scope limit, quoted from the receipt: it covers shifted energy, rebound and
+thermal inertia; it does **not** cover instantaneous coincidence, where
+`datasets/hq` remains the arbiter.
+
+### Coincidence — EnergyPlus corroborates the metered arbiter
+
+Against `datasets/hq` (all-electric subset, n=215, 15-min, 2019-02-08…14), the
+EnergyPlus coincidence curve tracks measured within 2–5 % across 2…32 homes,
+consistently slightly low: 0.656 vs 0.677 at 6 homes, 0.597 vs 0.619 at 12,
+0.549 vs 0.578 at 32. It is a corroborating second reference, not the arbiter.
+
+**Caution for a reader of §1 of this file.** The CF ≈ 0.85 figure recorded there
+comes from hourly, district-scale literature. Both the metered set and
+EnergyPlus put the coincidence factor of a **6-home** group nearer **0.66–0.68**
+at 15-minute resolution — the size and resolution this study actually sizes a
+pole transformer on. The two are different statistics and should not be used
+interchangeably.
 ## Cooling coupled to the thermal node (2026-09-01) — summer only, no headline change
 
 **A defect fix, not a re-calibration.** The zone branch of `Building.step()` --

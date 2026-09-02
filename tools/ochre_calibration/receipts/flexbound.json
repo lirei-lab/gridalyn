@@ -1,0 +1,31 @@
+{
+  "decision": {
+    "preheat_from": 13,
+    "preheat_to": 16,
+    "preheat_delta_c": 1.5,
+    "curtail_from": 16,
+    "curtail_to": 19,
+    "curtail_delta_c": 2.0
+  },
+  "dwellings": 29,
+  "fit": {
+    "dwellings": 14,
+    "mean_relief_kw_per_home": 4.381,
+    "peak_relief_kw_per_home": 9.367,
+    "preheat_cost_kw_per_home": 2.765,
+    "rebound_kw_per_home": 1.255,
+    "net_energy_kwh_per_home": -1.32,
+    "comfort_drift_c_mean": -1.54,
+    "comfort_drift_c_worst": -2.0
+  },
+  "holdout": {
+    "dwellings": 15,
+    "mean_relief_kw_per_home": 3.777,
+    "peak_relief_kw_per_home": 10.248,
+    "preheat_cost_kw_per_home": 2.36,
+    "rebound_kw_per_home": 1.081,
+    "net_energy_kwh_per_home": -0.79,
+    "comfort_drift_c_mean": -1.609,
+    "comfort_drift_c_worst": -2.0
+  }
+}

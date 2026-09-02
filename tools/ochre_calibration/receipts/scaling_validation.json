@@ -1,0 +1,96 @@
+{
+  "pool_dwellings": 73,
+  "pairwise_correlation": {
+    "median": 0.348,
+    "p90": 0.533,
+    "max": 0.791
+  },
+  "coincidence_curve": [
+    {
+      "homes": 1,
+      "coincidence_factor": 1.0,
+      "peak_kw_per_home": 20.439
+    },
+    {
+      "homes": 2,
+      "coincidence_factor": 0.822,
+      "peak_kw_per_home": 16.952
+    },
+    {
+      "homes": 3,
+      "coincidence_factor": 0.7426,
+      "peak_kw_per_home": 15.28
+    },
+    {
+      "homes": 6,
+      "coincidence_factor": 0.6669,
+      "peak_kw_per_home": 14.021
+    },
+    {
+      "homes": 12,
+      "coincidence_factor": 0.6347,
+      "peak_kw_per_home": 13.335
+    },
+    {
+      "homes": 18,
+      "coincidence_factor": 0.6265,
+      "peak_kw_per_home": 13.471
+    },
+    {
+      "homes": 24,
+      "coincidence_factor": 0.6209,
+      "peak_kw_per_home": 13.225
+    },
+    {
+      "homes": 32,
+      "coincidence_factor": 0.6173,
+      "peak_kw_per_home": 13.196
+    }
+  ],
+  "convergence": {
+    "last_three_sizes": [
+      18,
+      24,
+      32
+    ],
+    "marginal_change_pct": -2.04
+  },
+  "feeder_scale_up": [
+    {
+      "homes": 3235,
+      "jitter_steps": 0,
+      "feeder_peak_mw": 42.082,
+      "peak_kw_per_home": 13.008,
+      "coincidence_factor": 0.6136
+    },
+    {
+      "homes": 3235,
+      "jitter_steps": 2,
+      "feeder_peak_mw": 40.27,
+      "peak_kw_per_home": 12.448,
+      "coincidence_factor": 0.5871
+    },
+    {
+      "homes": 3235,
+      "jitter_steps": 8,
+      "feeder_peak_mw": 36.076,
+      "peak_kw_per_home": 11.152,
+      "coincidence_factor": 0.526
+    },
+    {
+      "homes": 3235,
+      "jitter_steps": 24,
+      "feeder_peak_mw": 32.438,
+      "peak_kw_per_home": 10.027,
+      "coincidence_factor": 0.4729
+    }
+  ],
+  "reference": {
+    "literature_coincidence_factor": 0.85,
+    "gridalyn_dwelling_heat_kw_at_minus25": 6.0,
+    "gridalyn_dwelling_annual_mwh": [
+      20,
+      22
+    ]
+  }
+}
