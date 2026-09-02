@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-02T13:19:30.111362+00:00",
+  "created_at": "2026-09-02T16:02:05.890445+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -170,7 +170,8 @@
       "base_path": "/.",
       "description": "Network-validated distributed ADMM coordination of cold-climate electric- heating homes with ML imputation of communication-failed agents, validated on the IEEE-33 feeder with pandapower.",
       "label": "Admm Thermal Consensus",
-      "project_id": "admm_thermal_consensus"
+      "project_id": "admm_thermal_consensus",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -241,7 +242,8 @@
       "base_path": "/projects/der_voltage_optimization",
       "description": "Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification.",
       "label": "Der Voltage Optimization",
-      "project_id": "der_voltage_optimization"
+      "project_id": "der_voltage_optimization",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -279,7 +281,8 @@
       "base_path": "/.",
       "description": "EV hosting capacity and flexibility across a 540-transformer distribution fleet, with the transformer rating convention as a declared axis.",
       "label": "Ev Hosting Flex",
-      "project_id": "ev_hosting_flex"
+      "project_id": "ev_hosting_flex",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -341,7 +344,144 @@
       "base_path": "/projects/ieee_33_bus_demo",
       "description": "Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.",
       "label": "Ieee 33 Bus Demo",
-      "project_id": "ieee_33_bus_demo"
+      "project_id": "ieee_33_bus_demo",
+      "scenarios": [
+        {
+          "description": "Original IEEE 33-bus feeder.",
+          "label": "Original IEEE 33-bus feeder.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "baseline"
+        },
+        {
+          "description": "Uniform 20 percent demand growth.",
+          "label": "Uniform 20 percent demand growth.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "load_growth_20"
+        },
+        {
+          "description": "Midday distributed PV at selected downstream buses.",
+          "label": "Midday distributed PV at selected downstream buses.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "pv_midday"
+        },
+        {
+          "description": "Evening EV charging demand at selected downstream buses.",
+          "label": "Evening EV charging demand at selected downstream buses.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "ev_evening_peak"
+        },
+        {
+          "description": "Combined PV and EV condition for a mixed operating case.",
+          "label": "Combined PV and EV condition for a mixed operating case.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "pv_plus_ev"
+        }
+      ]
     },
     {
       "artifacts": [
@@ -397,7 +537,8 @@
       "base_path": "/projects/minimal_grid_project",
       "description": "Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.",
       "label": "Minimal Grid Project",
-      "project_id": "minimal_grid_project"
+      "project_id": "minimal_grid_project",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -473,7 +614,8 @@
       "base_path": "/projects/prosumer_battery_market",
       "description": "Small synthetic feeder with distributed prosumers, batteries, and a real-time local market.",
       "label": "Prosumer Battery Market",
-      "project_id": "prosumer_battery_market"
+      "project_id": "prosumer_battery_market",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -549,7 +691,8 @@
       "base_path": "/projects/rl_voltage_control_lightsim",
       "description": "Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.",
       "label": "Rl Voltage Control Lightsim",
-      "project_id": "rl_voltage_control_lightsim"
+      "project_id": "rl_voltage_control_lightsim",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -631,7 +774,8 @@
       "base_path": "/projects/synthetic_geojson_feeder",
       "description": "Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.",
       "label": "Synthetic Geojson Feeder",
-      "project_id": "synthetic_geojson_feeder"
+      "project_id": "synthetic_geojson_feeder",
+      "scenarios": []
     }
   ],
   "report_id": "digital_twin_dashboard_catalog",
@@ -651,6 +795,28 @@
         "trafo_max_loading_percent": 133.97383987588367,
         "v_mean_pu": 0.9572012225029966,
         "v_min_pu": 0.9141792913107338
+      },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
       },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S0_powerflow_lines.parquet",
@@ -684,6 +850,28 @@
         "v_mean_pu": 0.9566832641622842,
         "v_min_pu": 0.9140079486997466
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S1_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S1_powerflow_nodes.parquet",
@@ -715,6 +903,28 @@
         "trafo_max_loading_percent": 143.10818999780537,
         "v_mean_pu": 0.9561490912409158,
         "v_min_pu": 0.9137752891332368
+      },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
       },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S2_powerflow_lines.parquet",
@@ -748,6 +958,28 @@
         "v_mean_pu": 0.9556118058802608,
         "v_min_pu": 0.9059520366808763
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S3_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S3_powerflow_nodes.parquet",
@@ -779,6 +1011,28 @@
         "trafo_max_loading_percent": 152.82054516046105,
         "v_mean_pu": 0.9550489610360119,
         "v_min_pu": 0.9040694933960463
+      },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
       },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S4_powerflow_lines.parquet",

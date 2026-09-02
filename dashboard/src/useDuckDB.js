@@ -4,14 +4,6 @@ import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
 import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
 import { buildScenarioCatalog } from './scenarios';
 
-/**
- * Per-scenario artifact kinds, and the alias each is queried under.
- *
- * Derived by iterating the paths a scenario declares rather than by four
- * copied registration blocks, so a kind added to the twin's catalog becomes
- * queryable without editing this file.
- */
-const SCENARIO_FILE_KINDS = ['nodes', 'lines', 'power', 'transformers'];
 
 // Force MVP bundle — does NOT require SharedArrayBuffer
 // (EH/pthread bundles can hang on non-HTTPS origins like Tailscale HTTP)
@@ -88,11 +80,14 @@ export function useDuckDB(
             false
           );
 
+        // Whatever kinds a scenario declares, not a list kept here. The four
+        // twin kinds were named in this file, in scenarios.js and in the SDK,
+        // with nothing keeping the three in sync -- and a study partitioned
+        // differently could not be registered at all.
         for (const scenario of scenarioCatalog) {
-          const paths = scenario.paths || {};
-          for (const kind of SCENARIO_FILE_KINDS) {
-            if (!paths[kind]) continue;
-            await register(`${scenario.id}_${kind}.parquet`, paths[kind]);
+          for (const [kind, path] of Object.entries(scenario.paths || {})) {
+            if (!path) continue;
+            await register(`${scenario.id}_${kind}.parquet`, path);
           }
         }
         for (const [artifact, path] of Object.entries({

@@ -34,6 +34,11 @@ export function deriveWorkspaces(catalogProjects = []) {
       kind: 'project',
       available: (project.artifacts || []).some(artifact => artifact.exists),
       artifacts: project.artifacts || [],
+      // A study's scenarios, in the same shape the twin's arrive in: an id, a
+      // label, `paths` keyed by the kinds THIS source declares, and the
+      // partitioning each kind must be read with. Empty for a study that
+      // declares no scenario indexer, which is most of them.
+      scenarios: project.scenarios || [],
     })),
   ];
 }
@@ -46,6 +51,29 @@ export function governedReports(workspace) {
   return (workspace?.artifacts || []).filter(
     artifact => artifact.kind === KIND_GOVERNED_REPORT && artifact.exists
   );
+}
+
+/**
+ * Describe a study's scenarios for display, without assuming any kind.
+ *
+ * The kinds differ per source on purpose -- the twin's describe a solved power
+ * flow, a study's describe whatever that study produced -- so this reports what
+ * each scenario declares rather than looking for a set it expects.
+ * `partitioning` travels with each kind because it changes how the artifact
+ * must be READ: a file-partitioned path holds this scenario alone, a
+ * column-partitioned one holds every scenario and a column selects.
+ */
+export function describeScenarios(workspace) {
+  return (workspace?.scenarios || []).map(scenario => ({
+    id: scenario.scenario_id,
+    label: scenario.label || scenario.scenario_id,
+    kinds: Object.entries(scenario.paths || {}).map(([kind, path]) => ({
+      kind,
+      path,
+      partitioning: scenario.partitioning?.[kind]?.partitioning || null,
+      idColumn: scenario.partitioning?.[kind]?.id_column || null,
+    })),
+  }));
 }
 
 export function tables(workspace) {

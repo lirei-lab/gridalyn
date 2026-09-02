@@ -29,10 +29,17 @@ catalog is written by ``projects``, not by ``twin``.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+from gridalyn.projects.scenario_catalog import (
+    ScenarioContract,
+    ScenarioContractError,
+    read_scenario_contract,
+    read_scenario_index,
+)
 
 KIND_GOVERNED_REPORT = "governed_report"
 KIND_TABLE = "table"
@@ -183,9 +190,95 @@ def build_project_catalog(
                     )
                     for relative in declared
                 ],
+                "scenarios": describe_scenarios(
+                    project,
+                    project_dir=project_dir,
+                    served_prefix=served_prefix,
+                ),
             }
         )
     return entries
+
+
+def describe_scenarios(
+    project: Any,
+    *,
+    project_dir: Path,
+    served_prefix: str,
+) -> list[dict[str, Any]]:
+    """Describe a study's scenarios in the shape the twin's already use.
+
+    One shape for both sources is the point: the client should not have a twin
+    code path and a study code path, because the moment it does, a study's
+    scenarios are second-class and the assumptions the twin's shape carries get
+    written into the client again.
+
+    Args:
+        project: Loaded ``StudyProject``.
+        project_dir: The study's directory on disk.
+        served_prefix: URL prefix the study's files are served under.
+
+    Returns:
+        One entry per scenario, each carrying ``scenario_id``, ``label`` and
+        ``paths`` keyed by the DECLARED kinds. Empty when the study declares no
+        contract, or when its index has not been produced -- a study whose
+        outputs are absent is not a broken study, the same reading
+        :func:`describe_artifact` gives a missing file.
+    """
+    contract = _scenario_contract(project)
+    if contract is None:
+        return []
+    index = read_scenario_index(
+        project_dir / contract.index,
+        id_column=contract.id_column,
+        label_column=contract.label_column,
+    )
+    described: list[dict[str, Any]] = []
+    for row in index:
+        scenario_id = str(row["scenario_id"])
+        paths: dict[str, str] = {}
+        for artifact in contract.artifacts:
+            relative = artifact.resolve(scenario_id)
+            if not (project_dir / relative).is_file():
+                continue
+            paths[artifact.kind] = f"{served_prefix.rstrip('/')}/{relative}"
+        described.append(
+            {
+                "scenario_id": scenario_id,
+                "label": row.get("label") or scenario_id,
+                "description": row.get("label") or "",
+                "paths": paths,
+                # How a consumer must READ each kind. Without this a client
+                # holding only the paths would have to guess whether a file is
+                # this scenario's alone or every scenario's, and guessing wrong
+                # renders another scenario's rows as this one's.
+                "partitioning": {
+                    artifact.kind: artifact.to_dict()
+                    for artifact in contract.artifacts
+                    if artifact.kind in paths
+                },
+            }
+        )
+    return described
+
+
+def _scenario_contract(project: Any) -> ScenarioContract | None:
+    """Return a study's declared scenario contract, or ``None``.
+
+    A malformed contract is reported on stderr and treated as absent rather
+    than taking the whole catalog down: the twin's scenarios and every other
+    study are unrelated to one study's bad declaration. That is the same
+    posture the catalog generator takes toward a study whose project.yaml will
+    not parse.
+    """
+    raw = getattr(project, "raw", None)
+    spec = (raw or {}).get("spec") if isinstance(raw, Mapping) else None
+    path = Path(getattr(project, "path", "project.yaml"))
+    try:
+        return read_scenario_contract(spec, path=path)
+    except ScenarioContractError as error:
+        print(f"warning: {error}", file=sys.stderr, flush=True)
+        return None
 
 
 def _label(project: Any) -> str:

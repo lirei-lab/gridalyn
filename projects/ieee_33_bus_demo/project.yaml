@@ -86,6 +86,26 @@ spec:
       manifests: outputs/manifests
       operations: outputs/operations
       reports: outputs/reports
+  # This study's scenarios, declared so the dashboard can enumerate and read
+  # them without knowing anything about this study. Partitioning is `column`
+  # because every artifact below holds ALL five scenarios discriminated by a
+  # scenario_id column -- scenario_voltage_profiles.csv is 165 rows, 33 buses
+  # times 5 scenarios. The twin partitions the other way, by file, which is
+  # exactly why the contract makes a consumer read this instead of assuming.
+  scenarios:
+    index: outputs/data/scenarios.csv
+    idColumn: scenario_id
+    labelColumn: description
+    artifacts:
+      parameters:
+        path: outputs/data/scenarios.csv
+        partitioning: column
+      results:
+        path: outputs/data/scenario_results.csv
+        partitioning: column
+      voltage_profiles:
+        path: outputs/data/scenario_voltage_profiles.csv
+        partitioning: column
   workflow:
     file: workflow.yaml
   validation:

@@ -150,6 +150,59 @@
         },
         "inputs": { "type": "object" },
         "artifacts": { "type": "object" },
+        "scenarios": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "artifacts"],
+          "description": "How this study's scenarios may be enumerated and read. Optional: a study without scenarios omits the block and behaves exactly as before. Declared rather than discovered so no consumer assumes a shape -- the twin partitions a scenario's data BY FILE (one artifact per scenario and kind) while ieee_33_bus_demo partitions BY COLUMN (one artifact holding every scenario, discriminated by a scenario_id column), and neither is more correct.",
+          "properties": {
+            "index": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project-relative path of the artifact that ENUMERATES the scenarios, a .csv or .json. Reading ids from an indexer rather than from a directory listing is what lets a study add a scenario without any consumer changing."
+            },
+            "idColumn": {
+              "type": "string",
+              "minLength": 1,
+              "default": "scenario_id",
+              "description": "Column or key in the index carrying each scenario id."
+            },
+            "labelColumn": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Column or key in the index carrying a human-readable label."
+            },
+            "artifacts": {
+              "type": "object",
+              "minProperties": 1,
+              "description": "The kinds of data each scenario carries, keyed by the name a consumer asks for. Free-form: the point of the contract is that no consumer holds a fixed set of kinds.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path"],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Project-relative path. Must carry the literal {scenario_id} when partitioning is 'file', and must not when it is 'column'."
+                  },
+                  "partitioning": {
+                    "type": "string",
+                    "enum": ["file", "column"],
+                    "default": "file",
+                    "description": "'file' when the scenario id is in the path, 'column' when it is in the rows."
+                  },
+                  "idColumn": {
+                    "type": "string",
+                    "minLength": 1,
+                    "default": "scenario_id",
+                    "description": "Column carrying the scenario id, for a column-partitioned artifact."
+                  }
+                }
+              }
+            }
+          }
+        },
         "workflow": {
           "type": "object",
           "additionalProperties": false,

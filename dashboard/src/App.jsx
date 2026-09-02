@@ -7,9 +7,15 @@ import { buildScenarioCatalog, loadTwin } from './scenarios';
 import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
-import { deriveWorkspaces, loadProjectReports, summaryRows } from './projectCatalog';
+import {
+  deriveWorkspaces,
+  describeScenarios,
+  loadProjectReports,
+  summaryRows,
+} from './projectCatalog';
 import TwinMap from './TwinMap';
 import StudyExtensionPanels from './StudyExtensionPanels';
+import StudyScenarios from './StudyScenarios';
 import OntologyPanel from './OntologyPanel';
 import ProvenanceBadge from './ProvenanceBadge';
 import { drawableClasses } from './ontology';
@@ -56,6 +62,9 @@ function ProjectDashboard({ workspace, reports, loading, activeWorkspace, onWork
     artifact => artifact.kind === 'table'
   );
   const missing = (workspace?.artifacts || []).filter(artifact => !artifact.exists);
+  // Read from what the study DECLARED, not discovered. A study with no
+  // scenario indexer yields none and this section does not render.
+  const scenarios = describeScenarios(workspace);
 
   return (
     <div className="project-dashboard" style={{ padding: '24px', overflowY: 'auto', height: '100vh' }}>
@@ -87,6 +96,8 @@ function ProjectDashboard({ workspace, reports, loading, activeWorkspace, onWork
       {!loading && reports.length === 0 && missing.length === 0 && (
         <p style={{ color: '#aaa' }}>This study declares no governed reports to show.</p>
       )}
+
+      <StudyScenarios scenarios={scenarios} />
 
       {reports.map(({ artifact, report, error }) => (
         <section key={artifact.path} style={{ marginTop: '24px', borderTop: '1px solid #333', paddingTop: '16px' }}>

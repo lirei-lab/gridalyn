@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from gridalyn.projects.project_catalog import build_project_catalog
+from gridalyn.projects.scenario_catalog import BY_FILE as PARTITION_BY_FILE
 from gridalyn.twin.network import (
     BASE_TABLE_FILENAMES,
     NetworkModelRepository,
@@ -33,6 +34,17 @@ FILE_KINDS = {
     "power": "powerflow_power",
     "transformers": "powerflow_transformers",
 }
+"""The twin's per-scenario artifact kinds, and the file suffix each is written
+under. The twin partitions BY FILE -- one artifact per (scenario, kind) -- so
+the scenario id is in the path.
+
+This mapping stays here, in the producer, and is now PUBLISHED with every
+scenario rather than being re-declared by each consumer. It was written out
+three times: here, in ``dashboard/src/scenarios.js`` and in
+``dashboard/src/useDuckDB.js``, with nothing keeping the three in sync, and the
+client additionally synthesized the ``timeseries/{id}_{suffix}.parquet`` layout
+for itself. A consumer that assumes this set cannot read a study's scenarios,
+which are partitioned the other way."""
 
 _TWIN_PREFIX = "digital_twin/"
 
@@ -208,6 +220,18 @@ def build_dashboard_catalog(
                 or summary.get("description")
                 or "",
                 "paths": _paths(scenario_id, summary, root),
+                # How each kind must be READ, published so a consumer never
+                # infers it. The twin is file-partitioned: each path holds this
+                # scenario alone. A study may be column-partitioned, where one
+                # path holds every scenario and a column selects.
+                "partitioning": {
+                    kind: {
+                        "kind": kind,
+                        "partitioning": PARTITION_BY_FILE,
+                        "id_column": None,
+                    }
+                    for kind in FILE_KINDS
+                },
                 # Where a scenario's numbers came from. Always "simulated":
                 # these artifacts are written by a solved power flow, and a
                 # value from a solver and a value from a meter must not reach

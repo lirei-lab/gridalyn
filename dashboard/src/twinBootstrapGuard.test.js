@@ -244,6 +244,52 @@ test('the catalog this repo ships actually carries the ontology', () => {
   }
 });
 
+test('only the pre-catalog fallback names a scenario artifact kind', () => {
+  // A scenario's kinds are whatever its catalog entry declares. The twin
+  // partitions BY FILE (one artifact per scenario and kind) and a study may
+  // partition BY COLUMN (one artifact holding every scenario); a client that
+  // names either one's kinds cannot read the other. The list lived in THREE
+  // places -- here, in the SDK, and in useDuckDB.js -- with nothing keeping
+  // them in sync.
+  //
+  // scenarios.js is the one exemption, and only for `buildScenarioCatalog`:
+  // the fallback runs when no catalog exists to declare anything, so the
+  // naming convention is the only route left. Same exemption, same reason, as
+  // LEGACY_MANIFEST_PATHS.semanticManifest.
+  const kinds = ['powerflow_nodes', 'powerflow_lines', 'powerflow_power'];
+  const offenders = [];
+  for (const name of sourceFiles()) {
+    if (name === 'scenarios.js') continue;
+    const source = read(name);
+    for (const kind of kinds) {
+      if (source.includes(kind)) offenders.push(`${name} -> ${kind}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these modules name a scenario artifact kind instead of reading the kinds ` +
+      `the catalog declares: ${offenders.join(', ')}`
+  );
+});
+
+test('the exemption stays confined to the fallback', () => {
+  // If the convention leaks back into the live path, the exemption above stops
+  // being an exemption and becomes a hole. The live path is
+  // buildDashboardScenarioCatalog; the shim must be reached only from
+  // buildScenarioCatalog.
+  const source = read('scenarios.js');
+  const live = source.slice(
+    source.indexOf('export function buildDashboardScenarioCatalog'),
+    source.indexOf('export function scenarioIdsFromManifest')
+  );
+  assert.ok(live.length > 0, 'could not locate the live catalog path');
+  assert.ok(
+    !live.includes('legacyConventionalPaths') && !live.includes('LEGACY_FILE_KINDS'),
+    'the pre-catalog naming convention leaked into the live catalog path'
+  );
+});
+
 test('map layers are created only in the registry', () => {
   // "Adding a layer touches the registry, not the app component" is the point
   // of the layer model; a `new SomethingLayer(...)` anywhere else silently

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  describeScenarios,
   deriveWorkspaces,
   formatSummaryValue,
   governedReports,
@@ -134,4 +135,74 @@ test('a thrown fetch is captured rather than rejecting the whole load', async ()
     throw new Error('offline');
   });
   assert.equal(loaded[0].error, 'offline');
+});
+
+test('a study carries the scenarios its catalog entry declares', () => {
+  const [twin, study] = deriveWorkspaces([
+    {
+      project_id: 'demo',
+      artifacts: [{ path: '/x.json', exists: true, kind: 'governed_report' }],
+      scenarios: [
+        {
+          scenario_id: 'baseline',
+          label: 'Original feeder.',
+          paths: { results: '/p/results.csv', profiles: '/p/profiles.csv' },
+          partitioning: {
+            results: { kind: 'results', partitioning: 'column', id_column: 'scenario_id' },
+            profiles: { kind: 'profiles', partitioning: 'column', id_column: 'scenario_id' },
+          },
+        },
+      ],
+    },
+  ]);
+  assert.equal(twin.id, 'digital_twin');
+  assert.equal(study.scenarios.length, 1);
+});
+
+test('a study that declares no indexer carries no scenarios', () => {
+  // Most studies. The section must not render, rather than render empty.
+  const [, study] = deriveWorkspaces([{ project_id: 'demo', artifacts: [] }]);
+  assert.deepEqual(study.scenarios, []);
+  assert.deepEqual(describeScenarios(study), []);
+});
+
+test('describeScenarios reports the kinds declared, never a set it expects', () => {
+  const workspace = {
+    scenarios: [
+      {
+        scenario_id: 'baseline',
+        paths: { anything_at_all: '/p/x.csv' },
+        partitioning: {
+          anything_at_all: {
+            kind: 'anything_at_all',
+            partitioning: 'column',
+            id_column: 'run_id',
+          },
+        },
+      },
+    ],
+  };
+  const [scenario] = describeScenarios(workspace);
+  assert.equal(scenario.id, 'baseline');
+  // Falls back to the id when the index declared no label column.
+  assert.equal(scenario.label, 'baseline');
+  assert.deepEqual(scenario.kinds, [
+    {
+      kind: 'anything_at_all',
+      path: '/p/x.csv',
+      partitioning: 'column',
+      idColumn: 'run_id',
+    },
+  ]);
+});
+
+test('a kind with no declared partitioning reports null, not a guess', () => {
+  // Reading a column-partitioned file as if it were file-partitioned renders
+  // another scenario's rows as this one's, so an absent declaration must stay
+  // absent rather than defaulting.
+  const [scenario] = describeScenarios({
+    scenarios: [{ scenario_id: 's', paths: { k: '/p/k.csv' } }],
+  });
+  assert.equal(scenario.kinds[0].partitioning, null);
+  assert.equal(scenario.kinds[0].idColumn, null);
 });
