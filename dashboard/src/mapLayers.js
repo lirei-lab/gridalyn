@@ -23,10 +23,92 @@ export const GEOMETRY_LINE = 'line';
 export const GEOMETRY_POINT = 'point';
 export const GEOMETRY_FIELD = 'field';
 
+/**
+ * Geometry kinds no layer here may declare, and why.
+ *
+ * `polygon` is absent from the list above deliberately, not by omission. The
+ * twin's `buildings` geometry is POINTS -- the GeoJSON ingest reads real
+ * footprints and keeps only the centroid, and the catalog now says so in
+ * `network_model.geography.geometry_kinds`. A footprint layer would draw a
+ * shape the twin does not hold, which is a claim about the world rather than
+ * a rendering choice. A guard asserts this list stays empty of any layer.
+ */
+export const UNSUPPORTED_GEOMETRIES = ['polygon', 'multipolygon', 'footprint'];
+
 /** Which of the twin's artifacts a layer reads. */
 export const SOURCE_NODES = 'nodes';
 export const SOURCE_LINES = 'lines';
 export const SOURCE_TRANSFORMERS = 'transformers';
+export const SOURCE_ONTOLOGY = 'ontology';
+
+/**
+ * Palette the ontology layers draw a class from, by position.
+ *
+ * Deliberately a palette indexed by a hash of the class NAME, not a map from
+ * class name to colour. A lookup table would mean a class the twin declares
+ * and this file has never heard of -- a new `ontology_class` value, a
+ * different profile, a user's own adapter -- draws in a fallback grey or not
+ * at all, which is exactly the coupling the catalog exists to break. Adding a
+ * class to the twin must not need a dashboard edit.
+ */
+const ONTOLOGY_PALETTE = [
+  [0, 200, 200],
+  [255, 170, 0],
+  [180, 120, 255],
+  [80, 220, 120],
+  [255, 105, 160],
+  [120, 180, 255],
+  [255, 220, 90],
+  [230, 130, 90],
+];
+
+/** Cheap, stable string hash. Not cryptographic; only needs to spread names. */
+function hashName(name) {
+  let hash = 0;
+  for (const character of String(name)) {
+    hash = (hash * 31 + character.codePointAt(0)) % 0xffffffff;
+  }
+  return hash;
+}
+
+/**
+ * Assign each class a palette slot, distinct whenever the palette allows.
+ *
+ * Hashing alone was not enough, and running the dashboard proved it: the two
+ * most numerous drawable classes in the shipped twin hash to the same slot, so
+ * they drew in the same green and the map read as monochrome. Three classes
+ * into eight slots collide about a third of the time -- bad odds for the case
+ * that matters most.
+ *
+ * So the hash picks a preferred slot and a deterministic linear probe resolves
+ * a clash, over the names sorted so the assignment does not depend on the order
+ * the catalog happened to list them. Two properties survive: no lookup table,
+ * so a class this file has never seen still gets a colour; and a fixed set of
+ * classes always gets the same colours.
+ *
+ * More classes than palette entries is the one case that must still collide;
+ * probing wraps and the extra classes reuse slots rather than going undrawn.
+ */
+export function ontologyClassColors(names, alpha = 200) {
+  const unique = [...new Set(names.map(String))].sort();
+  const taken = new Map();
+  const assigned = new Map();
+  for (const name of unique) {
+    const preferred = hashName(name) % ONTOLOGY_PALETTE.length;
+    let slot = preferred;
+    for (let step = 0; step < ONTOLOGY_PALETTE.length; step += 1) {
+      const candidate = (preferred + step) % ONTOLOGY_PALETTE.length;
+      if (!taken.has(candidate)) {
+        slot = candidate;
+        break;
+      }
+    }
+    taken.set(slot, name);
+    const [red, green, blue] = ONTOLOGY_PALETTE[slot];
+    assigned.set(name, [red, green, blue, alpha]);
+  }
+  return assigned;
+}
 
 /** Thermal scale deck.gl interpolates between. Six stops, darkest to critical. */
 const THERMAL_RANGE = [
@@ -247,22 +329,112 @@ export const MAP_LAYERS = [
   },
 ];
 
+/** Layer id for one ontology class, derived from the class's own name. */
+export function ontologyLayerId(name) {
+  return `ontology-class-${String(name).replace(/[^A-Za-z0-9]+/g, '-')}-layer`;
+}
+
+/**
+ * Registry entries DERIVED from the ontology classes the catalog declares.
+ *
+ * The six hand-written entries above are each keyed by an electrical quantity
+ * -- voltage, loading, overload. None reads the twin's ontology, though every
+ * base table and the scenario asset registry carry a class column and the
+ * semantic graph carries the hierarchy behind it. A twin that knows a bus
+ * serves a school and not a duplex could not show it.
+ *
+ * These entries close that. One point layer per class the catalog declares as
+ * LOCATED -- `located` is the twin's own statement that the artifact's rows
+ * carry coordinates, so a class whose geometry would have to be joined is not
+ * silently drawn in the wrong place. Nothing here names a class: the ids, the
+ * labels and the colours are all functions of what the catalog said, so a
+ * class added to the twin reaches the map with no dashboard edit.
+ *
+ * These are POINT layers, and the twin is what says so: its geography block
+ * declares `buildings` geometry as `point`, with the reason (the ingest keeps
+ * the centroid and drops the polygon). They must stay point layers until that
+ * declaration changes -- an encoding that implied footprints would be claiming
+ * geometry the twin does not hold.
+ */
+export function ontologyLayers(context = {}) {
+  const classes = context.ontologyClasses || [];
+  const seen = new Set();
+  const entries = [];
+  // Colours are assigned over the WHOLE drawn set, not per class, so the
+  // assignment can guarantee they differ. The panel colours its swatches from
+  // the same call over the same set, which is what keeps legend and map
+  // agreeing.
+  const colors = ontologyClassColors(
+    classes.filter(entry => entry?.located && entry?.name).map(entry => entry.name)
+  );
+  for (const entry of classes) {
+    if (!entry?.located || !entry?.name || seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    const name = entry.name;
+    entries.push({
+      id: ontologyLayerId(name),
+      label: name,
+      geometry: GEOMETRY_POINT,
+      source: SOURCE_ONTOLOGY,
+      ontologyClass: name,
+      derived: true,
+      visible: ({ showOntology, ontologyClass }) =>
+        Boolean(showOntology) && (!ontologyClass || ontologyClass === name),
+      build: ({ features }) =>
+        new ScatterplotLayer({
+          id: ontologyLayerId(name),
+          data: (features.ontology || []).filter(
+            feature => feature.properties.ontology_class === name
+          ),
+          pickable: true,
+          stroked: true,
+          filled: true,
+          autoHighlight: true,
+          highlightColor: [255, 255, 255, 220],
+          getPosition: feature => feature.geometry.coordinates,
+          getFillColor: colors.get(name),
+          getLineColor: [10, 10, 10, 200],
+          getLineWidth: 1,
+          getRadius: 14,
+          radiusMinPixels: 3,
+          radiusMaxPixels: 10,
+          lineWidthMinPixels: 1,
+        }),
+    });
+  }
+  return entries;
+}
+
+/**
+ * Every layer the map can draw for this context: the six coded, then the
+ * derived ones.
+ *
+ * A single sequence rather than two lists a caller has to remember to merge --
+ * that is what keeps `describeLayers`, `buildLayers` and the
+ * no-layer-outside-the-registry guard covering the derived entries too.
+ */
+export function registryFor(context = {}) {
+  return [...MAP_LAYERS, ...ontologyLayers(context)];
+}
+
 /** Describe the registry without building anything, for a legend or a toggle. */
 export function describeLayers(context = { heatmapMode: null }) {
-  return MAP_LAYERS.map(layer => ({
+  return registryFor(context).map(layer => ({
     id: layer.id,
     label: layer.label,
     geometry: layer.geometry,
     source: layer.source,
+    ontologyClass: layer.ontologyClass || null,
+    derived: Boolean(layer.derived),
     visible: layer.visible(context),
   }));
 }
 
 /** Build the deck.gl layers the context makes visible, in registry order. */
 export function buildLayers(context) {
-  return MAP_LAYERS.filter(layer => layer.visible(context)).map(layer =>
-    layer.build(context)
-  );
+  return registryFor(context)
+    .filter(layer => layer.visible(context))
+    .map(layer => layer.build(context));
 }
 
 /**
@@ -292,6 +464,13 @@ export function describeFeature(object) {
     return (
       `Bus: ${properties.bus_idx} | ` +
       `Voltage: ${properties.vm_pu.toFixed(3)} p.u. | Cat: ${properties.category}`
+    );
+  }
+  if (properties.ontology_class !== undefined) {
+    // The class is what the twin says this entity IS, so it leads. The id
+    // follows it rather than the other way round.
+    return (
+      `${properties.ontology_class}: ${properties.entity_id ?? 'unidentified'}`
     );
   }
   return null;

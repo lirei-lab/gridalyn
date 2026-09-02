@@ -36,6 +36,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.ingest",
         "EntityJoin",
     ),
+    "JOIN_COLUMNS": (
+        "gridalyn.twin.observation.ingest",
+        "JOIN_COLUMNS",
+    ),
     "LINE_LOADING_COLUMN": (
         "gridalyn.twin.observation.contract",
         "LINE_LOADING_COLUMN",
@@ -64,6 +68,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.twin.observation.contract",
         "ObservationProvenance",
     ),
+    "ObservationPublication": (
+        "gridalyn.twin.observation.publication",
+        "ObservationPublication",
+    ),
     "SUPPORTED_QUANTITIES": (
         "gridalyn.twin.observation.ingest",
         "SUPPORTED_QUANTITIES",
@@ -91,6 +99,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "register_observation_producer_extension": (
         "gridalyn.twin.observation.registry",
         "register_observation_producer_extension",
+    ),
+    "resolve_observation_publication": (
+        "gridalyn.twin.observation.publication",
+        "resolve_observation_publication",
     ),
 }
 

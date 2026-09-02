@@ -1800,6 +1800,21 @@
       "sha1": "d3d6fec91a14904bd18009ae42f54c57f443f421",
       "verdict": "PASS-AS-WRITTEN"
     },
+    "docs/guides/open-the-dashboard.md#2": {
+      "class": "ILLUSTRATIVE",
+      "auto": "ILLUSTRATIVE",
+      "family": "platform",
+      "file": "docs/guides/open-the-dashboard.md",
+      "ordinal": 2,
+      "line": 85,
+      "language": "text",
+      "sha1": "22e68028779f5d50cf8fe05c838590e00dfadd7d",
+      "sequence": null,
+      "verdict": "DOCUMENTED",
+      "rationale": "a directory listing, not a command: it shows where an operator places their own measurement exports and the declared entity join so the twin becomes a digital shadow. There is nothing to execute, and the SDK deliberately ships no measured data to execute it against.",
+      "evidence": "Checked against the tracked catalog and the SDK constants rather than run. `observation.measured.directory` in instances/default/digital_twin/dashboard/catalog.json is /instances/default/digital_twin/observations, of which the block's `instances/<name>/digital_twin/observations/` is the instance-generic form. The two file names match gridalyn.twin.observation.publication: `entity_join` is ENTITY_JOIN_STEM and `.csv` is in MEASUREMENT_SUFFIXES ('.csv', '.parquet'). The inline column comments match what the catalog publishes verbatim -- measured.columns ['timestamp', 'entity_id', 'quantity', 'value'] and measured.join_columns ['entity_id', 'bus_id'] -- so the block cannot drift from the contract without the catalog drifting first.",
+      "date": "2026-09-02"
+    },
     "docs/guides/project-template.md#0": {
       "auto": "RUNNABLE-INDEPENDENT",
       "class": "RUNNABLE-SEQUENCE",

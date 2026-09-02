@@ -223,6 +223,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.simulators.powerflow.synthetic_network",
         "build_synthetic_network_from_config",
     ),
+    "VALIDATION_FILENAME": (
+        "gridalyn.simulation.simulators.powerflow.synthetic_network",
+        "VALIDATION_FILENAME",
+    ),
     "build_synthetic_network_from_geojson": (
         "gridalyn.simulation.simulators.powerflow.synthetic_network",
         "build_synthetic_network_from_geojson",

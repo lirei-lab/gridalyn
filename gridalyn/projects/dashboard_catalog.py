@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -13,6 +14,17 @@ from gridalyn.twin.network import (
     BASE_TABLE_FILENAMES,
     NetworkModelRepository,
     resolve_network_geography,
+)
+from gridalyn.twin.observation.publication import (
+    PROVENANCE_SIMULATED,
+    resolve_observation_publication,
+)
+from gridalyn.twin.semantic.publication import (
+    GRAPH_CLASS_COLUMN,
+    GRAPH_SOURCE_COLUMN,
+    read_graph_manifest,
+    resolve_semantic_publication,
+    semantic_artifact_filenames,
 )
 
 FILE_KINDS = {
@@ -118,6 +130,9 @@ def build_dashboard_catalog(
     root: Path,
     network_repository: NetworkModelRepository | None = None,
     projects: Iterable[Any] | None = None,
+    semantic_dir: Path | None = None,
+    scenario_assets: Path | None = None,
+    observations_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Build a study-agnostic scenario catalog for the dashboard.
 
@@ -133,6 +148,20 @@ def build_dashboard_catalog(
             project's artifacts as a *source*, which is why this belongs here
             -- the catalog is written by the ``projects`` layer, which may
             legitimately see both a twin and a study.
+        semantic_dir: Directory holding the materialized semantic graph, or
+            ``None``. ``None`` publishes no ``semantic`` block at all, which
+            is the honest rendering for a twin that has none -- an empty block
+            would claim the ontology was looked for and found empty.
+        scenario_assets: Path to the scenario asset registry, or ``None``.
+            Contributes the one class population that varies *within* an
+            artifact, which is what a map can encode as a dimension.
+        observations_dir: Where this instance's MEASURED observations are read
+            from. Unlike ``semantic_dir``, the resulting block is published
+            whether or not anything is there: "is anything here measured?" is a
+            question every consumer must be able to ask of every instance, and
+            omitting the key would make "no measured data" and "this catalog is
+            too old to say" the same observation. ``None`` still publishes the
+            block, naming no directory.
 
     Returns:
         The catalog payload.
@@ -179,13 +208,18 @@ def build_dashboard_catalog(
                 or summary.get("description")
                 or "",
                 "paths": _paths(scenario_id, summary, root),
+                # Where a scenario's numbers came from. Always "simulated":
+                # these artifacts are written by a solved power flow, and a
+                # value from a solver and a value from a meter must not reach
+                # a view looking identical.
+                "provenance": PROVENANCE_SIMULATED,
                 "metrics": _metrics(summary),
                 "topology_counts": _topology_counts(summary, network_counts),
                 "extensions": extensions,
             }
         )
 
-    return {
+    catalog: dict[str, Any] = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "digital_twin_dashboard_catalog",
         # 1.1 adds network_model.geography: the CRS, the extent, the base
@@ -194,12 +228,170 @@ def build_dashboard_catalog(
         # so a viewer renders them from the report contract instead of from
         # per-study code. Both additive -- every 1.0 key keeps its name, shape
         # and meaning, so a reader written against 1.0 is unaffected.
-        "schema_version": "1.2",
+        # 1.3 adds semantic: the active profile, the graph's counts and
+        # validation verdict, the semantic artifact paths, and the ontology
+        # CLASSES with a count each -- the classes being what a client can
+        # build a layer or a filter from, which a node count cannot. Additive
+        # like the two before it.
+        # 1.4 adds observation, and `provenance` on every scenario: whether
+        # this instance carries MEASURED state, where it would be read from,
+        # and what each rendered artifact's values actually are. Also additive.
+        "schema_version": "1.4",
         "title": "Gridalyn Digital Twin",
         "network_model": network_model,
         "projects": build_project_catalog(projects or (), root=root),
         "scenarios": scenarios,
     }
+    semantic = _semantic(
+        semantic_dir=semantic_dir,
+        scenario_assets=scenario_assets,
+        network_repository=network_repository,
+        root=root,
+    )
+    if semantic is not None:
+        catalog["semantic"] = semantic
+    catalog["observation"] = _observation(observations_dir, root)
+    return catalog
+
+
+def _observation(observations_dir: Path | None, root: Path) -> dict[str, Any]:
+    """State whether this instance carries measured state, and where it lives.
+
+    Always returns a payload. An instance with no measured observations is the
+    normal case -- every instance this repository ships -- and it says so with
+    a reason and with the directory it looked in, rather than by being silent.
+
+    Args:
+        observations_dir: Where measured observations are read from, or
+            ``None`` when the caller names no location.
+        root: Workspace root that published paths are served relative to.
+
+    Returns:
+        The observation payload, extended with the served directory when one
+        was named.
+    """
+    publication = resolve_observation_publication(observations_dir or Path("."))
+    payload = publication.to_dict()
+    if observations_dir is None:
+        # No directory named, so none is published: a path the caller never
+        # gave would be this function's invention, not the twin's statement.
+        payload["measured"]["directory"] = None
+        return payload
+    payload["measured"]["directory"] = _web_path(observations_dir, root)
+    payload["measured"]["sources"] = [
+        _web_path(path, root) for path in publication.measured_sources
+    ]
+    payload["measured"]["entity_join"] = (
+        _web_path(publication.entity_join, root)
+        if publication.entity_join is not None
+        else None
+    )
+    return payload
+
+
+def _read_frame(path: Path, columns: list[str] | None = None) -> Any:
+    """Read a parquet artifact, or return ``None`` when it is unreadable.
+
+    A twin whose semantic tables are absent, truncated or written by a
+    different emitter must not take the whole catalog down with it: the
+    scenarios and the geography are unrelated to the ontology. The failure is
+    reported on stderr rather than swallowed, matching how the generator
+    reports a study it had to skip.
+
+    Args:
+        path: Artifact to read.
+        columns: Columns to project, or ``None`` for all. Projecting is what
+            keeps the multi-megabyte node table from being materialized in
+            full for a class tally.
+
+    Returns:
+        The loaded frame, or ``None``.
+    """
+    if not path.exists():
+        return None
+    import pandas as pd
+
+    try:
+        return pd.read_parquet(path, columns=columns)
+    except (OSError, ValueError) as error:  # unreadable or wrong columns
+        print(f"warning: skipping {path}: {error}", file=sys.stderr, flush=True)
+        return None
+
+
+def _semantic(
+    *,
+    semantic_dir: Path | None,
+    scenario_assets: Path | None,
+    network_repository: NetworkModelRepository | None,
+    root: Path,
+) -> dict[str, Any] | None:
+    """Publish the twin's ontology, or ``None`` when it declares none.
+
+    The dashboard reached the ontology through a hardcoded path to
+    ``semantic/graph_manifest.json`` and rendered four scalars from it --
+    profile, valid, node count, edge count. That is an ontology reduced to a
+    node count: nothing a client can colour, filter or group by, and a path
+    the catalog was supposed to have eliminated.
+
+    Args:
+        semantic_dir: Directory holding the materialized graph, or ``None``.
+        scenario_assets: Scenario asset registry path, or ``None``.
+        network_repository: Base snapshot whose tables carry the third class
+            population, or ``None``.
+        root: Workspace root that published paths are served relative to.
+
+    Returns:
+        The semantic payload, or ``None`` when neither a semantic directory
+        nor a scenario asset registry exists -- a twin with no ontology says
+        so by carrying no block, rather than by carrying an empty one.
+    """
+    graph_dir = semantic_dir if semantic_dir and semantic_dir.exists() else None
+    registry = scenario_assets if scenario_assets and scenario_assets.exists() else None
+    if graph_dir is None and registry is None:
+        return None
+
+    manifest: dict[str, Any] = {}
+    nodes = None
+    if graph_dir is not None:
+        manifest = read_graph_manifest(graph_dir)
+        nodes = _read_frame(
+            graph_dir / "nodes.parquet",
+            columns=[GRAPH_CLASS_COLUMN, GRAPH_SOURCE_COLUMN],
+        )
+    assets = _read_frame(registry) if registry is not None else None
+    base_frames: dict[str, Any] = {}
+    if network_repository is not None:
+        model = network_repository.load_model()
+        base_frames = {
+            "grid_buses": model.buses,
+            "grid_lines": model.lines,
+            "grid_transformers": model.transformers,
+            "buildings": model.buildings,
+            "building_grid_connectivity": model.connectivity,
+        }
+
+    publication = resolve_semantic_publication(
+        manifest=manifest,
+        base_frames=base_frames,
+        graph_nodes=nodes,
+        scenario_assets=assets,
+    )
+    payload = publication.to_dict()
+    # Every artifact a class was read from is reachable: the semantic
+    # documents and the asset registry are named here, and the base-population
+    # artifacts are named in `network_model.geography.paths` under the SAME
+    # canonical keys, so a consumer resolves `classes[].artifact` against the
+    # union of the two without a special case.
+    paths: dict[str, str] = {}
+    if graph_dir is not None:
+        for name, filename in semantic_artifact_filenames(publication.profile).items():
+            candidate = graph_dir / filename
+            if candidate.exists():
+                paths[name] = _web_path(candidate, root)
+    if registry is not None:
+        paths["asset_registry"] = _web_path(registry, root)
+    payload["paths"] = paths
+    return payload
 
 
 def _geography(

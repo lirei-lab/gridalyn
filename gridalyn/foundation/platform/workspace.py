@@ -128,6 +128,20 @@ class ArtifactLayout:
         return self.digital_twin / "semantic"
 
     @property
+    def observations(self) -> Path:
+        """Directory a deployment's MEASURED observations are read from.
+
+        The one artifact directory whose contents this repo never ships. The
+        SDK ships the ingest *path* -- ``gridalyn.twin.observation.ingest`` --
+        and a deployment becomes a digital *shadow* when its operator puts
+        their own AMI/SCADA export here alongside the entity join. Naming the
+        location in the layout is what lets the catalog say "there are none,
+        and here is where they would go" rather than leaving a consumer to
+        guess whether it looked in the right place.
+        """
+        return self.digital_twin / "observations"
+
+    @property
     def reports(self) -> Path:
         return self.digital_twin / "reports"
 

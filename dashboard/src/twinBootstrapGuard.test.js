@@ -98,6 +98,52 @@ test('no module builds an absolute twin artifact path', () => {
   );
 });
 
+/** The catalog artifact this repo tracks -- where the two languages must agree. */
+function shippedCatalog() {
+  return JSON.parse(
+    readFileSync(
+      join(SRC, '..', '..', 'instances', 'default', 'digital_twin', 'dashboard', 'catalog.json'),
+      'utf8'
+    )
+  );
+}
+
+test('the shipped catalog states whether this instance is a shadow', () => {
+  // Absent would make "no measured data" and "this catalog is too old to say"
+  // the same observation, which is the distinction the block exists for. It
+  // must survive a regeneration, whatever the instance happens to hold.
+  const observation = shippedCatalog().observation;
+  assert.ok(observation, 'the shipped catalog declares no observation block');
+  assert.ok(
+    observation.provenance_values.includes(observation.provenance),
+    `provenance ${observation.provenance} is outside the declared vocabulary ` +
+      `(${observation.provenance_values.join(', ')})`
+  );
+  assert.equal(
+    typeof observation.measured.available,
+    'boolean',
+    'measured availability must be answered, not omitted'
+  );
+  if (!observation.measured.available) {
+    assert.ok(
+      observation.measured.absent_reason,
+      'an instance with no measured data must say why, not go quiet'
+    );
+  }
+});
+
+test('every shipped scenario states where its numbers came from', () => {
+  const catalog = shippedCatalog();
+  const values = catalog.observation.provenance_values;
+  for (const scenario of catalog.scenarios) {
+    assert.ok(
+      values.includes(scenario.provenance),
+      `scenario ${scenario.scenario_id} declares provenance ` +
+        `${scenario.provenance}, outside ${values.join(', ')}`
+    );
+  }
+});
+
 test('the client can read the catalog this repo actually ships', async () => {
   // Cross-language drift is invisible to either side's own tests: the SDK
   // bumped the catalog to 1.2 while this client still declared 1.0/1.1, so the
@@ -120,6 +166,82 @@ test('the client can read the catalog this repo actually ships', async () => {
     `the shipped catalog is schema ${catalog.schema_version}, which this client ` +
       `does not declare support for (${SUPPORTED_SCHEMA_VERSIONS.join(', ')})`
   );
+});
+
+test('no module names an ontology class', () => {
+  // Same rule as scenario ids and studies, for the same reason: the classes
+  // come from the catalog, and a literal one here is the coupling the derived
+  // layer registry exists to remove -- a twin whose profile names a class this
+  // repo has never seen must still reach the map.
+  const catalogPath = join(
+    SRC,
+    '..',
+    '..',
+    'instances',
+    'default',
+    'digital_twin',
+    'dashboard',
+    'catalog.json'
+  );
+  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
+  const classes = [
+    ...new Set((catalog.semantic?.classes || []).map(entry => entry.class)),
+  ];
+  assert.ok(classes.length >= 4, `expected the twin's classes, found ${classes.length}`);
+
+  // Quoted-literal form, the same shape the scenario-id guard uses: what makes
+  // a class name load-bearing is being compared, keyed or branched on, and all
+  // three spell it as a string literal. Prose in a comment, and UI text that
+  // happens to share a word, are not the target.
+  const offenders = [];
+  for (const name of sourceFiles()) {
+    const source = read(name);
+    for (const declared of classes) {
+      const literal = new RegExp(
+        `(['"\`])${declared.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1`
+      );
+      if (literal.test(source)) offenders.push(`${name} -> ${declared}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these modules name an ontology class instead of deriving it from the ` +
+      `catalog: ${offenders.join(', ')}`
+  );
+});
+
+test('the catalog this repo ships actually carries the ontology', () => {
+  // The SDK can stop publishing `semantic` -- a regenerated catalog from a
+  // twin with no semantic dir, a build that forgot the flag -- and no Python
+  // test would notice, because the block is legitimately optional there. The
+  // tracked artifact is where the two sides have to agree.
+  const catalogPath = join(
+    SRC,
+    '..',
+    '..',
+    'instances',
+    'default',
+    'digital_twin',
+    'dashboard',
+    'catalog.json'
+  );
+  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
+  const semantic = catalog.semantic;
+  assert.ok(semantic, 'the shipped catalog declares no semantic block');
+  assert.ok(
+    semantic.classes.length > 0,
+    `the shipped catalog declares no ontology class: ${semantic.classes_absent_reason}`
+  );
+  // Every class must be attributable: the three populations do not coincide,
+  // so an entry that does not say which one it came from is unusable.
+  for (const entry of semantic.classes) {
+    assert.ok(
+      semantic.populations.includes(entry.population),
+      `class ${entry.class} claims population ${entry.population}, which the ` +
+        `catalog does not declare (${semantic.populations.join(', ')})`
+    );
+  }
 });
 
 test('map layers are created only in the registry', () => {

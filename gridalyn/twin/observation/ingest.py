@@ -89,8 +89,10 @@ SUPPORTED_QUANTITIES: dict[str, str] = {VOLTAGE_QUANTITY: "bus_voltage_pu"}
 #: Suffix-to-reader support of :func:`load_measurements`.
 _SUPPORTED_SUFFIXES = (".csv", ".parquet")
 
-#: Required columns of an :meth:`EntityJoin.from_frame` join frame.
-_JOIN_COLUMNS = (ENTITY_COLUMN, "bus_id")
+#: Required columns of an :meth:`EntityJoin.from_frame` join frame. Public
+#: because the catalog publishes it: an operator preparing an export reads the
+#: contract off the twin's own declaration rather than off this source.
+JOIN_COLUMNS = (ENTITY_COLUMN, "bus_id")
 
 #: The remediation every naive-timestamp rejection carries.
 _NAIVE_REMEDIATION = (
@@ -182,15 +184,15 @@ class EntityJoin:
                 or an ``entity_id`` appears more than once (the duplicates
                 are named).
         """
-        missing = [name for name in _JOIN_COLUMNS if name not in frame.columns]
+        missing = [name for name in JOIN_COLUMNS if name not in frame.columns]
         if missing:
             raise ValueError(
                 "EntityJoin.from_frame: the join frame is missing required "
                 f"column(s): {', '.join(missing)} (required columns: "
-                f"{', '.join(_JOIN_COLUMNS)}; present columns: "
+                f"{', '.join(JOIN_COLUMNS)}; present columns: "
                 f"{_present_columns(frame)})"
             )
-        null_count = int(frame[list(_JOIN_COLUMNS)].isna().to_numpy().sum())
+        null_count = int(frame[list(JOIN_COLUMNS)].isna().to_numpy().sum())
         if null_count:
             raise ValueError(
                 f"EntityJoin.from_frame: the join frame carries {null_count} "

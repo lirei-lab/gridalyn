@@ -53,6 +53,7 @@ ROLE_FEEDER_HEAD_BUS = "feeder_head_bus"
 ROLE_FEEDER_CLUSTER = "feeder_cluster"
 ROLE_LATITUDE = "latitude"
 ROLE_LONGITUDE = "longitude"
+ROLE_ONTOLOGY_CLASS = "ontology_class"
 
 ColumnDtype = Literal["string", "integer"]
 
@@ -277,6 +278,10 @@ BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
             # one.
             ColumnSpec(ROLE_LATITUDE, ("lat",)),
             ColumnSpec(ROLE_LONGITUDE, ("lon",)),
+            # One spelling: both in-repo producers -- SyntheticPandapower
+            # Adapter (`adapters/network.py`) and CimParquetAdapter
+            # (`adapters/cim.py`) -- write `cim_class` on this table.
+            ColumnSpec(ROLE_ONTOLOGY_CLASS, ("cim_class",)),
         ),
     ),
     GRID_LINES: TableSchema(
@@ -289,6 +294,7 @@ BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
             ColumnSpec(
                 ROLE_TO_BUS, ("to_bus_id",), required=True, references=GRID_BUSES
             ),
+            ColumnSpec(ROLE_ONTOLOGY_CLASS, ("cim_class",)),
         ),
     ),
     GRID_TRANSFORMERS: TableSchema(
@@ -301,6 +307,7 @@ BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
             ColumnSpec(
                 ROLE_LV_BUS, ("lv_bus_id",), required=True, references=GRID_BUSES
             ),
+            ColumnSpec(ROLE_ONTOLOGY_CLASS, ("cim_class",)),
         ),
     ),
     BUILDINGS: TableSchema(
@@ -326,6 +333,12 @@ BASE_TABLE_SCHEMAS: dict[str, TableSchema] = {
             # downstream of the base snapshot can reconstruct them.
             ColumnSpec(ROLE_LATITUDE, ("lat",)),
             ColumnSpec(ROLE_LONGITUDE, ("lon",)),
+            # A real producer split, unlike the three grid tables. Synthetic
+            # PandapowerAdapter writes `ontology_class` ("Building"), and
+            # CimParquetAdapter writes `cim_class` ("EnergyConsumer") on the
+            # same artifact -- the two standards name the same row differently.
+            # Resolution order is the shipped base's spelling first.
+            ColumnSpec(ROLE_ONTOLOGY_CLASS, ("ontology_class", "cim_class")),
         ),
     ),
     BUILDING_GRID_CONNECTIVITY: TableSchema(

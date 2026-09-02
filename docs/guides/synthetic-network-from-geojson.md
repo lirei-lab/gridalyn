@@ -62,7 +62,7 @@ The function returns:
 | `power_grid` | Generated topology bundle used by Gridalyn simulation and visualization helpers. |
 | `net` | The generated pandapower network. |
 | `validation_report` | Counts, CRS lineage, source hashes, topology checks, and optional power-flow convergence. |
-| `report_path` | Path to `synthetic_network_validation_report.json` when `out_dir` is provided. |
+| `report_path` | Path to `synthetic_network_validation.json` when `out_dir` is provided. |
 
 Use `clustering_crs="auto"` for normal GeoJSON inputs. It estimates a local
 metric CRS for K-Means and MST distances while preserving longitude/latitude on
@@ -79,7 +79,7 @@ uv run python examples/tutorials/basic_grid_creation.py
 
 It generates fake building footprints, creates LV/MV/HV graphs, and writes the
 footprint GeoJSON, the topology/network caches, and
-`synthetic_network_validation_report.json` under
+`synthetic_network_validation.json` under
 `examples/generated/outputs/basic_grid_creation/`. It does not render maps.
 
 Run the bundled real-footprint example:

@@ -10,6 +10,10 @@ import { loadOperationsCatalog } from './operationsCatalog';
 import { deriveWorkspaces, loadProjectReports, summaryRows } from './projectCatalog';
 import TwinMap from './TwinMap';
 import StudyExtensionPanels from './StudyExtensionPanels';
+import OntologyPanel from './OntologyPanel';
+import ProvenanceBadge from './ProvenanceBadge';
+import { drawableClasses } from './ontology';
+import { useOntologyFeatures } from './useOntologyFeatures';
 import { fmt, heatmapTitle } from './format';
 
 function WorkspaceSelector({ activeWorkspace, onChange, workspaces = [] }) {
@@ -145,11 +149,17 @@ export default function App() {
   const [scenarios, setScenarios] = useState(buildScenarioCatalog());
   const [twinGeography, setTwinGeography] = useState(null);
   const [twinNetworkModel, setTwinNetworkModel] = useState(null);
+  // The twin's ontology, from the catalog. Null for a twin that declares none.
+  const [twinSemantic, setTwinSemantic] = useState(null);
+  // Whether this deployment is a shadow. Null for a catalog too old to say,
+  // which is not the same as "no measured data".
+  const [twinObservation, setTwinObservation] = useState(null);
   const [twinWarnings, setTwinWarnings] = useState([]);
   const [twinError, setTwinError] = useState(null);
   const { db, isInitializing, dbError } = useDuckDB(
     activeWorkspace === 'digital_twin' ? scenarios : [],
-    activeWorkspace === 'digital_twin' ? twinGeography : null
+    activeWorkspace === 'digital_twin' ? twinGeography : null,
+    activeWorkspace === 'digital_twin' ? twinSemantic : null
   );
   // No literal scenario id: the selection follows whatever the twin declares,
   // and stays null until it has answered.
@@ -168,6 +178,9 @@ export default function App() {
   const [showLV, setShowLV] = useState(true);
   const [showTransformers, setShowTransformers] = useState(false);
   const [showStudyExtensions, setShowStudyExtensions] = useState(false);
+  // Off by default: the ontology layer is an extra reading of the same
+  // entities, not a replacement for the electrical one.
+  const [showOntology, setShowOntology] = useState(false);
 
   // Heatmap target dimension
   const [heatmapMode, setHeatmapMode] = useState('nodes'); // 'nodes', 'lines', or 'transformers'
@@ -182,6 +195,15 @@ export default function App() {
   const [clearingScorecardError, setClearingScorecardError] = useState(null);
   const [operationsCatalog, setOperationsCatalog] = useState(null);
   const [operationsCatalogError, setOperationsCatalogError] = useState(null);
+
+  // Entities typed by what the twin's ontology says they ARE, read from the
+  // artifacts and columns the catalog declares.
+  const ontologyFeatures = useOntologyFeatures(
+    db,
+    twinSemantic,
+    selectedScenario,
+    showOntology
+  );
 
   const scenarioSummary = scenarios.find(item => item.id === selectedScenario);
   const networkImpactScenarios = networkImpact?.scenarios || {};
@@ -249,6 +271,8 @@ export default function App() {
         setScenarios(twin.scenarios);
         setTwinGeography(twin.geography);
         setTwinNetworkModel(twin.networkModel);
+        setTwinSemantic(twin.semantic);
+        setTwinObservation(twin.observation);
         setTwinProjects(twin.projects);
         setTwinWarnings(twin.warnings);
         setTwinError(null);
@@ -260,6 +284,8 @@ export default function App() {
         setScenarios([]);
         setTwinGeography(null);
         setTwinNetworkModel(null);
+        setTwinSemantic(null);
+        setTwinObservation(null);
         setTwinProjects([]);
         setTwinWarnings([]);
         setTwinError(err.message || String(err));
@@ -573,8 +599,17 @@ export default function App() {
       nodes: nodesFeatures,
       lines: linesFeatures,
       transformers: transformerFeatures,
+      ontology: ontologyFeatures,
     }),
-    [nodesFeatures, linesFeatures, transformerFeatures]
+    [nodesFeatures, linesFeatures, transformerFeatures, ontologyFeatures]
+  );
+
+  // The classes the map may draw, narrowed to the selected scenario. Handed to
+  // the registry, which derives one layer per class; no class name appears in
+  // this component, and none needs to.
+  const scenarioOntologyClasses = useMemo(
+    () => drawableClasses(twinSemantic, selectedScenario),
+    [twinSemantic, selectedScenario]
   );
 
   if (activeProject) {
@@ -596,6 +631,8 @@ export default function App() {
         features={mapFeatures}
         geography={twinGeography}
         heatmapMode={heatmapMode}
+        ontologyClasses={scenarioOntologyClasses}
+        showOntology={showOntology}
         onSelectNode={setSelectedNode}
       />
 
@@ -619,7 +656,26 @@ export default function App() {
         <p style={{ margin: '0 0 4px 0', color: '#666666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {twinNetworkModel?.modelVersionId || 'model unidentified'}
         </p>
-        <p style={{ margin: '0 0 20px 0', color: '#aaaaaa', fontSize: '0.9rem' }}>Scenario {scenarioSummary?.label || selectedScenario} · Heatmap: {heatmapTitle(heatmapMode)}</p>
+        <p style={{ margin: '0 0 8px 0', color: '#aaaaaa', fontSize: '0.9rem' }}>Scenario {scenarioSummary?.label || selectedScenario} · Heatmap: {heatmapTitle(heatmapMode)}</p>
+        {/* What is on screen, stated rather than assumed. A twin with no
+            measured data says nothing further -- no empty panel, and no
+            implication that anything here was measured. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 20px 0' }}>
+          <ProvenanceBadge
+            provenance={scenarioSummary?.provenance || twinObservation?.provenance}
+            title={
+              twinObservation?.measured.available
+                ? 'this instance carries measured observations'
+                : twinObservation?.measured.absentReason || undefined
+            }
+          />
+          {twinObservation?.measured.available && (
+            <span style={{ color: '#7dffb0', fontSize: '0.72rem' }}>
+              shadow · {twinObservation.measured.sources.length} measured source
+              {twinObservation.measured.sources.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', margin: '0 0 8px 0', color: '#aaaaaa', fontSize: '0.9rem', borderBottom: '1px solid #444', paddingBottom: '5px' }} htmlFor="scenario-select">Scenario</label>
@@ -652,7 +708,10 @@ export default function App() {
           )}
           {scenarioSummary && (
             <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-              <p style={{ margin: '0 0 8px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold' }}>Grid Health</p>
+              <p style={{ margin: '0 0 8px 0', color: '#9de7ff', fontSize: '0.78rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Grid Health
+                <ProvenanceBadge provenance={scenarioSummary.provenance} />
+              </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.82rem', color: '#e6e6e6' }}>
                 <span>Grid peak: <strong>{fmt(gridMetrics.grid_peak_mw ?? gridMetrics.ext_grid_peak_mw)} MW</strong></span>
                 <span>Load peak: <strong>{fmt(gridMetrics.load_peak_mw)} MW</strong></span>
@@ -664,14 +723,12 @@ export default function App() {
               </div>
             </div>
           )}
-          {scenarioSummary?.semanticGraph && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333', fontSize: '0.78rem', color: '#d7eeee' }}>
-              <span>Ontology: <strong>{scenarioSummary.semanticGraph.profile}</strong></span>
-              <span>Valid: <strong>{scenarioSummary.semanticGraph.valid === null ? 'n/a' : String(scenarioSummary.semanticGraph.valid)}</strong></span>
-              <span>Nodes: <strong>{scenarioSummary.semanticGraph.nodeCount ?? 'n/a'}</strong></span>
-              <span>Edges: <strong>{scenarioSummary.semanticGraph.edgeCount ?? 'n/a'}</strong></span>
-            </div>
-          )}
+          <OntologyPanel
+            semantic={scenarioSummary?.semanticGraph || twinSemantic}
+            scenarioId={selectedScenario}
+            showOntology={showOntology}
+            onToggleOntology={() => setShowOntology(!showOntology)}
+          />
           <StudyExtensionPanels
             hasStudyExtensions={hasStudyExtensions}
             showStudyExtensions={showStudyExtensions}
@@ -869,6 +926,11 @@ export default function App() {
             <h3 style={{ margin: '0', fontSize: '1.2rem', color: '#fff' }}>
               Building Node {selectedNode.properties.bus_idx} · {selectedScenario}
               <span style={{ fontSize: '0.8rem', marginLeft: '10px', color: '#ff3232' }}>{selectedNode.properties.category}</span>
+              {/* This trace is a series of values, so it states where they
+                  came from too -- the rule is per view, not per screen. */}
+              <span style={{ marginLeft: '10px' }}>
+                <ProvenanceBadge provenance={scenarioSummary?.provenance} />
+              </span>
             </h3>
             <button 
               onClick={() => setSelectedNode(null)}

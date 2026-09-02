@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-08-28T18:44:24.374273+00:00",
+  "created_at": "2026-09-02T13:19:30.111362+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -32,6 +32,21 @@
         "center": {
           "lat": 46.3429294366034,
           "lon": -72.6040816042032
+        }
+      },
+      "geometry_kinds": {
+        "buildings": {
+          "kind": "point",
+          "reason": "the GeoJSON ingest reads Polygon/MultiPolygon footprints and retains only the centroid and the area (PowerGridGraph.extract_building_centers_and_areas); the polygons are not carried into the base snapshot, and nothing downstream of it can reconstruct them -- a consumer that wants footprints must go back to the source layer"
+        },
+        "grid_buses": {
+          "kind": "point"
+        },
+        "grid_lines": {
+          "kind": "derived"
+        },
+        "grid_transformers": {
+          "kind": "derived"
         }
       },
       "located": true,
@@ -90,6 +105,33 @@
       "valid": true,
       "warnings": []
     }
+  },
+  "observation": {
+    "measured": {
+      "absent_reason": "this instance carries no measured observations; the SDK ships the ingest path, not measured data -- place tidy measurement exports and the declared entity_join in the observations directory named here to feed a deployment's own AMI/SCADA data through gridalyn.twin.observation.ingest, which is what makes a deployment a digital shadow rather than a model",
+      "available": false,
+      "columns": [
+        "timestamp",
+        "entity_id",
+        "quantity",
+        "value"
+      ],
+      "directory": "/instances/default/digital_twin/observations",
+      "entity_join": null,
+      "join_columns": [
+        "entity_id",
+        "bus_id"
+      ],
+      "quantities": [
+        "voltage_pu"
+      ],
+      "sources": []
+    },
+    "provenance": "simulated",
+    "provenance_values": [
+      "simulated",
+      "measured"
+    ]
   },
   "projects": [
     {
@@ -564,9 +606,8 @@
         {
           "exists": true,
           "kind": "unknown",
-          "note": "JSON under reports/ that does not carry the required report fields; not a governed report",
-          "path": "/projects/synthetic_geojson_feeder/outputs/reports/synthetic_network_validation_report.json",
-          "relative": "outputs/reports/synthetic_network_validation_report.json"
+          "path": "/projects/synthetic_geojson_feeder/outputs/data/synthetic_network_validation.json",
+          "relative": "outputs/data/synthetic_network_validation.json"
         },
         {
           "exists": true,
@@ -617,6 +658,7 @@
         "power": "/instances/default/digital_twin/timeseries/S0_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S0_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S0",
       "topology_counts": {
         "n_buses": 3562,
@@ -648,6 +690,7 @@
         "power": "/instances/default/digital_twin/timeseries/S1_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S1_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S1",
       "topology_counts": {
         "n_buses": 3562,
@@ -679,6 +722,7 @@
         "power": "/instances/default/digital_twin/timeseries/S2_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S2_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S2",
       "topology_counts": {
         "n_buses": 3562,
@@ -710,6 +754,7 @@
         "power": "/instances/default/digital_twin/timeseries/S3_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S3_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S3",
       "topology_counts": {
         "n_buses": 3562,
@@ -741,6 +786,7 @@
         "power": "/instances/default/digital_twin/timeseries/S4_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S4_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S4",
       "topology_counts": {
         "n_buses": 3562,
@@ -751,6 +797,553 @@
       }
     }
   ],
-  "schema_version": "1.2",
+  "schema_version": "1.4",
+  "semantic": {
+    "classes": [
+      {
+        "artifact": "grid_buses",
+        "class": "ConnectivityNode",
+        "column": "cim_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3562,
+        "derived_from": [],
+        "identity": "bus_id",
+        "located": true,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "grid_lines",
+        "class": "ACLineSegment",
+        "column": "cim_class",
+        "coordinates": null,
+        "count": 3398,
+        "derived_from": [],
+        "identity": "line_id",
+        "located": false,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "grid_transformers",
+        "class": "PowerTransformer",
+        "column": "cim_class",
+        "coordinates": null,
+        "count": 163,
+        "derived_from": [],
+        "identity": "transformer_id",
+        "located": false,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "buildings",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3235,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "brick:Building",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "buildings"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:ACLineSegment",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3398,
+        "derived_from": [
+          "grid_lines"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:ConnectivityNode",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3562,
+        "derived_from": [
+          "grid_buses"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:EnergyConsumer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "buildings"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:PowerTransformer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 163,
+        "derived_from": [
+          "grid_transformers"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:ConstraintZone",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 810,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityAggregator",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityOffer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityPortfolio",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityProvider",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:HardCLSContract",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:SoftCLSContract",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:Scenario",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 5,
+        "derived_from": [
+          "scenario_manifest"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:ScenarioDevice",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 12935,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:SimulationRun",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 10,
+        "derived_from": [
+          "ev_load_summary",
+          "powerflow_summary"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:TimeSeriesDataset",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 25,
+        "derived_from": [
+          "ev_load_summary",
+          "powerflow_summary"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:EnergyFlexibility",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:EnergyFlexibilityKPI",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:FlexibleOperation",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:ThermallyActivatedBuildingSystem",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "ieee2030_5:EVSE",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3235,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S0"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2911,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S1"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 324,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S1"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2588,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S2"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 647,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S2"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2265,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S3"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 970,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S3"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 1941,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S4"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 1294,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S4"
+      }
+    ],
+    "classes_absent_reason": null,
+    "graph": {
+      "edge_count": 147065,
+      "node_count": 74286,
+      "validation": {
+        "errors": 0,
+        "valid": true,
+        "warnings": 0
+      }
+    },
+    "paths": {
+      "asset_registry": "/instances/default/digital_twin/scenarios/asset_registry.parquet",
+      "edges": "/instances/default/digital_twin/semantic/edges.parquet",
+      "graph_manifest": "/instances/default/digital_twin/semantic/graph_manifest.json",
+      "nodes": "/instances/default/digital_twin/semantic/nodes.parquet",
+      "profile": "/instances/default/digital_twin/semantic/profile_north_america.json",
+      "validation_report": "/instances/default/digital_twin/semantic/validation_report.json"
+    },
+    "populations": [
+      "base_snapshot",
+      "semantic_graph",
+      "scenario_assets"
+    ],
+    "profile": "north_america"
+  },
   "title": "Gridalyn Digital Twin"
 }

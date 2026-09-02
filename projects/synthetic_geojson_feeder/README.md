@@ -50,7 +50,7 @@ outputs/data/buses.csv
 outputs/data/lines.csv
 outputs/data/loads.csv
 outputs/reports/building_footprints_report.json
-outputs/reports/synthetic_network_validation_report.json
+outputs/data/synthetic_network_validation.json
 outputs/reports/synthetic_geojson_feeder_report.json
 outputs/figures/synthetic_feeder_topology.png
 outputs/manifests/project_run_manifest.json
@@ -58,9 +58,15 @@ outputs/manifests/project_run_manifest.json
 
 ## How it is verified
 
-Network generation writes its own validation report rather than being trusted:
-`synthetic_network_validation_report.json` is an artifact of the build stage,
-not an afterthought. On top of that,
+Network generation writes its own diagnostic rather than being trusted:
+`synthetic_network_validation.json` is an artifact of the build stage, not an
+afterthought. It sits under `outputs/data/` and is deliberately NOT named like
+a report: it carries eight domain keys (counts, topology, sizing, powerflow,
+CRS, source, validity) and none of the platform report contract's required
+fields, so calling it a report -- as its name and folder did until 2026-09-02
+-- handed every reader that classifies by destination a payload it cannot
+render. The governed report for this stage is
+`synthetic_geojson_feeder_report.json`. On top of that,
 `gridalyn project status --check-artifacts` confirms every declared artifact
 appeared, `gridalyn project regression` compares against
 `baselines/results_baseline.json`, and the study runs end to end in CI as one

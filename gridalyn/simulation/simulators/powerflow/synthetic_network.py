@@ -28,6 +28,24 @@ from gridalyn.twin.core.graph import PowerGridGraph
 # pathologically undersized network cannot bloat the JSON; counts remain exact.
 _OVER_CAPACITY_INDEX_CAP = 32
 
+VALIDATION_FILENAME = "synthetic_network_validation.json"
+"""File name of the build's domain diagnostic.
+
+Renamed from ``synthetic_network_validation_report.json`` on 2026-09-02, and
+the name is the whole point. This payload carries eight DOMAIN keys --
+``counts``, ``topology``, ``sizing``, ``powerflow``,
+``coordinate_reference_systems``, ``source``, ``valid``, ``report_id`` -- and
+none of ``REQUIRED_REPORT_FIELDS``. It is a diagnostic of the network that was
+built, not the run's own account of itself, so it is not a platform report and
+must not look like one: the project catalog classified it ``unknown`` for
+exactly that reason, and ``tests/test_report_contract.py`` treats a
+``*_report.json`` name as a governed destination.
+
+The alternative -- wrapping it in a report envelope -- was considered and
+rejected on the repo's own rule: making a non-report into one breaks its own
+consumers, and a diagnostic is not a run's account of itself.
+"""
+
 
 @dataclass(frozen=True)
 class SyntheticNetworkBuildResult:
@@ -156,7 +174,7 @@ def build_synthetic_network_from_config(
     report_path: Path | None = None
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
-        report_path = output_dir / "synthetic_network_validation_report.json"
+        report_path = output_dir / VALIDATION_FILENAME
         report_path.write_text(
             json.dumps(report, indent=2, default=str), encoding="utf-8"
         )

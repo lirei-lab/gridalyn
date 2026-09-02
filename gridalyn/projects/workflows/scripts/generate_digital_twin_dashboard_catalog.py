@@ -24,6 +24,9 @@ from gridalyn.twin.network import NetworkModelRepository  # noqa: E402
 DEFAULT_SCENARIO_INDEX = DEFAULT_LAYOUT.scenarios / "index.json"
 DEFAULT_BASE_DIR = DEFAULT_LAYOUT.base
 DEFAULT_POWERFLOW_SUMMARY = DEFAULT_LAYOUT.timeseries / "powerflow_smoke_summary.json"
+DEFAULT_SEMANTIC_DIR = DEFAULT_LAYOUT.semantic
+DEFAULT_SCENARIO_ASSETS = DEFAULT_LAYOUT.scenarios / "asset_registry.parquet"
+DEFAULT_OBSERVATIONS_DIR = DEFAULT_LAYOUT.observations
 DEFAULT_OUT = DEFAULT_LAYOUT.dashboard / "catalog.json"
 DEFAULT_EXTENSIONS = {
     "network_impact": DEFAULT_LAYOUT.flexibility / "network_impact_catalog.json",
@@ -74,6 +77,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--powerflow-summary", type=Path, default=DEFAULT_POWERFLOW_SUMMARY
     )
+    parser.add_argument("--semantic-dir", type=Path, default=DEFAULT_SEMANTIC_DIR)
+    parser.add_argument("--scenario-assets", type=Path, default=DEFAULT_SCENARIO_ASSETS)
+    parser.add_argument(
+        "--observations-dir", type=Path, default=DEFAULT_OBSERVATIONS_DIR
+    )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     return parser.parse_args()
 
@@ -87,6 +95,9 @@ def main() -> int:
         root=ROOT,
         network_repository=NetworkModelRepository.from_parquet(args.base_dir),
         projects=_discover_projects(ROOT),
+        semantic_dir=args.semantic_dir,
+        scenario_assets=args.scenario_assets,
+        observations_dir=args.observations_dir,
     )
     write_dashboard_catalog(args.out, catalog)
     print(

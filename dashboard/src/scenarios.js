@@ -6,6 +6,8 @@ import {
   fetchJsonOrNull,
   readGeography,
   readNetworkModel,
+  readObservation,
+  readSemantic,
   schemaWarning,
   servablePath,
   twinPath,
@@ -63,6 +65,14 @@ function scenarioSubtitle(scenario, summary) {
   return parts.join(' - ');
 }
 
+/**
+ * The ontology as the PRE-CATALOG manifest states it, for the fallback only.
+ *
+ * Kept because a twin without a catalog has no other route to its profile, and
+ * deliberately not reused on the catalog path: this shape is four scalars, and
+ * the four scalars were the problem. `readSemantic` is what the live path
+ * reads.
+ */
 function normalizeSemanticGraph(manifest) {
   if (!manifest) return null;
   return {
@@ -72,6 +82,24 @@ function normalizeSemanticGraph(manifest) {
     valid: manifest.validation?.valid ?? null,
     manifestPath: LEGACY_MANIFEST_PATHS.semanticManifest,
     artifacts: manifest.artifacts || {},
+  };
+}
+
+/**
+ * Narrow the twin's ontology to one scenario.
+ *
+ * The scenario-scoped population -- the asset registry's class per (scenario,
+ * class) pair -- is the only one whose counts differ between scenarios, so
+ * carrying the whole list onto every scenario would have each one reporting
+ * its siblings' numbers. Classes with no scenario scope are shared unchanged.
+ */
+export function semanticForScenario(semantic, scenarioId) {
+  if (!semantic) return null;
+  return {
+    ...semantic,
+    classes: semantic.classes.filter(
+      entry => entry.scenarioId === null || entry.scenarioId === scenarioId
+    ),
   };
 }
 
@@ -97,8 +125,9 @@ function normalizeExtensions(extensions = {}) {
   );
 }
 
-export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest = null) {
-  const semanticGraph = normalizeSemanticGraph(semanticManifest);
+export function buildDashboardScenarioCatalog(dashboardCatalog) {
+  const semantic = readSemantic(dashboardCatalog);
+  const observation = readObservation(dashboardCatalog);
   return (dashboardCatalog?.scenarios || [])
     .filter(scenario => scenario?.scenario_id)
     .sort((a, b) => {
@@ -121,7 +150,11 @@ export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest
         gridMetrics: metrics,
         topologyCounts: scenario.topology_counts || {},
         extensions: normalizeExtensions(scenario.extensions),
-        semanticGraph,
+        semanticGraph: semanticForScenario(semantic, id),
+        // What this scenario's numbers ARE. Declared per scenario rather than
+        // inferred from the instance, so an instance that later carries both
+        // kinds does not have to relabel every view at once.
+        provenance: scenario.provenance || observation?.provenance || null,
       };
     });
 }
@@ -200,14 +233,7 @@ export async function loadScenarioManifest(fetchImpl = fetch) {
  * with the reason confined to the browser console.
  */
 export async function loadTwin(fetchImpl = fetch) {
-  const [catalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] =
-    await Promise.all([
-      fetchJsonOrNull(fetchImpl, TWIN_CATALOG_PATH),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.scenarioIndex),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.powerflowSummary),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.assetRegistry),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.semanticManifest),
-    ]);
+  const catalog = await fetchJsonOrNull(fetchImpl, TWIN_CATALOG_PATH);
 
   const warnings = [];
   let scenarios = [];
@@ -216,9 +242,20 @@ export async function loadTwin(fetchImpl = fetch) {
   if (catalog?.scenarios?.length > 0) {
     const warning = schemaWarning(catalog);
     if (warning) warnings.push(warning);
-    scenarios = buildDashboardScenarioCatalog(catalog, semanticManifest);
+    scenarios = buildDashboardScenarioCatalog(catalog);
     source = 'catalog';
   } else {
+    // Reached only when the catalog answered nothing. Fetching these four
+    // alongside the catalog cost every load four needless requests, and -- for
+    // the semantic manifest -- made a hardcoded twin path part of the LIVE
+    // route rather than of the fallback it belongs to.
+    const [scenarioManifest, summaryManifest, assetManifest, semanticManifest] =
+      await Promise.all([
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.scenarioIndex),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.powerflowSummary),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.assetRegistry),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.semanticManifest),
+      ]);
     scenarios = buildScenarioCatalog(
       scenarioManifest,
       summaryManifest,
@@ -250,6 +287,14 @@ export async function loadTwin(fetchImpl = fetch) {
     scenarios,
     geography: readGeography(catalog),
     networkModel: readNetworkModel(catalog),
+    // Whether this deployment is a shadow, and where its measured state is
+    // read from. Null for a pre-1.4 catalog and for the fallback, neither of
+    // which can answer -- as distinct from answering "none".
+    observation: readObservation(catalog),
+    // The twin's ontology, reached through the contract rather than through
+    // `LEGACY_MANIFEST_PATHS.semanticManifest`. Null for a pre-1.3 catalog and
+    // for the fallback, where no such declaration exists to read.
+    semantic: readSemantic(catalog),
     // Studies as SOURCES the twin draws on, described by their declared
     // artifacts. Absent from a pre-catalog twin, hence the empty default.
     projects: readProjects(catalog),

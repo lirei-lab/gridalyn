@@ -63,7 +63,7 @@ spec:
     objectiveArtifacts:
       - outputs/reports/building_footprints_report.json
       - outputs/reports/synthetic_geojson_feeder_report.json
-      - outputs/reports/synthetic_network_validation_report.json
+      - outputs/data/synthetic_network_validation.json
       - outputs/data/buses.csv
       - outputs/data/lines.csv
       - outputs/data/loads.csv

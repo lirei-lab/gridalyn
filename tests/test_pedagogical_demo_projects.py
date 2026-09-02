@@ -83,11 +83,11 @@ def test_synthetic_geojson_feeder_runs_end_to_end() -> None:
     report_path = (
         GEOJSON_PROJECT / "outputs" / "reports" / "synthetic_geojson_feeder_report.json"
     )
+    # Under outputs/data/, not outputs/reports/: it carries eight domain keys
+    # and none of the platform report contract's required fields, so a
+    # governed destination would misfile it.
     validation_path = (
-        GEOJSON_PROJECT
-        / "outputs"
-        / "reports"
-        / "synthetic_network_validation_report.json"
+        GEOJSON_PROJECT / "outputs" / "data" / "synthetic_network_validation.json"
     )
     buses_path = GEOJSON_PROJECT / "outputs" / "data" / "buses.csv"
     lines_path = GEOJSON_PROJECT / "outputs" / "data" / "lines.csv"

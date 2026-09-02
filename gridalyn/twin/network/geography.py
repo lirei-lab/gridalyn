@@ -14,6 +14,15 @@ therefore *derived* -- the segment between the coordinates of its two endpoint
 buses -- and a transformer's is the position of one of its buses. Saying so
 here is what stops each consumer from rediscovering it by reading
 ``grid_lines.parquet`` and finding no coordinate column.
+
+**And what KIND each geometry is.** A resolved coordinate pair says "there is a
+position here"; it does not say whether that position is the whole geometry or
+a reduction of a richer one. For ``buildings`` it is a reduction -- the ingest
+starts from real footprints and keeps only the centroid -- so a consumer with
+only the coordinates would reasonably draw a footprint layer the twin cannot
+support. :data:`BUILDING_GEOMETRY_KIND` and the ``geometry_kinds`` block close
+that, on the same principle as ``crs_source``: the confidence and the shape of
+an answer travel with the answer.
 """
 
 from __future__ import annotations
@@ -54,6 +63,40 @@ CRS_DECLARED = "declared"
 CRS_ASSUMED = "assumed"
 
 _LOCATED_ARTIFACTS: tuple[str, ...] = (GRID_BUSES, BUILDINGS)
+
+GEOMETRY_POINT = "point"
+"""A row's geometry is a single position carried on the row itself."""
+
+GEOMETRY_DERIVED = "derived"
+"""A row's geometry is built from the positions of the buses it references."""
+
+BUILDING_GEOMETRY_KIND = GEOMETRY_POINT
+"""What ``buildings`` geometry IS, decided 2026-09-02 and declared, not implied.
+
+The GeoJSON ingest starts from real footprints:
+:meth:`gridalyn.twin.core.graph.PowerGridGraph.
+extract_building_centers_and_areas` filters on ``Polygon``/``MultiPolygon`` and
+raises when it finds neither. It then keeps the centroid and the area and drops
+the polygon, so the base snapshot carries building POINTS and nothing
+downstream of it can reconstruct the footprint.
+
+Two honest outcomes were open, and the wrong one was silence. Retaining the
+source geometry was measured and is reachable -- the shipped twin's source
+layer still exists, 3235 polygons, about 0.23 MB as parquet -- and was
+deliberately not taken here: it changes the base-snapshot contract and needs
+its own re-base, which does not belong inside a dashboard change. What is taken
+is the other honest outcome: the twin SAYS its building geometry is points, so
+no consumer offers a layer implying otherwise.
+"""
+
+BUILDING_GEOMETRY_REASON = (
+    "the GeoJSON ingest reads Polygon/MultiPolygon footprints and retains only "
+    "the centroid and the area (PowerGridGraph."
+    "extract_building_centers_and_areas); the polygons are not carried into the "
+    "base snapshot, and nothing downstream of it can reconstruct them -- a "
+    "consumer that wants footprints must go back to the source layer"
+)
+"""Why building geometry is points, travelling with the declaration itself."""
 
 
 @dataclass(frozen=True)
@@ -113,6 +156,11 @@ class NetworkGeography:
             each mapped to the column names the coordinates were resolved to.
         derived_geometry: Canonical artifacts whose geometry must be built from
             bus endpoints, each mapped to the endpoint roles to join on.
+        geometry_kinds: What each located artifact's geometry IS, so a consumer
+            never infers the shape from the fact that coordinates exist. A
+            column pair says "there is a position here"; it does not say
+            whether that position is the whole geometry or a reduction of a
+            richer one, and for ``buildings`` it is a reduction.
     """
 
     crs: str
@@ -120,6 +168,7 @@ class NetworkGeography:
     bounding_box: BoundingBox | None
     located_artifacts: Mapping[str, Mapping[str, str]]
     derived_geometry: Mapping[str, tuple[str, ...]]
+    geometry_kinds: Mapping[str, Mapping[str, str]]
 
     @property
     def located(self) -> bool:
@@ -139,6 +188,10 @@ class NetworkGeography:
             "derived_geometry": {
                 artifact: list(roles)
                 for artifact, roles in self.derived_geometry.items()
+            },
+            "geometry_kinds": {
+                artifact: dict(declaration)
+                for artifact, declaration in self.geometry_kinds.items()
             },
         }
         payload["extent"] = (
@@ -267,4 +320,30 @@ def resolve_network_geography(
             GRID_LINES: (ROLE_FROM_BUS, ROLE_TO_BUS),
             GRID_TRANSFORMERS: ("hv_bus", "lv_bus"),
         },
+        geometry_kinds=_geometry_kinds(located),
     )
+
+
+def _geometry_kinds(
+    located: Mapping[str, Mapping[str, str]],
+) -> dict[str, dict[str, str]]:
+    """Declare what each located artifact's geometry actually is.
+
+    Args:
+        located: Artifacts resolved as carrying coordinates directly.
+
+    Returns:
+        Artifact to declaration. Only ``buildings`` carries a reason, because
+        it is the only artifact whose position is a REDUCTION of a richer
+        source geometry rather than the geometry itself.
+    """
+    kinds: dict[str, dict[str, str]] = {}
+    for artifact in located:
+        declaration = {"kind": GEOMETRY_POINT}
+        if artifact == BUILDINGS:
+            declaration["kind"] = BUILDING_GEOMETRY_KIND
+            declaration["reason"] = BUILDING_GEOMETRY_REASON
+        kinds[artifact] = declaration
+    for artifact in (GRID_LINES, GRID_TRANSFORMERS):
+        kinds[artifact] = {"kind": GEOMETRY_DERIVED}
+    return kinds

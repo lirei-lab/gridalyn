@@ -113,11 +113,15 @@ class DescribeArtifactTest(unittest.TestCase):
     def test_json_in_reports_that_is_not_a_governed_report_is_demoted(self):
         """Named like a report, shaped like a domain payload.
 
-        `synthetic_geojson_feeder` ships exactly this: a
-        `synthetic_network_validation_report.json` carrying eight domain keys
-        and none of the required report fields. Calling it a governed report
-        because of its name and folder would hand the viewer a payload it
-        cannot render.
+        `synthetic_geojson_feeder` shipped exactly this until 2026-09-02: a
+        `synthetic_network_validation_report.json` in `outputs/reports/`,
+        carrying eight domain keys and none of the required report fields.
+        Calling it a governed report because of its name and folder would hand
+        the viewer a payload it cannot render. That file has since been renamed
+        to `outputs/data/synthetic_network_validation.json` so it stops
+        claiming to be one -- but the demotion this test pins is what has to
+        keep working, because the next such payload will not be renamed in
+        advance.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
