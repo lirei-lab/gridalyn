@@ -58,7 +58,11 @@ body {
   width: 1126px;
   max-width: 100%;
   margin: 0 auto;
-  text-align: center;
+  /* No text-align here. The Vite React starter centres everything, which is a
+     reasonable default for its demo page and wrong for a data view: it centred
+     every heading, tile and list item in the study workspace and detached the
+     Tables bullets from their links. Components that want centring ask for
+     it. */
   border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;

@@ -7,15 +7,11 @@ import { buildScenarioCatalog, loadTwin } from './scenarios';
 import { loadClearingScorecard } from './clearingScorecard';
 import { loadNetworkImpactReports } from './networkImpact';
 import { loadOperationsCatalog } from './operationsCatalog';
-import {
-  deriveWorkspaces,
-  describeScenarios,
-  loadProjectReports,
-  summaryRows,
-} from './projectCatalog';
+import { deriveWorkspaces, loadProjectReports } from './projectCatalog';
+import ProjectDashboard, { WorkspaceSelector } from './StudyWorkspace';
+
 import TwinMap from './TwinMap';
 import StudyExtensionPanels from './StudyExtensionPanels';
-import StudyScenarios from './StudyScenarios';
 import OntologyPanel from './OntologyPanel';
 import ProvenanceBadge from './ProvenanceBadge';
 import OverlayPanel from './OverlayPanel';
@@ -23,124 +19,6 @@ import { drawableClasses } from './ontology';
 import { useOntologyFeatures } from './useOntologyFeatures';
 import { fmt, heatmapTitle } from './format';
 
-function WorkspaceSelector({ activeWorkspace, onChange, workspaces = [] }) {
-  return (
-    <div className="workspace-switcher">
-      <label htmlFor="workspace-select">Workspace</label>
-      <select
-        id="workspace-select"
-        value={activeWorkspace}
-        onChange={event => onChange(event.target.value)}
-      >
-        {workspaces.map(workspace => (
-          <option key={workspace.id} value={workspace.id}>
-            {workspace.label}
-            {workspace.available === false ? ' (not run)' : ''}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-/**
- * Render any governed study, from what the catalog declares about it.
- *
- * Replaces a 131-line component dedicated to one study. Nothing here knows a
- * study by name: the panel lists the reports the catalog says a project
- * declares, renders each one's `summary` as label/value rows through the
- * platform report contract, and links whatever tables the study ships. A study
- * added to `projects/` appears with no edit to this file.
- *
- * What this deliberately does NOT do is draw a study-specific chart. The old
- * panel could, because it knew that one study's CSV column names; no declared
- * column contract exists for a study's tables, so inventing charts from
- * guessed columns would rebuild the coupling this removes. Tables are linked,
- * not plotted, until a study can declare its columns.
- */
-function ProjectDashboard({ workspace, reports, loading, activeWorkspace, onWorkspaceChange, workspaces }) {
-  const tabularArtifacts = (workspace?.artifacts || []).filter(
-    artifact => artifact.kind === 'table'
-  );
-  const missing = (workspace?.artifacts || []).filter(artifact => !artifact.exists);
-  // Read from what the study DECLARED, not discovered. A study with no
-  // scenario indexer yields none and this section does not render.
-  const scenarios = describeScenarios(workspace);
-
-  return (
-    <div className="project-dashboard" style={{ padding: '24px', overflowY: 'auto', height: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{workspace?.label || activeWorkspace}</h1>
-          {workspace?.description && (
-            <p style={{ color: '#aaa', marginTop: '6px', maxWidth: '70ch' }}>{workspace.description}</p>
-          )}
-        </div>
-        <WorkspaceSelector
-          activeWorkspace={activeWorkspace}
-          onChange={onWorkspaceChange}
-          workspaces={workspaces}
-        />
-      </div>
-
-      {loading && <p style={{ color: 'rgb(0,200,200)' }}>Loading declared artifacts...</p>}
-
-      {!loading && missing.length > 0 && (
-        <p style={{ color: '#ffaa33', fontSize: '0.8rem' }}>
-          {/* Said, not hidden: the two heavy studies gitignore their outputs,
-              so an empty panel here is expected rather than a fault. */}
-          ⚠ {missing.length} declared artifact{missing.length === 1 ? '' : 's'} not on disk.
-          Run this study with `gridalyn project run projects/{workspace?.id}`.
-        </p>
-      )}
-
-      {!loading && reports.length === 0 && missing.length === 0 && (
-        <p style={{ color: '#aaa' }}>This study declares no governed reports to show.</p>
-      )}
-
-      <StudyScenarios scenarios={scenarios} />
-
-      {reports.map(({ artifact, report, error }) => (
-        <section key={artifact.path} style={{ marginTop: '24px', borderTop: '1px solid #333', paddingTop: '16px' }}>
-          <h2 style={{ margin: '0 0 4px', fontSize: '1.05rem' }}>
-            {artifact.report_id || artifact.relative}
-          </h2>
-          <p style={{ color: '#777', fontSize: '0.75rem', margin: '0 0 12px' }}>
-            {artifact.source_domain && `${artifact.source_domain} · `}
-            <a href={artifact.path} style={{ color: '#4aa' }}>{artifact.relative}</a>
-            {report?.validation?.valid === false && (
-              <span style={{ color: '#ff4444' }}> · validation FAILED</span>
-            )}
-          </p>
-          {error && <p style={{ color: '#ff4444', fontSize: '0.8rem' }}>⚠ {error}</p>}
-          {report && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-              {summaryRows(report.summary).map(row => (
-                <div key={row.key} style={{ background: '#1a1a1a', padding: '10px 12px', borderRadius: '4px' }}>
-                  <div style={{ color: '#888', fontSize: '0.7rem', textTransform: 'uppercase' }}>{row.label}</div>
-                  <div style={{ fontSize: '1.05rem', wordBreak: 'break-word' }}>{row.value}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ))}
-
-      {tabularArtifacts.length > 0 && (
-        <section style={{ marginTop: '28px', borderTop: '1px solid #333', paddingTop: '16px' }}>
-          <h2 style={{ fontSize: '1.05rem' }}>Tables</h2>
-          <ul>
-            {tabularArtifacts.map(artifact => (
-              <li key={artifact.path}>
-                <a href={artifact.path} style={{ color: '#4aa' }}>{artifact.relative}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </div>
-  );
-}
 
 function transformerKind(row) {
   const hv = Number(row.vn_hv_kv);

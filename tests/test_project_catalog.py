@@ -14,6 +14,7 @@ import tempfile
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
@@ -21,9 +22,12 @@ from gridalyn.projects.project_catalog import (
     KIND_GOVERNED_REPORT,
     KIND_TABLE,
     KIND_UNKNOWN,
+    _problem_objective,
     build_project_catalog,
     classify_artifact,
     describe_artifact,
+    describe_experiments,
+    describe_governed_metrics,
 )
 
 
@@ -224,6 +228,125 @@ class ShippedStudiesTest(unittest.TestCase):
                     f"{entry['project_id']} declares no objectiveArtifacts, so a "
                     "generic viewer has nothing to render for it",
                 )
+
+
+class DeclaredResultHierarchyTest(unittest.TestCase):
+    """A study says which of its numbers are the result; the catalog publishes it.
+
+    Every summary value used to reach the viewer at equal weight, so a headline
+    result and a bus count rendered identically -- about thirty tiles on the
+    widest shipped study. The hierarchy was declared all along:
+    ``spec.experiments[].metrics`` is what the study set out to measure, and a
+    baseline pin is what a re-run is checked against.
+    """
+
+    def _project(self, spec: dict, name: str = "demo"):
+        return SimpleNamespace(name=name, raw={"spec": spec}, base_dir=Path("/tmp"))
+
+    def test_the_question_the_study_asks_is_published(self) -> None:
+        project = self._project({"problem": {"objective": "Ask something."}})
+        self.assertEqual("Ask something.", _problem_objective(project))
+
+    def test_a_study_without_a_problem_block_yields_an_empty_objective(self) -> None:
+        self.assertEqual("", _problem_objective(self._project({})))
+        self.assertEqual("", _problem_objective(SimpleNamespace(name="x", raw=None)))
+
+    def test_declared_metrics_reach_the_catalog(self) -> None:
+        described = describe_experiments(
+            self._project(
+                {
+                    "experiments": [
+                        {
+                            "id": "run",
+                            "objective": "Measure it.",
+                            "metrics": ["min_voltage_pu", "objective_value"],
+                            "scenario": "baseline",
+                        }
+                    ]
+                }
+            )
+        )
+        self.assertEqual(1, len(described))
+        self.assertEqual(["min_voltage_pu", "objective_value"], described[0]["metrics"])
+        self.assertEqual("Measure it.", described[0]["objective"])
+
+    def test_both_scenario_spellings_normalize_to_a_list(self) -> None:
+        """The shipped studies use `scenario` and `scenarios`; a consumer
+        should read one shape, not two."""
+        single = describe_experiments(
+            self._project({"experiments": [{"id": "a", "scenario": "baseline"}]})
+        )
+        plural = describe_experiments(
+            self._project({"experiments": [{"id": "b", "scenarios": ["x", "y"]}]})
+        )
+        self.assertEqual(["baseline"], single[0]["scenarios"])
+        self.assertEqual(["x", "y"], plural[0]["scenarios"])
+
+    def test_a_study_declaring_no_experiments_yields_none(self) -> None:
+        """Two shipped studies declare no metrics; their viewer must fall back
+        to showing everything as supporting detail rather than promoting by a
+        guess."""
+        self.assertEqual([], describe_experiments(self._project({})))
+
+    def test_baseline_pins_resolve_to_report_and_summary_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "baselines").mkdir()
+            (root / "baselines" / "results_baseline.json").write_text(
+                json.dumps(
+                    {
+                        "metrics": [
+                            {
+                                "id": "summary.total_pv_dispatch_mw",
+                                "source": "outputs/reports/r.json",
+                                "json_path": ["summary", "total_pv_dispatch_mw"],
+                                "tolerance": 0.001,
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            pins = describe_governed_metrics(root)
+        self.assertEqual(1, len(pins))
+        self.assertEqual("total_pv_dispatch_mw", pins[0]["key"])
+        self.assertEqual("summary", pins[0]["block"])
+        self.assertEqual("outputs/reports/r.json", pins[0]["source"])
+
+    def test_a_study_with_no_baseline_is_not_a_defect(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual([], describe_governed_metrics(Path(tmp)))
+
+    def test_an_unreadable_baseline_is_skipped_not_raised(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "baselines").mkdir()
+            (root / "baselines" / "results_baseline.json").write_text("{oops", "utf-8")
+            self.assertEqual([], describe_governed_metrics(root))
+
+
+class ShippedStudyHierarchyTest(unittest.TestCase):
+    """The two signals are distinct in the shipped studies, not merged."""
+
+    def test_declared_and_governed_are_not_the_same_set(self) -> None:
+        import yaml
+
+        root = Path(__file__).resolve().parent.parent / "projects"
+        study = root / "der_voltage_optimization"
+        spec = yaml.safe_load((study / "project.yaml").read_text("utf-8"))["spec"]
+        declared = {
+            metric
+            for experiment in describe_experiments(
+                SimpleNamespace(name="x", raw={"spec": spec})
+            )
+            for metric in experiment["metrics"]
+        }
+        governed = {pin["key"] for pin in describe_governed_metrics(study)}
+        self.assertTrue(declared, "the study declares metrics")
+        self.assertTrue(governed, "the study pins metrics")
+        # They genuinely disagree. Conflating them would lose the distinction
+        # between what a study set out to measure and what guards a re-run.
+        self.assertNotEqual(declared, governed)
 
 
 if __name__ == "__main__":

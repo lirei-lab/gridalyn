@@ -29,6 +29,7 @@ catalog is written by ``projects``, not by ``twin``.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -190,6 +191,11 @@ def build_project_catalog(
                     )
                     for relative in declared
                 ],
+                # What the study SAYS matters, so a viewer never guesses.
+                # Presentation follows declaration or it becomes per-study code.
+                "objective": _problem_objective(project),
+                "experiments": describe_experiments(project),
+                "governed_metrics": describe_governed_metrics(project_dir),
                 "scenarios": describe_scenarios(
                     project,
                     project_dir=project_dir,
@@ -198,6 +204,118 @@ def build_project_catalog(
             }
         )
     return entries
+
+
+def _problem_objective(project: Any) -> str:
+    """Return the question this study asks, or an empty string.
+
+    ``spec.problem.objective`` is declared by all eight shipped studies and was
+    read by nothing. A viewer that opens a study and cannot say what it is FOR
+    is showing numbers without their question.
+    """
+    raw = getattr(project, "raw", None)
+    if not isinstance(raw, Mapping):
+        return ""
+    problem = (raw.get("spec") or {}).get("problem")
+    if not isinstance(problem, Mapping):
+        return ""
+    objective = problem.get("objective")
+    return str(objective).strip() if isinstance(objective, str) else ""
+
+
+def describe_experiments(project: Any) -> list[dict[str, Any]]:
+    """Describe each declared experiment: what it is for, and what it measures.
+
+    ``spec.experiments[].metrics`` is the study's own statement of which
+    numbers are the result and which are context -- six of the eight shipped
+    studies declare it. Rendering every summary key at equal weight throws that
+    statement away, which is what made a bus count look like a headline.
+
+    Args:
+        project: Loaded ``StudyProject``.
+
+    Returns:
+        One entry per experiment, in declaration order. A study that declares
+        none yields an empty list and its viewer falls back to showing the
+        summary undifferentiated -- honest, because nothing said otherwise.
+    """
+    raw = getattr(project, "raw", None)
+    if not isinstance(raw, Mapping):
+        return []
+    experiments = (raw.get("spec") or {}).get("experiments")
+    if not isinstance(experiments, list):
+        return []
+    described: list[dict[str, Any]] = []
+    for entry in experiments:
+        if not isinstance(entry, Mapping):
+            continue
+        # Both spellings are declared in the shipped studies: a single
+        # `scenario` and a list of `scenarios`. Normalized to a list here so a
+        # consumer reads one shape.
+        scenarios = entry.get("scenarios")
+        if not isinstance(scenarios, list):
+            single = entry.get("scenario")
+            scenarios = [single] if isinstance(single, str) else []
+        described.append(
+            {
+                "id": str(entry.get("id") or ""),
+                "objective": str(entry.get("objective") or "").strip(),
+                "metrics": [
+                    str(metric)
+                    for metric in (entry.get("metrics") or [])
+                    if isinstance(metric, str)
+                ],
+                "scenarios": [str(name) for name in scenarios],
+            }
+        )
+    return described
+
+
+def describe_governed_metrics(project_dir: Path) -> list[dict[str, Any]]:
+    """Resolve which of a study's numbers are regression-pinned.
+
+    Declared and governed are two different statements and this catalog keeps
+    them apart. ``spec.experiments[].metrics`` is what the study set out to
+    measure; a baseline pin is what a re-run is checked against. They do not
+    have to agree, and in ``der_voltage_optimization`` they do not -- it
+    declares three metrics and pins four other values. A value that is both is
+    the strongest claim this contract can make about a result, and conflating
+    them would throw that away.
+
+    Args:
+        project_dir: The study's directory on disk.
+
+    Returns:
+        One entry per pin, naming the report it lives in and the summary key it
+        addresses. Empty when the study carries no baseline, which is not a
+        defect: a study can be governed by its sense checks alone.
+    """
+    path = project_dir / "baselines" / "results_baseline.json"
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    pins: list[dict[str, Any]] = []
+    for metric in payload.get("metrics") or []:
+        if not isinstance(metric, Mapping):
+            continue
+        json_path = metric.get("json_path")
+        if not isinstance(json_path, list) or not json_path:
+            continue
+        pins.append(
+            {
+                "id": str(metric.get("id") or ""),
+                "source": str(metric.get("source") or ""),
+                # The final segment is the summary key a viewer displays; the
+                # leading segments say which block of the report it sits in.
+                "block": str(json_path[0]),
+                "key": str(json_path[-1]),
+                "tolerance": metric.get("tolerance"),
+            }
+        )
+    return pins
 
 
 def describe_scenarios(
