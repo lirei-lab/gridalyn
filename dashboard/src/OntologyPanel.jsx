@@ -104,10 +104,24 @@ export default function OntologyPanel({
                   can appear twice with different counts, because they count
                   different things. Naming the artifact inline is what makes a
                   repeated class name legible rather than look like a bug. */}
-              <span style={{ color: '#6f6f6f', fontSize: '0.68rem' }}>
+              <span
+                style={{ color: '#6f6f6f', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+              >
                 {entry.artifact}
               </span>
-              <span style={{ marginLeft: 'auto', color: '#8a8a8a' }}>{entry.count}</span>
+              {/* Never broken across lines. The panel wraps unbreakable tokens
+                  so the model SHA cannot set its width, and that rule was
+                  splitting counts: 4850 rendered as "485" over "0". */}
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  color: '#8a8a8a',
+                  whiteSpace: 'nowrap',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {entry.count}
+              </span>
             </div>
           );
         })}

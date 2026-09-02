@@ -18,6 +18,7 @@ import StudyExtensionPanels from './StudyExtensionPanels';
 import StudyScenarios from './StudyScenarios';
 import OntologyPanel from './OntologyPanel';
 import ProvenanceBadge from './ProvenanceBadge';
+import OverlayPanel from './OverlayPanel';
 import { drawableClasses } from './ontology';
 import { useOntologyFeatures } from './useOntologyFeatures';
 import { fmt, heatmapTitle } from './format';
@@ -647,19 +648,10 @@ export default function App() {
         onSelectNode={setSelectedNode}
       />
 
-      {/* UI overlay */}
-      <div style={{
-        position: 'absolute',
-        top: 20,
-        left: 20,
-        background: 'rgba(0,0,0,0.85)',
-        color: 'white',
-        padding: '20px',
-        borderRadius: '12px',
-        fontFamily: 'Montserrat, sans-serif',
-        minWidth: '320px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
-      }}>
+      {/* The overlay scrolls and collapses; see OverlayPanel for why it had
+          to. The map is the subject of this view, so the panel must be able to
+          get out of its way. */}
+      <OverlayPanel title="Twin">
         <WorkspaceSelector activeWorkspace={activeWorkspace} onChange={setActiveWorkspace} workspaces={workspaces} />
         <h2 style={{ margin: '14px 0 5px 0', fontSize: '1.4rem' }}>Gridalyn Digital Twin</h2>
         {/* The twin identifies itself by its model version, not by a project
@@ -912,7 +904,7 @@ export default function App() {
           )}
         </div>
 
-      </div>
+      </OverlayPanel>
 
       {/* Floating Recharts Node Trajectory Analytics */}
       {selectedNode && (
