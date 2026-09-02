@@ -62,13 +62,20 @@ class DigitalTwinWorkflowExtractionTest(unittest.TestCase):
             def validate_integrity(self):
                 return FakeReport()
 
-        with patch(
-            "gridalyn.projects.workflows.digital_twin.ev_scenarios.NetworkModelRepository",
-            FakeRepository,
-            create=True,
-        ), patch.object(ev_scenarios, "_load_json", return_value={}):
-            with patch.object(pd, "read_parquet", side_effect=AssertionError("raw parquet read")):
-                with self.subTest("scenario generation uses repository instead of pd.read_parquet"):
+        with (
+            patch(
+                "gridalyn.projects.workflows.digital_twin.ev_scenarios.NetworkModelRepository",
+                FakeRepository,
+                create=True,
+            ),
+            patch.object(ev_scenarios, "_load_json", return_value={}),
+        ):
+            with patch.object(
+                pd, "read_parquet", side_effect=AssertionError("raw parquet read")
+            ):
+                with self.subTest(
+                    "scenario generation uses repository instead of pd.read_parquet"
+                ):
                     import tempfile
 
                     with tempfile.TemporaryDirectory() as tmp:

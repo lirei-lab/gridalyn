@@ -12,7 +12,6 @@ import geopandas as gpd
 
 from gridalyn.simulation.simulators.powerflow.runner import PowerflowMonteCarloRunner
 
-
 REQUIRED_SYNTHETIC_CACHE_FILES = (
     "pg_graph_cache.pkl",
     "pp_net_cache.pkl",
@@ -73,13 +72,19 @@ def prepare_synthetic_topology_cache(
         },
         "notes": notes or [],
     }
-    path = Path(manifest_path) if manifest_path is not None else cache_path / "topology_cache_manifest.json"
+    path = (
+        Path(manifest_path)
+        if manifest_path is not None
+        else cache_path / "topology_cache_manifest.json"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True))
     return path
 
 
-def validate_building_footprints(source: Path | str, report_path: Path | str) -> dict[str, Any]:
+def validate_building_footprints(
+    source: Path | str, report_path: Path | str
+) -> dict[str, Any]:
     """Validate building-footprint GeoJSON and write a lineage report."""
 
     source_path = Path(source)
@@ -102,7 +107,9 @@ def validate_building_footprints(source: Path | str, report_path: Path | str) ->
 
     invalid_count = int((~gdf.geometry.is_valid).sum())
     if invalid_count:
-        warnings.append(f"{invalid_count} invalid geometries will be repaired downstream.")
+        warnings.append(
+            f"{invalid_count} invalid geometries will be repaired downstream."
+        )
 
     polygon_gdf = gdf.loc[polygon_mask].copy()
     projected = polygon_gdf.to_crs(epsg=3857) if not polygon_gdf.empty else polygon_gdf

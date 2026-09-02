@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from network_model import (
+    DER_SPEC,
+    PV_MAX_MW,
+    build_rl_feeder,
+    load_multiplier_profile,
+    pv_profile,
+)
+
 from gridalyn.assets import voltage_control_assets_to_frame
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import ProjectScript, project_script
@@ -14,14 +22,6 @@ from gridalyn.simulation import (
     write_pandapower_element_tables,
     write_powerflow_report,
     write_voltage_profile_figure,
-)
-
-from network_model import (
-    DER_SPEC,
-    PV_MAX_MW,
-    build_rl_feeder,
-    load_multiplier_profile,
-    pv_profile,
 )
 
 
@@ -70,7 +70,12 @@ def main() -> int:
         script.reports_dir / "rl_feeder_report.json",
         metadata=script.report_metadata("rl_feeder_report"),
         net=net,
-        inputs=[{"name": "synthetic_10_bus_rl_feeder", "type": "deterministic_project_generator"}],
+        inputs=[
+            {
+                "name": "synthetic_10_bus_rl_feeder",
+                "type": "deterministic_project_generator",
+            }
+        ],
         artifacts=[script.file_reference(path) for path in (*tables.values(), figure)],
         summary={
             "network": "synthetic_10_bus_rl_feeder",

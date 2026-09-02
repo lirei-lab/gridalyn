@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from network_model import DER_ASSETS, build_der_feeder
+
 from gridalyn.assets import der_dispatch_assets_to_frame
 from gridalyn.foundation.platform.capabilities import require_capabilities
 from gridalyn.projects.scripting import ProjectScript, project_script
@@ -13,8 +15,6 @@ from gridalyn.simulation import (
     write_powerflow_report,
     write_voltage_profile_figure,
 )
-
-from network_model import DER_ASSETS, build_der_feeder
 
 
 def _write_tables(script: ProjectScript, net) -> dict[str, Path]:
@@ -45,7 +45,12 @@ def main() -> int:
         script.reports_dir / "der_feeder_report.json",
         metadata=script.report_metadata("der_feeder_report"),
         net=net,
-        inputs=[{"name": "synthetic_16_bus_der_feeder", "type": "deterministic_project_generator"}],
+        inputs=[
+            {
+                "name": "synthetic_16_bus_der_feeder",
+                "type": "deterministic_project_generator",
+            }
+        ],
         artifacts=[script.file_reference(path) for path in (*tables.values(), figure)],
         summary={
             "network": "synthetic_16_bus_der_feeder",
@@ -53,7 +58,9 @@ def main() -> int:
             "full_pv_mw": float(der_assets["pv_available_mw"].sum()),
             "max_voltage_full_pv_pu": float(net.res_bus.vm_pu.max()),
             "min_voltage_full_pv_pu": float(net.res_bus.vm_pu.min()),
-            "max_line_loading_full_pv_percent": float(net.res_line.loading_percent.max()),
+            "max_line_loading_full_pv_percent": float(
+                net.res_line.loading_percent.max()
+            ),
         },
     )
     return 0

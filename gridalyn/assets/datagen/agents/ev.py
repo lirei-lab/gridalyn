@@ -143,7 +143,8 @@ class EVCharger:
             dep = self._departure_minutes[idx] % 1440
 
             # Check if arrival falls within the current dt window (modulo 1440)
-            # We handle the case where the window might straddle midnight, though with 5-min dt and arrivals at ~18:00 it's fine.
+            # We handle the case where the window might straddle midnight,
+            # though with 5-min dt and arrivals at ~18:00 it's fine.
             if arr >= minute_of_day and arr < minute_of_day + dt:
                 self._plugged[idx] = True
                 self._socs[idx] = self._initial_socs[idx]

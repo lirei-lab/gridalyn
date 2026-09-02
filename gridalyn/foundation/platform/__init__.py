@@ -51,10 +51,26 @@ _LAZY_EXPORTS = {
         "workspace_from_environment",
     ),
     "ReportMetadata": ("gridalyn.foundation.platform.reports", "ReportMetadata"),
+    "UncertaintyEstimate": (
+        "gridalyn.foundation.platform.uncertainty",
+        "UncertaintyEstimate",
+    ),
     "build_report": ("gridalyn.foundation.platform.reports", "build_report"),
+    "build_uncertainty": (
+        "gridalyn.foundation.platform.uncertainty",
+        "build_uncertainty",
+    ),
+    "estimate_from_samples": (
+        "gridalyn.foundation.platform.uncertainty",
+        "estimate_from_samples",
+    ),
     "file_reference": ("gridalyn.foundation.platform.reports", "file_reference"),
     "read_json_report": ("gridalyn.foundation.platform.reports", "read_json_report"),
     "validate_report": ("gridalyn.foundation.platform.reports", "validate_report"),
+    "validate_uncertainty": (
+        "gridalyn.foundation.platform.uncertainty",
+        "validate_uncertainty",
+    ),
     "write_manifest": ("gridalyn.foundation.platform.reports", "write_manifest"),
     "write_report": ("gridalyn.foundation.platform.reports", "write_report"),
     "ModelVersion": ("gridalyn.foundation.platform.governance", "ModelVersion"),

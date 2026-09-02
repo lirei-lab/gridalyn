@@ -31,7 +31,6 @@ from projects.ev_hosting_flex.scripts.config import (
     ARRIVAL_MEAN_ANNUAL_H,
     ARRIVAL_STD_ANNUAL_H,
     BG_SCALE,
-    HEATING_CONTROL,
     CALENDAR_HOURS,
     CHARGER_MIX,
     COLD_DAY_TMEAN_C,
@@ -65,18 +64,19 @@ from projects.ev_hosting_flex.scripts.config import (
     EV_SIGMA_LOG,
     EVENING_WINDOW_ANNUAL,
     FIRM_P95_LIMIT_PERCENT,
+    HEATING_CONTROL,
     P_HEAT_QUEBEC,
-    POWER_FACTOR,
-    RATING_CONVENTION,
     PLUGIN_BASE,
     PLUGIN_KCOLD,
     PLUGIN_MAX,
+    POWER_FACTOR,
     R_STUDY_B,
     RAMP_HORIZON_YEARS,
     RAMP_MAX_EV_PER_HOME,
     RAMP_MIDPOINT_YEAR,
     RAMP_SHAPE,
     RAMP_STEEPNESS,
+    RATING_CONVENTION,
     TMY_INPUT_PATH,
     TRANSFORMER_KVA,
     TRIAGE_HOTSPOT_LIMIT_C,
@@ -92,7 +92,9 @@ N_STEPS = N_DAYS * STEPS_PER_DAY
 """Annual step count at the governed resolution (35040 at 15 min)."""
 
 
-def aggregate_to_hourly(arr: np.ndarray, res_minutes: int = ANNUAL_RES_MINUTES) -> np.ndarray:
+def aggregate_to_hourly(
+    arr: np.ndarray, res_minutes: int = ANNUAL_RES_MINUTES
+) -> np.ndarray:
     """Mean-aggregate a step-resolution trace to hourly (``…, 8760``).
 
     Reduces the LAST axis from ``N_DAYS * 24*60/res`` steps to ``8760`` hours by
@@ -174,9 +176,7 @@ def cold_capability_curve(
     from gridalyn.assets.modeling.transformers import TransformerThermalModel
 
     steps_per_hour = 60 // int(res_minutes)
-    temp = np.repeat(
-        temp_hourly.to_numpy(dtype=DTYPE)[:CALENDAR_HOURS], steps_per_hour
-    )
+    temp = np.repeat(temp_hourly.to_numpy(dtype=DTYPE)[:CALENDAR_HOURS], steps_per_hour)
     model = TransformerThermalModel(theta_max=float(TRIAGE_HOTSPOT_LIMIT_C))
     ref = float(model.max_load_for_temp(30.0))
     rounded = np.round(temp, 1)
@@ -267,7 +267,7 @@ def climate_bin_days(
 
     out: list[dict[str, Any]] = []
     edges = list(bin_edges)
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
         members = np.where((tday >= lo) & (tday < hi))[0]
         if members.size == 0:
             continue
@@ -325,7 +325,9 @@ def valley_fill_shift(
     for h in np.argsort(net, kind="stable"):
         if remaining <= 1e-12:
             break
-        rate_h = float(np.asarray(rating_kw).reshape(-1)[h % np.asarray(rating_kw).size])
+        rate_h = float(
+            np.asarray(rating_kw).reshape(-1)[h % np.asarray(rating_kw).size]
+        )
         headroom = min(max(rate_h - float(net[h]), 0.0), cap)
         put = min(headroom, remaining)
         agg[h] = put
@@ -427,7 +429,9 @@ def annual_base_realization(
         building.R = R_STUDY_B
         building.p_heat_max = P_HEAT_QUEBEC
     results = simulate_buildings(
-        buildings, temp_1min, burnin_hours=6,
+        buildings,
+        temp_1min,
+        burnin_hours=6,
         random_seed=int(seed),
         control=HEATING_CONTROL,
     )
@@ -503,7 +507,9 @@ def design_day_base_per_home(
         building.R = R_STUDY_B
         building.p_heat_max = P_HEAT_QUEBEC
     results = simulate_buildings(
-        buildings, window_1min, burnin_hours=6,
+        buildings,
+        window_1min,
+        burnin_hours=6,
         random_seed=int(seed),
         control=HEATING_CONTROL,
     )
@@ -594,9 +600,7 @@ def dhw_tank_annual(
     # hod0 or the morning/evening reheat peak lands ~5 h early.
     hod0 = int(temp_hourly.index[0].hour)
 
-    t_res = (
-        temp_hourly.resample(f"{res}min").interpolate().to_numpy(dtype=DTYPE)
-    )
+    t_res = temp_hourly.resample(f"{res}min").interpolate().to_numpy(dtype=DTYPE)
     n_steps = int(t_res.shape[0])
     inlet = DHW_INLET_MIN_C + (DHW_INLET_MAX_C - DHW_INLET_MIN_C) * np.clip(
         (t_res + 20.0) / 50.0, 0.0, 1.0
@@ -705,7 +709,9 @@ def ev_fleet_annual(
     for ev in range(int(n_evs)):
         for day in range(N_DAYS):
             cp = float(cp_by_day[day])
-            plug_p = min(float(PLUGIN_MAX), float(PLUGIN_BASE) + float(plugin_kcold) * cp)
+            plug_p = min(
+                float(PLUGIN_MAX), float(PLUGIN_BASE) + float(plugin_kcold) * cp
+            )
             if rng.random() > plug_p:
                 continue
             charger_kw = float(rng.choice(chargers, p=shares))
@@ -713,13 +719,18 @@ def ev_fleet_annual(
             energy_kwh = max(
                 1.0, float(rng.lognormal(np.log(median_kwh), float(EV_SIGMA_LOG)))
             )
-            start_m = float(
-                np.clip(
-                    rng.normal(float(ARRIVAL_MEAN_ANNUAL_H), float(ARRIVAL_STD_ANNUAL_H)),
-                    lo,
-                    hi,
+            start_m = (
+                float(
+                    np.clip(
+                        rng.normal(
+                            float(ARRIVAL_MEAN_ANNUAL_H), float(ARRIVAL_STD_ANNUAL_H)
+                        ),
+                        lo,
+                        hi,
+                    )
                 )
-            ) * 60.0
+                * 60.0
+            )
             end_m = start_m + energy_kwh / charger_kw * 60.0
             day_anchor = day * steps_per_day
             for slot in range(int(np.floor(start_m / res)), int(np.ceil(end_m / res))):
@@ -901,9 +912,11 @@ def p95_cold_evening_loading(
     # in a cold climate the biggest load lands in the coldest hour, which is
     # also the hour of greatest capability.
     rating_t = np.asarray(rating_series, dtype=DTYPE)
-    pct = np.asarray(load_kw, dtype=DTYPE)[: N_DAYS * steps_per_day] / rating_t[
-        : N_DAYS * steps_per_day
-    ] * 100.0
+    pct = (
+        np.asarray(load_kw, dtype=DTYPE)[: N_DAYS * steps_per_day]
+        / rating_t[: N_DAYS * steps_per_day]
+        * 100.0
+    )
     daily_pct = pct.reshape(N_DAYS, steps_per_day)
     return float(np.percentile(daily_pct[cold_days][:, window].max(axis=1), 95))
 
@@ -940,7 +953,11 @@ def firm_annual(
     cumulative = np.zeros(pool.shape[1], dtype=DTYPE)
     curve.append(
         p95_cold_evening_loading(
-            base, rating_kw, tday_mean_c, hod0=hod0, res_minutes=res_minutes,
+            base,
+            rating_kw,
+            tday_mean_c,
+            hod0=hod0,
+            res_minutes=res_minutes,
             rating_series=rating_series,
         )
     )

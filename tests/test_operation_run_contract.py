@@ -22,10 +22,16 @@ class OperationRunContractTest(unittest.TestCase):
             clearing_method="surrogate",
             status="completed",
             input_artifacts={
-                "provider_registry": "instances/default/digital_twin/flexibility/provider_registry.parquet",
+                "provider_registry": (
+                    "instances/default/digital_twin/flexibility/"
+                    "provider_registry.parquet"
+                ),
             },
             output_artifacts={
-                "dispatch_instructions": "projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet",
+                "dispatch_instructions": (
+                    "projects/ev_hosting_flex/outputs/operations/"
+                    "dispatch_instructions.parquet"
+                ),
             },
             kpi_report="projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json",
             validation={"valid": True, "errors": [], "warnings": []},
@@ -39,11 +45,22 @@ class OperationRunContractTest(unittest.TestCase):
         self.assertEqual(payload["operation_id"], "operation:S4:surrogate:sha256:test")
         self.assertEqual(payload["operation_type"], "flexibility_clearing")
         self.assertEqual(payload["scenario_id"], "S4")
-        self.assertEqual(payload["governance"]["network_model_version_id"], "model:sha256:test")
+        self.assertEqual(
+            payload["governance"]["network_model_version_id"], "model:sha256:test"
+        )
         self.assertEqual(payload["governance"]["study_run_id"], "run:ev:test")
-        self.assertEqual(payload["input_artifacts"]["provider_registry"], "instances/default/digital_twin/flexibility/provider_registry.parquet")
-        self.assertEqual(payload["output_artifacts"]["dispatch_instructions"], "projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet")
-        self.assertEqual(payload["kpi_report"], "projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json")
+        self.assertEqual(
+            payload["input_artifacts"]["provider_registry"],
+            "instances/default/digital_twin/flexibility/provider_registry.parquet",
+        )
+        self.assertEqual(
+            payload["output_artifacts"]["dispatch_instructions"],
+            "projects/ev_hosting_flex/outputs/operations/dispatch_instructions.parquet",
+        )
+        self.assertEqual(
+            payload["kpi_report"],
+            "projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json",
+        )
         self.assertTrue(validate_operation_run(payload).valid)
 
     def test_validate_operation_run_rejects_missing_core_lineage(self):
@@ -73,15 +90,28 @@ class OperationRunContractTest(unittest.TestCase):
                 scenario_id="S4",
                 network_model_version_id="model:sha256:test",
                 study_run_id=None,
-                input_artifacts={"requirements": "instances/default/digital_twin/flexibility/locational_clearing_events.parquet"},
-                output_artifacts={"settlement_records": "projects/ev_hosting_flex/outputs/operations/settlement_records.parquet"},
+                input_artifacts={
+                    "requirements": (
+                        "instances/default/digital_twin/flexibility/"
+                        "locational_clearing_events.parquet"
+                    )
+                },
+                output_artifacts={
+                    "settlement_records": (
+                        "projects/ev_hosting_flex/outputs/operations/"
+                        "settlement_records.parquet"
+                    )
+                },
                 kpi_report="projects/ev_hosting_flex/outputs/reports/operational_kpi_report.json",
             )
 
             written = write_operation_run(path, run)
 
             self.assertEqual(written, path)
-            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["operation_id"], run.operation_id)
+            self.assertEqual(
+                json.loads(path.read_text(encoding="utf-8"))["operation_id"],
+                run.operation_id,
+            )
 
 
 if __name__ == "__main__":

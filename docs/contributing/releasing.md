@@ -27,7 +27,7 @@ remain simulated-or-fixture, and the measured path at scale is
 operator-receipted (protocol `measured-state-ingest`). It is not a digital
 twin (which needs both directions — a recorded non-goal). Treat
 "digital twin" in the package and directory names as a target, and see
-[Network Model](../components/twin.md#what-class-of-thing-this-is) for
+[Network Model](../components/twin.md#what-problem-this-layer-solves) for
 the measurement behind that statement.
 
 The public demos are included because they exercise different platform
@@ -111,6 +111,47 @@ centered on the platform core and its executable workflows.
 - Package metadata does not promise unavailable hosted services.
 - All examples are clearly either tutorials or workflow entrypoints.
 - Regression baselines identify meaningful behavioral drift.
+
+## Citation And DOI
+
+The platform exists so a published result can be re-derived and cited. The
+citation apparatus is complete except for the one step that cannot be automated
+from inside the repository: minting the DOI.
+
+**What is already in place.**
+
+- `CITATION.cff` — the citable record. Its `version` is asserted against
+  `pyproject.toml` by `tests/test_citation_metadata.py`, because a citation
+  naming a version this tree is not at is worse than no citation.
+- `.zenodo.json` — the deposition metadata Zenodo reads when a GitHub release
+  is archived. Title, version and licence are asserted to agree with
+  `CITATION.cff` by the same test.
+
+**Minting the DOI — a human step, once.**
+
+1. Sign in at <https://zenodo.org> with the GitHub account that owns the
+   repository at <https://github.com/lirei-lab/gridalyn>, and enable it
+   under *GitHub → Repositories*.
+   Zenodo only archives releases created **after** the switch is on.
+2. Cut a GitHub release whose tag matches `pyproject.toml`'s `version`
+   (`v0.1.0` for `0.1.0`). Zenodo archives the tarball and mints two DOIs: a
+   **concept DOI** that always resolves to the newest version, and a
+   **version DOI** for that release alone.
+3. Put the **concept DOI** in `CITATION.cff` as a bare `doi:` field — the
+   identifier, not a URL:
+
+   ```yaml
+   doi: 10.5281/zenodo.XXXXXXX
+   ```
+
+   `test_doi_when_present_is_well_formed` skips while the field is absent and
+   starts asserting its shape the moment it is added.
+4. Re-run `uv run pytest -q tests/test_citation_metadata.py` and confirm four
+   passes with no skip.
+
+**On every subsequent release**, bump `version` in `pyproject.toml`,
+`CITATION.cff` and `.zenodo.json` together — the test fails if they drift — and
+leave the concept DOI unchanged, since it is what a reference manager resolves.
 
 ## Next Milestones
 

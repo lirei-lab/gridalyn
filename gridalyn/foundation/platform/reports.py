@@ -83,9 +83,39 @@ def build_report(
     artifacts: list[dict[str, Any]] | None = None,
     summary: dict[str, Any] | None = None,
     validation: dict[str, Any] | None = None,
+    uncertainty: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a report payload that follows the platform report contract."""
-    return {
+    """Build a report payload that follows the platform report contract.
+
+    Args:
+        metadata: Identity and provenance header for the report.
+        inputs: Input provenance records.
+        artifacts: Artifact provenance records.
+        summary: The run's headline numbers.
+        validation: The run's own pass/fail payload.
+        uncertainty: Optional intervals qualifying headline numbers in
+            ``summary``, keyed by metric name. Build it with
+            :func:`gridalyn.foundation.platform.uncertainty.build_uncertainty`
+            rather than by hand. Omitted from the payload when absent -- an
+            empty block is a contract error, not a neutral default.
+
+    Returns:
+        The report payload.
+
+    Raises:
+        ValueError: If ``uncertainty`` is given but does not satisfy the
+            contract, naming each failing field.
+    """
+    if uncertainty is not None:
+        from gridalyn.foundation.platform.uncertainty import validate_uncertainty
+
+        problems = validate_uncertainty(uncertainty, summary or {})
+        if problems:
+            raise ValueError(
+                f"{metadata.report_id}: invalid uncertainty block: "
+                + "; ".join(problems)
+            )
+    payload = {
         "report_id": metadata.report_id,
         "schema_version": metadata.schema_version,
         "created_at": _utc_now(),
@@ -100,6 +130,9 @@ def build_report(
         "summary": summary or {},
         "validation": validation or {"valid": True, "errors": [], "warnings": []},
     }
+    if uncertainty is not None:
+        payload["uncertainty"] = uncertainty
+    return payload
 
 
 def validate_report(payload: dict[str, Any]) -> list[str]:
@@ -120,6 +153,12 @@ def validate_report(payload: dict[str, Any]) -> list[str]:
         errors.append("summary must be an object")
     if "validation" in payload and not isinstance(payload["validation"], dict):
         errors.append("validation must be an object")
+    if "uncertainty" in payload:
+        from gridalyn.foundation.platform.uncertainty import validate_uncertainty
+
+        errors.extend(
+            validate_uncertainty(payload["uncertainty"], payload.get("summary"))
+        )
     return errors
 
 
@@ -147,14 +186,32 @@ def write_report(
     artifacts: list[dict[str, Any]] | None = None,
     summary: dict[str, Any] | None = None,
     validation: dict[str, Any] | None = None,
+    uncertainty: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build, validate, and write a platform report."""
+    """Build, validate, and write a platform report.
+
+    Args:
+        path: Destination for the JSON report.
+        metadata: Identity and provenance header.
+        inputs: Input provenance records.
+        artifacts: Artifact provenance records.
+        summary: The run's headline numbers.
+        validation: The run's own pass/fail payload.
+        uncertainty: Optional intervals qualifying entries of ``summary``.
+
+    Returns:
+        The written payload.
+
+    Raises:
+        ValueError: If the assembled payload violates the report contract.
+    """
     payload = build_report(
         metadata=metadata,
         inputs=inputs,
         artifacts=artifacts,
         summary=summary,
         validation=validation,
+        uncertainty=uncertainty,
     )
     errors = validate_report(payload)
     if errors:

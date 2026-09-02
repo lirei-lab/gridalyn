@@ -12,11 +12,7 @@ import math
 import numpy as np
 import pytest
 
-from gridalyn.assets.datagen.agents.buildings import (
-    ETA_COOL,
-    ETA_HEAT,
-    Building,
-)
+from gridalyn.assets.datagen.agents.buildings import ETA_COOL, ETA_HEAT, Building
 
 # T_in after 20 fixed euler steps (seed 7, t_out=-15, p_bg=1.2, dt=15) captured
 # from the CURRENT forward-Euler code. Pins the default path against drift.
@@ -68,7 +64,7 @@ def test_exact_path_opt_in_differs_but_tracks() -> None:
     traj_exact = _run_sequence(b_exact, integrator="exact")
 
     # Opt-in actually changes the path on at least one step.
-    assert any(e != x for e, x in zip(traj_euler, traj_exact))
+    assert any(e != x for e, x in zip(traj_euler, traj_exact, strict=True))
 
     # One controlled step: exact lands strictly between T_old and the analytic
     # equilibrium T_eq for a heating-dominated forcing.

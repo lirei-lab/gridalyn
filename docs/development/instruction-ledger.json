@@ -3884,6 +3884,36 @@
       "sequence": null,
       "sha1": "560fce11bdabe67f867ea962149f7413ee1bb196",
       "verdict": "DOCUMENTED"
+    },
+    "docs/contributing/conventions.md#0": {
+      "auto": "RUNNABLE-INDEPENDENT",
+      "class": "RUNNABLE-INDEPENDENT",
+      "date": "2026-09-01",
+      "evidence": "Both commands run from the repo root. `python tools/verb_prefixes.py` -> exit 0, reports 412 public functions, 39 entry points excluded, 23 acknowledged noun families, 240/350 = 68.6% compliance against 21 documented prefixes. `python tools/verb_prefixes.py --check` -> exit 0, no undocumented prefix at >= 3 uses. No files written.",
+      "family": "development",
+      "file": "docs/contributing/conventions.md",
+      "language": "bash",
+      "line": 11,
+      "ordinal": 0,
+      "rationale": "",
+      "sequence": null,
+      "sha1": "6aa167387d4f33164c7efa5b4dd213c3dca33b8f",
+      "verdict": "PASS-AS-WRITTEN"
+    },
+    "docs/contributing/releasing.md#1": {
+      "auto": "ILLUSTRATIVE",
+      "class": "ILLUSTRATIVE",
+      "date": null,
+      "evidence": null,
+      "family": "development",
+      "file": "docs/contributing/releasing.md",
+      "language": "yaml",
+      "line": 142,
+      "ordinal": 1,
+      "rationale": "fence language yaml is not executable as written",
+      "sequence": null,
+      "sha1": "0b5cf621a9ba23d57ff49343d54fdd45d0e5ae8e",
+      "verdict": "DOCUMENTED"
     }
   },
   "classified_on": "2026-08-06",

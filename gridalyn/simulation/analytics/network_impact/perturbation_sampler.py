@@ -19,8 +19,12 @@ def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> Non
 
 
 def _active_timesteps(dispatch: pd.DataFrame, max_timesteps: int) -> list[int]:
-    soft = dispatch.get("p_soft_cls_mw", pd.Series(0.0, index=dispatch.index)).astype(float)
-    hard = dispatch.get("p_hard_cls_mw", pd.Series(0.0, index=dispatch.index)).astype(float)
+    soft = dispatch.get("p_soft_cls_mw", pd.Series(0.0, index=dispatch.index)).astype(
+        float
+    )
+    hard = dispatch.get("p_hard_cls_mw", pd.Series(0.0, index=dispatch.index)).astype(
+        float
+    )
     active = dispatch.loc[(soft + hard) > 0.0].copy()
     if active.empty:
         return []
@@ -54,7 +58,13 @@ def select_perturbation_samples(
     """Select ranked provider/timestep perturbations to label with pandapower."""
     _require_columns(
         providers,
-        ["provider_id", "scenario_id", "provider_type", "pandapower_load", "available_capacity_kw"],
+        [
+            "provider_id",
+            "scenario_id",
+            "provider_type",
+            "pandapower_load",
+            "available_capacity_kw",
+        ],
         "providers",
     )
     _require_columns(
@@ -81,15 +91,19 @@ def select_perturbation_samples(
         ["constraint_id", "selection_score", "provider_id"],
         ascending=[True, False, True],
     )
-    candidate_predictions = candidate_predictions.groupby("constraint_id", as_index=False).head(
-        max_providers_per_constraint
-    )
+    candidate_predictions = candidate_predictions.groupby(
+        "constraint_id", as_index=False
+    ).head(max_providers_per_constraint)
     providers = providers.loc[providers["scenario_id"] == scenario_id].copy()
     candidates = providers.merge(
         candidate_predictions.drop(
             columns=[
                 column
-                for column in ["available_capacity_kw", "base_cost_per_kw_h", "selection_priority"]
+                for column in [
+                    "available_capacity_kw",
+                    "base_cost_per_kw_h",
+                    "selection_priority",
+                ]
                 if column in candidate_predictions.columns
             ]
         ),
@@ -105,7 +119,11 @@ def select_perturbation_samples(
             for perturbation in perturbation_values:
                 rows.append(
                     {
-                        "sample_id": f"{candidate['constraint_id']}|{candidate['provider_id']}|t{timestep}|kw{perturbation:g}",
+                        "sample_id": (
+                            f"{candidate['constraint_id']}"
+                            f"|{candidate['provider_id']}"
+                            f"|t{timestep}|kw{perturbation:g}"
+                        ),
                         "scenario_id": scenario_id,
                         "constraint_id": candidate["constraint_id"],
                         "provider_id": candidate["provider_id"],
@@ -113,14 +131,23 @@ def select_perturbation_samples(
                         "pandapower_load": int(candidate["pandapower_load"]),
                         "timestep": int(timestep),
                         "requested_perturbation_kw": float(perturbation),
-                        "available_capacity_kw": float(candidate["available_capacity_kw"]),
+                        "available_capacity_kw": float(
+                            candidate["available_capacity_kw"]
+                        ),
                         "predicted_deliverability_factor": float(
                             candidate["predicted_deliverability_factor"]
                         ),
                         "selection_score": float(candidate["selection_score"]),
                     }
                 )
-    return pd.DataFrame(rows).sort_values(["constraint_id", "selection_score", "sample_id"], ascending=[True, False, True]).reset_index(drop=True)
+    return (
+        pd.DataFrame(rows)
+        .sort_values(
+            ["constraint_id", "selection_score", "sample_id"],
+            ascending=[True, False, True],
+        )
+        .reset_index(drop=True)
+    )
 
 
 def build_perturbation_matrices(
@@ -231,16 +258,26 @@ def build_physics_labels(
                 "perturbed_constraint_trafo_loading_pct": pert_constraint_trafo,
                 "delta_constraint_trafo_loading_pct": delta_constraint,
                 "baseline_global_trafo_max_loading_pct": float(np.max(baseline_trafo)),
-                "perturbed_global_trafo_max_loading_pct": float(np.max(perturbed_trafo)),
-                "delta_global_trafo_max_loading_pct": float(np.max(perturbed_trafo) - np.max(baseline_trafo)),
+                "perturbed_global_trafo_max_loading_pct": float(
+                    np.max(perturbed_trafo)
+                ),
+                "delta_global_trafo_max_loading_pct": float(
+                    np.max(perturbed_trafo) - np.max(baseline_trafo)
+                ),
                 "baseline_global_line_max_loading_pct": float(np.max(baseline_line)),
                 "perturbed_global_line_max_loading_pct": float(np.max(perturbed_line)),
-                "delta_global_line_max_loading_pct": float(np.max(perturbed_line) - np.max(baseline_line)),
+                "delta_global_line_max_loading_pct": float(
+                    np.max(perturbed_line) - np.max(baseline_line)
+                ),
                 "baseline_v_min_pu": float(np.min(baseline_v)),
                 "perturbed_v_min_pu": float(np.min(perturbed_v)),
                 "delta_v_min_pu": float(np.min(perturbed_v) - np.min(baseline_v)),
-                "baseline_ext_grid_mw": float(baseline_results["ext_p_mw"][baseline_idx]),
-                "perturbed_ext_grid_mw": float(perturbed_results["ext_p_mw"][sample_idx]),
+                "baseline_ext_grid_mw": float(
+                    baseline_results["ext_p_mw"][baseline_idx]
+                ),
+                "perturbed_ext_grid_mw": float(
+                    perturbed_results["ext_p_mw"][sample_idx]
+                ),
                 "delta_ext_grid_mw": float(
                     perturbed_results["ext_p_mw"][sample_idx]
                     - baseline_results["ext_p_mw"][baseline_idx]
@@ -260,7 +297,9 @@ def build_sampler_report(
     perturbation_kw: float,
 ) -> dict[str, Any]:
     """Summarize generated finite-difference labels."""
-    positive = labels.loc[labels["actual_perturbation_kw"] > 0.0] if len(labels) else labels
+    positive = (
+        labels.loc[labels["actual_perturbation_kw"] > 0.0] if len(labels) else labels
+    )
     return {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_id": "network_impact_perturbation_samples",
@@ -272,10 +311,16 @@ def build_sampler_report(
         "summary": {
             "n_samples": int(len(labels)),
             "n_positive_samples": int(len(positive)),
-            "provider_count": int(labels["provider_id"].nunique()) if len(labels) else 0,
+            "provider_count": (
+                int(labels["provider_id"].nunique()) if len(labels) else 0
+            ),
             "timestep_count": int(labels["timestep"].nunique()) if len(labels) else 0,
-            "mean_relief_pct_per_kw": float(positive["relief_pct_per_kw"].mean()) if len(positive) else 0.0,
-            "mean_delta_v_min_pu": float(positive["delta_v_min_pu"].mean()) if len(positive) else 0.0,
+            "mean_relief_pct_per_kw": (
+                float(positive["relief_pct_per_kw"].mean()) if len(positive) else 0.0
+            ),
+            "mean_delta_v_min_pu": (
+                float(positive["delta_v_min_pu"].mean()) if len(positive) else 0.0
+            ),
         },
     }
 

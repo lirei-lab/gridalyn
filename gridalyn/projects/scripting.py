@@ -222,10 +222,25 @@ class ProjectScript:
         artifacts: list[dict[str, Any]] | None = None,
         summary: dict[str, Any] | None = None,
         validation: dict[str, Any] | None = None,
+        uncertainty: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Write a platform report with project metadata pre-filled.
 
         Defaults to ``outputs/reports/<report_id>.json`` inside the project.
+
+        Args:
+            report_id: Report identifier, also the default file name.
+            path: Explicit destination, overriding the default.
+            inputs: Input provenance records.
+            artifacts: Artifact provenance records.
+            summary: The stage's headline numbers.
+            validation: The stage's own pass/fail payload.
+            uncertainty: Optional intervals qualifying entries of ``summary``,
+                built with ``build_uncertainty``. A stage that samples a
+                distribution should report it here rather than discard it.
+
+        Returns:
+            The written report payload.
         """
         from gridalyn.foundation.platform.reports import write_report
 
@@ -239,6 +254,7 @@ class ProjectScript:
             artifacts=artifacts,
             summary=summary,
             validation=validation,
+            uncertainty=uncertainty,
         )
 
     def file_reference(self, path: Path | str) -> dict[str, Any]:

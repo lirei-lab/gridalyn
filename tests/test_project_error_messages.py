@@ -7,7 +7,12 @@ import unittest
 from pathlib import Path
 
 from gridalyn.projects import init_project, validate_project
-from gridalyn.projects.loader import read_yaml
+from gridalyn.projects.loader import (
+    PROJECT_REQUIRED_FIELDS,
+    WORKFLOW_REQUIRED_FIELDS,
+    load_project,
+    read_yaml,
+)
 from gridalyn.projects.model_inputs import (
     load_numeric_profile_array,
     load_radial_feeder_spec,
@@ -150,3 +155,121 @@ class TestStandardPowerflowScenarioLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _drop(document: dict, dotted: str) -> None:
+    """Delete the field at ``dotted`` from ``document``, in place.
+
+    Args:
+        document: The parsed YAML mapping to prune.
+        dotted: A path such as ``spec.problem.type``, where a ``[]`` segment
+            means "every element of this sequence".
+    """
+    parts = dotted.split(".")
+    cursor: object = document
+    for index, part in enumerate(parts):
+        last = index == len(parts) - 1
+        if part.endswith("[]"):
+            sequence = cursor[part[:-2]]  # type: ignore[index]
+            for item in sequence:
+                _drop(item, ".".join(parts[index + 1 :]))
+            return
+        if last:
+            del cursor[part]  # type: ignore[union-attr]
+            return
+        cursor = cursor[part]  # type: ignore[index]
+
+
+class TestLoaderRequiredFieldErrors(unittest.TestCase):
+    """Every required field the loader reads fails with a located message.
+
+    The covered set is derived from the loader's own declarations rather than
+    restated here, so a new required field cannot be added without a message.
+    """
+
+    def _write(self, target: Path, name: str, document: dict) -> None:
+        import yaml
+
+        (target / name).write_text(yaml.safe_dump(document), encoding="utf-8")
+
+    def test_every_declared_project_field_reports_file_path_and_remedy(self) -> None:
+        for dotted, expected in PROJECT_REQUIRED_FIELDS.items():
+            with self.subTest(field=dotted):
+                with tempfile.TemporaryDirectory() as tmp:
+                    target = _make_project(tmp)
+                    document = read_yaml(target / "project.yaml")
+                    if dotted.startswith("spec.experiments"):
+                        document["spec"].setdefault("experiments", [{"id": "e0"}])
+                    _drop(document, dotted)
+                    self._write(target, "project.yaml", document)
+
+                    with self.assertRaises(ValueError) as ctx:
+                        load_project(target / "project.yaml")
+
+                    message = str(ctx.exception)
+                    self.assertIn("project.yaml", message)
+                    self.assertIn(dotted.split("[]")[0].rsplit(".", 1)[-1], message)
+                    self.assertIn("expected", message)
+                    self.assertIn(expected.split(",")[0], message)
+
+    def test_every_declared_workflow_field_reports_file_path_and_remedy(self) -> None:
+        for dotted, expected in WORKFLOW_REQUIRED_FIELDS.items():
+            with self.subTest(field=dotted):
+                with tempfile.TemporaryDirectory() as tmp:
+                    target = _make_project(tmp)
+                    document = read_yaml(target / "workflow.yaml")
+                    _drop(document, dotted)
+                    self._write(target, "workflow.yaml", document)
+
+                    with self.assertRaises(ValueError) as ctx:
+                        load_project(target / "project.yaml")
+
+                    message = str(ctx.exception)
+                    self.assertIn("workflow.yaml", message)
+                    self.assertIn("expected", message)
+                    self.assertIn(expected.split(",")[0], message)
+
+    def test_scalar_given_for_a_nested_block_names_the_wrong_type(self) -> None:
+        """The KeyError: 'file' case: spec.workflow given as a string."""
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            document = read_yaml(target / "project.yaml")
+            document["spec"]["workflow"] = "workflow.yaml"
+            self._write(target, "project.yaml", document)
+
+            with self.assertRaises(ValueError) as ctx:
+                load_project(target / "project.yaml")
+
+            message = str(ctx.exception)
+            self.assertIn("project.yaml", message)
+            self.assertIn("spec.workflow", message)
+            self.assertIn("must be a mapping, found str", message)
+
+    def test_unsupported_path_base_enumerates_the_valid_set(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            document = read_yaml(target / "project.yaml")
+            document["spec"]["pathBase"] = "elsewhere"
+            self._write(target, "project.yaml", document)
+
+            with self.assertRaises(ValueError) as ctx:
+                load_project(target / "project.yaml")
+
+            message = str(ctx.exception)
+            self.assertIn("spec.pathBase", message)
+            self.assertIn("'elsewhere'", message)
+            self.assertIn("project", message)
+            self.assertIn("repo", message)
+
+    def test_missing_workflow_file_raises_located_file_not_found(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            (target / "workflow.yaml").unlink()
+
+            with self.assertRaises(FileNotFoundError) as ctx:
+                load_project(target / "project.yaml")
+
+            message = str(ctx.exception)
+            self.assertIn("project.yaml", message)
+            self.assertIn("spec.workflow.file", message)
+            self.assertIn("does not exist at", message)

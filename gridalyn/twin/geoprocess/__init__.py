@@ -6,21 +6,33 @@ from importlib import import_module
 
 _LAZY_EXPORTS = {
     "BuildingDownloader": ("gridalyn.twin.geoprocess.downloader", "BuildingDownloader"),
-    "clip_buildings_by_polygon": ("gridalyn.twin.geoprocess.buildings", "clip_buildings_by_polygon"),
+    "clip_buildings_by_polygon": (
+        "gridalyn.twin.geoprocess.buildings",
+        "clip_buildings_by_polygon",
+    ),
     "download_osm_building_footprints": (
         "gridalyn.twin.geoprocess.buildings",
         "download_osm_building_footprints",
     ),
-    "FakeGeoJSONGenerator": ("gridalyn.twin.geoprocess.generator", "FakeGeoJSONGenerator"),
+    "FakeGeoJSONGenerator": (
+        "gridalyn.twin.geoprocess.generator",
+        "FakeGeoJSONGenerator",
+    ),
     "GeoProcessor": ("gridalyn.twin.geoprocess.processor", "GeoProcessor"),
-    "load_polygon_coordinates": ("gridalyn.twin.geoprocess.buildings", "load_polygon_coordinates"),
+    "load_polygon_coordinates": (
+        "gridalyn.twin.geoprocess.buildings",
+        "load_polygon_coordinates",
+    ),
     "prepare_microsoft_building_footprints": (
         "gridalyn.twin.geoprocess.buildings",
         "prepare_microsoft_building_footprints",
     ),
     "calculate_area": ("gridalyn.twin.geoprocess.utils", "calculate_area"),
     "calculate_centroid": ("gridalyn.twin.geoprocess.utils", "calculate_centroid"),
-    "extract_building_data": ("gridalyn.twin.geoprocess.utils", "extract_building_data"),
+    "extract_building_data": (
+        "gridalyn.twin.geoprocess.utils",
+        "extract_building_data",
+    ),
     "validate_geojson": ("gridalyn.twin.geoprocess.utils", "validate_geojson"),
 }
 

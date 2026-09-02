@@ -64,7 +64,7 @@ def test_dhw_draws_cluster_at_local_occupancy_hours() -> None:
     f = dhw_tank_annual(np.random.default_rng(3), 8, temp, res_minutes=15)
     spd = 24 * 60 // 15
     daily = f[: (f.shape[0] // spd) * spd].reshape(-1, spd)
-    by_pos = daily.mean(axis=0).reshape(24, spd // 24).mean(axis=1)   # by array-hour
+    by_pos = daily.mean(axis=0).reshape(24, spd // 24).mean(axis=1)  # by array-hour
     # remap array-hour position p -> local clock hour (hod0 + p) % 24
     by_local = np.zeros(24)
     for p in range(24):
@@ -105,9 +105,9 @@ def test_dhw_draw_profile_continuous_and_smoother() -> None:
 
     w = dhw_draw_profile()
     assert w.shape == (24,)
-    assert (w > 0.0).all()                       # no zero hours
-    assert abs(float(w.sum()) - 1.0) < 1e-9      # normalized
-    assert 17 <= int(np.argmax(w)) <= 21         # evening peak
+    assert (w > 0.0).all()  # no zero hours
+    assert abs(float(w.sum()) - 1.0) < 1e-9  # normalized
+    assert 17 <= int(np.argmax(w)) <= 21  # evening peak
     # sparse baseline (old dict) for the relative smoothness comparison
     sparse = np.zeros(24)
     for h, v in DHW_DRAW_WEIGHTS.items():
@@ -122,13 +122,16 @@ def test_dhw_draw_profile_continuous_and_smoother() -> None:
 # Runs once generate_annual_mc has regenerated base_annual.npy (Task 5); asserts
 # the realistic base lands in the HQ band in BOTH peak and energy.
 from projects.ev_hosting_flex.scripts.config import (  # noqa: E402
-    ANNUAL_RES_MINUTES, PROJECT_OUTPUTS_DIR,
+    ANNUAL_RES_MINUTES,
+    PROJECT_OUTPUTS_DIR,
 )
 
 _BASE = PROJECT_OUTPUTS_DIR / "data" / "base_annual.npy"
 
 
-@pytest.mark.skipif(not _BASE.is_file(), reason="base_annual.npy absent (run generate_annual_mc)")
+@pytest.mark.skipif(
+    not _BASE.is_file(), reason="base_annual.npy absent (run generate_annual_mc)"
+)
 def test_recalibrated_base_in_hq_band() -> None:
     """The governed 6-home base is realistic in peak AND energy. The annual
     coincident peak sits in the HQ 10-15 kW band; the P99 typical-cold-day peak is
