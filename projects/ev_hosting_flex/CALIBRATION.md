@@ -6,13 +6,52 @@ It records the Québec-relevant evidence so the calibration is **traceable**, an
 corrects an earlier over-statement (that `diversity = 1` was "pessimistic, real
 1.5–2.5" — the evidence shows it is actually defensible for this load type).
 
+## Current headline figures
+
+**Read this table before quoting anything else in this file.** Every row is
+checked against `baselines/results_baseline.json` by
+`tools/check_calibration_claims.py`, at the precision shown, so a figure here
+cannot survive a re-base that moved its pin.
+
+The rest of this document is a **chronological record**. Sections carry the
+numbers that were current when they were written, and a re-base appends rather
+than revising them — so an older section may state a figure this table
+supersedes. When they disagree, this table wins.
+
+| Figure | Current value | Baseline pin |
+|---|---|---|
+| Firm hosting capacity | 11 EVs | `annual.firm_ev_count` |
+| Flexible hosting capacity | 16 EVs | `annual.flexible_ev_count` |
+| Hosting expansion | 0.4545 | `annual.hosting_expansion_percent` |
+| Firm hosting, P05 | 10.0 EVs | `cred.firm_p05` |
+| Firm hosting, P50 | 11.0 EVs | `cred.firm_p50` |
+| Firm hosting, P95 | 13.0 EVs | `cred.firm_p95` |
+| Flexible hosting, P50 | 16.0 EVs | `cred.flex_p50` |
+| Base peak, P50 | 66.10 kW | `cred.base_peak_p50` |
+| Congested hours at pool top | 19.5 h/yr | `annual.congested_hours_at_pool_top` |
+| Economic break-even | 6 EVs | `annual.econ_breakeven_ev_count` |
+| Naive-model firm overestimate | 45.45 % | `coldcoupling.firm_overestimate_percent` |
+| Insurance crossover adoption | 11 EVs | `insurance.crossover_adoption` |
+| Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
+| Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
+| corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+
 ## Evidence status — verified (adversarial votes)
 
 Gathered with the deep-research harness (5 angles, 19 sources). The adversarial
-verification pass **ran** (3-vote panel per claim). Caveat: no Québec **metered**
-per-house kW, no published HQ sizing rule, and no IEEE C57.91 threshold were found
-*directly* — the Québec figures are **inferences** from HQ consumer docs + general
-cold-climate literature (German/Belgian sources are directional, not transferable).
+verification pass **ran** (3-vote panel per claim).
+
+**Superseded on this point, 2026-08-04.** As written (2026-06-23) this section
+said no Québec metered per-house kW was found, and the *literature review*
+still stands on that footing: no published HQ sizing rule and no IEEE C57.91
+threshold were found directly, so the figures below remain inferences from HQ
+consumer docs plus cold-climate literature (German/Belgian sources are
+directional, not transferable). But the study is no longer validated only
+against literature — `datasets/hq` supplies **metered** Hydro-Québec
+consumption, and the RC building model is checked against its all-electric
+subset (n = 215, 15-minute) with the residual bias disclosed. See the latching
+thermostat entry below and `docs/components/assets.md`. A reader who stops here
+gets the opposite of the truth, in the direction that understates the work.
 
 **Confirmed:**
 - **[3-0]** HQ: cold-day heating reaches **~80 % of household electricity**; coincident
@@ -724,8 +763,11 @@ and the activation frequency, are the robust results; the dollars are illustrati
   Charge the North (Geotab/FleetCarma, >1000 CA drivers); Pollution Probe — *Consumer EV
   Charging Experience in Canada*.
 
-*Verified with a 3-vote adversarial panel (2026-06-23). Québec-specific figures remain
-inferences — no metered per-house kW or published HQ sizing rule was found directly.*
+*Verified with a 3-vote adversarial panel (2026-06-23). The Québec-specific
+figures in this list remain literature inferences — no published HQ sizing rule
+was found directly. This is a statement about the SOURCES ABOVE, not about the
+study: metered Hydro-Québec data (`datasets/hq`, n = 215 all-electric) arrived
+2026-08-04 and is what the building model is validated against.*
 
 ## Latching thermostats — diversity re-base (2026-08-04)
 

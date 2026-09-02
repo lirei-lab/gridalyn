@@ -1,0 +1,128 @@
+"""A study's stated headline figures must agree with its pinned baseline.
+
+CLAUDE.md designates each CALIBRATION.md as the source of truth and tells
+readers to consult it before quoting a metric. `ev_hosting_flex` carried a firm
+P50 of 4 against a pinned 11 for over a month, because the file is written by
+appending and a re-base moved the pins without revising the prose. Nothing
+caught it: the doc-path checker validates paths, not numbers.
+
+This gate reads only the "Current headline figures" table, where each row names
+the pin it mirrors. Historical prose is deliberately not read -- superseded
+numbers belong in a chronological record, and a gate that flagged them would be
+noise nobody keeps.
+"""
+
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+
+import check_calibration_claims as claims  # noqa: E402
+
+
+class TestCalibrationClaims(unittest.TestCase):
+    def test_at_least_one_study_is_gated(self) -> None:
+        """A gate nothing opts into protects nothing."""
+        self.assertTrue(
+            claims.gated_studies(),
+            "no CALIBRATION.md declares a 'Current headline figures' table; "
+            "the gate would pass vacuously",
+        )
+
+    def test_every_gated_study_agrees_with_its_baseline(self) -> None:
+        for study in claims.gated_studies():
+            with self.subTest(study=study):
+                failures = claims.check_study(study)
+                self.assertEqual(
+                    failures,
+                    [],
+                    f"{study}/CALIBRATION.md states figures its own baseline "
+                    "refutes:\n  " + "\n  ".join(failures),
+                )
+
+    def test_the_flagship_is_among_them(self) -> None:
+        """The study the defect was found in must stay covered."""
+        self.assertIn("ev_hosting_flex", claims.gated_studies())
+
+    def test_the_gate_catches_a_stale_figure(self) -> None:
+        """Exercise the failure path, not only the passing one.
+
+        A gate never seen to fail is not known to work. This reproduces the
+        original defect shape -- a table figure that disagrees with its pin --
+        without touching any tracked file.
+        """
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            study = Path(tmp) / "projects" / "fake_study"
+            (study / "baselines").mkdir(parents=True)
+            (study / "baselines" / "results_baseline.json").write_text(
+                json.dumps({"metrics": [{"id": "cred.firm_p50", "expected": 11.0}]}),
+                encoding="utf-8",
+            )
+            (study / "CALIBRATION.md").write_text(
+                "# Fake\n\n## Current headline figures\n\n"
+                "| Figure | Current value | Baseline pin |\n"
+                "|---|---|---|\n"
+                "| Firm hosting, P50 | 4.0 EVs | `cred.firm_p50` |\n",
+                encoding="utf-8",
+            )
+            original = claims.PROJECTS
+            claims.PROJECTS = study.parent
+            try:
+                failures = claims.check_study("fake_study")
+            finally:
+                claims.PROJECTS = original
+
+        self.assertEqual(len(failures), 1)
+        self.assertIn("cred.firm_p50", failures[0])
+        self.assertIn("4.0", failures[0])
+        self.assertIn("11.0", failures[0])
+
+    def test_a_row_naming_an_unknown_pin_fails(self) -> None:
+        """A claim that mirrors nothing is as bad as one that mirrors wrongly."""
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            study = Path(tmp) / "projects" / "fake_study"
+            (study / "baselines").mkdir(parents=True)
+            (study / "baselines" / "results_baseline.json").write_text(
+                json.dumps({"metrics": [{"id": "real.pin", "expected": 1.0}]}),
+                encoding="utf-8",
+            )
+            (study / "CALIBRATION.md").write_text(
+                "## Current headline figures\n\n"
+                "| Figure | Current value | Baseline pin |\n"
+                "|---|---|---|\n"
+                "| Something | 1.0 | `no.such.pin` |\n",
+                encoding="utf-8",
+            )
+            original = claims.PROJECTS
+            claims.PROJECTS = study.parent
+            try:
+                failures = claims.check_study("fake_study")
+            finally:
+                claims.PROJECTS = original
+
+        self.assertEqual(len(failures), 1)
+        self.assertIn("no.such.pin", failures[0])
+
+    def test_rounding_is_compared_at_the_displayed_precision(self) -> None:
+        """The document may round for legibility, not to hide a moved pin."""
+        parsed = claims.read_claims(
+            REPO_ROOT / "projects" / "ev_hosting_flex" / "CALIBRATION.md"
+        )
+        by_pin = {pin: (value, places) for _, pin, value, places in parsed}
+        value, places = by_pin["insurance.expected_cost_flex_at_ref"]
+        self.assertEqual(places, 2)
+        self.assertEqual(value, 480.06)
+
+
+if __name__ == "__main__":
+    unittest.main()
