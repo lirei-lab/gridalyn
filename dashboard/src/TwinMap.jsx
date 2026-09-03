@@ -23,6 +23,8 @@ export default function TwinMap({
   features,
   geography,
   heatmapMode,
+  ontologyClasses,
+  showOntology,
   onSelectNode,
   children,
 }) {
@@ -30,7 +32,15 @@ export default function TwinMap({
   // treats a new initialViewState object as a camera reset, so rebuilding it
   // each render would fight the user's own panning.
   const initialViewState = viewStateForGeography(geography);
-  const layers = buildLayers({ features, heatmapMode, onSelectNode });
+  const layers = buildLayers({
+    features,
+    heatmapMode,
+    // The registry derives a layer per declared class from these; this
+    // component neither names a class nor knows how many there are.
+    ontologyClasses,
+    showOntology,
+    onSelectNode,
+  });
 
   return (
     <DeckGL

@@ -6,17 +6,43 @@ import {
   fetchJsonOrNull,
   readGeography,
   readNetworkModel,
+  readObservation,
+  readSemantic,
   schemaWarning,
   servablePath,
   twinPath,
 } from './twinSource.js';
 
-const FILE_KINDS = {
+/**
+ * The twin's per-scenario kinds and file suffixes -- FOR THE PRE-CATALOG
+ * FALLBACK ONLY.
+ *
+ * This list is the twin's on-disk layout, and the live path must not hold it:
+ * a scenario's kinds are whatever its catalog entry names, which is what lets
+ * a study partitioned differently be read by the same code. But the fallback
+ * runs precisely when no catalog exists to declare anything, and a
+ * pre-catalog summary that omits its paths leaves the naming convention as the
+ * only way to reach the timeseries at all.
+ *
+ * So it is kept, scoped to `buildScenarioCatalog`, exactly as
+ * `LEGACY_MANIFEST_PATHS.semanticManifest` is kept for the same reason. The
+ * live path reads `buildDashboardScenarioCatalog`, which assumes no kinds.
+ */
+const LEGACY_FILE_KINDS = {
   nodes: 'powerflow_nodes',
   lines: 'powerflow_lines',
   power: 'powerflow_power',
   transformers: 'powerflow_transformers',
 };
+
+function legacyConventionalPaths(id) {
+  return Object.fromEntries(
+    Object.entries(LEGACY_FILE_KINDS).map(([kind, suffix]) => [
+      kind,
+      twinPath(`timeseries/${id}_${suffix}.parquet`),
+    ])
+  );
+}
 
 function scenarioSortKey(id) {
   const match = String(id).match(/^S(\d+)$/);
@@ -26,29 +52,23 @@ function scenarioSortKey(id) {
 const normalizePath = servablePath;
 
 /**
- * Reconstruct a scenario's paths by naming convention.
+ * Normalize whatever kinds a scenario declares, assuming none.
  *
- * Only reached by the pre-catalog fallback below, and by a catalog that omits
- * a path. A catalog written by the current SDK always declares all four, so
- * this is a compatibility shim rather than the normal route -- which is why it
- * derives from `twinPath` instead of carrying its own instance literal.
+ * This function used to iterate a FILE_KINDS map -- nodes, lines, power,
+ * transformers -- written out here, again in the SDK, and a third time in
+ * useDuckDB.js, with nothing keeping the three in sync. Worse, its companion
+ * `conventionalPaths` synthesized `timeseries/{id}_{suffix}.parquet` HERE, in
+ * the client: the twin's on-disk layout asserted by the consumer that is
+ * supposed to be told it.
+ *
+ * Both are gone. A scenario's kinds are whatever its catalog entry names, so a
+ * study partitioned differently from the twin reads through this same path.
  */
-function conventionalPaths(id) {
+function normalizePaths(paths = {}) {
   return Object.fromEntries(
-    Object.entries(FILE_KINDS).map(([kind, suffix]) => [
-      kind,
-      twinPath(`timeseries/${id}_${suffix}.parquet`),
-    ])
-  );
-}
-
-function normalizePaths(id, paths = {}) {
-  const fallback = conventionalPaths(id);
-  return Object.fromEntries(
-    Object.keys(FILE_KINDS).map(kind => [
-      kind,
-      normalizePath(paths?.[kind]) || fallback[kind],
-    ])
+    Object.entries(paths || {})
+      .map(([kind, value]) => [kind, normalizePath(value)])
+      .filter(([, value]) => Boolean(value))
   );
 }
 
@@ -63,6 +83,14 @@ function scenarioSubtitle(scenario, summary) {
   return parts.join(' - ');
 }
 
+/**
+ * The ontology as the PRE-CATALOG manifest states it, for the fallback only.
+ *
+ * Kept because a twin without a catalog has no other route to its profile, and
+ * deliberately not reused on the catalog path: this shape is four scalars, and
+ * the four scalars were the problem. `readSemantic` is what the live path
+ * reads.
+ */
 function normalizeSemanticGraph(manifest) {
   if (!manifest) return null;
   return {
@@ -72,6 +100,24 @@ function normalizeSemanticGraph(manifest) {
     valid: manifest.validation?.valid ?? null,
     manifestPath: LEGACY_MANIFEST_PATHS.semanticManifest,
     artifacts: manifest.artifacts || {},
+  };
+}
+
+/**
+ * Narrow the twin's ontology to one scenario.
+ *
+ * The scenario-scoped population -- the asset registry's class per (scenario,
+ * class) pair -- is the only one whose counts differ between scenarios, so
+ * carrying the whole list onto every scenario would have each one reporting
+ * its siblings' numbers. Classes with no scenario scope are shared unchanged.
+ */
+export function semanticForScenario(semantic, scenarioId) {
+  if (!semantic) return null;
+  return {
+    ...semantic,
+    classes: semantic.classes.filter(
+      entry => entry.scenarioId === null || entry.scenarioId === scenarioId
+    ),
   };
 }
 
@@ -97,8 +143,9 @@ function normalizeExtensions(extensions = {}) {
   );
 }
 
-export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest = null) {
-  const semanticGraph = normalizeSemanticGraph(semanticManifest);
+export function buildDashboardScenarioCatalog(dashboardCatalog) {
+  const semantic = readSemantic(dashboardCatalog);
+  const observation = readObservation(dashboardCatalog);
   return (dashboardCatalog?.scenarios || [])
     .filter(scenario => scenario?.scenario_id)
     .sort((a, b) => {
@@ -117,11 +164,19 @@ export function buildDashboardScenarioCatalog(dashboardCatalog, semanticManifest
         label: scenario.label || id,
         subtitle: scenario.description || '',
         description: scenario.description || '',
-        paths: normalizePaths(id, scenario.paths),
+        paths: normalizePaths(scenario.paths),
+        // How each kind must be READ. Declared by the twin and by any study
+        // that publishes scenarios, so a consumer never infers whether a file
+        // holds this scenario alone or every scenario.
+        partitioning: scenario.partitioning || {},
         gridMetrics: metrics,
         topologyCounts: scenario.topology_counts || {},
         extensions: normalizeExtensions(scenario.extensions),
-        semanticGraph,
+        semanticGraph: semanticForScenario(semantic, id),
+        // What this scenario's numbers ARE. Declared per scenario rather than
+        // inferred from the instance, so an instance that later carries both
+        // kinds does not have to relabel every view at once.
+        provenance: scenario.provenance || observation?.provenance || null,
       };
     });
 }
@@ -160,7 +215,9 @@ export function buildScenarioCatalog(scenarioManifest, summaryManifest, assetMan
       return ai - bi || as.localeCompare(bs);
     })
     .map(([id, { scenario, summary, asset }]) => {
-      const paths = normalizePaths(id, summary?.paths || scenario?.paths);
+      const declared = normalizePaths(summary?.paths || scenario?.paths);
+      const paths =
+        Object.keys(declared).length > 0 ? declared : legacyConventionalPaths(id);
       const label = scenario?.label || summary?.label || id;
       return {
         ...(asset || {}),
@@ -200,14 +257,7 @@ export async function loadScenarioManifest(fetchImpl = fetch) {
  * with the reason confined to the browser console.
  */
 export async function loadTwin(fetchImpl = fetch) {
-  const [catalog, scenarioManifest, summaryManifest, assetManifest, semanticManifest] =
-    await Promise.all([
-      fetchJsonOrNull(fetchImpl, TWIN_CATALOG_PATH),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.scenarioIndex),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.powerflowSummary),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.assetRegistry),
-      fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.semanticManifest),
-    ]);
+  const catalog = await fetchJsonOrNull(fetchImpl, TWIN_CATALOG_PATH);
 
   const warnings = [];
   let scenarios = [];
@@ -216,9 +266,20 @@ export async function loadTwin(fetchImpl = fetch) {
   if (catalog?.scenarios?.length > 0) {
     const warning = schemaWarning(catalog);
     if (warning) warnings.push(warning);
-    scenarios = buildDashboardScenarioCatalog(catalog, semanticManifest);
+    scenarios = buildDashboardScenarioCatalog(catalog);
     source = 'catalog';
   } else {
+    // Reached only when the catalog answered nothing. Fetching these four
+    // alongside the catalog cost every load four needless requests, and -- for
+    // the semantic manifest -- made a hardcoded twin path part of the LIVE
+    // route rather than of the fallback it belongs to.
+    const [scenarioManifest, summaryManifest, assetManifest, semanticManifest] =
+      await Promise.all([
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.scenarioIndex),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.powerflowSummary),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.assetRegistry),
+        fetchJsonOrNull(fetchImpl, LEGACY_MANIFEST_PATHS.semanticManifest),
+      ]);
     scenarios = buildScenarioCatalog(
       scenarioManifest,
       summaryManifest,
@@ -250,6 +311,14 @@ export async function loadTwin(fetchImpl = fetch) {
     scenarios,
     geography: readGeography(catalog),
     networkModel: readNetworkModel(catalog),
+    // Whether this deployment is a shadow, and where its measured state is
+    // read from. Null for a pre-1.4 catalog and for the fallback, neither of
+    // which can answer -- as distinct from answering "none".
+    observation: readObservation(catalog),
+    // The twin's ontology, reached through the contract rather than through
+    // `LEGACY_MANIFEST_PATHS.semanticManifest`. Null for a pre-1.3 catalog and
+    // for the fallback, where no such declaration exists to read.
+    semantic: readSemantic(catalog),
     // Studies as SOURCES the twin draws on, described by their declared
     // artifacts. Absent from a pre-catalog twin, hence the empty default.
     projects: readProjects(catalog),

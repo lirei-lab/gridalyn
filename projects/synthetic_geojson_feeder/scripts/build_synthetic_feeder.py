@@ -9,6 +9,7 @@ import pandas as pd
 
 from gridalyn.projects.scripting import ProjectScript, project_script
 from gridalyn.simulation import (
+    VALIDATION_FILENAME,
     build_pandapower_summary,
     build_synthetic_network_from_geojson,
     write_pandapower_element_tables,
@@ -77,9 +78,7 @@ def _write_report(
     )
     artifacts = [
         script.file_reference(script.data_dir / "building_footprints.geojson"),
-        script.file_reference(
-            script.reports_dir / "synthetic_network_validation_report.json"
-        ),
+        script.file_reference(script.data_dir / VALIDATION_FILENAME),
         *(script.file_reference(path) for path in tables.values()),
         script.file_reference(figure_path),
     ]
@@ -127,7 +126,12 @@ def main() -> int:
     result = build_synthetic_network_from_geojson(
         footprints_path=script.data_dir / "building_footprints.geojson",
         config_path=script.root / "inputs/synthetic_network_config.json",
-        out_dir=script.reports_dir,
+        # The build's diagnostic is DATA, not a report: it carries eight
+        # domain keys and none of REQUIRED_REPORT_FIELDS, and writing it into
+        # outputs/reports/ made it look governed to every reader that classifies
+        # by destination. The governed report for this stage is the
+        # `script.write_report` call below.
+        out_dir=script.data_dir,
         clustering_crs="auto",
         write_cache=False,
         run_powerflow=True,

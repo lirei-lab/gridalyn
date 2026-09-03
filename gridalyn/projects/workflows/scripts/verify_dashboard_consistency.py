@@ -13,15 +13,16 @@ ROOT = find_workspace_root(__file__)
 LAYOUT = ArtifactLayout(ROOT)
 DEFAULT_CATALOG = LAYOUT.dashboard / "catalog.json"
 
-SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = ("1.0", "1.1", "1.2")
+SUPPORTED_SCHEMA_VERSIONS: tuple[str, ...] = ("1.0", "1.1", "1.2", "1.3", "1.4")
 """Catalog schema versions this verifier accepts, oldest first.
 
 A *set* rather than a single literal, because the checks below read only the
 keys 1.0 introduced. Pinning one version turned every additive bump into a
 false failure -- 1.1 added ``network_model.geography`` and changed nothing this
-function reads, yet the equality check would have rejected it. A version that
-genuinely removes or repurposes a key that is read here should be left out of
-this tuple, which is what makes the omission meaningful.
+function reads, yet the equality check would have rejected it. 1.2
+(``projects``), 1.3 (``semantic``) and 1.4 (``observation``) are additive on the
+same terms. A version that genuinely removes or repurposes a key read here
+should be left out of this tuple, which is what makes the omission meaningful.
 """
 
 

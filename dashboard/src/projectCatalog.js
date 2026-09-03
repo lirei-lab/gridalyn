@@ -34,6 +34,17 @@ export function deriveWorkspaces(catalogProjects = []) {
       kind: 'project',
       available: (project.artifacts || []).some(artifact => artifact.exists),
       artifacts: project.artifacts || [],
+      // What the study says it is FOR, and what it says it measures. Read from
+      // the catalog so presentation follows declaration rather than per-study
+      // code -- the coupling this whole view exists to avoid.
+      objective: project.objective || '',
+      experiments: project.experiments || [],
+      governed_metrics: project.governed_metrics || [],
+      // A study's scenarios, in the same shape the twin's arrive in: an id, a
+      // label, `paths` keyed by the kinds THIS source declares, and the
+      // partitioning each kind must be read with. Empty for a study that
+      // declares no scenario indexer, which is most of them.
+      scenarios: project.scenarios || [],
     })),
   ];
 }
@@ -46,6 +57,92 @@ export function governedReports(workspace) {
   return (workspace?.artifacts || []).filter(
     artifact => artifact.kind === KIND_GOVERNED_REPORT && artifact.exists
   );
+}
+
+/**
+ * Describe a study's scenarios for display, without assuming any kind.
+ *
+ * The kinds differ per source on purpose -- the twin's describe a solved power
+ * flow, a study's describe whatever that study produced -- so this reports what
+ * each scenario declares rather than looking for a set it expects.
+ * `partitioning` travels with each kind because it changes how the artifact
+ * must be READ: a file-partitioned path holds this scenario alone, a
+ * column-partitioned one holds every scenario and a column selects.
+ */
+export function describeScenarios(workspace) {
+  return (workspace?.scenarios || []).map(scenario => ({
+    id: scenario.scenario_id,
+    label: scenario.label || scenario.scenario_id,
+    kinds: Object.entries(scenario.paths || {}).map(([kind, path]) => ({
+      kind,
+      path,
+      partitioning: scenario.partitioning?.[kind]?.partitioning || null,
+      idColumn: scenario.partitioning?.[kind]?.id_column || null,
+    })),
+  }));
+}
+
+/**
+ * Split a study's summary into what it CLAIMS and what merely supports it.
+ *
+ * Every value used to get an identical tile at identical size, so a headline
+ * result and a bus count read the same and ~30 of them read as a wall. The
+ * hierarchy was declared all along and ignored: `spec.experiments[].metrics`
+ * is the study's own statement of which numbers are the result, and a baseline
+ * pin is what a re-run is checked against.
+ *
+ * The two are kept apart because they are different statements and, in the
+ * shipped studies, they genuinely disagree: one study declares three metrics
+ * and pins four other values. A number that is both declared and governed is
+ * the strongest claim the contract can make; merging them would lose that.
+ *
+ * A study that declares no metrics gets everything as supporting detail, which
+ * is honest: nothing said otherwise, so nothing is promoted.
+ */
+export function partitionSummary(rows, { declared = [], governed = [] } = {}) {
+  const wanted = new Set(declared);
+  const pinned = new Set(governed);
+  const headline = [];
+  const supporting = [];
+  for (const row of rows) {
+    const entry = {
+      ...row,
+      declared: wanted.has(row.key),
+      governed: pinned.has(row.key),
+    };
+    (entry.declared || entry.governed ? headline : supporting).push(entry);
+  }
+  // Declared first, then governed-only: the study's stated measures lead, and
+  // what the baseline additionally guards follows.
+  headline.sort((a, b) => Number(b.declared) - Number(a.declared));
+  return { headline, supporting };
+}
+
+/**
+ * The metric keys a study declares, across every experiment it declares.
+ */
+export function declaredMetrics(workspace) {
+  return [
+    ...new Set(
+      (workspace?.experiments || []).flatMap(experiment => experiment.metrics || [])
+    ),
+  ];
+}
+
+/**
+ * The summary keys a study's baseline pins, for one report.
+ *
+ * Scoped by report because two reports of one study can carry the same key
+ * name and only one of them may be pinned.
+ */
+export function governedMetrics(workspace, relative) {
+  return [
+    ...new Set(
+      (workspace?.governed_metrics || [])
+        .filter(pin => !relative || pin.source === relative)
+        .map(pin => pin.key)
+    ),
+  ];
 }
 
 export function tables(workspace) {

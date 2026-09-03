@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  declaredMetrics,
+  describeScenarios,
   deriveWorkspaces,
+  governedMetrics,
+  partitionSummary,
   formatSummaryValue,
   governedReports,
   loadProjectReports,
@@ -134,4 +138,135 @@ test('a thrown fetch is captured rather than rejecting the whole load', async ()
     throw new Error('offline');
   });
   assert.equal(loaded[0].error, 'offline');
+});
+
+test('a study carries the scenarios its catalog entry declares', () => {
+  const [twin, study] = deriveWorkspaces([
+    {
+      project_id: 'demo',
+      artifacts: [{ path: '/x.json', exists: true, kind: 'governed_report' }],
+      scenarios: [
+        {
+          scenario_id: 'baseline',
+          label: 'Original feeder.',
+          paths: { results: '/p/results.csv', profiles: '/p/profiles.csv' },
+          partitioning: {
+            results: { kind: 'results', partitioning: 'column', id_column: 'scenario_id' },
+            profiles: { kind: 'profiles', partitioning: 'column', id_column: 'scenario_id' },
+          },
+        },
+      ],
+    },
+  ]);
+  assert.equal(twin.id, 'digital_twin');
+  assert.equal(study.scenarios.length, 1);
+});
+
+test('a study that declares no indexer carries no scenarios', () => {
+  // Most studies. The section must not render, rather than render empty.
+  const [, study] = deriveWorkspaces([{ project_id: 'demo', artifacts: [] }]);
+  assert.deepEqual(study.scenarios, []);
+  assert.deepEqual(describeScenarios(study), []);
+});
+
+test('describeScenarios reports the kinds declared, never a set it expects', () => {
+  const workspace = {
+    scenarios: [
+      {
+        scenario_id: 'baseline',
+        paths: { anything_at_all: '/p/x.csv' },
+        partitioning: {
+          anything_at_all: {
+            kind: 'anything_at_all',
+            partitioning: 'column',
+            id_column: 'run_id',
+          },
+        },
+      },
+    ],
+  };
+  const [scenario] = describeScenarios(workspace);
+  assert.equal(scenario.id, 'baseline');
+  // Falls back to the id when the index declared no label column.
+  assert.equal(scenario.label, 'baseline');
+  assert.deepEqual(scenario.kinds, [
+    {
+      kind: 'anything_at_all',
+      path: '/p/x.csv',
+      partitioning: 'column',
+      idColumn: 'run_id',
+    },
+  ]);
+});
+
+test('a kind with no declared partitioning reports null, not a guess', () => {
+  // Reading a column-partitioned file as if it were file-partitioned renders
+  // another scenario's rows as this one's, so an absent declaration must stay
+  // absent rather than defaulting.
+  const [scenario] = describeScenarios({
+    scenarios: [{ scenario_id: 's', paths: { k: '/p/k.csv' } }],
+  });
+  assert.equal(scenario.kinds[0].partitioning, null);
+  assert.equal(scenario.kinds[0].idColumn, null);
+});
+
+test('partitionSummary promotes only what the study declared or pins', () => {
+  const rows = [
+    { key: 'objective_value', label: 'objective value', value: '0.3148' },
+    { key: 'bus_count', label: 'bus count', value: '16' },
+    { key: 'solver_status', label: 'solver status', value: 'optimal' },
+  ];
+  const { headline, supporting } = partitionSummary(rows, {
+    declared: ['objective_value'],
+    governed: ['solver_status'],
+  });
+  assert.deepEqual(headline.map(r => r.key), ['objective_value', 'solver_status']);
+  assert.deepEqual(supporting.map(r => r.key), ['bus_count']);
+  assert.equal(headline[0].declared, true);
+  assert.equal(headline[1].governed, true);
+});
+
+test('a value that is both declared and governed carries both marks', () => {
+  // The strongest claim the contract can make about a result: the study set
+  // out to measure it AND a re-run is checked against it. Merging the two
+  // signals would lose that.
+  const [row] = partitionSummary([{ key: 'episode_count', label: 'x', value: '90' }], {
+    declared: ['episode_count'],
+    governed: ['episode_count'],
+  }).headline;
+  assert.equal(row.declared, true);
+  assert.equal(row.governed, true);
+});
+
+test('a study that declares nothing promotes nothing', () => {
+  // Two shipped studies declare no metrics. Promoting by a guess would be
+  // inventing importance the study never claimed.
+  const rows = [{ key: 'a', label: 'a', value: '1' }];
+  const { headline, supporting } = partitionSummary(rows);
+  assert.deepEqual(headline, []);
+  assert.equal(supporting.length, 1);
+});
+
+test('governedMetrics is scoped to the report that pins it', () => {
+  // Two reports of one study can carry the same key and only one be pinned.
+  const workspace = {
+    governed_metrics: [
+      { key: 'min_voltage_pu', source: 'outputs/reports/a.json' },
+      { key: 'other', source: 'outputs/reports/b.json' },
+    ],
+  };
+  assert.deepEqual(governedMetrics(workspace, 'outputs/reports/a.json'), [
+    'min_voltage_pu',
+  ]);
+  assert.deepEqual(governedMetrics(workspace, 'outputs/reports/b.json'), ['other']);
+});
+
+test('declaredMetrics unions every experiment the study declares', () => {
+  assert.deepEqual(
+    declaredMetrics({
+      experiments: [{ metrics: ['a', 'b'] }, { metrics: ['b', 'c'] }],
+    }),
+    ['a', 'b', 'c']
+  );
+  assert.deepEqual(declaredMetrics({}), []);
 });

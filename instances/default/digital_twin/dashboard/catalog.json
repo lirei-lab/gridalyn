@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-08-28T18:44:24.374273+00:00",
+  "created_at": "2026-09-02T18:03:03.909037+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -32,6 +32,21 @@
         "center": {
           "lat": 46.3429294366034,
           "lon": -72.6040816042032
+        }
+      },
+      "geometry_kinds": {
+        "buildings": {
+          "kind": "point",
+          "reason": "the GeoJSON ingest reads Polygon/MultiPolygon footprints and retains only the centroid and the area (PowerGridGraph.extract_building_centers_and_areas); the polygons are not carried into the base snapshot, and nothing downstream of it can reconstruct them -- a consumer that wants footprints must go back to the source layer"
+        },
+        "grid_buses": {
+          "kind": "point"
+        },
+        "grid_lines": {
+          "kind": "derived"
+        },
+        "grid_transformers": {
+          "kind": "derived"
         }
       },
       "located": true,
@@ -91,6 +106,33 @@
       "warnings": []
     }
   },
+  "observation": {
+    "measured": {
+      "absent_reason": "this instance carries no measured observations; the SDK ships the ingest path, not measured data -- place tidy measurement exports and the declared entity_join in the observations directory named here to feed a deployment's own AMI/SCADA data through gridalyn.twin.observation.ingest, which is what makes a deployment a digital shadow rather than a model",
+      "available": false,
+      "columns": [
+        "timestamp",
+        "entity_id",
+        "quantity",
+        "value"
+      ],
+      "directory": "/instances/default/digital_twin/observations",
+      "entity_join": null,
+      "join_columns": [
+        "entity_id",
+        "bus_id"
+      ],
+      "quantities": [
+        "voltage_pu"
+      ],
+      "sources": []
+    },
+    "provenance": "simulated",
+    "provenance_values": [
+      "simulated",
+      "measured"
+    ]
+  },
   "projects": [
     {
       "artifacts": [
@@ -127,8 +169,21 @@
       ],
       "base_path": "/.",
       "description": "Network-validated distributed ADMM coordination of cold-climate electric- heating homes with ML imputation of communication-failed agents, validated on the IEEE-33 feeder with pandapower.",
+      "experiments": [
+        {
+          "id": "comms_failure_resilience",
+          "metrics": [],
+          "objective": "Measure aggregate peak/PAR/cost and IEEE-33 min-voltage / max-line- loading across the non-responsive-fraction sweep.",
+          "scenarios": [
+            "coordinated_imputed"
+          ]
+        }
+      ],
+      "governed_metrics": [],
       "label": "Admm Thermal Consensus",
-      "project_id": "admm_thermal_consensus"
+      "objective": "Coordinate residential electric heating with sharing-ADMM to flatten the feeder peak, keep coordination consistent under agent communication failures via ML imputation, and quantify how imputation error propagates into IEEE-33 voltage and line-loading violations.",
+      "project_id": "admm_thermal_consensus",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -198,8 +253,54 @@
       ],
       "base_path": "/projects/der_voltage_optimization",
       "description": "Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification.",
+      "experiments": [
+        {
+          "id": "optimized_dispatch_verification",
+          "metrics": [
+            "objective_value",
+            "min_voltage_pu",
+            "max_voltage_pu"
+          ],
+          "objective": "Compare optimized setpoints against AC power-flow validation.",
+          "scenarios": [
+            "pv_voltage_stress"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.solver_status",
+          "key": "solver_status",
+          "source": "outputs/reports/der_voltage_optimization_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.verified_max_voltage_after_pu",
+          "key": "verified_max_voltage_after_pu",
+          "source": "outputs/reports/der_voltage_optimization_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.total_pv_dispatch_mw",
+          "key": "total_pv_dispatch_mw",
+          "source": "outputs/reports/der_voltage_optimization_report.json",
+          "tolerance": 0.00024811245453504983
+        },
+        {
+          "block": "summary",
+          "id": "summary.total_pv_curtailment_mw",
+          "key": "total_pv_curtailment_mw",
+          "source": "outputs/reports/der_voltage_optimization_report.json",
+          "tolerance": 0.0001
+        }
+      ],
       "label": "Der Voltage Optimization",
-      "project_id": "der_voltage_optimization"
+      "objective": "Compute DER and battery setpoints that improve feeder voltage while respecting operating limits.",
+      "project_id": "der_voltage_optimization",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -236,8 +337,29 @@
       ],
       "base_path": "/.",
       "description": "EV hosting capacity and flexibility across a 540-transformer distribution fleet, with the transformer rating convention as a declared axis.",
+      "experiments": [
+        {
+          "id": "fleet_triage",
+          "metrics": [],
+          "objective": "Classify every pole transformer in the fleet at each adoption level and adoption-clustering level, under both rating conventions: never binds / flexibility defers it / needs steel / constrained by the winter heating base. This is the study's primary result; the per-feeder stages below are the worked example behind it.",
+          "scenarios": [
+            "baseline"
+          ]
+        },
+        {
+          "id": "firm_hosting_baseline",
+          "metrics": [],
+          "objective": "Measure the firm EV hosting limit (first line/transformer overload) on the radial feeder without flexibility contracts. Extended with the flexible case and hosting-expansion headline in Phases 9-10.",
+          "scenarios": [
+            "baseline"
+          ]
+        }
+      ],
+      "governed_metrics": [],
       "label": "Ev Hosting Flex",
-      "project_id": "ev_hosting_flex"
+      "objective": "Determine, across the whole pole-transformer fleet, how many assets bind as EV adoption grows from today (0.11 EV/home) to Qu\u00e9bec saturation (1.32 EV/home, every household light vehicle electrified), how many a flexibility contract defers, and how many need reinforcement regardless.\nThe unit of analysis is the FLEET, not one feeder. Measured on this network, the median asset and the tail answer differently: the governed 6-home unit hosts full saturation firmly, while a share of the 540 binds well before it. A single-feeder headline reports whichever of those the chosen feeder happens to be.\nThe transformer rating is a declared axis, not an assumption. Judging a winter peak against a nameplate defined at a 30 \u00b0C ambient breaks the coupling between load and thermal capability \u2014 in a heating-dominated feeder both are driven by the same outdoor temperature and rise together. On this network that choice moves more assets than the entire EV transition does, so both conventions are emitted.",
+      "project_id": "ev_hosting_flex",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -298,8 +420,222 @@
       ],
       "base_path": "/projects/ieee_33_bus_demo",
       "description": "Demo project using Gridalyn's IEEE 33-bus benchmark feeder contract.",
+      "experiments": [
+        {
+          "id": "deterministic_scenario_comparison",
+          "metrics": [
+            "min_voltage_pu",
+            "voltage_violation_count",
+            "max_line_loading_percent"
+          ],
+          "objective": "Rank benchmark operating cases by voltage and loading impact.",
+          "scenarios": [
+            "baseline",
+            "load_growth_20",
+            "pv_midday",
+            "ev_evening_peak",
+            "pv_plus_ev"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.scenario_count",
+          "key": "scenario_count",
+          "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.worst_voltage_scenario",
+          "key": "worst_voltage_scenario",
+          "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.min_voltage_pu",
+          "key": "min_voltage_pu",
+          "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.max_voltage_violation_count",
+          "key": "max_voltage_violation_count",
+          "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.best_voltage_scenario",
+          "key": "best_voltage_scenario",
+          "source": "outputs/reports/ieee33_scenario_comparison_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "daily.summary.converged_hours",
+          "key": "converged_hours",
+          "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "daily.summary.min_voltage_pu",
+          "key": "min_voltage_pu",
+          "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "daily.summary.daily_energy_mwh",
+          "key": "daily_energy_mwh",
+          "source": "outputs/reports/ieee33_daily_timeseries_report.json",
+          "tolerance": 0.004539660886110129
+        }
+      ],
       "label": "Ieee 33 Bus Demo",
-      "project_id": "ieee_33_bus_demo"
+      "objective": "Compare deterministic operating scenarios on a known radial benchmark feeder.",
+      "project_id": "ieee_33_bus_demo",
+      "scenarios": [
+        {
+          "description": "Original IEEE 33-bus feeder.",
+          "label": "Original IEEE 33-bus feeder.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "baseline"
+        },
+        {
+          "description": "Uniform 20 percent demand growth.",
+          "label": "Uniform 20 percent demand growth.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "load_growth_20"
+        },
+        {
+          "description": "Midday distributed PV at selected downstream buses.",
+          "label": "Midday distributed PV at selected downstream buses.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "pv_midday"
+        },
+        {
+          "description": "Evening EV charging demand at selected downstream buses.",
+          "label": "Evening EV charging demand at selected downstream buses.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "ev_evening_peak"
+        },
+        {
+          "description": "Combined PV and EV condition for a mixed operating case.",
+          "label": "Combined PV and EV condition for a mixed operating case.",
+          "partitioning": {
+            "parameters": {
+              "id_column": "scenario_id",
+              "kind": "parameters",
+              "partitioning": "column"
+            },
+            "results": {
+              "id_column": "scenario_id",
+              "kind": "results",
+              "partitioning": "column"
+            },
+            "voltage_profiles": {
+              "id_column": "scenario_id",
+              "kind": "voltage_profiles",
+              "partitioning": "column"
+            }
+          },
+          "paths": {
+            "parameters": "/projects/ieee_33_bus_demo/outputs/data/scenarios.csv",
+            "results": "/projects/ieee_33_bus_demo/outputs/data/scenario_results.csv",
+            "voltage_profiles": "/projects/ieee_33_bus_demo/outputs/data/scenario_voltage_profiles.csv"
+          },
+          "scenario_id": "pv_plus_ev"
+        }
+      ]
     },
     {
       "artifacts": [
@@ -354,8 +690,47 @@
       ],
       "base_path": "/projects/minimal_grid_project",
       "description": "Minimal Gridalyn project that teaches the project contract with one tiny power-flow run.",
+      "experiments": [
+        {
+          "id": "baseline_powerflow",
+          "metrics": [
+            "powerflow_converged",
+            "min_voltage_pu",
+            "bus_count"
+          ],
+          "objective": "Confirm convergence, voltage range, and report/figure generation.",
+          "scenarios": [
+            "baseline"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.powerflow_converged",
+          "key": "powerflow_converged",
+          "source": "outputs/reports/minimal_grid_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.min_voltage_pu",
+          "key": "min_voltage_pu",
+          "source": "outputs/reports/minimal_grid_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.max_line_loading_pct",
+          "key": "max_line_loading_pct",
+          "source": "outputs/reports/minimal_grid_report.json",
+          "tolerance": 0.01
+        }
+      ],
       "label": "Minimal Grid Project",
-      "project_id": "minimal_grid_project"
+      "objective": "Validate the smallest reproducible Gridalyn project contract with one AC power-flow run.",
+      "project_id": "minimal_grid_project",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -430,8 +805,54 @@
       ],
       "base_path": "/projects/prosumer_battery_market",
       "description": "Small synthetic feeder with distributed prosumers, batteries, and a real-time local market.",
+      "experiments": [
+        {
+          "id": "realtime_market_dispatch",
+          "metrics": [
+            "peak_import_mw",
+            "dispatched_energy_mwh",
+            "min_voltage_pu"
+          ],
+          "objective": "Measure battery dispatch, feeder import reduction, and AC power-flow feasibility.",
+          "scenarios": [
+            "realtime_peak_window"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.total_cleared_mwh",
+          "key": "total_cleared_mwh",
+          "source": "outputs/reports/prosumer_realtime_market_report.json",
+          "tolerance": 0.0001
+        },
+        {
+          "block": "summary",
+          "id": "summary.peak_import_after_mw",
+          "key": "peak_import_after_mw",
+          "source": "outputs/reports/prosumer_realtime_market_report.json",
+          "tolerance": 0.000255
+        },
+        {
+          "block": "summary",
+          "id": "summary.min_voltage_after_pu",
+          "key": "min_voltage_after_pu",
+          "source": "outputs/reports/prosumer_realtime_market_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.prosumer_count",
+          "key": "prosumer_count",
+          "source": "outputs/reports/prosumer_realtime_market_report.json",
+          "tolerance": 0
+        }
+      ],
       "label": "Prosumer Battery Market",
-      "project_id": "prosumer_battery_market"
+      "objective": "Dispatch distributed batteries through a local market to reduce feeder import above an operating limit.",
+      "project_id": "prosumer_battery_market",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -506,8 +927,62 @@
       ],
       "base_path": "/projects/rl_voltage_control_lightsim",
       "description": "Tabular RL voltage-control demo using lightsim2grid for fast power-flow simulation.",
+      "experiments": [
+        {
+          "id": "train_and_evaluate_policy",
+          "metrics": [
+            "mean_reward",
+            "voltage_violation_count",
+            "episode_count"
+          ],
+          "objective": "Verify that the learned policy improves the voltage-control reward in evaluation.",
+          "scenarios": [
+            "training",
+            "evaluation"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.min_voltage_midday_pu",
+          "key": "min_voltage_midday_pu",
+          "source": "outputs/reports/rl_feeder_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.max_voltage_midday_pu",
+          "key": "max_voltage_midday_pu",
+          "source": "outputs/reports/rl_feeder_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.episode_count",
+          "key": "episode_count",
+          "source": "outputs/reports/rl_voltage_control_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.evaluation_step_count",
+          "key": "evaluation_step_count",
+          "source": "outputs/reports/rl_voltage_control_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.algorithm",
+          "key": "algorithm",
+          "source": "outputs/reports/rl_voltage_control_report.json",
+          "tolerance": 0
+        }
+      ],
       "label": "Rl Voltage Control Lightsim",
-      "project_id": "rl_voltage_control_lightsim"
+      "objective": "Train and evaluate a compact control policy that reduces voltage deviations with PV and battery actions.",
+      "project_id": "rl_voltage_control_lightsim",
+      "scenarios": []
     },
     {
       "artifacts": [
@@ -564,9 +1039,8 @@
         {
           "exists": true,
           "kind": "unknown",
-          "note": "JSON under reports/ that does not carry the required report fields; not a governed report",
-          "path": "/projects/synthetic_geojson_feeder/outputs/reports/synthetic_network_validation_report.json",
-          "relative": "outputs/reports/synthetic_network_validation_report.json"
+          "path": "/projects/synthetic_geojson_feeder/outputs/data/synthetic_network_validation.json",
+          "relative": "outputs/data/synthetic_network_validation.json"
         },
         {
           "exists": true,
@@ -589,8 +1063,54 @@
       ],
       "base_path": "/projects/synthetic_geojson_feeder",
       "description": "Demo project that converts generated building-footprint GeoJSON into a synthetic distribution feeder.",
+      "experiments": [
+        {
+          "id": "build_baseline_feeder",
+          "metrics": [
+            "building_count",
+            "pandapower_bus_count",
+            "powerflow_converged"
+          ],
+          "objective": "Validate GeoJSON generation, feeder construction, and topology reports.",
+          "scenarios": [
+            "baseline"
+          ]
+        }
+      ],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.building_count",
+          "key": "building_count",
+          "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.pandapower_bus_count",
+          "key": "pandapower_bus_count",
+          "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.powerflow_converged",
+          "key": "powerflow_converged",
+          "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.min_voltage_pu",
+          "key": "min_voltage_pu",
+          "source": "outputs/reports/synthetic_geojson_feeder_report.json",
+          "tolerance": 0.001
+        }
+      ],
       "label": "Synthetic Geojson Feeder",
-      "project_id": "synthetic_geojson_feeder"
+      "objective": "Generate a reproducible feeder model from building footprints and validate the resulting topology.",
+      "project_id": "synthetic_geojson_feeder",
+      "scenarios": []
     }
   ],
   "report_id": "digital_twin_dashboard_catalog",
@@ -611,12 +1131,35 @@
         "v_mean_pu": 0.9572012225029966,
         "v_min_pu": 0.9141792913107338
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S0_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S0_powerflow_nodes.parquet",
         "power": "/instances/default/digital_twin/timeseries/S0_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S0_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S0",
       "topology_counts": {
         "n_buses": 3562,
@@ -642,12 +1185,35 @@
         "v_mean_pu": 0.9566832641622842,
         "v_min_pu": 0.9140079486997466
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S1_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S1_powerflow_nodes.parquet",
         "power": "/instances/default/digital_twin/timeseries/S1_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S1_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S1",
       "topology_counts": {
         "n_buses": 3562,
@@ -673,12 +1239,35 @@
         "v_mean_pu": 0.9561490912409158,
         "v_min_pu": 0.9137752891332368
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S2_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S2_powerflow_nodes.parquet",
         "power": "/instances/default/digital_twin/timeseries/S2_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S2_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S2",
       "topology_counts": {
         "n_buses": 3562,
@@ -704,12 +1293,35 @@
         "v_mean_pu": 0.9556118058802608,
         "v_min_pu": 0.9059520366808763
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S3_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S3_powerflow_nodes.parquet",
         "power": "/instances/default/digital_twin/timeseries/S3_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S3_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S3",
       "topology_counts": {
         "n_buses": 3562,
@@ -735,12 +1347,35 @@
         "v_mean_pu": 0.9550489610360119,
         "v_min_pu": 0.9040694933960463
       },
+      "partitioning": {
+        "lines": {
+          "id_column": null,
+          "kind": "lines",
+          "partitioning": "file"
+        },
+        "nodes": {
+          "id_column": null,
+          "kind": "nodes",
+          "partitioning": "file"
+        },
+        "power": {
+          "id_column": null,
+          "kind": "power",
+          "partitioning": "file"
+        },
+        "transformers": {
+          "id_column": null,
+          "kind": "transformers",
+          "partitioning": "file"
+        }
+      },
       "paths": {
         "lines": "/instances/default/digital_twin/timeseries/S4_powerflow_lines.parquet",
         "nodes": "/instances/default/digital_twin/timeseries/S4_powerflow_nodes.parquet",
         "power": "/instances/default/digital_twin/timeseries/S4_powerflow_power.parquet",
         "transformers": "/instances/default/digital_twin/timeseries/S4_powerflow_transformers.parquet"
       },
+      "provenance": "simulated",
       "scenario_id": "S4",
       "topology_counts": {
         "n_buses": 3562,
@@ -751,6 +1386,553 @@
       }
     }
   ],
-  "schema_version": "1.2",
+  "schema_version": "1.4",
+  "semantic": {
+    "classes": [
+      {
+        "artifact": "grid_buses",
+        "class": "ConnectivityNode",
+        "column": "cim_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3562,
+        "derived_from": [],
+        "identity": "bus_id",
+        "located": true,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "grid_lines",
+        "class": "ACLineSegment",
+        "column": "cim_class",
+        "coordinates": null,
+        "count": 3398,
+        "derived_from": [],
+        "identity": "line_id",
+        "located": false,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "grid_transformers",
+        "class": "PowerTransformer",
+        "column": "cim_class",
+        "coordinates": null,
+        "count": 163,
+        "derived_from": [],
+        "identity": "transformer_id",
+        "located": false,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "buildings",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3235,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "base_snapshot",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "brick:Building",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "buildings"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:ACLineSegment",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3398,
+        "derived_from": [
+          "grid_lines"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:ConnectivityNode",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3562,
+        "derived_from": [
+          "grid_buses"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:EnergyConsumer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "buildings"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cim:PowerTransformer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 163,
+        "derived_from": [
+          "grid_transformers"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:ConstraintZone",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 810,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityAggregator",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityOffer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityPortfolio",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:FlexibilityProvider",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:HardCLSContract",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "cls:SoftCLSContract",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:Scenario",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 5,
+        "derived_from": [
+          "scenario_manifest"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:ScenarioDevice",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 12935,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:SimulationRun",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 10,
+        "derived_from": [
+          "ev_load_summary",
+          "powerflow_summary"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "dt:TimeSeriesDataset",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 25,
+        "derived_from": [
+          "ev_load_summary",
+          "powerflow_summary"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:EnergyFlexibility",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:EnergyFlexibilityKPI",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:FlexibleOperation",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "efont:ThermallyActivatedBuildingSystem",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 4850,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "ieee2030_5:EVSE",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 3235,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S0"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2911,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S1"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 324,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S1"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2588,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S2"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 647,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S2"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 2265,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S3"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 970,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S3"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "Building",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 1941,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S4"
+      },
+      {
+        "artifact": "asset_registry",
+        "class": "EVChargingAsset",
+        "column": "ontology_class",
+        "coordinates": {
+          "latitude": "lat",
+          "longitude": "lon"
+        },
+        "count": 1294,
+        "derived_from": [],
+        "identity": "building_id",
+        "located": true,
+        "population": "scenario_assets",
+        "scenario_column": "scenario_id",
+        "scenario_id": "S4"
+      }
+    ],
+    "classes_absent_reason": null,
+    "graph": {
+      "edge_count": 147065,
+      "node_count": 74286,
+      "validation": {
+        "errors": 0,
+        "valid": true,
+        "warnings": 0
+      }
+    },
+    "paths": {
+      "asset_registry": "/instances/default/digital_twin/scenarios/asset_registry.parquet",
+      "edges": "/instances/default/digital_twin/semantic/edges.parquet",
+      "graph_manifest": "/instances/default/digital_twin/semantic/graph_manifest.json",
+      "nodes": "/instances/default/digital_twin/semantic/nodes.parquet",
+      "profile": "/instances/default/digital_twin/semantic/profile_north_america.json",
+      "validation_report": "/instances/default/digital_twin/semantic/validation_report.json"
+    },
+    "populations": [
+      "base_snapshot",
+      "semantic_graph",
+      "scenario_assets"
+    ],
+    "profile": "north_america"
+  },
   "title": "Gridalyn Digital Twin"
 }

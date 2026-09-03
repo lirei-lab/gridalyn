@@ -16,9 +16,13 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.twin.network.geography import (
+    BUILDING_GEOMETRY_KIND,
+    BUILDING_GEOMETRY_REASON,
     CRS_ASSUMED,
     CRS_DECLARED,
     DEFAULT_GEOGRAPHIC_CRS,
+    GEOMETRY_DERIVED,
+    GEOMETRY_POINT,
     BoundingBox,
     resolve_network_geography,
 )
@@ -157,6 +161,69 @@ class ResolveNetworkGeographyTest(unittest.TestCase):
         self.assertEqual(
             geography.derived_geometry[GRID_TRANSFORMERS], ("hv_bus", "lv_bus")
         )
+
+    def test_building_geometry_is_declared_points_with_its_reason(self):
+        """Decided 2026-09-02, and the wrong outcome was silence.
+
+        The GeoJSON ingest reads real Polygon/MultiPolygon footprints and keeps
+        only the centroid and the area. A consumer holding the coordinate pair
+        alone would reasonably draw a footprint layer the twin cannot support,
+        so the twin says the shape rather than leaving it to be inferred.
+        """
+        geography = resolve_network_geography(
+            frames={
+                BUILDINGS: pd.DataFrame(
+                    [
+                        {
+                            "building_id": "b:0",
+                            "load_id": "l:0",
+                            "lat": 46.3,
+                            "lon": -72.6,
+                        }
+                    ]
+                )
+            }
+        )
+        declared = geography.geometry_kinds[BUILDINGS]
+        self.assertEqual(GEOMETRY_POINT, declared["kind"])
+        self.assertEqual(BUILDING_GEOMETRY_KIND, declared["kind"])
+        self.assertEqual(BUILDING_GEOMETRY_REASON, declared["reason"])
+        self.assertIn("retains only", declared["reason"])
+        self.assertIn("go back to the source layer", declared["reason"])
+
+    def test_a_bus_position_is_the_whole_geometry_so_it_needs_no_reason(self):
+        """Only ``buildings`` is a REDUCTION of a richer source geometry."""
+        geography = resolve_network_geography(
+            frames={
+                GRID_BUSES: _buses([{"bus_id": "bus:0", "lat": 46.3, "lon": -72.6}])
+            }
+        )
+        self.assertEqual({"kind": GEOMETRY_POINT}, geography.geometry_kinds[GRID_BUSES])
+
+    def test_derived_artifacts_declare_their_kind_too(self):
+        geography = resolve_network_geography(frames={})
+        self.assertEqual(GEOMETRY_DERIVED, geography.geometry_kinds[GRID_LINES]["kind"])
+        self.assertEqual(
+            GEOMETRY_DERIVED, geography.geometry_kinds[GRID_TRANSFORMERS]["kind"]
+        )
+
+    def test_geometry_kinds_reach_the_payload(self):
+        payload = resolve_network_geography(
+            frames={
+                BUILDINGS: pd.DataFrame(
+                    [
+                        {
+                            "building_id": "b:0",
+                            "load_id": "l:0",
+                            "lat": 46.3,
+                            "lon": -72.6,
+                        }
+                    ]
+                )
+            }
+        ).to_dict()
+        self.assertEqual(GEOMETRY_POINT, payload["geometry_kinds"][BUILDINGS]["kind"])
+        self.assertIn("reason", payload["geometry_kinds"][BUILDINGS])
 
     def test_center_is_the_extent_midpoint(self):
         box = BoundingBox(min_lon=-2.0, min_lat=10.0, max_lon=2.0, max_lat=20.0)

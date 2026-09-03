@@ -20,6 +20,10 @@ def test_artifact_layout_defines_platform_roots(tmp_path: Path) -> None:
         layout.operations
         == tmp_path / "instances" / "default" / "digital_twin" / "operations"
     )
+    assert (
+        layout.observations
+        == tmp_path / "instances" / "default" / "digital_twin" / "observations"
+    )
     assert layout.project("demo") == tmp_path / "projects" / "demo"
     assert layout.project_outputs("demo") == tmp_path / "projects" / "demo" / "outputs"
 
@@ -29,6 +33,10 @@ def test_artifact_layout_selects_named_twin_instance(tmp_path: Path) -> None:
 
     assert layout.digital_twin == tmp_path / "instances" / "proj_x" / "digital_twin"
     assert layout.base == tmp_path / "instances" / "proj_x" / "digital_twin" / "base"
+    assert (
+        layout.observations
+        == tmp_path / "instances" / "proj_x" / "digital_twin" / "observations"
+    )
     assert layout.default_instance == tmp_path / "instances" / "default"
 
 

@@ -216,3 +216,341 @@ body, html, #root {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The floating twin panel.
+   In CSS rather than inline style objects because two of the three fixes need
+   selectors an inline style cannot express: a sticky header inside a scroll
+   container, and a scrollbar that is visible against a dark translucent panel
+   without being loud. */
+.twin-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  border-radius: 12px;
+  font-family: Montserrat, sans-serif;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  /* Bounded on BOTH axes. The lower bound keeps the panel usable; the upper
+     one stops a single unbreakable token -- the model SHA -- from setting the
+     width of the box around it, which is what made this ~1100px wide. */
+  min-width: 320px;
+  max-width: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain; /* don't hand a scroll to the map behind it */
+  z-index: 2;
+}
+
+.twin-overlay--collapsed {
+  min-width: 0;
+  width: auto;
+}
+
+.twin-overlay__bar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.92);
+  border-bottom: 1px solid #2a2a2a;
+  border-radius: 12px 12px 0 0;
+}
+
+.twin-overlay--collapsed .twin-overlay__bar {
+  border-bottom: none;
+  border-radius: 12px;
+}
+
+.twin-overlay__title {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9de7ff;
+  white-space: nowrap;
+}
+
+.twin-overlay__toggle {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 3px 9px;
+}
+
+.twin-overlay__toggle:hover {
+  border-color: #9de7ff;
+  color: #9de7ff;
+}
+
+.twin-overlay__body {
+  padding: 14px 20px 20px;
+}
+
+/* Any unbreakable token inside the panel -- the model SHA is the one that bit
+   -- wraps rather than widening its container. */
+.twin-overlay__body,
+.twin-overlay__body p {
+  overflow-wrap: anywhere;
+}
+
+.twin-overlay::-webkit-scrollbar {
+  width: 10px;
+}
+
+.twin-overlay::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 6px;
+}
+
+.twin-overlay::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.twin-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── The study view ────────────────────────────────────────────────────────
+   Presentation follows what the study DECLARED, never per-study code. The
+   classes above (__panel, __header, __notice) were written for this view and
+   referenced nowhere; they are wired now rather than duplicated. */
+
+.project-dashboard__objective {
+  color: #9de7ff;
+  font-size: 0.92rem;
+  margin-top: 8px;
+  max-width: 70ch;
+}
+
+.study-experiments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.study-experiment {
+  flex: 1 1 320px;
+  border-left: 2px solid #2b6b76;
+  padding: 2px 0 2px 12px;
+}
+
+.study-experiment__id {
+  color: #7ad9e6;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.study-experiment p {
+  color: #c9d6dd;
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+  max-width: 60ch;
+}
+
+.study-experiment__metrics {
+  color: #7d8d95 !important;
+  font-size: 0.75rem !important;
+}
+
+.study-report {
+  margin-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
+}
+
+.study-report__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.study-report__head h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.study-report__verdict {
+  color: #6fdc9a;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.study-report__verdict.is-invalid {
+  color: #ff5555;
+}
+
+.study-report__source {
+  color: #7d8d95;
+  font-size: 0.75rem;
+  margin: 4px 0 14px;
+}
+
+.study-report__source a {
+  color: #4aa;
+}
+
+.study-report__error {
+  color: #ff5555;
+  font-size: 0.8rem;
+}
+
+/* The declared result. Prominent, because the study said it is the point. */
+.study-report__headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.study-metric {
+  flex: 1 1 200px;
+  min-width: 0; /* so a long value wraps instead of widening the row */
+  background: rgba(0, 205, 210, 0.07);
+  border: 1px solid rgba(0, 205, 210, 0.28);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.study-metric__label {
+  color: #8fa3ac;
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.study-metric__value {
+  color: #eef7fb;
+  display: block;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  margin-top: 4px;
+  /* A long algorithm name is a value like any other; it wraps rather than
+     overflowing the tile it sits in. */
+  overflow-wrap: anywhere;
+}
+
+.study-metric__tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.study-tag {
+  border: 1px solid #3d6e77;
+  border-radius: 999px;
+  color: #7ad9e6;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  padding: 1px 8px;
+  text-transform: uppercase;
+}
+
+.study-tag--governed {
+  border-color: #4f7a52;
+  color: #6fdc9a;
+}
+
+/* Everything the study did not claim as a result: readable, dense, secondary. */
+.study-report__supporting {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 2px 22px;
+  margin: 16px 0 0;
+}
+
+.study-report__supporting > div {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  /* Wrap rather than compete. A very long value -- a solver's full algorithm
+     name is the one that bit -- squeezed its label until the label itself
+     broke mid-word ("algorit / hm"). Wrapping puts the value on its own line
+     instead, which costs a row and keeps both readable. */
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.study-report__supporting dt {
+  color: #8fa3ac;
+  flex: 0 1 auto;
+  font-size: 0.78rem;
+  /* Never squeezed below a readable label. */
+  min-width: 10ch;
+  /* break-word, not anywhere: `anywhere` split short labels mid-word
+     ("algorit / hm") even when the row had space. Break only when a token
+     genuinely cannot fit. */
+  overflow-wrap: break-word;
+}
+
+.study-report__supporting dd {
+  color: #dfe9ee;
+  flex: 0 1 auto;
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.study-report__empty {
+  color: #7d8d95;
+  font-size: 0.8rem;
+}
+
+.study-tables {
+  margin-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
+}
+
+.study-tables h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.study-tables__note {
+  color: #7d8d95;
+  font-size: 0.78rem;
+  margin: 4px 0 10px;
+  max-width: 70ch;
+}
+
+.study-tables ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.study-tables a {
+  color: #4aa;
+}
+
+/* Both surfaces below paint their own dark background unconditionally, so they
+   must state their own heading colour too. index.css defines --text-h as
+   near-black (#08060d) and only lightens it under `prefers-color-scheme: dark`
+   -- so on a machine reporting a light preference every heading in these
+   panels rendered near-black on near-black and was effectively invisible. A
+   surface that fixes its background cannot inherit a colour that flips with
+   the OS theme. */
+.project-dashboard h1,
+.project-dashboard h2,
+.project-dashboard h3,
+.twin-overlay h1,
+.twin-overlay h2,
+.twin-overlay h3 {
+  color: #eef7fb;
+}

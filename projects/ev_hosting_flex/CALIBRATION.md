@@ -8,15 +8,25 @@ corrects an earlier over-statement (that `diversity = 1` was "pessimistic, real
 
 ## Current headline figures
 
-**Read this table before quoting anything else in this file.** Every row is
-checked against `baselines/results_baseline.json` by
-`tools/check_calibration_claims.py`, at the precision shown, so a figure here
-cannot survive a re-base that moved its pin.
+**Read this table and the one after it before quoting anything else in this
+file.** Both are checked by `tools/check_calibration_claims.py` at the precision
+shown — headline figures against `baselines/results_baseline.json`, knobs against
+`project.yaml`'s `spec.inputs.studyConfig` — so a figure in either cannot survive
+a change that moved its source.
 
-The rest of this document is a **chronological record**. Sections carry the
-numbers that were current when they were written, and a re-base appends rather
-than revising them — so an older section may state a figure this table
-supersedes. When they disagree, this table wins.
+The rest of this document is a **chronological record** (decided 2026-09-02).
+Sections carry the numbers that were current when they were written, and a
+re-base appends rather than revising them — so an older section may state a
+figure these two tables supersede. When they disagree, these tables win.
+
+That structure has one obligation, and it is the one this file has twice failed:
+**a section whose code is retired must say so at its top.** A stale number in a
+dated section is a legitimate record; a section written in the present tense
+about machinery that no longer exists is not a record of anything, because it
+never was true of the tree a reader is looking at. Two such sections are
+bannered below — Cold-load pickup (retired Phase 15) and Recommended values
+(adopted in `10-03`). The re-base procedure in
+`docs/contributing/verification.md` carries the rule.
 
 | Figure | Current value | Baseline pin |
 |---|---|---|
@@ -35,6 +45,29 @@ supersedes. When they disagree, this table wins.
 | Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
 | Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
 | corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+
+## Current knob values
+
+The same rule, against the other source of truth. Headline figures are pinned in
+`baselines/results_baseline.json`; the sizing **knobs** are declared in
+`project.yaml` under `spec.inputs.studyConfig`, which is what `scripts/config.py`
+reads. `tools/check_calibration_claims.py` checks this table against that block,
+so a recalibration cannot leave a knob stated here that the study no longer uses.
+
+| Knob | Current value | Declared in |
+|---|---|---|
+| Per-EV charger nameplate | 7.2 kW | `evUnitKw` |
+| EV coincident fraction | 0.35 | `diversityFactor` |
+| EV coincident draw per EV | 2.52 kW | `evUnitKw` x `diversityFactor` |
+| Transformer utilization margin | 0.8 | `transformerUtilizationMargin` |
+| EV coincidence mixing weight | 0.5 | `evCoincidenceRho` |
+| Per-home thermal resistance | 7.0 | `rQuebec` |
+
+Sequence-valued knobs are deliberately **not** restated here — `evSweep` and
+`chargingWindow` are declared in the same `studyConfig` block and should be read
+from it. A restated sequence is precisely what went stale: the sweep ran
+`(0, 20, …, 200)` in the text long after the study had moved to a step of 2 up
+to 52.
 
 ## Evidence status — verified (adversarial votes)
 
@@ -304,6 +337,25 @@ literature-defensible partial-coincidence model.
 
 ## Cold-load pickup (CLPU) base uplift — `CLPU_PEAK` (260625-pwz)
 
+> **RETIRED — Phase 15 (RETIRE-02, D-13). Historical record; nothing below is
+> live.** The four knobs this section chooses (`CLPU_PEAK`, `CLPU_TEMP_ONSET`,
+> `CLPU_TEMP_FULL`, `CLPU_WINDOW`) were **physically deleted from
+> `scripts/config.py`**, together with their sole consumer
+> `_stochastic.clpu_factor` and the annual `tmy_base` that applied it; the
+> re-anchored `_twostage.compose_scenarios` applies no CLPU lift, because the
+> base is now the emitted `Q_design` building mean. The determinism guard
+> described below is gone with them: `PRE_CLPU_BASE_*_SHA256` /
+> `PRE_CLPU_REQUIRED_SHA256` and the file that asserted them,
+> `tests/test_ev_hosting_flex_stochastic.py`, no longer exist. `config.py`
+> carries the deletion tombstone at the point the block used to be.
+>
+> Kept rather than deleted because the *evidence* is still citable — the
+> hourly-averaged evening CLPU bump of ~1.3–1.5 against the sub-hourly
+> post-outage ~2.2 p.u. is a literature finding, not an implementation detail —
+> and because the headline table below records a real re-base the study passed
+> through. Read every present-tense sentence from here to the next `##` as past
+> tense. For what the study uses now, see **Current knob values** at the top.
+
 The governed base `_stochastic.tmy_base` was a **static grades-day heating
 envelope that never spikes**: the coldest-evening 7-home feeder base reached only
 **~62 %** of the 71.25 kW rating (43.94 / 71.25; the config-derived ADMD figure is
@@ -397,24 +449,36 @@ re-base). **No committed Phase-12 regression baseline exists yet** (Phase 12 not
 done), so **no baseline is broken** — only the phase outputs move, deliberately,
 onto the literature-defensible CLPU cold-evening base.
 
-## Recommended values (Québec / Canada-defensible, verified)
+## Recommended values (Québec / Canada-defensible, verified) — ADOPTED in 10-03
 
-| Knob | Current | Defensible | Action |
+> **Historical record of a recommendation that was carried out.** The
+> "Was" column below is the state this review found on 2026-06-23; the "Became"
+> column is what `10-03` set, and every one of those values is now gated at the
+> top of this file under **Current knob values** (or, for the sequence-valued
+> ones, declared in `project.yaml`'s `spec.inputs.studyConfig`). This table
+> previously carried the pre-adoption numbers in a column headed *Current* with
+> an *Action* column telling a reader to perform work already done — a reader
+> saw a model over-stated by ~71 % on EV coincident power and ~186 % on session
+> energy. Past tense is what stops that recurring: an adopted recommendation
+> cannot go stale, whereas a standing one can.
+
+| Knob | Was (2026-06-23) | Defensible band | Became (10-03) |
 |---|---|---|---|
-| `TRANSFORMER_UTILIZATION_MARGIN` | `0.8` | **0.8** ✅ verified | **Keep** (80 % + CLPU headroom is the standard) |
-| Profile diversity | `1` (fully coincident) | **1.0–1.5** (centre ~1.15) | **Keep ≈1** — conservative edge, defensible |
-| `WINTER_PEAK_FACTOR` → per-home peak | 17.64 kW | **10–15 kW** | **Trim** (model is high) |
-| `EV_UNIT_KW × DIVERSITY_FACTOR` (coincident) | 4.32 kW | ~1.4 kW (↑ small/cold feeders) | **Lower** toward ~2–3 kW |
-| EV daily energy (window shape) | 21.6 kWh (flat 5 h) | **6–13 kWh** (~2 h active) | **Trim** — shorten window or use a peaked shape |
-| Topology `diversity_factor_lv` | `5` | **~1.2–1.5** | Inconsistent for all-electric (resize bypasses it) |
-| `EV_SWEEP` | `(0,20,…,200)` = 0–769 % adoption | ≤ ~2 EV/dwelling (≤ ~52) + finer step | **Cap & refine** (headline resolution) |
+| `TRANSFORMER_UTILIZATION_MARGIN` | `0.8` | **0.8** ✅ verified | **unchanged** — 80 % + headroom is the standard |
+| Profile diversity | `1` (fully coincident) | **1.0–1.5** (centre ~1.15) | **kept ≈1** — conservative edge, defensible |
+| `WINTER_PEAK_FACTOR` → per-home peak | 17.64 kW | **10–15 kW** | **~13.2 kW** (factor 1.6 → 1.2), mid-band |
+| `EV_UNIT_KW × DIVERSITY_FACTOR` (coincident) | 4.32 kW | ~1.4 kW (↑ small/cold feeders) | **2.52 kW** (diversity 0.6 → 0.35) |
+| EV daily energy (window shape) | 21.6 kWh (flat 5 h) | **6–13 kWh** (~2 h active) | **7.56 kWh** (window (17,22) → (17,20)) |
+| Topology `diversity_factor_lv` | `5` | **~1.2–1.5** | inconsistent for all-electric; the load-aware resize bypasses it |
+| `EV_SWEEP` | `(0,20,…,200)` = 0–769 % adoption | ≤ ~2 EV/dwelling (≤ ~52) + finer step | **step 2 to 52** (27 points) |
 
 **Headline takeaway.** That the feeder hosts **~1 EV/dwelling firm** before congesting is a
 **real, verified** result for a Québec all-electric feeder: EV charging (~1.4 kW diversified)
 is *secondary* to electric heat (~10–15 kW). It is **not** a sizing error and the **0.8
-margin is correct**. The justified refinements are: **trim the per-home peak (→10–15 kW)**,
-**lower EV power & energy toward the Canadian values**, and **cap/refine `EV_SWEEP`** to a
-plausible adoption range — all of which tighten the `hosting_expansion_percent` headline.
+margin is correct**. The refinements this review called for — trim the per-home peak,
+lower EV power and energy toward the Canadian values, cap and refine `EV_SWEEP` — were
+all applied in `10-03`; `WINTER_PEAK_FACTOR` itself was later superseded outright by the
+TMY heating-degree base (D-14), which is why `config.py` marks it deprecated.
 
 ## Generative-MC design-day seam (Phase 13)
 

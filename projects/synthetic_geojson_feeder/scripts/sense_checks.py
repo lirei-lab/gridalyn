@@ -28,7 +28,7 @@ def check(project: StudyProject, checks: CheckList) -> None:
         project, "outputs/reports/synthetic_geojson_feeder_report.json"
     )
     validation = read_json_report(
-        project, "outputs/reports/synthetic_network_validation_report.json"
+        project, "outputs/data/synthetic_network_validation.json"
     )
     buses = read_csv(project, "outputs/data/buses.csv")
     lines = read_csv(project, "outputs/data/lines.csv")

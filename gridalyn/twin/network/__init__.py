@@ -1,9 +1,13 @@
 """Canonical network model repository and topology query APIs."""
 
 from gridalyn.twin.network.geography import (
+    BUILDING_GEOMETRY_KIND,
+    BUILDING_GEOMETRY_REASON,
     CRS_ASSUMED,
     CRS_DECLARED,
     DEFAULT_GEOGRAPHIC_CRS,
+    GEOMETRY_DERIVED,
+    GEOMETRY_POINT,
     BoundingBox,
     NetworkGeography,
     resolve_network_geography,
@@ -32,6 +36,10 @@ from gridalyn.twin.network.repository import (
 
 __all__ = [
     "BASE_PROFILE_ID",
+    "BUILDING_GEOMETRY_KIND",
+    "BUILDING_GEOMETRY_REASON",
+    "GEOMETRY_DERIVED",
+    "GEOMETRY_POINT",
     "BASE_TABLE_FILENAMES",
     "DEFAULT_OPERATIONAL_STATE",
     "OPERATIONAL_STATE_ABSENT_REASON",

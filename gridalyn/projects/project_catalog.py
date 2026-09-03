@@ -29,10 +29,18 @@ catalog is written by ``projects``, not by ``twin``.
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+from gridalyn.projects.scenario_catalog import (
+    ScenarioContract,
+    ScenarioContractError,
+    read_scenario_contract,
+    read_scenario_index,
+)
 
 KIND_GOVERNED_REPORT = "governed_report"
 KIND_TABLE = "table"
@@ -183,9 +191,212 @@ def build_project_catalog(
                     )
                     for relative in declared
                 ],
+                # What the study SAYS matters, so a viewer never guesses.
+                # Presentation follows declaration or it becomes per-study code.
+                "objective": _problem_objective(project),
+                "experiments": describe_experiments(project),
+                "governed_metrics": describe_governed_metrics(project_dir),
+                "scenarios": describe_scenarios(
+                    project,
+                    project_dir=project_dir,
+                    served_prefix=served_prefix,
+                ),
             }
         )
     return entries
+
+
+def _problem_objective(project: Any) -> str:
+    """Return the question this study asks, or an empty string.
+
+    ``spec.problem.objective`` is declared by all eight shipped studies and was
+    read by nothing. A viewer that opens a study and cannot say what it is FOR
+    is showing numbers without their question.
+    """
+    raw = getattr(project, "raw", None)
+    if not isinstance(raw, Mapping):
+        return ""
+    problem = (raw.get("spec") or {}).get("problem")
+    if not isinstance(problem, Mapping):
+        return ""
+    objective = problem.get("objective")
+    return str(objective).strip() if isinstance(objective, str) else ""
+
+
+def describe_experiments(project: Any) -> list[dict[str, Any]]:
+    """Describe each declared experiment: what it is for, and what it measures.
+
+    ``spec.experiments[].metrics`` is the study's own statement of which
+    numbers are the result and which are context -- six of the eight shipped
+    studies declare it. Rendering every summary key at equal weight throws that
+    statement away, which is what made a bus count look like a headline.
+
+    Args:
+        project: Loaded ``StudyProject``.
+
+    Returns:
+        One entry per experiment, in declaration order. A study that declares
+        none yields an empty list and its viewer falls back to showing the
+        summary undifferentiated -- honest, because nothing said otherwise.
+    """
+    raw = getattr(project, "raw", None)
+    if not isinstance(raw, Mapping):
+        return []
+    experiments = (raw.get("spec") or {}).get("experiments")
+    if not isinstance(experiments, list):
+        return []
+    described: list[dict[str, Any]] = []
+    for entry in experiments:
+        if not isinstance(entry, Mapping):
+            continue
+        # Both spellings are declared in the shipped studies: a single
+        # `scenario` and a list of `scenarios`. Normalized to a list here so a
+        # consumer reads one shape.
+        scenarios = entry.get("scenarios")
+        if not isinstance(scenarios, list):
+            single = entry.get("scenario")
+            scenarios = [single] if isinstance(single, str) else []
+        described.append(
+            {
+                "id": str(entry.get("id") or ""),
+                "objective": str(entry.get("objective") or "").strip(),
+                "metrics": [
+                    str(metric)
+                    for metric in (entry.get("metrics") or [])
+                    if isinstance(metric, str)
+                ],
+                "scenarios": [str(name) for name in scenarios],
+            }
+        )
+    return described
+
+
+def describe_governed_metrics(project_dir: Path) -> list[dict[str, Any]]:
+    """Resolve which of a study's numbers are regression-pinned.
+
+    Declared and governed are two different statements and this catalog keeps
+    them apart. ``spec.experiments[].metrics`` is what the study set out to
+    measure; a baseline pin is what a re-run is checked against. They do not
+    have to agree, and in ``der_voltage_optimization`` they do not -- it
+    declares three metrics and pins four other values. A value that is both is
+    the strongest claim this contract can make about a result, and conflating
+    them would throw that away.
+
+    Args:
+        project_dir: The study's directory on disk.
+
+    Returns:
+        One entry per pin, naming the report it lives in and the summary key it
+        addresses. Empty when the study carries no baseline, which is not a
+        defect: a study can be governed by its sense checks alone.
+    """
+    path = project_dir / "baselines" / "results_baseline.json"
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    pins: list[dict[str, Any]] = []
+    for metric in payload.get("metrics") or []:
+        if not isinstance(metric, Mapping):
+            continue
+        json_path = metric.get("json_path")
+        if not isinstance(json_path, list) or not json_path:
+            continue
+        pins.append(
+            {
+                "id": str(metric.get("id") or ""),
+                "source": str(metric.get("source") or ""),
+                # The final segment is the summary key a viewer displays; the
+                # leading segments say which block of the report it sits in.
+                "block": str(json_path[0]),
+                "key": str(json_path[-1]),
+                "tolerance": metric.get("tolerance"),
+            }
+        )
+    return pins
+
+
+def describe_scenarios(
+    project: Any,
+    *,
+    project_dir: Path,
+    served_prefix: str,
+) -> list[dict[str, Any]]:
+    """Describe a study's scenarios in the shape the twin's already use.
+
+    One shape for both sources is the point: the client should not have a twin
+    code path and a study code path, because the moment it does, a study's
+    scenarios are second-class and the assumptions the twin's shape carries get
+    written into the client again.
+
+    Args:
+        project: Loaded ``StudyProject``.
+        project_dir: The study's directory on disk.
+        served_prefix: URL prefix the study's files are served under.
+
+    Returns:
+        One entry per scenario, each carrying ``scenario_id``, ``label`` and
+        ``paths`` keyed by the DECLARED kinds. Empty when the study declares no
+        contract, or when its index has not been produced -- a study whose
+        outputs are absent is not a broken study, the same reading
+        :func:`describe_artifact` gives a missing file.
+    """
+    contract = _scenario_contract(project)
+    if contract is None:
+        return []
+    index = read_scenario_index(
+        project_dir / contract.index,
+        id_column=contract.id_column,
+        label_column=contract.label_column,
+    )
+    described: list[dict[str, Any]] = []
+    for row in index:
+        scenario_id = str(row["scenario_id"])
+        paths: dict[str, str] = {}
+        for artifact in contract.artifacts:
+            relative = artifact.resolve(scenario_id)
+            if not (project_dir / relative).is_file():
+                continue
+            paths[artifact.kind] = f"{served_prefix.rstrip('/')}/{relative}"
+        described.append(
+            {
+                "scenario_id": scenario_id,
+                "label": row.get("label") or scenario_id,
+                "description": row.get("label") or "",
+                "paths": paths,
+                # How a consumer must READ each kind. Without this a client
+                # holding only the paths would have to guess whether a file is
+                # this scenario's alone or every scenario's, and guessing wrong
+                # renders another scenario's rows as this one's.
+                "partitioning": {
+                    artifact.kind: artifact.to_dict()
+                    for artifact in contract.artifacts
+                    if artifact.kind in paths
+                },
+            }
+        )
+    return described
+
+
+def _scenario_contract(project: Any) -> ScenarioContract | None:
+    """Return a study's declared scenario contract, or ``None``.
+
+    A malformed contract is reported on stderr and treated as absent rather
+    than taking the whole catalog down: the twin's scenarios and every other
+    study are unrelated to one study's bad declaration. That is the same
+    posture the catalog generator takes toward a study whose project.yaml will
+    not parse.
+    """
+    raw = getattr(project, "raw", None)
+    spec = (raw or {}).get("spec") if isinstance(raw, Mapping) else None
+    path = Path(getattr(project, "path", "project.yaml"))
+    try:
+        return read_scenario_contract(spec, path=path)
+    except ScenarioContractError as error:
+        print(f"warning: {error}", file=sys.stderr, flush=True)
+        return None
 
 
 def _label(project: Any) -> str:

@@ -28,7 +28,7 @@ spec:
         - outputs/data/buses.csv
         - outputs/data/lines.csv
         - outputs/data/loads.csv
-        - outputs/reports/synthetic_network_validation_report.json
+        - outputs/data/synthetic_network_validation.json
         - outputs/reports/synthetic_geojson_feeder_report.json
         - outputs/figures/synthetic_feeder_topology.png
     - id: export_twin_network_model

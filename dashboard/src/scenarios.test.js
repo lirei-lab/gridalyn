@@ -5,6 +5,7 @@ import {
   buildDashboardScenarioCatalog,
   buildScenarioCatalog,
   scenarioIdsFromManifest,
+  semanticForScenario,
 } from './scenarios.js';
 
 test('buildDashboardScenarioCatalog uses generic grid metrics and explicit paths', () => {
@@ -115,4 +116,27 @@ test('buildScenarioCatalog includes summary-only scenarios with conventional met
 
 test('scenarioIdsFromManifest returns no scenarios when no manifest exists', () => {
   assert.deepEqual(scenarioIdsFromManifest(null), []);
+});
+
+test('semanticForScenario shares unscoped classes and isolates scoped ones', () => {
+  const semantic = {
+    profile: 'north_america',
+    classes: [
+      { name: 'ConnectivityNode', scenarioId: null },
+      { name: 'Building', scenarioId: 'S1' },
+      { name: 'EVChargingAsset', scenarioId: 'S1' },
+      { name: 'Building', scenarioId: 'S4' },
+    ],
+  };
+  // A scenario must not report its siblings' counts: the scenario population is
+  // the only one whose numbers differ between scenarios.
+  assert.deepEqual(
+    semanticForScenario(semantic, 'S1').classes.map(entry => entry.name),
+    ['ConnectivityNode', 'Building', 'EVChargingAsset']
+  );
+  assert.deepEqual(
+    semanticForScenario(semantic, 'S4').classes.map(entry => entry.name),
+    ['ConnectivityNode', 'Building']
+  );
+  assert.equal(semanticForScenario(null, 'S1'), null);
 });

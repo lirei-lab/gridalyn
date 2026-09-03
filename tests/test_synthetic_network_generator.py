@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
 from gridalyn.simulation.simulators.powerflow.synthetic_network import (
     build_synthetic_network_from_config,
     build_synthetic_network_from_geojson,
 )
+from gridalyn.twin.geoprocess import FakeGeoJSONGenerator
 
 
 def test_synthetic_network_generator_builds_report_and_cache(tmp_path: Path) -> None:
@@ -37,7 +37,7 @@ def test_synthetic_network_generator_builds_report_and_cache(tmp_path: Path) -> 
     assert report["counts"]["buildings"] == 9
     assert report["counts"]["pandapower_loads"] == 9
     assert report["topology"]["isolated_nodes_total"] == 0
-    assert result.report_path == out_dir / "synthetic_network_validation_report.json"
+    assert result.report_path == out_dir / "synthetic_network_validation.json"
     assert result.report_path.exists()
     assert (out_dir / "pg_graph_cache.pkl").exists()
     assert (out_dir / "pp_net_cache.pkl").exists()

@@ -14,7 +14,16 @@ const TWIN_ROOT = '/instances/default/digital_twin';
 
 export const TWIN_CATALOG_PATH = `${TWIN_ROOT}/dashboard/catalog.json`;
 
-/** Manifests the pre-catalog fallback reconstructs a scenario list from. */
+/**
+ * Manifests the pre-catalog fallback reconstructs a scenario list from.
+ *
+ * Fallback only. `semanticManifest` in particular was read on the LIVE path
+ * until the catalog gained a `semantic` block: the dashboard reached the
+ * twin's ontology by a hardcoded path -- the exact route the catalog exists to
+ * eliminate -- and rendered four scalars off it. `loadTwin` now fetches these
+ * only when the catalog yields no scenario, so a twin with a catalog costs one
+ * request and asserts no layout.
+ */
 export const LEGACY_MANIFEST_PATHS = {
   scenarioIndex: `${TWIN_ROOT}/scenarios/index.json`,
   powerflowSummary: `${TWIN_ROOT}/timeseries/powerflow_smoke_summary.json`,
@@ -31,7 +40,7 @@ export const LEGACY_MANIFEST_PATHS = {
  * the repo itself ships was unreadable. `twinBootstrapGuard.test.js` now reads
  * the tracked catalog and fails if this list cannot read it.
  */
-export const SUPPORTED_SCHEMA_VERSIONS = ['1.0', '1.1', '1.2'];
+export const SUPPORTED_SCHEMA_VERSIONS = ['1.0', '1.1', '1.2', '1.3', '1.4'];
 
 /**
  * A twin that could not be discovered, reported with where we looked.
@@ -98,6 +107,118 @@ export function readGeography(catalog) {
     // geometry is the join of their endpoint buses. Declared by the twin so
     // no consumer rediscovers it by reading a file and finding nothing.
     derivedGeometry: geography.derived_geometry || {},
+    // What KIND each geometry is. A coordinate pair says a position exists;
+    // it does not say the position is the whole geometry. For `buildings` it
+    // is a reduction of a footprint the twin does not retain, and a client
+    // that did not know would reasonably draw a polygon layer the twin cannot
+    // support.
+    geometryKinds: geography.geometry_kinds || {},
+  };
+}
+
+/**
+ * What kind of geometry an artifact has, and why, or null when undeclared.
+ *
+ * Null for a pre-1.4 catalog: "undeclared" is not "point". A view that needs
+ * to know must treat an undeclared kind as unknown rather than assume the
+ * shape it would prefer to draw.
+ */
+export function geometryKind(geography, artifact) {
+  const declared = geography?.geometryKinds?.[artifact];
+  if (!declared) return null;
+  return { kind: declared.kind || null, reason: declared.reason || null };
+}
+
+/**
+ * The twin's ontology, as the catalog declares it.
+ *
+ * Returns null for a catalog that declares none -- a pre-1.3 catalog, or a
+ * twin with no semantic layer and no scenario asset registry. Null means "this
+ * twin publishes no ontology", which is a different statement from an empty
+ * class list: a twin whose artifacts genuinely carry no class column publishes
+ * an empty list plus `classesAbsentReason` saying why.
+ *
+ * `classes` is the load-bearing part. Each entry names the class, its row
+ * count, the POPULATION it was read from, the artifact and column it was read
+ * off, and whether that artifact's rows carry coordinates -- so a consumer can
+ * ask for "the classes I can draw" without knowing any class name in advance.
+ */
+export function readSemantic(catalog) {
+  const semantic = catalog?.semantic;
+  if (!semantic) return null;
+  const graph = semantic.graph || {};
+  const validation = graph.validation || {};
+  return {
+    profile: semantic.profile ?? null,
+    nodeCount: graph.node_count ?? null,
+    edgeCount: graph.edge_count ?? null,
+    valid: validation.valid ?? null,
+    errors: validation.errors ?? null,
+    warnings: validation.warnings ?? null,
+    populations: semantic.populations || [],
+    classes: (semantic.classes || []).map(entry => ({
+      name: entry.class,
+      count: entry.count ?? null,
+      population: entry.population ?? null,
+      artifact: entry.artifact ?? null,
+      column: entry.column ?? null,
+      located: Boolean(entry.located),
+      // The twin names the columns rather than the client assuming lat/lon.
+      coordinates: entry.coordinates ?? null,
+      identity: entry.identity ?? null,
+      // The column the rows are SCOPED by, declared for the same reason as
+      // `coordinates`. Dropping it silently unscoped the query, which drew
+      // every scenario's rows at once.
+      scenarioColumn: entry.scenario_column ?? null,
+      scenarioId: entry.scenario_id ?? null,
+      derivedFrom: entry.derived_from || [],
+    })),
+    // Absent by construction rather than by omission: a twin that declares no
+    // class says why, so an empty list is never read as a failed fetch.
+    classesAbsentReason: semantic.classes_absent_reason ?? null,
+    paths: Object.fromEntries(
+      Object.entries(semantic.paths || {}).map(([artifact, path]) => [
+        artifact,
+        servablePath(path),
+      ])
+    ),
+  };
+}
+
+/**
+ * Where this instance's numbers come from, and whether it is a shadow.
+ *
+ * `gridalyn.twin` is a digital MODEL; a deployment becomes a digital SHADOW
+ * when its operator feeds it their own measured data. Nothing on screen could
+ * express that: the dashboard read scenario timeseries and nothing else, and
+ * no rendered value said where it came from.
+ *
+ * Unlike `readSemantic`, this returns a value for any 1.4 catalog even when
+ * there is no measured data -- because "no" is the answer for every instance
+ * this repo ships, and it is an answer, not a silence. A pre-1.4 catalog
+ * returns null: "too old to say" is genuinely different from "none".
+ */
+export function readObservation(catalog) {
+  const observation = catalog?.observation;
+  if (!observation) return null;
+  const measured = observation.measured || {};
+  return {
+    provenance: observation.provenance || null,
+    provenanceValues: observation.provenance_values || [],
+    measured: {
+      available: Boolean(measured.available),
+      // Present whenever `available` is false, so a view can say WHY rather
+      // than render an empty panel.
+      absentReason: measured.absent_reason ?? null,
+      directory: servablePath(measured.directory),
+      sources: (measured.sources || []).map(servablePath),
+      entityJoin: servablePath(measured.entity_join),
+      // The contract an operator's export must satisfy, read off the twin
+      // rather than restated here.
+      columns: measured.columns || [],
+      quantities: measured.quantities || [],
+      joinColumns: measured.join_columns || [],
+    },
   };
 }
 
