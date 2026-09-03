@@ -1335,6 +1335,21 @@
       "sha1": "b8ea90cce05ec33f20ce0e618ea35096f44c1aad",
       "verdict": "DOCUMENTED"
     },
+    "docs/development/stage-profiles.md#0": {
+      "class": "RUNNABLE-INDEPENDENT",
+      "auto": "RUNNABLE-INDEPENDENT",
+      "family": "development",
+      "file": "docs/development/stage-profiles.md",
+      "ordinal": 0,
+      "line": 13,
+      "language": "bash",
+      "sha1": "dee27ddecbaeb08da744df92a127e6ec384a7a35",
+      "sequence": null,
+      "verdict": "PASS-AS-WRITTEN",
+      "rationale": "",
+      "evidence": "Run from the repo root -> exit 0, 0.11 s. Profiled 8 of 8 studies under projects/ (7 from complete manifests; ev_hosting_flex reported PARTIAL RUN, admm_thermal_consensus reported STALE MANIFEST) and wrote docs/development/stage-profiles.json.",
+      "date": "2026-09-02"
+    },
     "docs/development/utility-platform-roadmap.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",

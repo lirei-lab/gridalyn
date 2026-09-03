@@ -1,6 +1,6 @@
 # `tools/`
 
-Ten scripts at this level. Nine Python, one Node (`check_mermaid_diagrams.mjs`
+Eleven scripts at this level. Ten Python, one Node (`check_mermaid_diagrams.mjs`
 — the mermaid parser this repo needs isn't available in Python, so it stands
 alone as the one non-Python tool here). Plus one directory,
 [`ochre_calibration/`](#ochre_calibration), which is a harness rather than a
@@ -40,6 +40,7 @@ Three ways, and they are not equivalent:
 | `r7_twin_consumer_identity.py` (535 lines) | Operator-only, receipted | Two-ref verdict tool for the R7 guardrail (studies untouched by a twin-layer change): `tool.py <ref1> <ref2>` diffs the twin's real consumers' output. The no-arg form only snapshots — it is not a verdict. |
 | `measured_ingest_proof.py` (391 lines) | Operator-only, receipted | At-scale proof of the measured-state ingest path against `datasets/hq`'s real 35,041×1000 axis. Needs that dataset on disk (544 MB, gitignored, undistributable) — CI genuinely cannot run this one. |
 | `render_hero_network.py` (206 lines) | Operator-only, no receipt | Regenerates the documentation homepage's hero image from the digital twin's real Trois-Rivières feeder. Run it after a change to the twin's geometry or styling; nothing else depends on its output being fresh. |
+| `stage_profile.py` (490 lines) | Operator-only, no receipt | Reads a study's run manifest — which already records `started_at`/`ended_at` per stage — and reports where its wall time actually goes: per-stage share, the wave each stage sits in, and the speedup a concurrent runner could reach on the *measured* costs rather than on the DAG's shape. Flags a manifest that is partial (`--stage` filter) or stale (workflow gained stages since the run) instead of folding it into the totals. Recorded output: `docs/development/stage-profiles.md`. |
 
 ## `ochre_calibration/`
 
