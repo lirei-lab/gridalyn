@@ -1350,6 +1350,21 @@
       "evidence": "Run from the repo root -> exit 0, 0.11 s. Profiled 8 of 8 studies under projects/ (7 from complete manifests; ev_hosting_flex reported PARTIAL RUN, admm_thermal_consensus reported STALE MANIFEST) and wrote docs/development/stage-profiles.json.",
       "date": "2026-09-02"
     },
+    "docs/development/stage-profiles.md#1": {
+      "class": "ILLUSTRATIVE",
+      "auto": "ILLUSTRATIVE",
+      "family": "development",
+      "file": "docs/development/stage-profiles.md",
+      "ordinal": 1,
+      "line": 147,
+      "language": "text",
+      "sha1": "55e77258df60dfca002e15caeb88a66a9377beb5",
+      "sequence": null,
+      "verdict": "DOCUMENTED",
+      "rationale": "fence language text is not executable as written",
+      "evidence": null,
+      "date": null
+    },
     "docs/development/utility-platform-roadmap.md#0": {
       "auto": "ILLUSTRATIVE",
       "class": "ILLUSTRATIVE",

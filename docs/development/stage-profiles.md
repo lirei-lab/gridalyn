@@ -139,9 +139,37 @@ Measured directly on 2026-09-02, by timing the stage's kernels in-process:
 | `annual_base_realization` (forecast, per `FC_SIGMAS`) | 4 | 65.1s | ~4m20s |
 | `ev_fleet_annual` | 1 | 0.13s | 0.13s |
 | `load_annual_tmy` | 1 | 0.04s | 0.04s |
-| | | | **≈ 5m40s** |
+| | | | **330.1s ≈ 5m30s** |
 
-Roughly **1.6% of a six-hour run**, not the bulk of it.
+**Superseded by a direct measurement of the stage itself.** On 2026-09-03 a full
+cold run of the workflow recorded:
+
+```text
+[4/23] generate_annual_mc completed in 311.1s
+```
+
+**311.1s (5m11s) — 1.44% of a six-hour run.** The in-process estimate above is
+**6.1% high** (330.1s against 311.1s), and the two must not be cited
+interchangeably: one times the kernels with warm imports inside an
+already-running interpreter, the other is the stage as the runner executes it,
+subprocess spawn and all.
+
+The direction of the gap is what is worth recording, because the obvious
+explanation does not fit. A real stage additionally pays interpreter start,
+imports, cache reads, `np.save` and report writing — all of which should push it
+*above* a kernel-only figure, not below. Nor does the cold first call explain it:
+the first in-process realization ran 69.5s against a warm 65.1s, so dropping it
+accounts for ~4.4s of ~19s, about a quarter. The remainder is that each pipeline
+realization runs at 62.2s against the warm in-process 65.1s — roughly 4% faster
+across the whole series. Plausible causes not checked: a fresh interpreter doing
+only this work, differing BLAS/OMP defaults between an interactive process and a
+runner-spawned subprocess, or warmer page cache after stages 1–3. None was
+chased; at 1.44% of the run it does not pay.
+
+**The transferable finding is the shape, not the number:** an in-process timing
+of a stage ran ~6% slow against the stage itself, and only a quarter of that was
+the cold start. Worth knowing the next time an in-process measurement is used to
+decide whether to build something — here it erred in the safe direction.
 
 The "K = 1000 Monte-Carlo draws" figure that this belief rests on refers to
 `K` in `projects/ev_hosting_flex/scripts/config.py`, which that constant's own
