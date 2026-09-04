@@ -16,7 +16,7 @@ import argparse
 import math
 import pickle
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -47,6 +47,7 @@ from projects.ev_hosting_flex.scripts.config import (
     POWER_FACTOR,
     ROUND_DECIMALS,
     SEED,
+    TRIAGE_K_BASE,
 )
 from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
@@ -54,11 +55,35 @@ from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
 
 _STEPS_PER_DAY = 24 * (60 // int(ANNUAL_RES_MINUTES))
 
+# The base-MC cache is SHARED by four stages under two different K:
+# ``CONGESTION_K_BASE`` (this stage, analyze_nonwires_value) and
+# ``TRIAGE_K_BASE`` (analyze_fleet_triage, analyze_locational_contracts).
+#
+# Keying the cache on the CALLER's k_base made every alternation between those
+# two groups a signature miss, so each of the four regenerated the whole set and
+# overwrote the file for the next: measured at 3.73 h of base-MC regeneration in
+# a 4.51 h run, of which 2.49 h was recomputing realizations that already
+# existed.
+#
+# Generating the LARGER K once serves both, exactly rather than approximately:
+# the per-realization seed is ``SEED + 100003 + h*211 + k``, a function of the
+# index alone, so the K=3 set is a bit-identical PREFIX of the K=6 set. Callers
+# get ``[:k_base]``.
+_MAX_K_BASE: int = max(cast(int, CONGESTION_K_BASE), cast(int, TRIAGE_K_BASE))
 
-def _base_mc_signature(k_base: int) -> str:
+
+def _base_mc_signature() -> str:
     """Signature of the base-determining config, so the cache invalidates on a
     base recalibration (R/DHW/BG_SCALE re-base) instead of silently reusing a
-    stale MC (the 2026-07-14 DHW re-base footgun)."""
+    stale MC (the 2026-07-14 DHW re-base footgun).
+
+    Keyed on ``_MAX_K_BASE``, not on the calling stage's ``k_base``: the file is
+    shared by four stages under two K values, and keying it on the caller made
+    the two groups invalidate each other on every alternation. Coverage of the
+    requested sizes is checked separately by the caller rather than folded in
+    here, so a new home-count regenerates without a config change looking like
+    a recalibration.
+    """
     import hashlib
 
     from projects.ev_hosting_flex.scripts import config as _cfg
@@ -77,7 +102,7 @@ def _base_mc_signature(k_base: int) -> str:
         _cfg.DHW_SEED_SALT,
         int(SEED),
         int(ANNUAL_RES_MINUTES),
-        int(k_base),
+        int(_MAX_K_BASE),
     )
     return hashlib.sha256(repr(parts).encode()).hexdigest()[:16]
 
@@ -87,27 +112,58 @@ def _ensure_base_mc_cache(
 ) -> dict[int, np.ndarray]:
     """K base realizations per distinct home-count, cached in an npz.
 
-    Returns ``{home_count: (k_base, n_steps) kW}``. Deterministic (seeds derived
-    from SEED); regenerates if the cache is absent OR its base-config signature
-    no longer matches (so a base recalibration is never silently reused).
+    Returns ``{home_count: (k_base, n_steps) kW}`` — the caller's ``k_base``
+    realizations, taken as a prefix of the ``_MAX_K_BASE`` set the file holds.
+    Deterministic: the seed is a function of ``(home_count, k)`` only, so the
+    prefix is bit-identical to generating ``k_base`` directly.
+
+    Regenerates when the cache is absent, when its base-config signature no
+    longer matches (so a base recalibration is never silently reused), or when
+    it does not cover every requested home-count. That last check replaces
+    folding ``sizes`` into the signature: a new home-count then regenerates
+    without being indistinguishable from a recalibration, and a cache covering
+    MORE sizes than asked for still serves.
+
+    Args:
+        data_dir: Study data directory holding ``base_mc_by_size.npz``.
+        temp: Annual TMY temperature series driving the realizations.
+        sizes: Distinct downstream home-counts to cover.
+        k_base: How many realizations this caller wants. Must not exceed
+            ``_MAX_K_BASE``.
+
+    Returns:
+        Mapping of home-count to a ``(k_base, n_steps)`` kW array.
+
+    Raises:
+        ValueError: If ``k_base`` exceeds ``_MAX_K_BASE``, which would mean a
+            new consumer was added without widening the shared maximum.
     """
+    if int(k_base) > _MAX_K_BASE:
+        raise ValueError(
+            f"k_base={int(k_base)} exceeds the shared cache maximum "
+            f"{_MAX_K_BASE}. Remediation: include this caller's K in "
+            f"_MAX_K_BASE in analyze_congestion_risk.py, so the shared file "
+            f"still covers every consumer."
+        )
     path = data_dir / "base_mc_by_size.npz"
-    sig = _base_mc_signature(k_base)
+    sig = _base_mc_signature()
+    wanted = sorted({int(h) for h in sizes})
     if path.is_file():
         z = np.load(path)
         cached_sig = str(z["_sig"]) if "_sig" in z.files else ""
-        if cached_sig == sig:
-            return {int(k): z[k].astype(DTYPE) for k in z.files if k != "_sig"}
+        covered = {int(k) for k in z.files if k != "_sig"}
+        if cached_sig == sig and set(wanted) <= covered:
+            return {h: z[str(h)][: int(k_base)].astype(DTYPE) for h in wanted}
     out: dict[int, np.ndarray] = {}
-    for h in sorted(sizes):
+    for h in wanted:
         out[h] = np.stack(
             [
                 annual_base_realization(temp, int(h), SEED + 100003 + int(h) * 211 + k)
-                for k in range(int(k_base))
+                for k in range(_MAX_K_BASE)
             ]
         ).astype(DTYPE)
     np.savez(path, _sig=np.array(sig), **{str(h): out[h] for h in out})
-    return out
+    return {h: out[h][: int(k_base)] for h in wanted}
 
 
 def _ev_pools(n_max: int, tday: np.ndarray, hod0: int, k_ev: int) -> list[np.ndarray]:
