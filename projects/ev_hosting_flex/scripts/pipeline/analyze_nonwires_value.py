@@ -323,45 +323,57 @@ def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
     return {"artifact_paths": [out_path_ref, *fig_paths], "summary": summary}
 
 
-def _substation_deferral(
-    script: ProjectScript, sizing: dict[str, Any], crf: float
-) -> dict[str, Any]:
-    """Substation N-1 reinforcement deferral (emergency-rating crossing)."""
-    char = script.read_json("outputs/json/network_characterization.json")
-    sub = char["substation"]
-    a0 = sub.get("n1_reinforcement_penetration_emergency")
-    n_tx = int(sub["n_transformers"])
-    mva = float(sub["mva_per_transformer"])
-    capex = float(SUBSTATION_CAPEX_PER_MVA) * mva * n_tx
+def _substation_deferral_at(a0: float | None, n_tx: int, mva: float) -> dict[str, Any]:
+    """Substation N-1 deferral from its crossing adoption -- pure, testable.
+
+    Args:
+        a0: Adoption (EV/home) at which the N-1 emergency rating is crossed
+            without flexibility, or ``None`` when it is never crossed.
+        n_tx: Substation transformer count.
+        mva: MVA per substation transformer.
+
+    Returns:
+        The deferral record: ``a0``/``a1``, capex, ``defer_npv``,
+        ``trafo_years`` and the two flags that say WHY a value is zero or
+        capped -- ``needed_within_horizon`` and ``avoided_beyond_horizon``.
+    """
+    capex = float(SUBSTATION_CAPEX_PER_MVA) * float(mva) * int(n_tx)
+    nothing = {
+        "a0": None if a0 is None else round(float(a0), 6),
+        "capex": round(capex, ROUND_DECIMALS),
+        "defer_npv": 0.0,
+        "trafo_years": 0.0,
+    }
     if a0 is None:
-        return {
-            "a0": None,
-            "capex": round(capex, ROUND_DECIMALS),
-            "defer_npv": 0.0,
-            "trafo_years": 0.0,
-        }
+        return nothing
     # flex lifts the substation crossing by the same fractional margin the largest
     # feeder gets (aggregate-flex proxy): defer to a1 = a0 * (1 + margin).
     a1 = float(a0) * 1.5  # documented proxy: ~50% adoption headroom from flex
     y0 = year_at_adoption(float(a0))
+    horizon = float(RAMP_HORIZON_YEARS)
+    # The FIRM crossing itself must fall inside the planning horizon for there
+    # to be anything to defer. Capping only the deferred crossing (y1) at the
+    # horizon while letting y0 run past it produced a NEGATIVE deferral --
+    # (1+r)^-y0 < (1+r)^-horizon and trafo_years = horizon - y0 < 0 -- which
+    # read as "flexibility brings the substation upgrade FORWARD by 0.9 years".
+    # Measured on the 2026-09-04 clean run at a0 = 1.3137 EV/home (y0 = 15.885
+    # against a 15-year horizon): defer_npv -25413.63, and it flipped the
+    # study's total deferral NPV negative. An upgrade not needed within the
+    # horizon defers nothing; say so and return zero, as the unreachable case
+    # already did.
+    if not np.isfinite(y0) or y0 > horizon:
+        return {**nothing, "a1": round(a1, 6), "needed_within_horizon": False}
     y1 = year_at_adoption(a1)
-    if not np.isfinite(y0):
-        return {
-            "a0": round(float(a0), 6),
-            "capex": round(capex, ROUND_DECIMALS),
-            "defer_npv": 0.0,
-            "trafo_years": 0.0,
-        }
     r = float(DISCOUNT_RATE)
     disc0 = (1.0 + r) ** (-y0)
     # If the deferred crossing falls outside the planning horizon the upgrade
     # is AVOIDED within it, not deferred. Discounting that as `disc1 = 0` would
     # book the entire capex as deferral value and inflate the headline several
-    # fold, while `trafo_years` correctly reported None — an internally
+    # fold, while `trafo_years` correctly reported None -- an internally
     # inconsistent pair. The deferral is therefore capped AT the horizon and
     # the fact is flagged, so a reader sees an avoided upgrade for what it is.
-    beyond = not np.isfinite(y1) or y1 > float(RAMP_HORIZON_YEARS)
-    y1_eff = float(RAMP_HORIZON_YEARS) if beyond else float(y1)
+    beyond = not np.isfinite(y1) or y1 > horizon
+    y1_eff = horizon if beyond else float(y1)
     disc1 = (1.0 + r) ** (-y1_eff)
     defer = capex * (disc0 - disc1)
     return {
@@ -369,9 +381,22 @@ def _substation_deferral(
         "a1": round(a1, 6),
         "capex": round(capex, ROUND_DECIMALS),
         "defer_npv": round(float(defer), ROUND_DECIMALS),
+        "needed_within_horizon": True,
         "avoided_beyond_horizon": bool(beyond),
         "trafo_years": round(float(y1_eff - y0), ROUND_DECIMALS),
     }
+
+
+def _substation_deferral(
+    script: ProjectScript, sizing: dict[str, Any], crf: float
+) -> dict[str, Any]:
+    """Substation N-1 reinforcement deferral (emergency-rating crossing)."""
+    sub = script.read_json("outputs/json/network_characterization.json")["substation"]
+    return _substation_deferral_at(
+        sub.get("n1_reinforcement_penetration_emergency"),
+        int(sub["n_transformers"]),
+        float(sub["mva_per_transformer"]),
+    )
 
 
 def _figures(payload: dict[str, Any], figures_dir: Path) -> list[Path]:
