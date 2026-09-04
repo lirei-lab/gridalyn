@@ -313,7 +313,19 @@ def _persist_operational(
 
     written.update(
         materialize_flexibility_operation_artifacts(
-            root=script.root,
+            # base_dir, not root. This function takes the WORKSPACE root -- it
+            # builds `root / "projects" / <id> / "outputs"` and reads the twin's
+            # base metadata through ArtifactLayout(root) to resolve the model
+            # version id. `script.root` is the PROJECT directory, so passing it
+            # pointed ArtifactLayout at a path that does not exist, the model
+            # version resolved to None, and write_operation_run rejected the
+            # empty governance field.
+            #
+            # It was `root=ROOT` (the workspace) until the 2026-08-17
+            # boilerplate migration swapped in script.root. Nothing caught it
+            # for seventeen days because this is the only caller and it runs
+            # only in a full flagship run.
+            root=script.base_dir,
             project_id="ev_hosting_flex",
             scenario_id=scenario_id,
             flexibility_dir=flex_dir,
