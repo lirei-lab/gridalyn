@@ -119,7 +119,6 @@ flowchart LR
     analyze_voltage_risk["analyze_voltage_risk"]
     analyze_voltage_risk_network["analyze_voltage_risk_network"]
     validate_powerflow["validate_powerflow"]
-    build_study_reports["build_study_reports"]
 
     prepare_workspace --> prepare_topology_cache
     prepare_topology_cache --> export_twin_network_model
@@ -147,13 +146,11 @@ flowchart LR
     generate_annual_mc --> analyze_voltage_risk_network
     compute_congestion_annual --> validate_powerflow
     apply_curtailment_contracts --> validate_powerflow
-    compute_curtailment_economics --> build_study_reports
-    validate_powerflow --> build_study_reports
 
     classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
     classDef hub fill:#e8eaf6,stroke:#3f51b5,color:#1a237e,stroke-width:2px
     classDef step fill:#e0f2f1,stroke:#00897b,color:#004d40
-    class prepare_workspace,build_study_reports entry
+    class prepare_workspace entry
     class generate_annual_mc hub
     class prepare_topology_cache,export_twin_network_model,compute_congestion_annual,apply_curtailment_contracts,compute_curtailment_economics,analyze_credibility,analyze_cold_insurance,analyze_cold_coupling,analyze_network_characterization,analyze_clustered_adoption,analyze_flexibility_incentive,analyze_network_performance,analyze_congestion_risk,analyze_fleet_triage,analyze_locational_contracts,analyze_nonwires_value,analyze_phase_imbalance,analyze_voltage_risk,analyze_voltage_risk_network,validate_powerflow step
 ```

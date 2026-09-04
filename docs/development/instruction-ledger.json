@@ -3128,7 +3128,7 @@
       "ordinal": 2,
       "line": 98,
       "language": "mermaid",
-      "sha1": "c75344283db05db051594c235921d3cee90f2ee1",
+      "sha1": "21d5753a186c84654d277b603e53fb33328d23ce",
       "sequence": null,
       "verdict": "DOCUMENTED",
       "rationale": "fence language mermaid is not executable as written",

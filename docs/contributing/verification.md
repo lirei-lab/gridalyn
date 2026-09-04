@@ -223,7 +223,7 @@ HEAD).
 Two operator commands:
 
 - `python tools/flagship_verify.py` — the shape-covering subset, the fast
-  source-proven proof used on generator/kernel changes. It runs 16 of the 23
+  source-proven proof used on generator/kernel changes. It runs 15 of the 22
   stages in about 24 minutes, skipping the four a clean run timed above ten
   minutes (`analyze_congestion_risk`, `analyze_credibility`,
   `analyze_cold_insurance`, `analyze_voltage_risk_network`) and, by

@@ -108,9 +108,8 @@ The EV Hosting Flexibility project is a comprehensive research arc. It starts
 from project-declared inputs, builds a synthetic topology cache, generates
 stochastic building and EV profiles, computes dynamic thermal limits, clears
 locational flexibility contracts, validates selected actions with pandapower,
-writes figures and materializes operation artifacts. Its final
-`build_study_reports` stage is still a stub — the canonical study report is
-pending.
+writes figures and materializes operation artifacts. It has no canonical
+study-report stage yet; the per-stage reports are the record.
 
 Run it only when you need the full stack:
 

@@ -109,7 +109,7 @@ class TestUnrelatedCommandsAreUnchanged(unittest.TestCase):
     """Assertion 4: a command using neither form is returned unchanged."""
 
     def test_echo_stub_is_unchanged(self) -> None:
-        command = 'echo "STUB build_study_reports — canonical study report pending"'
+        command = 'echo "an ordinary shell command, no interpreter token"'
 
         self.assertEqual(command, _resolve_interpreter(command))
 
