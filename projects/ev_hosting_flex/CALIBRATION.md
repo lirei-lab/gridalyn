@@ -45,6 +45,32 @@ bannered below — Cold-load pickup (retired Phase 15) and Recommended values
 | Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
 | Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
 | corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+| Fleet: transformers in the fleet | 540 | `fleet.n_transformers` |
+| Fleet at risk at 1 EV/home, static rating | 500 | `fleet.n_at_risk_at_1ev_static` |
+| Fleet deferred by flexibility at 1 EV/home, static | 73 | `fleet.flex_defers_at_1ev_static` |
+| Fleet needing steel at 1 EV/home, static | 1 | `fleet.needs_steel_at_1ev_static` |
+| Fleet base-constrained at 1 EV/home, static | 426 | `fleet.base_constrained_at_1ev_static` |
+| Fleet deferred fraction of at-risk, static | 0.146 | `fleet.deferred_fraction_at_1ev_static` |
+| Fleet at risk at 1 EV/home, hourly rating | 186 | `fleet.n_at_risk_at_1ev_hourly_kt` |
+| Fleet deferred by flexibility at 1 EV/home, hourly | 182 | `fleet.flex_defers_at_1ev_hourly_kt` |
+| Fleet needing steel at 1 EV/home, hourly | 4 | `fleet.needs_steel_at_1ev_hourly_kt` |
+| Fleet base-constrained at 1 EV/home, hourly | 0 | `fleet.base_constrained_at_1ev_hourly_kt` |
+| Fleet deferred fraction of at-risk, hourly | 0.978495 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
+
+**The fleet rows are the study's declared primary result** — `project.yaml`
+calls `fleet_triage` "the study's primary result; the per-feeder stages below
+are the worked example behind it" — and until 2026-09-04 they were the only
+substantive figures in the study with no pin. They are pinned under **both**
+rating conventions, not only the declared headline (`static`), because the two
+disagree by 6.7x on the deferred fraction and pinning one would re-hide that
+one commit after it was made visible. **They carry no `uncertainty` block, on
+purpose.** The triage medians rest on `triageKBase` = 3 base realizations shared
+across transformers of equal home count — neither many nor independent — which
+is not a distribution the study can defend an interval from; an interval is
+carried where it can be defended and is absent rather than faked where it
+cannot. Raising `triageKBase` is a deliberate re-base to be recorded here, not a
+free change: since 7f8cbb03 the shared base-MC cache already holds six
+realizations, so its generation cost is paid, but the medians will move.
 
 ## Current knob values
 
@@ -62,6 +88,7 @@ so a recalibration cannot leave a knob stated here that the study no longer uses
 | Transformer utilization margin | 0.8 | `transformerUtilizationMargin` |
 | EV coincidence mixing weight | 0.5 | `evCoincidenceRho` |
 | Per-home thermal resistance | 7.0 | `rQuebec` |
+| Fleet triage base realizations | 3 | `triageKBase` |
 
 Sequence-valued knobs are deliberately **not** restated here — `evSweep` and
 `chargingWindow` are declared in the same `studyConfig` block and should be read

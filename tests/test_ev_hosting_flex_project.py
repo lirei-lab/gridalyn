@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -77,6 +78,35 @@ def test_flagship_config_reads_from_project_yaml() -> None:
     assert study_config_block["transformerKva"] == 75.0
 
 
+def _pin_mismatch(metric: dict[str, Any], node: Any) -> str | None:
+    """Return why ``node`` fails ``metric``'s pin, or None when it matches.
+
+    Mirrors ``compare_regression_metric``: null pins match by identity (e.g.
+    ``crossover_temp_c`` when no crossover exists), non-numeric pins by
+    equality (``fleet.headline_rating_convention`` pins a string so the declared
+    convention cannot change without a visible re-base), numbers by tolerance.
+    """
+    expected = metric["expected"]
+    if node is None or expected is None:
+        if node is not expected:
+            return (
+                f"{metric['id']}: current {node!r} vs baseline {expected!r} "
+                "(null mismatch)"
+            )
+        return None
+    if isinstance(expected, str) or isinstance(node, str):
+        if node != expected:
+            return f"{metric['id']}: current {node!r} vs baseline {expected!r}"
+        return None
+    tolerance = metric["tolerance"]
+    if abs(node - expected) > tolerance:
+        return (
+            f"{metric['id']}: current {node} vs baseline {expected} "
+            f"(tolerance {tolerance})"
+        )
+    return None
+
+
 @pytest.mark.skipif(
     not (FLEX / "outputs" / "json" / "powerflow_violations.json").exists(),
     reason="flagship outputs absent; run the study first",
@@ -90,8 +120,11 @@ def test_flagship_baselines_value_identical() -> None:
         (FLEX / "baselines" / "results_baseline.json").read_text(encoding="utf-8")
     )
     metrics = baseline["metrics"]
-    assert len(metrics) == 81, (
-        "the flagship baseline must pin exactly 81 metrics (a different count "
+    # 81 through 2026-09-04, then +13 `fleet.*` pins on the declared primary
+    # result (syntgrid-eei.2): 11 headline cells under both rating conventions,
+    # plus k_base and the declared headline convention.
+    assert len(metrics) == 94, (
+        "the flagship baseline must pin exactly 94 metrics (a different count "
         "means the tree moved or the baseline was edited); reconcile before "
         "adjusting."
     )
@@ -116,22 +149,9 @@ def test_flagship_baselines_value_identical() -> None:
                 break
         else:
             checked += 1
-            expected = metric["expected"]
-            tolerance = metric["tolerance"]
-            # A pin may legitimately be null (e.g. `crossover_temp_c` when no
-            # crossover exists): None == None is an identity-preserving match.
-            if node is None or expected is None:
-                if node is not expected:
-                    failures.append(
-                        f"{metric['id']}: current {node!r} vs baseline "
-                        f"{expected!r} (null mismatch)"
-                    )
-                continue
-            if abs(node - expected) > tolerance:
-                failures.append(
-                    f"{metric['id']}: current {node} vs baseline {expected} "
-                    f"(tolerance {tolerance})"
-                )
+            failure = _pin_mismatch(metric, node)
+            if failure is not None:
+                failures.append(failure)
     assert not failures, (
         f"{len(failures)} of {len(metrics)} pinned metrics FAILED value-identity "
         f"({checked} checked clean):\n" + "\n".join(failures)

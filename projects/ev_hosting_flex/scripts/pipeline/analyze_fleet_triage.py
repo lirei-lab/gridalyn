@@ -644,7 +644,12 @@ def run_stage() -> dict[str, Any]:
         "analysis is not, so the two are declared separately rather than shared.",
         "kW-proxy (power/thermal): no AC voltage or phase imbalance. Per-size "
         "MC with finite K_BASE -> the counts are medians carrying sampling "
-        "error, and transformers of equal home count share a realization family.",
+        "error, and transformers of equal home count share a realization family. "
+        f"NO `uncertainty` BLOCK IS CARRIED for that reason: K_BASE={int(TRIAGE_K_BASE)} "
+        "draws that share realization families are not a distribution this "
+        "stage can defend an interval from, and the contract carries an interval "
+        "where it can be defended and omits it rather than fakes it where it "
+        "cannot (syntgrid-eei.2). Raising K_BASE is a recorded re-base.",
     ]
     if derived["pool_limited_sizes"]:
         warnings.append(

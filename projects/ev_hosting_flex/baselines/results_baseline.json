@@ -787,6 +787,143 @@
       ],
       "source": "outputs/json/cold_insurance.json",
       "tolerance": 1e-06
+    },
+    {
+      "expected": 540,
+      "id": "fleet.n_transformers",
+      "json_path": [
+        "n_transformers"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 3,
+      "id": "fleet.k_base",
+      "json_path": [
+        "k_base"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": "static",
+      "id": "fleet.headline_rating_convention",
+      "json_path": [
+        "headline_rating_convention"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 500,
+      "id": "fleet.n_at_risk_at_1ev_static",
+      "json_path": [
+        "triage",
+        16,
+        "n_at_risk"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 73,
+      "id": "fleet.flex_defers_at_1ev_static",
+      "json_path": [
+        "triage",
+        16,
+        "flex_defers"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 1,
+      "id": "fleet.needs_steel_at_1ev_static",
+      "json_path": [
+        "triage",
+        16,
+        "needs_steel"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 426,
+      "id": "fleet.base_constrained_at_1ev_static",
+      "json_path": [
+        "triage",
+        16,
+        "base_constrained"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.146,
+      "id": "fleet.deferred_fraction_at_1ev_static",
+      "json_path": [
+        "triage",
+        16,
+        "deferred_fraction_of_at_risk"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 1e-06
+    },
+    {
+      "expected": 186,
+      "id": "fleet.n_at_risk_at_1ev_hourly_kt",
+      "json_path": [
+        "triage",
+        40,
+        "n_at_risk"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 182,
+      "id": "fleet.flex_defers_at_1ev_hourly_kt",
+      "json_path": [
+        "triage",
+        40,
+        "flex_defers"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 4,
+      "id": "fleet.needs_steel_at_1ev_hourly_kt",
+      "json_path": [
+        "triage",
+        40,
+        "needs_steel"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0,
+      "id": "fleet.base_constrained_at_1ev_hourly_kt",
+      "json_path": [
+        "triage",
+        40,
+        "base_constrained"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 0.978495,
+      "id": "fleet.deferred_fraction_at_1ev_hourly_kt",
+      "json_path": [
+        "triage",
+        40,
+        "deferred_fraction_of_at_risk"
+      ],
+      "source": "outputs/json/fleet_triage.json",
+      "tolerance": 1e-06
     }
   ],
   "project": "ev_hosting_flex"
