@@ -182,8 +182,8 @@ never touched. Treat the fallback as support for contracts already written, and
 | `id` | yes | Stable stage identifier used in logs and run manifests. |
 | `command` | yes | Shell command executed from repository root when `pathBase: repo`. Use `{python}` for the interpreter. |
 | `needs` | optional | Stage IDs that should run before this stage. |
-| `inputs` | optional | Files consumed by the stage. |
-| `outputs` | optional | Files produced by the stage. |
+| `inputs` | optional | Artifacts the stage reads. Declarative: nothing checks them at run time yet, so keep them to artifacts (not source files — git and the manifest's `git_commit` are the provenance of code) and keep them true. |
+| `outputs` | optional | Files the stage produces. **Enforced:** after the stage exits zero, every listed path must exist, or the run fails naming the stage and the missing paths. A stage that lists none is not checked. |
 
 ## Path Rules
 
