@@ -1,13 +1,20 @@
 """Shape-covering verification subset for the flagship ``ev_hosting_flex`` study.
 
 The flagship study's reproduce-and-pin tests pass against a cached tree, but a
-full source regeneration takes roughly six hours across 23 stages. This tool
-makes that verification *source-proven by protocol*: it runs the pipeline's
-non-heavy stages end to end (the "shape" of the pipeline), records a
-per-stage result for every stage — run, skipped, or failed — and reports the R7
-baseline check. The hours-long heavy stage (the annual Monte-Carlo base) is
-skipped by default with a recorded reason; pass ``--include-heavy`` for the full
-operator-scheduled regeneration.
+full source regeneration takes hours across 23 stages. This tool makes that
+verification *source-proven by protocol*: it runs the pipeline's non-heavy
+stages end to end (the "shape" of the pipeline), records a per-stage result for
+every stage — run, skipped, or failed — and reports the R7 baseline check. The
+stages measured to dominate a cold run are skipped by default with a recorded
+reason; pass ``--include-heavy`` for the full operator-scheduled regeneration.
+
+**The heavy set is measured, not assumed.** Until 2026-09-04 it was
+``{generate_annual_mc}`` on the belief that the annual Monte-Carlo base took
+hours. It takes five minutes, and because every analysis stage depends on it,
+skipping it skipped 20 of 23 stages: the "shape-covering subset" ran three
+setup stages in a tenth of a minute. The set below is the four stages a clean
+23-stage run timed above ten minutes; with them skipped the subset runs 16 of
+23 stages in about 24 minutes (syntgrid-zpz).
 
 Per-stage records are the payload for a verification-receipt entry's optional
 ``stages`` field (see ``docs/development/verification-receipts.json``), so a
@@ -28,9 +35,25 @@ import time
 from pathlib import Path
 from typing import Any
 
-#: Stages whose cost dominates the ~6 h full regeneration. Skipped by the
-#: shape-covering subset unless ``--include-heavy`` is passed.
-HEAVY_STAGES: frozenset[str] = frozenset({"generate_annual_mc"})
+#: Stages that dominate a cold full regeneration, from the first clean
+#: 23-stage run (2026-09-04, seconds): analyze_congestion_risk 4556 — it
+#: generates the shared base-MC cache, ~25 s when that cache is warm —
+#: analyze_credibility 3141 and analyze_cold_insurance 3013 (K=50 each),
+#: analyze_voltage_risk_network 1068. Everything else is under seven minutes;
+#: generate_annual_mc, the previous sole member, is 295. Skipped by the
+#: shape-covering subset unless ``--include-heavy`` is passed. Because
+#: congestion_risk is here, the three stages that need it — fleet_triage,
+#: nonwires_value, locational_contracts, the study's primary-result chain —
+#: are skipped by dependency; a warm-cache tier that runs them when
+#: base_mc_by_size.npz already matches is the natural follow-up.
+HEAVY_STAGES: frozenset[str] = frozenset(
+    {
+        "analyze_congestion_risk",
+        "analyze_credibility",
+        "analyze_cold_insurance",
+        "analyze_voltage_risk_network",
+    }
+)
 
 #: Workflow contract, read-only, relative to the workspace root.
 WORKFLOW_PATH = "projects/ev_hosting_flex/workflow.yaml"

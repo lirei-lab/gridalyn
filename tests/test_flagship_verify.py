@@ -60,31 +60,31 @@ class FlagshipVerifyTests(unittest.TestCase):
             [
                 _stage("prepare"),
                 {
-                    "id": "generate_annual_mc",
+                    "id": "analyze_credibility",
                     "needs": ["prepare"],
                     "command": "heavy --noop",
                 },
-                _stage("after", ["generate_annual_mc"]),
+                _stage("after", ["analyze_credibility"]),
             ]
         )
         decisions = tool.classify_runs(stages)
         by_id = {s["id"]: (action, reason) for s, action, reason in decisions}
-        self.assertEqual("skipped", by_id["generate_annual_mc"][0])
-        self.assertIn("heavy", by_id["generate_annual_mc"][1])
+        self.assertEqual("skipped", by_id["analyze_credibility"][0])
+        self.assertIn("heavy", by_id["analyze_credibility"][1])
         # A stage depending on a skipped stage is skipped with a reason too.
         self.assertEqual("skipped", by_id["after"][0])
         self.assertIn("depends on skipped", by_id["after"][1])
 
     def test_include_heavy_runs_the_heavy_stage(self) -> None:
-        stages = tool.topo_sort([_stage("a"), _stage("generate_annual_mc", ["a"])])
+        stages = tool.topo_sort([_stage("a"), _stage("analyze_credibility", ["a"])])
         decisions = tool.classify_runs(stages, include_heavy=True)
         by_id = {s["id"]: action for s, action, _ in decisions}
-        self.assertEqual("run", by_id["generate_annual_mc"])
+        self.assertEqual("run", by_id["analyze_credibility"])
 
     def test_per_stage_record_shape(self) -> None:
         from unittest import mock
 
-        stages = tool.topo_sort([_stage("a"), _stage("generate_annual_mc", ["a"])])
+        stages = tool.topo_sort([_stage("a"), _stage("analyze_credibility", ["a"])])
         with mock.patch.object(tool, "load_stages", return_value=stages):
             result = tool.run_subset(
                 Path("."), include_heavy=False, dry_run=True, run_baselines_check=False
@@ -95,7 +95,7 @@ class FlagshipVerifyTests(unittest.TestCase):
             self.assertEqual({"name", "status", "duration_s", "reason"}, set(record))
             self.assertIn(record["status"], {"run", "skipped", "ok", "failed"})
         by_name = {r["name"]: r for r in records}
-        self.assertEqual("skipped", by_name["generate_annual_mc"]["status"])
+        self.assertEqual("skipped", by_name["analyze_credibility"]["status"])
 
     def test_failing_non_heavy_stage_raises(self) -> None:
         from unittest import mock
@@ -117,7 +117,16 @@ class FlagshipVerifyTests(unittest.TestCase):
     def test_real_workflow_parses_and_enumerates_stages(self) -> None:
         stages = tool.topo_sort(tool.load_stages(_REPO_ROOT))
         self.assertEqual(23, len(stages))
-        self.assertIn("generate_annual_mc", tool.HEAVY_STAGES)
+        ids = {s["id"] for s in stages}
+        # Every heavy id names a real stage, and the set is the MEASURED one:
+        # generate_annual_mc (295 s on the clean run) is no longer in it, so the
+        # subset covers 16 stages rather than 3 (syntgrid-zpz).
+        self.assertTrue(tool.HEAVY_STAGES <= ids, tool.HEAVY_STAGES - ids)
+        self.assertNotIn("generate_annual_mc", tool.HEAVY_STAGES)
+        decisions = tool.classify_runs(stages)
+        ran = [s["id"] for s, action, _ in decisions if action == "run"]
+        self.assertGreaterEqual(len(ran), 16, ran)
+        self.assertIn("generate_annual_mc", ran)
 
     # -- R7 baseline check (review fix: was untested) -------------------------
 

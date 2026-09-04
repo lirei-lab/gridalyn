@@ -212,8 +212,8 @@ be, because isolation always reaches for an index.
 The flagship `ev_hosting_flex` study is verified **by protocol** rather than by
 a single opaque run: a shape-covering subset (`python tools/flagship_verify.py`)
 executes the pipeline's non-heavy stages end to end against the study workspace,
-skips the hours-long heavy stages with a recorded reason, and reports the
-baseline check. Per-stage records — name, status, duration, and a reason when a
+skips the stages measured to dominate a cold run with a recorded reason, and
+reports the baseline check. Per-stage records — name, status, duration, and a reason when a
 stage is skipped — are captured so a partial regeneration is auditable, and the
 verification-receipt ledger accepts an optional per-stage record list on any
 receipt (each stage must carry a `name` and a `status` — `ok`, `skipped` or
@@ -223,16 +223,21 @@ HEAD).
 Two operator commands:
 
 - `python tools/flagship_verify.py` — the shape-covering subset, the fast
-  source-proven proof used on generator/kernel changes. Its stage execution is
-  quick (the recorded run executed 2 stages in ~4 s; the heavy annual-MC stage
-  and its dependents are skipped with recorded reasons), so its wall time is
-  dominated by environment/toolchain setup rather than stage work.
+  source-proven proof used on generator/kernel changes. It runs 16 of the 23
+  stages in about 24 minutes, skipping the four a clean run timed above ten
+  minutes (`analyze_congestion_risk`, `analyze_credibility`,
+  `analyze_cold_insurance`, `analyze_voltage_risk_network`) and, by
+  dependency, the three that need the first. Until 2026-09-04 the heavy set was
+  `{generate_annual_mc}` alone, and because every analysis stage depends on it
+  the subset executed 2 stages in ~4 s — a proof of almost nothing
+  (`syntgrid-zpz`).
 - `python tools/flagship_verify.py --include-heavy` — the full regeneration
-  (roughly six hours), operator-scheduled at milestones; the resulting receipt is
-  recorded at the commit it ran at.
+  (about four hours cold as of 2026-09-04, down from six after the shared
+  base-MC cache stopped regenerating four times), operator-scheduled at
+  milestones; the resulting receipt is recorded at the commit it ran at.
 
-The full six-hour regeneration remains operator-scheduled; the subset is what
-keeps the study source-proven between those runs.
+The full regeneration remains operator-scheduled; the subset is what keeps the
+study source-proven between those runs.
 
 ### Executed run (2026-08-06, recorded at 6ea8a92a)
 
