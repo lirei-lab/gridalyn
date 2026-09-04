@@ -601,7 +601,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 6807.30723,
+      "expected": 6359.51806,
       "id": "nonwires.total_deferral_npv",
       "json_path": [
         "total_deferral_npv"
@@ -610,7 +610,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 267.257832,
+      "expected": 266.287716,
       "id": "nonwires.total_trafo_years_deferred",
       "json_path": [
         "total_trafo_years_deferred"
@@ -637,7 +637,7 @@
       "tolerance": 1e-06
     },
     {
-      "expected": 5.375358,
+      "expected": 5.626741,
       "id": "nonwires.first_reinforcement_year",
       "json_path": [
         "first_reinforcement_year"

@@ -1136,3 +1136,16 @@ planning horizon and booked a *negative* deferral (`syntgrid-eei.7`, fixed in
 LV-only total +6359.52.
 
 **Headline unchanged:** firm 11, flexible 16, +45 % expansion, break-even 6.
+
+**The four `nonwires.*` pins, re-based on the second clean run** (from
+`88c225f6`, which carries the `syntgrid-eei.7` fix):
+
+| Pin | Was | Now |
+|---|---|---|
+| `nonwires.total_deferral_npv` | 6807.31 | 6359.52 |
+| `nonwires.total_trafo_years_deferred` | 267.258 | 266.288 |
+| `nonwires.first_reinforcement_year` | 5.37536 | 5.62674 |
+
+The substation term is 0 with `needed_within_horizon: false` — the N-1
+crossing at 1.31 EV/home is reached only after the 15-year horizon, so there
+is nothing to defer. The total is the LV deferral alone.
