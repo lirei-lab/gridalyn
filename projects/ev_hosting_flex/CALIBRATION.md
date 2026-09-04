@@ -35,16 +35,16 @@ bannered below — Cold-load pickup (retired Phase 15) and Recommended values
 | Hosting expansion | 0.4545 | `annual.hosting_expansion_percent` |
 | Firm hosting, P05 | 10.0 EVs | `cred.firm_p05` |
 | Firm hosting, P50 | 11.0 EVs | `cred.firm_p50` |
-| Firm hosting, P95 | 13.0 EVs | `cred.firm_p95` |
+| Firm hosting, P95 | 12.55 EVs | `cred.firm_p95` |
 | Flexible hosting, P50 | 16.0 EVs | `cred.flex_p50` |
-| Base peak, P50 | 66.10 kW | `cred.base_peak_p50` |
+| Base peak, P50 | 65.76 kW | `cred.base_peak_p50` |
 | Congested hours at pool top | 19.5 h/yr | `annual.congested_hours_at_pool_top` |
 | Economic break-even | 6 EVs | `annual.econ_breakeven_ev_count` |
 | Naive-model firm overestimate | 45.45 % | `coldcoupling.firm_overestimate_percent` |
 | Insurance crossover adoption | 11 EVs | `insurance.crossover_adoption` |
-| Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
-| Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
-| corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+| Expected flexibility cost at reference | 480.05 $ | `insurance.expected_cost_flex_at_ref` |
+| Short years if planning at P50 | 0.24 | `insurance.short_years_if_plan_p50` |
+| corr(winter severity, firm) | 0.36 | `insurance.delta_firm_correlation` |
 | Fleet: transformers in the fleet | 540 | `fleet.n_transformers` |
 | Fleet at risk at 1 EV/home, static rating | 500 | `fleet.n_at_risk_at_1ev_static` |
 | Fleet deferred by flexibility at 1 EV/home, static | 73 | `fleet.flex_defers_at_1ev_static` |
@@ -64,13 +64,26 @@ substantive figures in the study with no pin. They are pinned under **both**
 rating conventions, not only the declared headline (`static`), because the two
 disagree by 6.7x on the deferred fraction and pinning one would re-hide that
 one commit after it was made visible. **They carry no `uncertainty` block, on
-purpose.** The triage medians rest on `triageKBase` = 3 base realizations shared
-across transformers of equal home count — neither many nor independent — which
-is not a distribution the study can defend an interval from; an interval is
-carried where it can be defended and is absent rather than faked where it
-cannot. Raising `triageKBase` is a deliberate re-base to be recorded here, not a
-free change: since 7f8cbb03 the shared base-MC cache already holds six
-realizations, so its generation cost is paid, but the medians will move.
+purpose, and the reason is specific.** Two sampling axes sit under these
+counts. The **allocation** axis — which homes get the EVs, at clustered
+dispersion 0.7 — is characterised and independent: across 200 allocation
+seeds with the per-size limits held fixed, `flex_defers` has sd ≈ 1.9 (95 %
+[68, 76] around the pinned 73) and `n_at_risk` sd ≈ 1.9 ([495, 502] around
+500); the single-draw spread is 2.6× the 6-draw spread against √6 = 2.45, so
+the averaged draws scale as independent samples (measured 2026-09-04,
+`syntgrid-eei.3`). The **base-MC** axis — the `triageKBase` = 3 realizations
+behind those limits, shared by every transformer of equal home count — is
+*uncharacterised and non-independent by construction*, and it is the binding
+one. Two different reasons: one axis is quotable, the other is not. An
+interval is carried where it can be defended and is absent rather than faked
+where it cannot; the honest interval here would have to include the axis
+nobody has measured. Two consequences for a reader: `needs_steel` = 1 is a
+pinned value, not a finding — its allocation range is [0, 2], so "1 of 540
+needs reinforcement" is equally consistent with 0 and with 2; and raising
+`triageKBase` is a deliberate re-base to be recorded here, not a free change —
+since 7f8cbb03 the shared base-MC cache already holds six realizations, so its
+generation cost is paid, but it buys exactly the unmeasured axis, and measuring
+`per_size_limits` across base seeds first would say whether six is enough.
 
 ## Current knob values
 
@@ -1075,3 +1088,51 @@ flips one step earlier separates the trajectories discretely.
 cooling-capable dwelling ends colder than the same dwelling without cooling.
 The defect lived in exactly one branch, so a mode-agnostic assertion is the one
 that would have caught it.
+
+## First coherent run, and the re-base it forced (2026-09-04) — 27 pins
+
+**Read this with the "Cooling coupled to the thermal node (2026-09-01)"
+section above.** That re-base measured its blast radius on the base trace
+alone, moved three `annual.*` pins, and declared the other 78 value-identical —
+against artifacts on disk that the cooling fix had never regenerated. Every one
+of those artifacts dated from 08-04, 08-18 or 08-19. The eleven downstream
+stages had not been re-run on the fixed base. "Value-identical" was true of the
+files and false of the code.
+
+The first run of all 23 stages from committed code (`7f8cbb03`, 15:30–19:21
+UTC, outputs backed up first as `syntgrid-ev-outputs-PRE-clean-run-20260904`)
+is the first measurement of what the cooling fix did downstream. 31 pins
+differ; 27 are re-based here, on that run. Nothing since `bd1253ac` can have
+moved them: the five scripts whose pins drifted have zero commits, `_annual.py`'s
+one commit is reformatting (`annual.*` pins pass; `base_peak_kw` byte-identical),
+the exported twin's `sha256` is identical across runs, and
+numpy/scipy/pandapower/python match the 09-03 manifest.
+
+Two magnitudes inside the 27. Eighteen drift under 1 % — annual energy −1.46 %
+propagating through the AC solves (`pf.*`, `netchar.*`, `voltage*.*`). Nine
+drift more, each with a mechanism: `coldcoupling.curtailment_underestimate_ratio`
++50 % because the *naive* model's summer-driven curtailment (its denominator,
+7 kWh/yr) fell 37 % while the cold-coupled numerator fell 6 %;
+`flexincentive.shift_ceiling_warmest` 2.5 → 1.83 and the `cluster.*` block
+because summer peaks moved; `cred.firm_p95` 13 → 12.55 because one of K=50
+realizations crossed the 95th-percentile position under numpy's linear
+interpolation; `pf.post_ev_1p5_n_trafos_over_dynamic` 0 → 2 at a count boundary.
+
+| Pin | Was | Now |
+|---|---|---|
+| `cred.firm_p95` | 13.0 | 12.55 |
+| `cred.base_peak_p50` | 66.10 | 65.76 |
+| `insurance.expected_cost_flex_at_ref` | 480.06 | 480.054 |
+| `insurance.short_years_if_plan_p50` | 0.26 | 0.24 |
+| `insurance.delta_firm_correlation` | 0.42 | 0.360694 |
+
+(The full 27 are the diff of `baselines/results_baseline.json` in this commit.)
+
+**Four pins are deliberately NOT re-based here:** `nonwires.*`. The clean run's
+`total_deferral_npv` came out −19054, a sign flip, and it is a defect rather
+than a measurement — `_substation_deferral` let the firm crossing run past the
+planning horizon and booked a *negative* deferral (`syntgrid-eei.7`, fixed in
+`dd50e374`). Those four land on an artifact the fixed code produced; expected
+LV-only total +6359.52.
+
+**Headline unchanged:** firm 11, flexible 16, +45 % expansion, break-even 6.

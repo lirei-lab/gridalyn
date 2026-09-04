@@ -14,6 +14,7 @@ noise nobody keeps.
 
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -121,7 +122,25 @@ class TestCalibrationClaims(unittest.TestCase):
         by_pin = {refs[0]: (value, places) for _, refs, value, places in parsed}
         value, places = by_pin["insurance.expected_cost_flex_at_ref"]
         self.assertEqual(places, 2)
-        self.assertEqual(value, 480.06)
+        # Against the pin itself, not a literal: a deliberate re-base of this
+        # figure must not break the test that checks the document rounds
+        # honestly (it did, at 480.06 -> 480.05 on 2026-09-04).
+        baseline = json.loads(
+            (
+                REPO_ROOT
+                / "projects"
+                / "ev_hosting_flex"
+                / "baselines"
+                / "results_baseline.json"
+            ).read_text()
+        )
+        expected = next(
+            m["expected"]
+            for m in baseline["metrics"]
+            if m["id"] == "insurance.expected_cost_flex_at_ref"
+        )
+        self.assertEqual(value, round(expected, places))
+        self.assertNotEqual(value, expected, "the document is expected to round")
 
 
 class TestCalibrationKnobs(unittest.TestCase):

@@ -153,61 +153,61 @@
     },
     "project": "der_voltage_optimization",
     "run": {
-      "ended_at": "2026-09-02T20:37:02.589990+00:00",
-      "git_commit": "3ba770b56e13434c62b307d887f3970905ded49a",
+      "ended_at": "2026-09-04T13:15:25.202223+00:00",
+      "git_commit": "3e970eaa7fac42df9295d7e3285ad14c9a475e91",
       "stage_filter": null,
-      "started_at": "2026-09-02T20:36:48.185814+00:00",
+      "started_at": "2026-09-04T13:15:10.716390+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.410853,
-        "share_pct": 2.85,
+        "seconds": 0.430066,
+        "share_pct": 2.97,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 4.238089,
-        "share_pct": 29.45,
+        "seconds": 4.405853,
+        "share_pct": 30.43,
         "stage": "build_der_feeder",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 2.941808,
-        "share_pct": 20.44,
+        "seconds": 3.064915,
+        "share_pct": 21.17,
         "stage": "export_twin_network_model",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 6.368524,
-        "share_pct": 44.25,
+        "seconds": 6.145135,
+        "share_pct": 42.45,
         "stage": "run_voltage_optimization",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 0.433193,
-        "share_pct": 3.01,
+        "seconds": 0.431766,
+        "share_pct": 2.98,
         "stage": "validate_project_outputs",
         "wave": 2
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.306,
+      "ceiling_speedup": 1.318,
       "critical_path": [
         "prepare_workspace",
         "build_der_feeder",
         "run_voltage_optimization"
       ],
-      "critical_path_seconds": 11.017,
-      "sequential_seconds": 14.392,
+      "critical_path_seconds": 10.981,
+      "sequential_seconds": 14.478,
       "uniform_cost_speedup": 1.667,
-      "wave_schedule_seconds": 11.017,
-      "wave_speedup": 1.306,
+      "wave_schedule_seconds": 10.981,
+      "wave_speedup": 1.318,
       "workers": 4
     },
     "waves": {
@@ -217,221 +217,201 @@
   },
   {
     "coverage": {
-      "complete": false,
+      "complete": true,
       "declared_stages": 23,
-      "missing_stages": [
-        "analyze_clustered_adoption",
-        "analyze_cold_coupling",
-        "analyze_cold_insurance",
-        "analyze_congestion_risk",
-        "analyze_credibility",
-        "analyze_fleet_triage",
-        "analyze_flexibility_incentive",
-        "analyze_locational_contracts",
-        "analyze_network_characterization",
-        "analyze_network_performance",
-        "analyze_nonwires_value",
-        "analyze_phase_imbalance",
-        "analyze_voltage_risk",
-        "analyze_voltage_risk_network",
-        "apply_curtailment_contracts",
-        "build_study_reports",
-        "compute_congestion_annual",
-        "compute_curtailment_economics",
-        "export_twin_network_model",
-        "generate_annual_mc",
-        "validate_powerflow"
-      ],
-      "partial_run": true,
-      "recorded_stages": 2,
+      "missing_stages": [],
+      "partial_run": false,
+      "recorded_stages": 23,
       "stale_manifest": false,
-      "timed_stages": 2
+      "timed_stages": 23
     },
     "project": "ev_hosting_flex",
     "run": {
-      "ended_at": "2026-08-19T18:28:43.185389+00:00",
-      "git_commit": "04bf3200cad57c7aa104c3fcc005c5aa6dadbf90",
-      "stage_filter": [
-        "prepare_topology_cache",
-        "prepare_workspace"
-      ],
-      "started_at": "2026-08-19T18:28:39.185866+00:00",
+      "ended_at": "2026-09-04T19:20:48.569287+00:00",
+      "git_commit": "7f8cbb03ce2d45254e5e1adc95db74bc6dcdeedc",
+      "stage_filter": null,
+      "started_at": "2026-09-04T15:30:41.591222+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.417281,
-        "share_pct": 11.59,
+        "seconds": 0.406681,
+        "share_pct": 0.0,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 3.184513,
-        "share_pct": 88.41,
+        "seconds": 3.003024,
+        "share_pct": 0.02,
         "stage": "prepare_topology_cache",
         "wave": 1
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 5.014587,
+        "share_pct": 0.04,
         "stage": "export_twin_network_model",
         "wave": 2
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 295.443151,
+        "share_pct": 2.14,
         "stage": "generate_annual_mc",
         "wave": 2
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 394.634879,
+        "share_pct": 2.86,
         "stage": "analyze_clustered_adoption",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 4.900324,
+        "share_pct": 0.04,
         "stage": "analyze_cold_coupling",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 4556.527692,
+        "share_pct": 33.0,
         "stage": "analyze_congestion_risk",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 2.638841,
+        "share_pct": 0.02,
         "stage": "analyze_flexibility_incentive",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 20.871956,
+        "share_pct": 0.15,
         "stage": "analyze_network_characterization",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 9.564001,
+        "share_pct": 0.07,
         "stage": "analyze_network_performance",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 147.572616,
+        "share_pct": 1.07,
         "stage": "analyze_phase_imbalance",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 157.767142,
+        "share_pct": 1.14,
         "stage": "analyze_voltage_risk",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 1067.560775,
+        "share_pct": 7.73,
         "stage": "analyze_voltage_risk_network",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 0.581937,
+        "share_pct": 0.0,
         "stage": "compute_congestion_annual",
         "wave": 3
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 80.388422,
+        "share_pct": 0.58,
         "stage": "analyze_fleet_triage",
         "wave": 4
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 9.453931,
+        "share_pct": 0.07,
         "stage": "analyze_nonwires_value",
         "wave": 4
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 3.451903,
+        "share_pct": 0.03,
         "stage": "apply_curtailment_contracts",
         "wave": 4
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 2.194741,
+        "share_pct": 0.02,
         "stage": "compute_curtailment_economics",
         "wave": 4
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 3140.587545,
+        "share_pct": 22.75,
         "stage": "analyze_credibility",
         "wave": 5
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 511.126745,
+        "share_pct": 3.7,
         "stage": "analyze_locational_contracts",
         "wave": 5
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 391.814999,
+        "share_pct": 2.84,
         "stage": "validate_powerflow",
         "wave": 5
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 3001.087883,
+        "share_pct": 21.74,
         "stage": "analyze_cold_insurance",
         "wave": 6
       },
       {
-        "recorded": false,
-        "seconds": null,
-        "share_pct": null,
+        "recorded": true,
+        "seconds": 0.000949,
+        "share_pct": 0.0,
         "stage": "build_study_reports",
         "wave": 6
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.0,
+      "ceiling_speedup": 2.142,
       "critical_path": [
         "prepare_workspace",
-        "prepare_topology_cache"
+        "prepare_topology_cache",
+        "generate_annual_mc",
+        "compute_congestion_annual",
+        "apply_curtailment_contracts",
+        "analyze_credibility",
+        "analyze_cold_insurance"
       ],
-      "critical_path_seconds": 3.602,
-      "sequential_seconds": 3.602,
+      "critical_path_seconds": 6444.562,
+      "sequential_seconds": 13806.595,
       "uniform_cost_speedup": 3.286,
-      "wave_schedule_seconds": 3.602,
-      "wave_speedup": 1.0,
+      "wave_schedule_seconds": 11077.444,
+      "wave_speedup": 1.246,
       "workers": 4
     },
     "waves": {
@@ -451,61 +431,61 @@
     },
     "project": "ieee_33_bus_demo",
     "run": {
-      "ended_at": "2026-09-02T18:19:32.746968+00:00",
-      "git_commit": "bb6b4d9a9dc1a9404f83fbc7c32b7383222bb896",
+      "ended_at": "2026-09-04T13:21:38.281902+00:00",
+      "git_commit": "3e970eaa7fac42df9295d7e3285ad14c9a475e91",
       "stage_filter": null,
-      "started_at": "2026-09-02T18:19:16.069128+00:00",
+      "started_at": "2026-09-04T13:21:22.135338+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.377043,
-        "share_pct": 2.26,
+        "seconds": 0.371147,
+        "share_pct": 2.3,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 4.194444,
-        "share_pct": 25.17,
+        "seconds": 4.025248,
+        "share_pct": 24.94,
         "stage": "run_ieee33_powerflow",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 6.605599,
-        "share_pct": 39.63,
+        "seconds": 6.512144,
+        "share_pct": 40.35,
         "stage": "generate_operational_scenarios",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 5.077686,
-        "share_pct": 30.47,
+        "seconds": 4.850393,
+        "share_pct": 30.06,
         "stage": "run_daily_timeseries",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 0.41223,
-        "share_pct": 2.47,
+        "seconds": 0.379364,
+        "share_pct": 2.35,
         "stage": "validate_project_outputs",
         "wave": 3
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.491,
+      "ceiling_speedup": 1.479,
       "critical_path": [
         "prepare_workspace",
         "run_ieee33_powerflow",
         "generate_operational_scenarios"
       ],
-      "critical_path_seconds": 11.177,
-      "sequential_seconds": 16.667,
+      "critical_path_seconds": 10.909,
+      "sequential_seconds": 16.138,
       "uniform_cost_speedup": 1.25,
-      "wave_schedule_seconds": 11.589,
-      "wave_speedup": 1.438,
+      "wave_schedule_seconds": 11.288,
+      "wave_speedup": 1.43,
       "workers": 4
     },
     "waves": {
@@ -525,31 +505,31 @@
     },
     "project": "minimal_grid_project",
     "run": {
-      "ended_at": "2026-09-02T18:21:00.307987+00:00",
-      "git_commit": "bb6b4d9a9dc1a9404f83fbc7c32b7383222bb896",
+      "ended_at": "2026-09-04T14:44:43.526211+00:00",
+      "git_commit": "1c9f80e01c7206c53b0601223d98feb74b53a3f5",
       "stage_filter": null,
-      "started_at": "2026-09-02T18:20:55.322372+00:00",
+      "started_at": "2026-09-04T14:44:38.332924+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.409345,
-        "share_pct": 8.25,
+        "seconds": 0.393681,
+        "share_pct": 8.19,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 4.149239,
-        "share_pct": 83.59,
+        "seconds": 3.994826,
+        "share_pct": 83.12,
         "stage": "run_minimal_powerflow",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 0.40529,
-        "share_pct": 8.16,
+        "seconds": 0.417428,
+        "share_pct": 8.69,
         "stage": "validate_project_outputs",
         "wave": 2
       }
@@ -561,10 +541,10 @@
         "run_minimal_powerflow",
         "validate_project_outputs"
       ],
-      "critical_path_seconds": 4.964,
-      "sequential_seconds": 4.964,
+      "critical_path_seconds": 4.806,
+      "sequential_seconds": 4.806,
       "uniform_cost_speedup": 1.0,
-      "wave_schedule_seconds": 4.964,
+      "wave_schedule_seconds": 4.806,
       "wave_speedup": 1.0,
       "workers": 4
     },
@@ -585,61 +565,61 @@
     },
     "project": "prosumer_battery_market",
     "run": {
-      "ended_at": "2026-09-02T18:21:46.940080+00:00",
-      "git_commit": "bb6b4d9a9dc1a9404f83fbc7c32b7383222bb896",
+      "ended_at": "2026-09-04T13:23:52.892616+00:00",
+      "git_commit": "3e970eaa7fac42df9295d7e3285ad14c9a475e91",
       "stage_filter": null,
-      "started_at": "2026-09-02T18:21:31.974241+00:00",
+      "started_at": "2026-09-04T13:23:38.178167+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.377526,
-        "share_pct": 2.52,
+        "seconds": 0.428782,
+        "share_pct": 2.92,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 3.888974,
-        "share_pct": 26.0,
+        "seconds": 4.12699,
+        "share_pct": 28.07,
         "stage": "build_synthetic_feeder",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 2.794633,
-        "share_pct": 18.69,
+        "seconds": 2.722525,
+        "share_pct": 18.52,
         "stage": "export_twin_network_model",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 7.393983,
-        "share_pct": 49.44,
+        "seconds": 7.018052,
+        "share_pct": 47.73,
         "stage": "run_realtime_prosumer_market",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 0.501094,
-        "share_pct": 3.35,
+        "seconds": 0.408039,
+        "share_pct": 2.77,
         "stage": "validate_project_outputs",
         "wave": 2
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.283,
+      "ceiling_speedup": 1.27,
       "critical_path": [
         "prepare_workspace",
         "build_synthetic_feeder",
         "run_realtime_prosumer_market"
       ],
-      "critical_path_seconds": 11.66,
-      "sequential_seconds": 14.956,
+      "critical_path_seconds": 11.574,
+      "sequential_seconds": 14.704,
       "uniform_cost_speedup": 1.667,
-      "wave_schedule_seconds": 11.66,
-      "wave_speedup": 1.283,
+      "wave_schedule_seconds": 11.574,
+      "wave_speedup": 1.27,
       "workers": 4
     },
     "waves": {
@@ -659,61 +639,61 @@
     },
     "project": "rl_voltage_control_lightsim",
     "run": {
-      "ended_at": "2026-09-02T18:23:37.178532+00:00",
-      "git_commit": "bb6b4d9a9dc1a9404f83fbc7c32b7383222bb896",
+      "ended_at": "2026-09-04T13:25:39.568920+00:00",
+      "git_commit": "3e970eaa7fac42df9295d7e3285ad14c9a475e91",
       "stage_filter": null,
-      "started_at": "2026-09-02T18:22:17.860899+00:00",
+      "started_at": "2026-09-04T13:24:22.295048+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.426336,
-        "share_pct": 0.54,
+        "seconds": 0.390826,
+        "share_pct": 0.51,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 4.286192,
-        "share_pct": 5.4,
+        "seconds": 4.148938,
+        "share_pct": 5.37,
         "stage": "build_rl_feeder",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 2.686213,
-        "share_pct": 3.39,
+        "seconds": 2.775996,
+        "share_pct": 3.59,
         "stage": "export_twin_network_model",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 71.400836,
-        "share_pct": 90.03,
+        "seconds": 69.520355,
+        "share_pct": 89.99,
         "stage": "train_rl_voltage_agent",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 0.508684,
-        "share_pct": 0.64,
+        "seconds": 0.416587,
+        "share_pct": 0.54,
         "stage": "validate_project_outputs",
         "wave": 2
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.042,
+      "ceiling_speedup": 1.043,
       "critical_path": [
         "prepare_workspace",
         "build_rl_feeder",
         "train_rl_voltage_agent"
       ],
-      "critical_path_seconds": 76.113,
-      "sequential_seconds": 79.308,
+      "critical_path_seconds": 74.06,
+      "sequential_seconds": 77.253,
       "uniform_cost_speedup": 1.667,
-      "wave_schedule_seconds": 76.113,
-      "wave_speedup": 1.042,
+      "wave_schedule_seconds": 74.06,
+      "wave_speedup": 1.043,
       "workers": 4
     },
     "waves": {
@@ -733,61 +713,61 @@
     },
     "project": "synthetic_geojson_feeder",
     "run": {
-      "ended_at": "2026-09-02T18:21:09.413680+00:00",
-      "git_commit": "bb6b4d9a9dc1a9404f83fbc7c32b7383222bb896",
+      "ended_at": "2026-09-04T13:23:14.686690+00:00",
+      "git_commit": "3e970eaa7fac42df9295d7e3285ad14c9a475e91",
       "stage_filter": null,
-      "started_at": "2026-09-02T18:21:00.551217+00:00",
+      "started_at": "2026-09-04T13:23:05.895645+00:00",
       "status": "completed"
     },
     "stages": [
       {
         "recorded": true,
-        "seconds": 0.381588,
-        "share_pct": 4.32,
+        "seconds": 0.369077,
+        "share_pct": 4.2,
         "stage": "prepare_workspace",
         "wave": 0
       },
       {
         "recorded": true,
-        "seconds": 0.59613,
-        "share_pct": 6.74,
+        "seconds": 0.585507,
+        "share_pct": 6.67,
         "stage": "generate_building_footprints",
         "wave": 1
       },
       {
         "recorded": true,
-        "seconds": 4.573574,
-        "share_pct": 51.72,
+        "seconds": 4.573243,
+        "share_pct": 52.08,
         "stage": "build_synthetic_feeder",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 2.845429,
-        "share_pct": 32.18,
+        "seconds": 2.83647,
+        "share_pct": 32.3,
         "stage": "export_twin_network_model",
         "wave": 2
       },
       {
         "recorded": true,
-        "seconds": 0.445724,
-        "share_pct": 5.04,
+        "seconds": 0.416992,
+        "share_pct": 4.75,
         "stage": "validate_project_outputs",
         "wave": 3
       }
     ],
     "totals": {
-      "ceiling_speedup": 1.593,
+      "ceiling_speedup": 1.589,
       "critical_path": [
         "prepare_workspace",
         "generate_building_footprints",
         "build_synthetic_feeder"
       ],
-      "critical_path_seconds": 5.551,
-      "sequential_seconds": 8.842,
+      "critical_path_seconds": 5.528,
+      "sequential_seconds": 8.781,
       "uniform_cost_speedup": 1.25,
-      "wave_schedule_seconds": 5.997,
-      "wave_speedup": 1.474,
+      "wave_schedule_seconds": 5.945,
+      "wave_speedup": 1.477,
       "workers": 4
     },
     "waves": {

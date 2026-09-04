@@ -164,7 +164,48 @@ largest win available. But `analyze_credibility` (wave 5) and
 and no amount of concurrency touches them. That is why the ceiling is 2.53x
 rather than the 3.29x the DAG's shape suggests.
 
-### One stage's cost is not reproducible between runs
+### The flagship, measured again after the cache fix
+
+The profile above was read from a run that regenerated the shared base-MC
+cache four times (`syntgrid-lx7`). The first clean 23-stage run *after* that
+fix — 2026-09-04, from `7f8cbb03`, recorded in one manifest with no
+`stage_filter` — is the profile a reader should now size anything against.
+
+| Stage | Wave | Time | Share |
+|---|---|---|---|
+| `analyze_congestion_risk` | 3 | 75.9 min | 33.0% |
+| `analyze_credibility` | 5 | 52.3 min | 22.8% |
+| `analyze_cold_insurance` | 6 | 50.0 min | 21.7% |
+| `analyze_voltage_risk_network` | 3 | 17.8 min | 7.7% |
+| `analyze_locational_contracts` | 5 | 8.5 min | 3.7% |
+| `analyze_clustered_adoption` | 3 | 6.6 min | 2.9% |
+| `validate_powerflow` | 5 | 6.5 min | 2.8% |
+| `generate_annual_mc` | 2 | 4.9 min | 2.1% |
+| `analyze_voltage_risk` | 3 | 2.6 min | 1.1% |
+| *(the other 14 stages)* | | < 2.5 min each | 2.1% |
+
+**Sequential 3.84 h.** The top four stages hold 85%; `generate_annual_mc`
+is 2.1%.
+`analyze_congestion_risk` is now the one that *generates* the cache
+(75.9 min); `analyze_fleet_triage` and
+`analyze_nonwires_value`, which used to regenerate it, fell to
+1.3 min and
+9.5s.
+
+```text
+sequential                        3.84 h
+wave-barrier schedule, 2 workers  3.08 h    1.25x   (workers=4)
+true DAG schedule, unlimited      1.79 h    2.14x
+```
+
+The conclusions of the previous section hold on the new numbers: the barrier,
+not the worker cap, is the constraint, and the critical path is the sequential
+spine (`generate_annual_mc → analyze_congestion_risk → …`) plus the two K=50
+stages at the end. What changed is the *size* of the prize — the fix removed
+more wall time than any scheduler could, which is the right order to have
+done things in.
+
+## One stage's cost is not reproducible between runs
 
 `analyze_congestion_risk` measured **24.5s** in the full run and **4612.8s** in
 the recovery run four hours later — a factor of 188, on the same machine and the
