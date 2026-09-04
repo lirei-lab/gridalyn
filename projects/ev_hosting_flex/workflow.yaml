@@ -25,8 +25,6 @@ spec:
       needs: [prepare_workspace]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.prepare_topology_cache"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/prepare_topology_cache.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/inputs/synthetic_network_config.json
       outputs:
         - projects/ev_hosting_flex/outputs/cache/pg_graph_cache.pkl
@@ -34,6 +32,12 @@ spec:
         - projects/ev_hosting_flex/outputs/cache/grid_cache_meta.json
         - projects/ev_hosting_flex/outputs/cache/building_footprint_validation_report.json
         - projects/ev_hosting_flex/outputs/cache/topology_cache_manifest.json
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
+        - projects/ev_hosting_flex/outputs/cache/node_nameplate_kw.json
+        - projects/ev_hosting_flex/outputs/cache/line_transformer_ratings_kw.json
+        - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
 
     # ── Stage 2b: twin-native NetworkModel export (additive, terminal,
     # Phase 31/Milestone 14, R26) ─────────────────────────────────────────
@@ -45,8 +49,6 @@ spec:
       needs: [prepare_topology_cache]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.export_twin_network_model"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/export_twin_network_model.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/inputs/synthetic_network_config.json
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/pg_graph_cache.pkl
@@ -68,9 +70,6 @@ spec:
       needs: [prepare_topology_cache]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/generate_annual_mc.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/inputs/tmy_trois_rivieres.csv
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -80,15 +79,16 @@ spec:
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
         - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_0.0.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_1.5.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_3.0.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_5.0.npy
 
     # ── Stage 4b: study-B annual firm hosting (live, F2 of the migration) ──
     - id: compute_congestion_annual
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.compute_congestion_annual"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/compute_congestion_annual.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
@@ -101,12 +101,14 @@ spec:
       needs: [compute_congestion_annual]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.apply_curtailment_contracts"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/apply_curtailment_contracts.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_0.0.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_1.5.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_3.0.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_5.0.npy
+        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
@@ -116,12 +118,10 @@ spec:
       needs: [compute_congestion_annual]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
+        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/curtailment_economics.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
@@ -130,9 +130,6 @@ spec:
       needs: [generate_annual_mc, compute_congestion_annual, apply_curtailment_contracts]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_credibility"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/cache/node_building_count.json
@@ -145,10 +142,6 @@ spec:
       needs: [generate_annual_mc, analyze_credibility]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_cold_insurance"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_insurance.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_credibility.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
         - projects/ev_hosting_flex/outputs/cache/node_building_count.json
@@ -165,9 +158,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_cold_coupling"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_cold_coupling.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
       outputs:
@@ -182,11 +172,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_network_characterization"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -200,12 +185,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_clustered_adoption"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_clustered_adoption.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_network_characterization.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -219,10 +198,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
       outputs:
@@ -234,12 +209,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_network_performance"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_network_performance.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_flexibility_incentive.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
@@ -253,11 +222,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
       outputs:
@@ -270,11 +234,6 @@ spec:
       needs: [analyze_congestion_risk]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_fleet_triage"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_fleet_triage.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
@@ -287,12 +246,6 @@ spec:
       needs: [analyze_fleet_triage]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_locational_contracts"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_congestion_risk.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
@@ -306,13 +259,10 @@ spec:
       needs: [analyze_network_characterization, analyze_congestion_risk]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_nonwires_value"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_nonwires_value.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/data/base_mc_by_size.npz
         - projects/ev_hosting_flex/outputs/json/network_characterization.json
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/nonwires_value.json
         - projects/ev_hosting_flex/outputs/figures/nonwires_value.png
@@ -322,11 +272,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_phase_imbalance"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_phase_imbalance.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -340,10 +285,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -358,12 +299,6 @@ spec:
       needs: [generate_annual_mc]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_voltage_risk_network"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk_network.py
-        - projects/ev_hosting_flex/scripts/pipeline/analyze_voltage_risk.py
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -383,10 +318,6 @@ spec:
       needs: [compute_congestion_annual, apply_curtailment_contracts]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.validate_powerflow"
       inputs:
-        - projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py
-        - projects/ev_hosting_flex/scripts/_powerflow.py
-        - projects/ev_hosting_flex/scripts/_annual.py
-        - projects/ev_hosting_flex/scripts/config.py
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
         - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
         - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
@@ -395,6 +326,7 @@ spec:
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
         - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
+        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
       outputs:
         - projects/ev_hosting_flex/outputs/data/powerflow_bus_voltage.parquet
         - projects/ev_hosting_flex/outputs/data/powerflow_line_loading.parquet
