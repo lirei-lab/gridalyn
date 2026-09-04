@@ -409,6 +409,7 @@ spec:
       triageRatingConventions:
       - static
       - hourly_kt
+      triageHeadlineRatingConvention: static
       triageHotspotLimitC: 110.0
       ratingConvention: hourly_kt
       evKwhPerYear: 2509.0

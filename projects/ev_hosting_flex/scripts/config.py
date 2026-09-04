@@ -1713,6 +1713,33 @@ but WHAT IT IS ATTRIBUTED TO. Both are emitted so the reader sees the spread
 instead of inheriting one convention silently.
 """
 
+TRIAGE_HEADLINE_RATING_CONVENTION = _CONFIG["triageHeadlineRatingConvention"]
+"""Which of `TRIAGE_RATING_CONVENTIONS` the fleet triage HEADLINE is quoted under.
+
+Declared rather than positional. This was `TRIAGE_RATING_CONVENTIONS[0]` until
+2026-09-03, which made reordering a YAML list silently rewrite the study's
+primary result -- and the two conventions are not a small correction apart. At
+1 EV/home the study measures 500 at-risk / 73 deferred under `static` and
+186 / 182 under `hourly_kt`: a 6.7x swing on the headline claim, larger than
+any other choice the study makes.
+
+Note this is deliberately allowed to DIFFER from `RATING_CONVENTION`, which the
+per-feeder stages use. A fleet-wide triage is a screen and may reasonably want
+the conservative nameplate convention where the feeder analysis wants the
+physically correct one. What is not acceptable is that difference being
+undeclared, which is what it was.
+"""
+
+if TRIAGE_HEADLINE_RATING_CONVENTION not in TRIAGE_RATING_CONVENTIONS:
+    raise ValueError(
+        f"{PROJECT_ROOT / 'project.yaml'}: spec.inputs.studyConfig."
+        "triageHeadlineRatingConvention is "
+        f"{TRIAGE_HEADLINE_RATING_CONVENTION!r}, which is not among the "
+        "evaluated triageRatingConventions "
+        f"({', '.join(TRIAGE_RATING_CONVENTIONS)}). The headline must be "
+        "quoted under a convention the triage actually computes."
+    )
+
 TRIAGE_HOTSPOT_LIMIT_C = _CONFIG["triageHotspotLimitC"]
 """Hot-spot limit defining the C57.91 capability (normal insulation life)."""
 

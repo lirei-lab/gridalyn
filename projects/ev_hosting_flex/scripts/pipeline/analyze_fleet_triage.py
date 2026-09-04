@@ -57,6 +57,7 @@ from projects.ev_hosting_flex.scripts.config import (
     TRIAGE_CLUSTER_DRAWS,
     TRIAGE_CURTAIL_TOLERANCE,
     TRIAGE_DISPERSION_GRID,
+    TRIAGE_HEADLINE_RATING_CONVENTION,
     TRIAGE_HOTSPOT_LIMIT_C,
     TRIAGE_K_BASE,
     TRIAGE_POOL_PER_HOME,
@@ -439,6 +440,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
         "pool_per_home": float(TRIAGE_POOL_PER_HOME),
         "crf": round(crf, 6),
         "rating_conventions": list(TRIAGE_RATING_CONVENTIONS),
+        "headline_rating_convention": str(TRIAGE_HEADLINE_RATING_CONVENTION),
         "hotspot_limit_c": float(TRIAGE_HOTSPOT_LIMIT_C),
         "k_curve_summary": {
             "min": round(float(k_curve.min()), 4),
@@ -462,7 +464,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
             for t in triage
             if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
             and abs(t["dispersion"] - float(TRIAGE_BASE_DISPERSION)) < 1e-9
-            and t["rating_convention"] == TRIAGE_RATING_CONVENTIONS[0]
+            and t["rating_convention"] == TRIAGE_HEADLINE_RATING_CONVENTION
         ),
         triage[0],
     )
@@ -472,7 +474,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
             for t in triage
             if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
             and abs(t["dispersion"]) < 1e-9
-            and t["rating_convention"] == TRIAGE_RATING_CONVENTIONS[0]
+            and t["rating_convention"] == TRIAGE_HEADLINE_RATING_CONVENTION
         ),
         triage[0],
     )
@@ -490,6 +492,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
         "feeder_curtailed_fraction_at_flexible": ref["curtailed_fraction_at_flexible"],
         "n_pool_limited_sizes": len(pool_limited),
         "base_dispersion": float(TRIAGE_BASE_DISPERSION),
+        "headline_rating_convention": str(TRIAGE_HEADLINE_RATING_CONVENTION),
         "flex_defers_at_1ev_uniform": at_uniform["flex_defers"],
         "n_at_risk_at_1ev_uniform": at_uniform["n_at_risk"],
     }
@@ -506,7 +509,7 @@ def _figures(payload: dict[str, Any], script: ProjectScript) -> list[Path]:
     figures_dir = script.figures_dir
     figures_dir.mkdir(parents=True, exist_ok=True)
     base_delta = float(payload["base_dispersion"])
-    conv0 = payload["rating_conventions"][0]
+    conv0 = payload["headline_rating_convention"]
     tri = [
         t
         for t in payload["triage"]
@@ -564,6 +567,43 @@ def _figures(payload: dict[str, Any], script: ProjectScript) -> list[Path]:
     return [path]
 
 
+def _convention_contrast(payload: dict[str, Any]) -> str:
+    """State both conventions' headline counts, read from the emitted grid.
+
+    Computed rather than written down so the sentence cannot drift from the
+    numbers it describes: a convention whose spread narrows should narrow this
+    warning too, and one that widens should widen it.
+
+    Args:
+        payload: The triage payload, carrying `triage` and the headline
+            convention.
+
+    Returns:
+        A sentence contrasting the conventions at 1 EV/home and the base
+        dispersion, or a bare statement if a convention produced no such cell.
+    """
+    delta = float(payload["base_dispersion"])
+    cells = {
+        t["rating_convention"]: t
+        for t in payload["triage"]
+        if abs(t["adoption_ev_per_home"] - 1.0) < 1e-9
+        and abs(t["dispersion"] - delta) < 1e-9
+    }
+    parts = []
+    for conv in payload["rating_conventions"]:
+        cell = cells.get(conv)
+        if cell is None:
+            continue
+        parts.append(
+            f"{conv} gives {cell['n_at_risk']} at risk and "
+            f"{cell['flex_defers']} deferred "
+            f"({cell['deferred_fraction_of_at_risk']:.1%})"
+        )
+    if len(parts) < 2:
+        return "only one convention produced a headline cell."
+    return "at 1 EV/home, " + "; ".join(parts) + "."
+
+
 def run_stage() -> dict[str, Any]:
     """Run the fleet triage and emit the platform report."""
     from gridalyn.projects.scripting import project_script
@@ -591,6 +631,17 @@ def run_stage() -> dict[str, Any]:
         "allocation understates the worst last-mile transformer. The headline "
         f"uses sigma={float(TRIAGE_BASE_DISPERSION)}; the full dispersion grid "
         "is emitted so the sensitivity is readable rather than assumed.",
+        "THE HEADLINE IS QUOTED UNDER ONE RATING CONVENTION and the other "
+        "reverses the conclusion. `static` judges every hour against the "
+        "nameplate (a 30 C ambient basis); `hourly_kt` scales it by the IEEE "
+        "C57.91 capability at each step's actual ambient. In a heating-dominated "
+        "feeder load and capability rise together, so this is not a small "
+        f"correction: {_convention_contrast(derived)} The headline uses "
+        f"{derived['headline_rating_convention']!r}; both conventions are "
+        "computed and emitted in `triage`, so the alternative is readable "
+        "without re-running. Note the per-feeder stages use RATING_CONVENTION, "
+        "which may differ -- the fleet triage is a screen and the feeder "
+        "analysis is not, so the two are declared separately rather than shared.",
         "kW-proxy (power/thermal): no AC voltage or phase imbalance. Per-size "
         "MC with finite K_BASE -> the counts are medians carrying sampling "
         "error, and transformers of equal home count share a realization family.",
