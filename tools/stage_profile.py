@@ -307,6 +307,7 @@ def profile_project(project_dir: Path, workers: int) -> dict[str, Any]:
             "started_at": manifest.get("started_at"),
             "ended_at": manifest.get("ended_at"),
             "stage_filter": manifest.get("stage_filter"),
+            "partial_runs_since": manifest.get("partial_runs_since") or [],
         },
         "coverage": {
             "declared_stages": len(dependencies),
@@ -388,6 +389,15 @@ def format_profile(profile: dict[str, Any]) -> str:
             f"  PARTIAL RUN — manifest records a --stage filter "
             f"({', '.join(profile['run']['stage_filter'])}); every figure below "
             f"covers only those stages."
+        )
+    since = profile["run"].get("partial_runs_since") or []
+    if since:
+        rewritten = sorted({st for run in since for st in run.get("stages", [])})
+        lines.append(
+            f"  PARTIAL RUNS SINCE — {len(since)} --stage run(s) rewrote "
+            f"{len(rewritten)} stage(s)' artifacts after this run "
+            f"({', '.join(rewritten)}); the timings below are this run's, the "
+            f"artifacts on disk for those stages may not be."
         )
     if coverage["stale_manifest"]:
         lines.append(

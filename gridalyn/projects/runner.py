@@ -536,6 +536,66 @@ def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def _preserve_full_run(
+    output_path: Path, manifest: dict[str, Any], *, partial: bool, echo: bool
+) -> Path:
+    """Return where this run's manifest goes, keeping a full run's record intact.
+
+    A ``--stage`` run used to write its manifest to the same path as a full run
+    and silently replace it. That is how the flagship's record of a 23-stage
+    run became a 2-stage one (2026-08-19) and, on 2026-09-03, how a 13-stage
+    recovery run erased the only record of a 20-stage run that had failed at
+    stage 21 -- the timings survived solely because an operator had tee'd
+    stderr to a file. The artifacts a partial run rewrites still land in the
+    same ``outputs/``; what this preserves is the *record* of which run
+    produced what, so a reader can tell a coherent set from a mixed one.
+
+    Args:
+        output_path: The default manifest path for this project.
+        manifest: This run's open manifest, mutated to point at the primary.
+        partial: Whether this run was narrowed with a stage filter.
+        echo: Whether to say where the record went.
+
+    Returns:
+        ``output_path`` unchanged when there is nothing coherent to protect (a
+        full run, or no prior full completed run on disk); otherwise the
+        sibling ``<name>.partial.json``, after the full run's record has been
+        annotated with this run under ``partial_runs_since``.
+    """
+    if not partial or not output_path.exists():
+        return output_path
+    try:
+        existing = json.loads(output_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return output_path
+    coherent = (
+        isinstance(existing, dict)
+        and not existing.get("stage_filter")
+        and not existing.get("dry_run")
+        and existing.get("status") == "completed"
+    )
+    if not coherent:
+        return output_path
+    partial_path = output_path.with_name(f"{output_path.stem}.partial.json")
+    existing.setdefault("partial_runs_since", []).append(
+        {
+            "manifest": str(partial_path),
+            "started_at": manifest["started_at"],
+            "git_commit": manifest.get("git_commit"),
+            "stages": list(manifest.get("stage_filter") or []),
+        }
+    )
+    _write_manifest(output_path, existing)
+    manifest["primary_manifest"] = str(output_path)
+    if echo:
+        _echo(
+            f"partial run: manifest -> {partial_path}; the full run's record at "
+            f"{output_path} is preserved and now lists this run under "
+            "partial_runs_since"
+        )
+    return partial_path
+
+
 def default_manifest_path(project: StudyProject) -> Path:
     return project.root / "outputs" / "manifests" / "project_run_manifest.json"
 
@@ -716,6 +776,14 @@ def run_project(
     _attach_provenance(manifest, project, planned, output_path, echo=echo)
     if stages:
         manifest["stage_filter"] = sorted({stage.id for stage in planned})
+    output_path = _preserve_full_run(
+        output_path, manifest, partial=bool(stages), echo=echo
+    )
+    # The manifest is on disk from here on and rewritten after every stage, so
+    # a run killed hard (SIGKILL, OOM, power) still leaves every completed
+    # stage's timing and status behind. Until 2026-09-04 it was written once,
+    # in the ``finally`` below -- a six-hour run had no record until it ended.
+    _write_manifest(output_path, manifest)
     total = len(planned)
     executed: list[str] = []
     try:
@@ -735,15 +803,18 @@ def run_project(
                     _echo(f"[{index}/{total}] {stage.id} (planned): {stage.command}")
                 continue
 
-            _execute_stage(
-                stage,
-                record,
-                project=project,
-                index=index,
-                total=total,
-                output_path=output_path,
-                echo=echo,
-            )
+            try:
+                _execute_stage(
+                    stage,
+                    record,
+                    project=project,
+                    index=index,
+                    total=total,
+                    output_path=output_path,
+                    echo=echo,
+                )
+            finally:
+                _write_manifest(output_path, manifest)
     except Exception:
         if manifest["status"] == "running":
             manifest["status"] = "failed"
