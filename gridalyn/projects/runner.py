@@ -536,6 +536,52 @@ def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+#: Sub-directories of ``outputs/`` whose files a run's manifest fingerprints
+#: at close. ``manifests`` is excluded because the manifest cannot hash itself.
+_ARTIFACT_DIRS = (
+    "json",
+    "reports",
+    "data",
+    "cache",
+    "figures",
+    "operations",
+    "flexibility",
+)
+
+
+def _record_artifacts(project: StudyProject) -> dict[str, dict[str, Any]]:
+    """Fingerprint every artifact under ``outputs/`` so a later mixture is detectable.
+
+    The manifest already said which commit ran and which stages; nothing tied
+    the files on disk to it afterwards. On 2026-09-04 running the plain test
+    suite rewrote 16 flagship artifacts (the reproduce-and-pin tests regenerate
+    a subset whenever outputs are present), and a partial run rewrites its
+    stages' outputs in place. Neither left a trace. With each file's
+    ``sha256`` recorded at close, a reader -- ``tools/stage_profile.py`` -- can
+    say exactly which artifacts no longer come from the run the manifest
+    describes, instead of inferring it from mtimes.
+
+    Args:
+        project: The study whose ``outputs/`` tree is fingerprinted.
+
+    Returns:
+        Mapping of project-relative path to its ``file_reference`` record
+        (``path``, ``bytes``, ``sha256``), sorted by path. Empty if the study
+        wrote nothing.
+    """
+    outputs = project.root / "outputs"
+    records: dict[str, dict[str, Any]] = {}
+    for sub in _ARTIFACT_DIRS:
+        base = outputs / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(p for p in base.rglob("*") if p.is_file()):
+            records[str(path.relative_to(project.root))] = file_reference(
+                path, project.root
+            )
+    return records
+
+
 def _preserve_full_run(
     output_path: Path, manifest: dict[str, Any], *, partial: bool, echo: bool
 ) -> Path:
@@ -823,6 +869,11 @@ def run_project(
         if manifest["status"] == "running":
             manifest["status"] = "planned" if dry_run else "completed"
         manifest["ended_at"] = _utc_now()
+        if not dry_run:
+            try:
+                manifest["artifacts"] = _record_artifacts(project)
+            except OSError as exc:  # never lose the manifest over a fingerprint
+                manifest["artifacts_error"] = repr(exc)
         try:
             manifest["study_run"] = build_study_run(
                 project_id=project.name,

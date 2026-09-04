@@ -168,6 +168,37 @@ def measure_stage_seconds(manifest: dict[str, Any]) -> dict[str, float | None]:
     return measured
 
 
+def drifted_artifacts(
+    manifest: dict[str, Any], project_dir: Path
+) -> tuple[list[str], list[str], int]:
+    """Return which recorded artifacts no longer match the run that recorded them.
+
+    Args:
+        manifest: A run manifest carrying an ``artifacts`` fingerprint map.
+        project_dir: The study directory the manifest's paths are relative to.
+
+    Returns:
+        ``(changed, missing, total)`` -- paths whose current ``sha256`` differs
+        from the recorded one, paths that no longer exist, and how many were
+        recorded. All empty/zero when the manifest carries no fingerprints
+        (runs recorded before 2026-09-04 do not).
+    """
+    import hashlib
+
+    recorded = manifest.get("artifacts") or {}
+    changed: list[str] = []
+    missing: list[str] = []
+    for rel, ref in sorted(recorded.items()):
+        path = project_dir / rel
+        if not path.is_file():
+            missing.append(rel)
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != ref.get("sha256"):
+            changed.append(rel)
+    return changed, missing, len(recorded)
+
+
 def compute_critical_path(
     dependencies: dict[str, list[str]], seconds: dict[str, float]
 ) -> tuple[float, list[str]]:
@@ -296,6 +327,9 @@ def profile_project(project_dir: Path, workers: int) -> dict[str, Any]:
     ]
 
     missing = sorted(set(dependencies) - set(measured))
+    changed_files, missing_files, recorded_files = drifted_artifacts(
+        manifest, project_dir
+    )
     critical_seconds, critical_path = compute_critical_path(dependencies, timed)
     wave_seconds = simulate_wave_schedule(dependencies, timed, workers)
 
@@ -317,6 +351,9 @@ def profile_project(project_dir: Path, workers: int) -> dict[str, Any]:
             "partial_run": bool(manifest.get("stage_filter")),
             "stale_manifest": bool(missing) and not manifest.get("stage_filter"),
             "complete": not missing,
+            "artifacts_recorded": recorded_files,
+            "artifacts_changed": changed_files,
+            "artifacts_missing": missing_files,
         },
         "waves": {
             "count": (max(waves.values()) + 1) if waves else 0,
@@ -389,6 +426,16 @@ def format_profile(profile: dict[str, Any]) -> str:
             f"  PARTIAL RUN — manifest records a --stage filter "
             f"({', '.join(profile['run']['stage_filter'])}); every figure below "
             f"covers only those stages."
+        )
+    if coverage["artifacts_changed"] or coverage["artifacts_missing"]:
+        n_changed = len(coverage["artifacts_changed"])
+        n_missing = len(coverage["artifacts_missing"])
+        first = (coverage["artifacts_changed"] or coverage["artifacts_missing"])[0]
+        lines.append(
+            f"  ARTIFACTS DRIFTED — {n_changed} changed and {n_missing} missing of "
+            f"{coverage['artifacts_recorded']} files this run fingerprinted at "
+            f"close (first: {first}); the outputs on disk are no longer the set "
+            f"this manifest describes."
         )
     since = profile["run"].get("partial_runs_since") or []
     if since:
