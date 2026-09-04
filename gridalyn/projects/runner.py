@@ -582,6 +582,41 @@ def _record_artifacts(project: StudyProject) -> dict[str, dict[str, Any]]:
     return records
 
 
+def _check_declared_outputs(stage: WorkflowStage, project: StudyProject) -> None:
+    """Fail a stage that declared an output and did not produce it.
+
+    ``outputs:`` in ``workflow.yaml`` was documentation: nothing read it, so a
+    declaration could name files a stage stopped writing months ago, or a
+    stage could echo "STUB" and count as completed. Checking existence after
+    the stage turns the declaration into a contract at the cost of one
+    ``stat`` per path. A stage that declares no outputs is not checked, so
+    studies that never declared any are unaffected.
+
+    Args:
+        stage: The stage that just exited zero.
+        project: The study, for resolving the declared paths.
+
+    Raises:
+        FileNotFoundError: Naming the stage and every missing path, with the
+            remedy -- produce it, or stop declaring it.
+    """
+    missing: list[str] = []
+    for declared in stage.outputs:
+        path = Path(declared)
+        if not path.is_absolute():
+            path = project.base_dir / path
+        if not path.exists():
+            missing.append(declared)
+    if missing:
+        listed = "\n  ".join(missing)
+        raise FileNotFoundError(
+            f"{project.workflow.path}: stage {stage.id!r} exited 0 but did not "
+            f"produce {len(missing)} declared output(s):\n  {listed}\n"
+            "Remediation: make the stage write them, or remove them from the "
+            "stage's `outputs:`."
+        )
+
+
 def _preserve_full_run(
     output_path: Path, manifest: dict[str, Any], *, partial: bool, echo: bool
 ) -> Path:
@@ -784,6 +819,16 @@ def _execute_stage(
                 f"{project.root} --stage {stage.id}"
             )
         raise subprocess.CalledProcessError(result.returncode, stage.command)
+    try:
+        _check_declared_outputs(stage, project)
+    except FileNotFoundError:
+        # Exit 0 but a promised file is absent: the stage did not do what the
+        # contract says it does. Recorded distinctly from a non-zero exit.
+        record["status"] = "failed"
+        record["error"] = "declared output missing"
+        if echo:
+            _echo(f"Inspect the run manifest: {output_path}")
+        raise
     record["status"] = "completed"
     if echo:
         _echo(f"[{index}/{total}] {stage.id} completed in {elapsed:.1f}s")

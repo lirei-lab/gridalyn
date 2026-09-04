@@ -202,3 +202,61 @@ class PartialRunProtectionTests(unittest.TestCase):
             self.assertFalse(
                 manifest_path.with_name("project_run_manifest.partial.json").exists()
             )
+
+
+class DeclaredOutputTests(unittest.TestCase):
+    """``outputs:`` is a contract: a stage that declares one must produce it."""
+
+    def _project(self, root: Path, command: str, outputs: list[str]) -> Path:
+        lines = [
+            "apiVersion: gridalyn.io/v1alpha1",
+            "kind: Workflow",
+            "metadata:",
+            "  name: persistence_workflow",
+            "spec:",
+            "  stages:",
+            "    - id: build",
+            f"      command: {command!r}",
+        ]
+        if outputs:
+            lines.append("      outputs:")
+            lines.extend(f"        - {o}" for o in outputs)
+        (root / "workflow.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (root / "project.yaml").write_text(_PROJECT, encoding="utf-8")
+        return root / "outputs" / "manifests" / "project_run_manifest.json"
+
+    def test_a_produced_declared_output_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mp = self._project(
+                root,
+                "mkdir -p outputs/json && echo '{}' > outputs/json/x.json",
+                ["outputs/json/x.json"],
+            )
+            self.assertEqual(
+                run_project(load_project(root / "project.yaml"), manifest_path=mp),
+                ["build"],
+            )
+
+    def test_a_declared_output_that_is_not_produced_fails_the_run_by_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mp = self._project(root, "echo STUB", ["outputs/json/never.json"])
+            with self.assertRaises(FileNotFoundError) as ctx:
+                run_project(load_project(root / "project.yaml"), manifest_path=mp)
+            self.assertIn("'build'", str(ctx.exception))
+            self.assertIn("outputs/json/never.json", str(ctx.exception))
+            self.assertIn("Remediation", str(ctx.exception))
+            manifest = _read(mp)
+            self.assertEqual(manifest["status"], "failed")
+            self.assertEqual(manifest["stages"][0]["status"], "failed")
+            self.assertEqual(manifest["stages"][0]["error"], "declared output missing")
+
+    def test_a_stage_declaring_no_outputs_is_not_checked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mp = self._project(root, "echo nothing", [])
+            self.assertEqual(
+                run_project(load_project(root / "project.yaml"), manifest_path=mp),
+                ["build"],
+            )
