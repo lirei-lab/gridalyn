@@ -40,6 +40,9 @@ from projects.ev_hosting_flex.scripts.config import (
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
 )
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
+    feeder_home_count,
+)
 
 # SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
 # (imported before this stage under `{python} -m`).
@@ -108,8 +111,7 @@ def derive_curtailment(script: ProjectScript) -> dict[str, Any]:
     expansion = (flexible / firm - 1.0) if firm > 0 else None
 
     # ── Enrollment sweep at 1 EV/home (the binding lever, study-B Fig B) ────
-    annual_report = script.read_json("outputs/reports/annual_mc_report.json")
-    n_lever = min(int(annual_report["summary"]["n_homes"]), pool_max)
+    n_lever = min(feeder_home_count(script), pool_max)
     enrollment = []
     for rho in ENROLLMENT_GRID:
         n_enrolled = int(round(rho * n_lever))

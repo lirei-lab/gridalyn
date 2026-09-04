@@ -108,7 +108,9 @@ spec:
         - projects/ev_hosting_flex/outputs/data/fc_base_sigma_1.5.npy
         - projects/ev_hosting_flex/outputs/data/fc_base_sigma_3.0.npy
         - projects/ev_hosting_flex/outputs/data/fc_base_sigma_5.0.npy
-        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
@@ -121,7 +123,9 @@ spec:
         - projects/ev_hosting_flex/outputs/data/base_annual.npy
         - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
-        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
       outputs:
         - projects/ev_hosting_flex/outputs/json/curtailment_economics.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
@@ -326,7 +330,7 @@ spec:
         - projects/ev_hosting_flex/outputs/data/tday_mean_c.npy
         - projects/ev_hosting_flex/outputs/json/firm_hosting_annual.json
         - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
-        - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
       outputs:
         - projects/ev_hosting_flex/outputs/data/powerflow_bus_voltage.parquet
         - projects/ev_hosting_flex/outputs/data/powerflow_line_loading.parquet

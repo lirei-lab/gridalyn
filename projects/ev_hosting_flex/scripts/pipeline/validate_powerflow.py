@@ -70,6 +70,9 @@ from projects.ev_hosting_flex.scripts.config import (
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
 )
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
+    feeder_home_count,
+)
 
 # SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
 # (imported before this stage under `{python} -m`, before any numpy transitively).
@@ -313,9 +316,7 @@ def build_scenario_profiles(
     flexible = int(
         script.read_json("outputs/json/curtailment_hosting.json")["flexible_ev_count"]
     )
-    n_homes = int(
-        script.read_json("outputs/reports/annual_mc_report.json")["summary"]["n_homes"]
-    )
+    n_homes = feeder_home_count(script)
 
     temp_hourly = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp_hourly)
