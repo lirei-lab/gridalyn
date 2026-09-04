@@ -31,7 +31,11 @@ machine.
 | `der_voltage_optimization` | 5/5 | 14.4s | 11.0s | **1.31x** | 1.67x |
 | `synthetic_geojson_feeder` | 5/5 | 8.8s | 5.6s | **1.59x** | 1.25x |
 | `minimal_grid_project` | 3/3 | 5.0s | 5.0s | **1.00x** | 1.00x |
-| `ev_hosting_flex` | **2/23** | — | — | **not measured** | 3.29x |
+| `ev_hosting_flex` | 23/23 † | 4.51 h | 1.78 h | **2.53x** | 3.29x |
+
+† From two runs, read from the run log rather than a manifest — see
+"The flagship, measured" below, including one stage whose cost was not
+reproducible between them.
 
 *Critical path* is the longest dependency chain weighted by measured time: the
 wall time a perfect scheduler with unlimited workers would reach, and therefore
@@ -92,38 +96,89 @@ and a study concentrated in two independent stages (`admm_thermal_consensus`,
 90.4%, 1.56x) carry the same answer to the first question and opposite answers
 overall. Only the second question separates them.
 
-For the flagship, neither question is answered yet: wave 3 holds ten stages, and
-whether the hours sit in one of them or spread across them is exactly what the
-missing profile would say.
+The flagship has since answered both, and it answers them differently from every
+fast study: its four dominant stages span three different waves, so two of them
+overlap and two do not. See "The flagship, measured".
 
-## The flagship is not profiled
+## The flagship, measured
 
-`ev_hosting_flex` records 2 of its 23 stages, because the manifest on disk came
-from a partial `--stage` run (its `stage_filter` names the two). No per-stage
-profile of the ~6-hour run exists, and none can be produced without a full run.
-The tool reports this rather than presenting the two-stage total as a profile.
+A full cold run on 2026-09-03 (01:19–05:38 UTC) executed 20 of the 23 stages and
+then failed in stage 21; a recovery run (11:38–15:36) completed the remaining
+three plus their dependencies. Together they give the first complete per-stage
+profile of `ev_hosting_flex`.
 
-One component of it *was* measured directly, in-process, without a runner
-invocation — see "the annual Monte-Carlo is not the bottleneck" below.
+**The profile is not in a manifest.** The failing run's manifest was overwritten
+by the recovery run's, which records 13 stages behind a `stage_filter`. The
+20-stage timings survive only in the run log, because the runner writes the
+manifest once, in its `finally` block, rather than per stage. `stage_profile.py`
+reads manifests and so cannot produce this profile today; the figures below were
+read from the log.
 
-## Two manifest defects the profiles exposed
+| Stage | Wave | Time | Share |
+|---|---|---|---|
+| `analyze_nonwires_value` | 4 | 76.3 min | 28.2% |
+| `analyze_credibility` | 5 | 51.6 min | 19.1% |
+| `analyze_cold_insurance` | 6 | 50.2 min | 18.6% |
+| `analyze_fleet_triage` | 4 | 40.7 min | 15.1% |
+| `analyze_voltage_risk_network` | 3 | 18.0 min | 6.7% |
+| `analyze_locational_contracts` | 5 | 8.5 min | 3.2% |
+| `analyze_clustered_adoption` | 3 | 6.9 min | 2.5% |
+| `validate_powerflow` | 5 | 6.6 min | 2.4% |
+| `generate_annual_mc` | 2 | 5.2 min | 1.9% |
+| *(the other 14 stages)* | | < 3 min each | 1.3% |
 
-**A partial run overwrites a full run's record.** The flagship's manifest is
-honest that it was filtered — it carries
-`stage_filter: ["prepare_topology_cache", "prepare_workspace"]` — but it
-replaced whatever record the full run left. The filter field is what makes the
-partial run detectable at all.
+**Four stages hold 81% of the run.** The remaining nineteen hold 19% between
+them.
 
-**`stage_filter: null` does not mean the record is current.**
-`admm_thermal_consensus` records 13 stages with no filter and
-`status: completed`, yet its workflow declares 14. The run (2026-08-18 23:10
-UTC) predates the commit that added `export_twin_network_model` to that
-workflow (`11dde791`, 2026-08-20 00:37 UTC). The manifest is a faithful record
-of a workflow that has since changed. A reader therefore cannot conclude "full
-run" from the absence of a filter; the recorded stage ids have to be compared
-against the workflow as it stood at the manifest's `git_commit`.
-`tools/stage_profile.py` reports this as `STALE MANIFEST` and marks the derived
-figures a lower bound.
+### What it says about parallelising the runner
+
+```text
+sequential                        4.51 h
+wave-barrier schedule, 2 workers  3.36 h    1.34x
+wave-barrier schedule, 10 workers 3.36 h    1.34x
+true DAG schedule, unlimited      1.78 h    2.53x
+```
+
+Three results, and the second and third are the ones that should change the
+design.
+
+**The worker cap is not the constraint.** Two workers reach exactly what ten
+reach. Every wave is dominated by a single stage, so capacity beyond the second
+worker has nothing to do. This substantially defuses the oversubscription hazard
+— the runner never needs to run ten stages at once, and a cap of 2–3 costs
+nothing against a cap of 10.
+
+**The wave barrier is the constraint.** A scheduler that runs each wave
+concurrently and waits for it to drain reaches 1.34x. One that starts each stage
+as soon as its own declared dependencies are satisfied reaches 2.53x — nearly
+double, on identical hardware and identical stage costs. The whole difference is
+stages waiting on a barrier rather than on their actual `needs:`. A wave-barrier
+implementation would deliver about a third of the available gain and look like it
+had succeeded.
+
+**The dominant stages are only partly independent.** `analyze_nonwires_value`
+and `analyze_fleet_triage` are both in wave 4 and mutually independent, so
+concurrency removes the smaller from the clock: 40.8 minutes saved, the single
+largest win available. But `analyze_credibility` (wave 5) and
+`analyze_cold_insurance` (wave 6) sit on the critical path one after the other,
+and no amount of concurrency touches them. That is why the ceiling is 2.53x
+rather than the 3.29x the DAG's shape suggests.
+
+### One stage's cost is not reproducible between runs
+
+`analyze_congestion_risk` measured **24.5s** in the full run and **4612.8s** in
+the recovery run four hours later — a factor of 188, on the same machine and the
+same commit. Every other stage measured in both runs agreed within 11%.
+
+The cause was not investigated. The plausible one is caching: the full run met
+artifacts accreted from months of partial runs, while the recovery run met
+artifacts its own upstream stages had just regenerated. Whichever way round it
+is, it means a single run's profile is not automatically a stable description of
+the workload, and the table above should be read with that caveat on that row.
+Taking the larger figure instead moves the sequential total to 5.78 h and the
+ceiling to 2.19x; it does not change any conclusion above, because the
+wave-barrier result stays at 1.33x and the barrier remains the binding
+constraint.
 
 ## The annual Monte-Carlo is not the bottleneck
 
