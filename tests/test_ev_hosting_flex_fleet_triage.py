@@ -137,14 +137,15 @@ def test_governed_report_summary_agrees_with_the_pinned_headline_cell() -> None:
 
 
 @pytest.mark.skipif(not _TRIAGE.is_file(), reason=_SKIP)
-def test_governed_categories_partition_the_fleet_up_to_rounding() -> None:
-    """The four triage categories account for every transformer.
+def test_governed_categories_partition_the_fleet_exactly() -> None:
+    """The four triage categories account for every transformer, exactly.
 
-    ``triage_fleet`` averages each category over the allocation draws and
-    rounds each INDEPENDENTLY, so the four rounded counts can sum to n+1 or n-1
-    (measured: 541 of 540 under ``hourly_kt``). That is a presentation defect,
-    tracked separately; this test pins the bound so it cannot widen, and should
-    tighten to equality when the rounding is made to partition.
+    ``triage_fleet`` used to round each category's mean INDEPENDENTLY, so the
+    four counts could sum to n+1 or n-1 -- measured 541 of 540 under
+    ``hourly_kt``, which reads as a classification error rather than as
+    rounding and breaks the partition the stacked figure claims. Largest-
+    remainder apportionment makes them sum to the fleet (bd eei.6), and this
+    asserts equality rather than the +/-1 bound it held while that was open.
     """
     p = json.loads(_TRIAGE.read_text())
     n = int(p["n_transformers"])
@@ -156,7 +157,7 @@ def test_governed_categories_partition_the_fleet_up_to_rounding() -> None:
             + cell["needs_steel"]
             + cell["base_constrained"]
         )
-        assert abs(total - n) <= 1, f"triage[{i}]: categories sum to {total} of {n}"
+        assert total == n, f"triage[{i}]: categories sum to {total} of {n}"
         assert cell["n_at_risk"] == (
             cell["flex_defers"] + cell["needs_steel"] + cell["base_constrained"]
         )

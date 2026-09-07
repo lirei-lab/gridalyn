@@ -232,8 +232,10 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # stages closing the six light governed studies, so a study's own DAG
         # ends by checking itself rather than trusting a separate CLI call
         # (bd h85) + 1 build_study_reports stage, the canonical study report
-        # that replaces the ten-week-old `echo "STUB ..."` (bd eei.9).
-        self.assertEqual(65, declared)
+        # that replaces the ten-week-old `echo "STUB ..."` (bd eei.9) + 1
+        # build_base_mc_cache stage, the sole writer of the shared base-MC set
+        # (bd c7f.2.1).
+        self.assertEqual(66, declared)
 
 
 if __name__ == "__main__":

@@ -64,8 +64,8 @@ from projects.ev_hosting_flex.scripts.config import (
     TRIAGE_RATING_CONVENTIONS,
 )
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
-    _ensure_base_mc_cache,
     _ev_pools,
+    load_base_mc_cache,
 )
 from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
@@ -321,7 +321,24 @@ def triage_fleet(
                 acc[NEEDS_STEEL] += 1.0
                 steel_kva += rung
 
-    counts = {k: int(round(v / n_draws)) for k, v in acc.items()}
+    # Largest-remainder apportionment, not four independent roundings. Each
+    # category's mean is floored, then the units left over by flooring are given
+    # to the largest fractional parts -- so the four counts sum to the fleet
+    # exactly. Rounding each mean on its own let them sum to n+1 (measured
+    # 2026-09-04: 541 of 540 under hourly_kt) or n-1, which reads as a
+    # classification error rather than as rounding, and breaks the partition the
+    # stacked figure claims (bd eei.6). Ties resolve by the category order in
+    # ``acc``, which is fixed, so the result is deterministic.
+    means = {k: v / n_draws for k, v in acc.items()}
+    total = int(round(sum(means.values())))
+    counts = {k: int(v) for k, v in means.items()}
+    remainder = total - sum(counts.values())
+    if remainder:
+        by_fraction = sorted(
+            means, key=lambda k: (-(means[k] - int(means[k])), list(means).index(k))
+        )
+        for key in by_fraction[:remainder]:
+            counts[key] += 1
     at_risk = counts[FLEX_DEFERS] + counts[NEEDS_STEEL] + counts[BASE_CONSTRAINED]
     return {
         "adoption_ev_per_home": float(adoption),
@@ -386,7 +403,7 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
             )
         rating_by_size[h] = group.pop()
 
-    base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(TRIAGE_K_BASE))
+    base_mc = load_base_mc_cache(data_dir, sizes, int(TRIAGE_K_BASE))
     pools_by_size: dict[int, list[np.ndarray]] = {}
     for h in sizes:
         depth = int(math.ceil(float(TRIAGE_POOL_PER_HOME) * h))

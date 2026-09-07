@@ -116,19 +116,20 @@ class FlagshipVerifyTests(unittest.TestCase):
 
     def test_real_workflow_parses_and_enumerates_stages(self) -> None:
         stages = tool.topo_sort(tool.load_stages(_REPO_ROOT))
-        self.assertEqual(23, len(stages))
+        self.assertEqual(24, len(stages))
         ids = {s["id"] for s in stages}
         # Every heavy id names a real stage, and the set is the MEASURED one:
         # generate_annual_mc (295 s on the clean run) is no longer in it, so the
-        # 15 of 23: build_study_reports depends on analyze_cold_insurance,
-        # which is heavy, so the study report is skipped with the rest of the
-        # heavy chain -- correct, since it aggregates reports those stages
-        # would not have written (bd zpz, bd eei.9).
+        # subset covers 16 of 24 rather than the 3 it covered while the heavy
+        # set was {generate_annual_mc} and everything depended on it (bd zpz).
+        # The 8 it skips are the four heavy stages plus the four that need one:
+        # fleet_triage, locational_contracts, nonwires_value and the study
+        # report, which aggregates reports those stages would not have written.
         self.assertTrue(tool.HEAVY_STAGES <= ids, tool.HEAVY_STAGES - ids)
         self.assertNotIn("generate_annual_mc", tool.HEAVY_STAGES)
         decisions = tool.classify_runs(stages)
         ran = [s["id"] for s, action, _ in decisions if action == "run"]
-        self.assertGreaterEqual(len(ran), 15, ran)
+        self.assertGreaterEqual(len(ran), 16, ran)
         self.assertIn("generate_annual_mc", ran)
 
     # -- R7 baseline check (review fix: was untested) -------------------------
@@ -192,7 +193,7 @@ class FlagshipVerifyTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertTrue(out.exists())
             payload = json.loads(out.read_text())
-            self.assertEqual(23, len(payload["stages"]))
+            self.assertEqual(24, len(payload["stages"]))
 
     def test_main_list_stages_exits_zero(self) -> None:
         from contextlib import redirect_stdout
@@ -202,7 +203,7 @@ class FlagshipVerifyTests(unittest.TestCase):
         with redirect_stdout(buffer):
             code = tool.main(["--list-stages", "--workspace", str(_REPO_ROOT)])
         self.assertEqual(0, code)
-        self.assertEqual(23, len(buffer.getvalue().splitlines()))
+        self.assertEqual(24, len(buffer.getvalue().splitlines()))
 
     def test_main_usage_error_exits_two(self) -> None:
         with self.assertRaises(SystemExit) as ctx:
