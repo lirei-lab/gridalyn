@@ -51,11 +51,11 @@ bannered below — Cold-load pickup (retired Phase 15) and Recommended values
 | Fleet needing steel at 1 EV/home, static | 1 | `fleet.needs_steel_at_1ev_static` |
 | Fleet base-constrained at 1 EV/home, static | 426 | `fleet.base_constrained_at_1ev_static` |
 | Fleet deferred fraction of at-risk, static | 0.146 | `fleet.deferred_fraction_at_1ev_static` |
-| Fleet at risk at 1 EV/home, hourly rating | 186 | `fleet.n_at_risk_at_1ev_hourly_kt` |
+| Fleet at risk at 1 EV/home, hourly rating | 185 | `fleet.n_at_risk_at_1ev_hourly_kt` |
 | Fleet deferred by flexibility at 1 EV/home, hourly | 182 | `fleet.flex_defers_at_1ev_hourly_kt` |
-| Fleet needing steel at 1 EV/home, hourly | 4 | `fleet.needs_steel_at_1ev_hourly_kt` |
+| Fleet needing steel at 1 EV/home, hourly | 3 | `fleet.needs_steel_at_1ev_hourly_kt` |
 | Fleet base-constrained at 1 EV/home, hourly | 0 | `fleet.base_constrained_at_1ev_hourly_kt` |
-| Fleet deferred fraction of at-risk, hourly | 0.978495 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
+| Fleet deferred fraction of at-risk, hourly | 0.983784 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
 
 **The fleet rows are the study's declared primary result** — `project.yaml`
 calls `fleet_triage` "the study's primary result; the per-feeder stages below
@@ -1165,3 +1165,32 @@ LV-only total +6359.52.
 The substation term is 0 with `needed_within_horizon: false` — the N-1
 crossing at 1.31 EV/home is reached only after the 15-year horizon, so there
 is nothing to defer. The total is the LV deferral alone.
+
+## Fleet categories now partition the fleet (2026-09-07) — 3 pins, hourly_kt only
+
+`triage_fleet` rounded each category's mean independently, so the four counts
+need not sum to the fleet: measured 541 of 540 under `hourly_kt`. Largest-
+remainder apportionment fixes it (bd eei.6); the classification logic is
+untouched — it was never wrong, only the presentation of its averages was.
+Three pins move, all `hourly_kt`; `static` already summed to 540:
+
+| Pin | Was | Now |
+|---|---|---|
+| `fleet.n_at_risk_at_1ev_hourly_kt` | 186 | 185 |
+| `fleet.needs_steel_at_1ev_hourly_kt` | 4 | 3 |
+| `fleet.deferred_fraction_at_1ev_hourly_kt` | 0.978495 | 0.983784 |
+
+Re-based on the **third clean run** (2026-09-07, from `f6a35e47`, 24 stages,
+one manifest, no stage filter). That run is also the first to carry **artifact
+fingerprints**: 129 files recorded with their `sha256` at close, so a later
+rewrite is detectable rather than inferred from mtimes (bd qgr.1). Against the
+second clean run, 91 of the 94 pins are byte-identical and the three that
+differ are exactly these — two code changes landed between the runs
+(`bd c7f.2.1`, `bd eei.6`) and moved nothing else.
+
+One honest caveat on the run's wall time. It measures 2.60 h, against 3.84 h
+for the first clean run, but the two are not comparable: `build_base_mc_cache`
+found a valid cache and completed in 8.5 s rather than building the set. A
+genuinely cold run pays roughly 75 min there, which the first run paid inside
+`analyze_congestion_risk`.
+

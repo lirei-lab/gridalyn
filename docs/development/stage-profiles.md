@@ -100,6 +100,43 @@ The flagship has since answered both, and it answers them differently from every
 fast study: its four dominant stages span three different waves, so two of them
 overlap and two do not. See "The flagship, measured".
 
+## The flagship after the cache became its own stage (2026-09-07)
+
+The third clean run, from `f6a35e47`: 24 stages, one manifest, and the first to
+carry artifact fingerprints — 129 files with their `sha256`, 0 drifted when
+re-checked.
+
+| Stage | Wave | Time | Share |
+|---|---|---|---|
+| `analyze_cold_insurance` | 6 | 51.8 min | 33.2% |
+| `analyze_credibility` | 5 | 51.6 min | 33.1% |
+| `analyze_voltage_risk_network` | 3 | 18.1 min | 11.6% |
+| `analyze_locational_contracts` | 5 | 8.3 min | 5.3% |
+| `analyze_clustered_adoption` | 3 | 6.5 min | 4.1% |
+| `validate_powerflow` | 5 | 6.4 min | 4.1% |
+| `generate_annual_mc` | 2 | 5.0 min | 3.2% |
+| `analyze_voltage_risk` | 3 | 2.7 min | 1.7% |
+
+```text
+sequential                        2.60 h
+wave-barrier schedule, 4 workers  2.13 h    1.22x
+true DAG schedule, unlimited      1.81 h    1.44x
+```
+
+**Read the wall time with its caveat.** `build_base_mc_cache` found a valid
+cache and finished in 8.5 s instead of building the set, so 2.60 h is a
+warm-cache figure; a cold run pays roughly 75 min there, which the first run
+paid inside `analyze_congestion_risk` (4556 s). The comparison that holds
+between the runs is the shape, not the total.
+
+**And the ceiling fell, from 2.14x to 1.44x, for a good reason.** Moving
+the base-MC build out of `analyze_congestion_risk` took 75 minutes of
+parallelisable work off the graph; what is left is dominated by
+`analyze_credibility` and `analyze_cold_insurance`, K=50 stages that sit on the
+critical path one after the other. Concurrency has less to win because a fix
+already won it — which is the right order, and the reason to re-size `bd c7f.2`
+against this profile rather than the first run's.
+
 ## The flagship, measured
 
 A full cold run on 2026-09-03 (01:19–05:38 UTC) executed 20 of the 23 stages and
