@@ -49,7 +49,7 @@ from projects.ev_hosting_flex.scripts.config import (
     TRAFO_CAPEX_PER_KVA,
 )
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
-    _ensure_base_mc_cache,
+    load_base_mc_cache,
 )
 from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (
     capital_recovery_factor,
@@ -219,7 +219,7 @@ def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
         h: sum(1 for v in homes_by_trafo.values() if v == h) for h in sizes
     }
 
-    base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(CONGESTION_K_BASE))
+    base_mc = load_base_mc_cache(data_dir, sizes, int(CONGESTION_K_BASE))
     # per-EV mean hourly design-day profile
     ev_pool = aggregate_to_hourly(
         ev_fleet_annual(np.random.default_rng(SEED), int(POOL_MAX_ANNUAL), tday, hod0)

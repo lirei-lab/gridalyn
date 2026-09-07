@@ -57,7 +57,7 @@ from projects.ev_hosting_flex.scripts.config import (
     TRIAGE_K_BASE,
 )
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
-    _ensure_base_mc_cache,
+    load_base_mc_cache,
 )
 from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
     size_network_to_load,
@@ -361,7 +361,7 @@ def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
     }
     sizes = sorted(set(homes_by_trafo.values()))
 
-    base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(TRIAGE_K_BASE))
+    base_mc = load_base_mc_cache(data_dir, sizes, int(TRIAGE_K_BASE))
     base_by_size = {h: base_mc[h][0] for h in sizes}
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(float)
     _cap, series = feeder_rating(temp)

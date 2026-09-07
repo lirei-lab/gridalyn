@@ -301,3 +301,103 @@ def test_a_consumer_wanting_more_than_the_shared_maximum_is_refused(
     _stub_realizations(monkeypatch)
     with pytest.raises(ValueError, match="exceeds the shared cache maximum"):
         m._ensure_base_mc_cache(tmp_path, None, [3], m._MAX_K_BASE + 1)  # type: ignore[arg-type]
+
+
+# ─── 5. The shared cache has ONE writer (bd c7f.2.1) ─────────────────────
+#
+# lx7 made four stages share one base-MC set instead of regenerating it four
+# times. It did not make the sharing safe under concurrency: analyze_fleet_triage
+# and analyze_nonwires_value sit in the same wave with no edge between them, so
+# a wave-level scheduler runs them together and both would write the same .npz
+# on a non-atomic np.savez. Consumers now READ through load_base_mc_cache, which
+# raises rather than regenerating; only build_base_mc_cache writes.
+
+
+def test_the_reader_never_creates_the_cache_it_is_missing(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A reader must fail, not generate -- that is what removes the race."""
+    from projects.ev_hosting_flex.scripts.pipeline import analyze_congestion_risk as m
+
+    calls = _stub_realizations(monkeypatch)
+    with pytest.raises(FileNotFoundError, match="build_base_mc_cache"):
+        m.load_base_mc_cache(tmp_path, [2, 5], 3)  # type: ignore[arg-type]
+    assert calls == [], "the reader generated realizations instead of failing"
+    assert not list(tmp_path.iterdir()), "the reader wrote into the data directory"  # type: ignore[attr-defined]
+
+
+def test_the_reader_returns_the_writers_prefix(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the builder writes at the shared maximum, a K=3 reader slices."""
+    from projects.ev_hosting_flex.scripts.pipeline import analyze_congestion_risk as m
+
+    _stub_realizations(monkeypatch)
+    built = m._ensure_base_mc_cache(tmp_path, None, [2, 5], m._MAX_K_BASE)  # type: ignore[arg-type]
+    read = m.load_base_mc_cache(tmp_path, [2, 5], 3)  # type: ignore[arg-type]
+    for homes in (2, 5):
+        assert read[homes].shape[0] == 3
+        np.testing.assert_array_equal(read[homes], built[homes][:3])
+
+
+def test_the_reader_refuses_a_cache_built_under_another_configuration(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A base recalibration must fail the reader, not be silently reused."""
+    from projects.ev_hosting_flex.scripts.pipeline import analyze_congestion_risk as m
+
+    _stub_realizations(monkeypatch)
+    m._ensure_base_mc_cache(tmp_path, None, [2], m._MAX_K_BASE)  # type: ignore[arg-type]
+    monkeypatch.setattr(m, "_base_mc_signature", lambda: "a-different-signature")
+    with pytest.raises(FileNotFoundError, match="different base configuration"):
+        m.load_base_mc_cache(tmp_path, [2], 3)  # type: ignore[arg-type]
+
+
+def test_the_reader_refuses_a_cache_missing_a_home_count(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An uncovered size must name itself, not come back as a short dict."""
+    from projects.ev_hosting_flex.scripts.pipeline import analyze_congestion_risk as m
+
+    _stub_realizations(monkeypatch)
+    m._ensure_base_mc_cache(tmp_path, None, [2], m._MAX_K_BASE)  # type: ignore[arg-type]
+    with pytest.raises(FileNotFoundError, match=r"home-count\(s\) \[9\]"):
+        m.load_base_mc_cache(tmp_path, [2, 9], 3)  # type: ignore[arg-type]
+
+
+def test_only_one_stage_declares_the_cache_as_an_output() -> None:
+    """The DAG must say what the code now enforces: one writer, three readers."""
+    import yaml
+
+    from projects.ev_hosting_flex.scripts.config import PROJECT_ROOT
+
+    stages = yaml.safe_load(
+        (PROJECT_ROOT / "workflow.yaml").read_text(encoding="utf-8")
+    )["spec"]["stages"]
+    writers = [
+        s["id"]
+        for s in stages
+        if any("base_mc_by_size" in o for o in s.get("outputs") or [])
+    ]
+    readers = [
+        s["id"]
+        for s in stages
+        if any("base_mc_by_size" in i for i in s.get("inputs") or [])
+    ]
+    assert writers == ["build_base_mc_cache"], writers
+    assert len(readers) == 4, readers
+    by_id = {s["id"]: s for s in stages}
+
+    def ancestors(stage_id: str, seen: set[str] | None = None) -> set[str]:
+        seen = seen if seen is not None else set()
+        for need in by_id[stage_id].get("needs") or []:
+            if need not in seen:
+                seen.add(need)
+                ancestors(need, seen)
+        return seen
+
+    for reader in readers:
+        assert writers[0] in ancestors(reader), (
+            f"{reader} reads the shared cache without depending on "
+            f"{writers[0]}; under a concurrent runner that is a race"
+        )

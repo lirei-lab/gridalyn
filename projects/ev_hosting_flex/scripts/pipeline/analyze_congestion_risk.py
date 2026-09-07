@@ -166,6 +166,66 @@ def _ensure_base_mc_cache(
     return {h: out[h][: int(k_base)] for h in wanted}
 
 
+def load_base_mc_cache(
+    data_dir: Path, sizes: list[int], k_base: int
+) -> dict[int, np.ndarray]:
+    """Return the shared base-MC set, reading only -- never generating.
+
+    The four stages that consume this cache used to call
+    :func:`_ensure_base_mc_cache`, which regenerates on a miss. Two of them
+    (``analyze_fleet_triage`` and ``analyze_nonwires_value``) sit in the same
+    wave with no edge between them, so a concurrent runner would run them
+    together and both could write the same ``.npz`` -- ``np.savez`` is not
+    atomic, and the overlap that motivated the concurrency would be spent
+    generating the set twice (bd c7f.2.1). Consumers therefore read; only
+    ``build_base_mc_cache`` writes, and the workflow's ``needs:`` edges say so.
+
+    Args:
+        data_dir: Study data directory holding ``base_mc_by_size.npz``.
+        sizes: Distinct home-counts the caller needs covered.
+        k_base: How many realizations the caller wants, as a prefix.
+
+    Returns:
+        Mapping of home-count to a ``(k_base, n_steps)`` kW array.
+
+    Raises:
+        FileNotFoundError: If the cache is absent, built under a different
+            base-config signature, or does not cover every requested size --
+            each naming the stage that produces it, because a reader silently
+            regenerating is the failure this function exists to prevent.
+    """
+    path = data_dir / "base_mc_by_size.npz"
+    if int(k_base) > _MAX_K_BASE:
+        raise ValueError(
+            f"k_base={int(k_base)} exceeds the shared cache maximum "
+            f"{_MAX_K_BASE}. Remediation: widen _MAX_K_BASE and re-run "
+            f"build_base_mc_cache."
+        )
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} is absent. Remediation: run the build_base_mc_cache stage "
+            f"first; it is declared under this stage's `needs:`."
+        )
+    cached = np.load(path)
+    signature = str(cached["_sig"]) if "_sig" in cached.files else ""
+    if signature != _base_mc_signature():
+        raise FileNotFoundError(
+            f"{path} was built under a different base configuration "
+            f"(signature {signature!r}, expected {_base_mc_signature()!r}). "
+            f"Remediation: re-run build_base_mc_cache; a base recalibration "
+            f"invalidates it deliberately."
+        )
+    wanted = sorted({int(h) for h in sizes})
+    covered = {int(key) for key in cached.files if key != "_sig"}
+    uncovered = [h for h in wanted if h not in covered]
+    if uncovered:
+        raise FileNotFoundError(
+            f"{path} does not cover home-count(s) {uncovered}. Remediation: "
+            f"re-run build_base_mc_cache; the topology changed after it ran."
+        )
+    return {h: cached[str(h)][: int(k_base)].astype(DTYPE) for h in wanted}
+
+
 def _ev_pools(n_max: int, tday: np.ndarray, hod0: int, k_ev: int) -> list[np.ndarray]:
     """K EV-fleet draws of ``n_max`` EVs each; per-scenario counts use prefixes."""
     return [
@@ -250,7 +310,7 @@ def derive_congestion(script: ProjectScript) -> dict[str, Any]:
         if _series is None
         else cold_capability_curve(temp, res_minutes=int(ANNUAL_RES_MINUTES))
     )
-    base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(CONGESTION_K_BASE))
+    base_mc = load_base_mc_cache(data_dir, sizes, int(CONGESTION_K_BASE))
     ev_grid = [float(e) for e in CONGESTION_EV_PER_HOME_GRID]
     g_grid = [float(g) for g in CONGESTION_G_GRID]
     n_max = int(math.ceil(max(ev_grid) * max(sizes)))
