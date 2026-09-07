@@ -215,6 +215,22 @@ peak. They partly offset, but both should move toward the Canadian values.
 
 ## Power-limited multi-session availability (Phase 10.3)
 
+> **RETIRED — Phase 15 (RETIRE-02, D-13). Historical record; nothing below is
+> live.** The constants this section chooses (`WORKPLACE_WINDOW`,
+> `AVAILABILITY_SCENARIOS`, `TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95`,
+> `TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`, `EXTENDED_PENETRATION_SWEEP`,
+> `PLUGIN_WINDOW`) were **physically deleted from `scripts/config.py`** on
+> 2026-09-07 (`syntgrid-8va`), together with the four other constants the file
+> marked RETIRED. Each had been kept importable for a consumer its own
+> docstring named; every one of those consumers was already gone — measured by
+> AST across 492 files, zero reads. `config.py` carries deletion tombstones at
+> the points the blocks used to be, and
+> `tests/test_ev_hosting_flex_retired_constants.py` fails if any of them
+> returns or if any constant still marked RETIRED is read. The scenarios,
+> windows and energy gates described below therefore record what the study
+> once did; the live flexible leg is the deferral model, and acceptability is
+> reliability-only (see *RETIRE-02 framing change* below).
+
 The flexible leg was re-baselined from the 10.1 in-window valley-fill **deferral**
 mechanism to **power-limited natural charging** (V1G smart-charging) over multiple
 daily availability sessions (D-08 goal amendment; ROADMAP lineage). This subsection
