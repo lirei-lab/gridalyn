@@ -231,8 +231,9 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # admm_thermal_consensus (all Milestone 14) + 6 validate_project_outputs
         # stages closing the six light governed studies, so a study's own DAG
         # ends by checking itself rather than trusting a separate CLI call
-        # (syntgrid-h85).
-        self.assertEqual(64, declared)
+        # (bd h85) + 1 build_study_reports stage, the canonical study report
+        # that replaces the ten-week-old `echo "STUB ..."` (bd eei.9).
+        self.assertEqual(65, declared)
 
 
 if __name__ == "__main__":

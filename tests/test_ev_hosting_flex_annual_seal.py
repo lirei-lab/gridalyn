@@ -12,8 +12,8 @@ LEAVES THE WORKSPACE EXACTLY AS IT FOUND IT. The chain regenerates stages
 3–6 in place, and until 2026-09-04 whatever it wrote stayed: on a tree whose
 artifacts predated the current code, an ordinary ``pytest -q`` replaced the
 annual chain's outputs with current-code ones and left everything downstream
-from the old code — a mixed set with no trace of the mixing (syntgrid-qgr.1,
-found by syntgrid-66). The seal now snapshots ``outputs/{data,json,reports}``
+from the old code — a mixed set with no trace of the mixing (bd qgr.1,
+found by bd 66). The seal now snapshots ``outputs/{data,json,reports}``
 before the chain and restores every file (bytes and mtime, ``copy2``) in a
 ``finally`` — pass or fail — deleting anything the chain created that was not
 there before, then asserts the tree's digests are identical to the snapshot.

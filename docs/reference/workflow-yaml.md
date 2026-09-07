@@ -106,6 +106,7 @@ flowchart LR
     compute_curtailment_economics["compute_curtailment_economics"]
     analyze_credibility["analyze_credibility"]
     analyze_cold_insurance["analyze_cold_insurance"]
+    build_study_reports["build_study_reports"]
     analyze_cold_coupling["analyze_cold_coupling"]
     analyze_network_characterization["analyze_network_characterization"]
     analyze_clustered_adoption["analyze_clustered_adoption"]
@@ -150,7 +151,10 @@ flowchart LR
     classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
     classDef hub fill:#e8eaf6,stroke:#3f51b5,color:#1a237e,stroke-width:2px
     classDef step fill:#e0f2f1,stroke:#00897b,color:#004d40
-    class prepare_workspace entry
+    analyze_cold_insurance --> build_study_reports
+    validate_powerflow --> build_study_reports
+    analyze_nonwires_value --> build_study_reports
+    class prepare_workspace,build_study_reports entry
     class generate_annual_mc hub
     class prepare_topology_cache,export_twin_network_model,compute_congestion_annual,apply_curtailment_contracts,compute_curtailment_economics,analyze_credibility,analyze_cold_insurance,analyze_cold_coupling,analyze_network_characterization,analyze_clustered_adoption,analyze_flexibility_incentive,analyze_network_performance,analyze_congestion_risk,analyze_fleet_triage,analyze_locational_contracts,analyze_nonwires_value,analyze_phase_imbalance,analyze_voltage_risk,analyze_voltage_risk_network,validate_powerflow step
 ```

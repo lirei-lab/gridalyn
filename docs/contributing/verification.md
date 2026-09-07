@@ -223,14 +223,14 @@ HEAD).
 Two operator commands:
 
 - `python tools/flagship_verify.py` — the shape-covering subset, the fast
-  source-proven proof used on generator/kernel changes. It runs 15 of the 22
+  source-proven proof used on generator/kernel changes. It runs 15 of the 23
   stages in about 24 minutes, skipping the four a clean run timed above ten
   minutes (`analyze_congestion_risk`, `analyze_credibility`,
   `analyze_cold_insurance`, `analyze_voltage_risk_network`) and, by
   dependency, the three that need the first. Until 2026-09-04 the heavy set was
   `{generate_annual_mc}` alone, and because every analysis stage depends on it
   the subset executed 2 stages in ~4 s — a proof of almost nothing
-  (`syntgrid-zpz`).
+  (`bd zpz`).
 - `python tools/flagship_verify.py --include-heavy` — the full regeneration
   (about four hours cold as of 2026-09-04, down from six after the shared
   base-MC cache stopped regenerating four times), operator-scheduled at

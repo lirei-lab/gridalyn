@@ -434,6 +434,7 @@ spec:
   validation:
     senseChecker: scripts/sense_checks.py:check
     objectiveArtifacts:
+      - outputs/reports/study_report.json
       - outputs/reports/topology_cache_report.json
       - outputs/reports/annual_mc_report.json
       - outputs/reports/fleet_triage_report.json

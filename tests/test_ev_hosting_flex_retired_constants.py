@@ -4,7 +4,7 @@
 naming the consumer that "still references it". Measured 2026-09-04: none of
 those consumers existed -- zero reads of any of the ten, repo-wide -- so the
 stated reason for keeping them had expired years-of-commits ago while the
-constants still read as live. They were deleted in syntgrid-8va.
+constants still read as live. They were deleted in bd 8va.
 
 Two guards, and they answer different questions. The first pins the deletion,
 so a revival makes `config.py`'s tombstones and CALIBRATION.md's banners wrong
@@ -28,7 +28,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG = REPO_ROOT / "projects" / "ev_hosting_flex" / "scripts" / "config.py"
 
-#: Deleted in syntgrid-8va. Kept as data so the first test states what it pins.
+#: Deleted in bd 8va. Kept as data so the first test states what it pins.
 DELETED = frozenset(
     {
         "AVAILABILITY_SCENARIOS",
@@ -118,7 +118,7 @@ class DeletedConstantsStayDeleted(unittest.TestCase):
     def test_the_tombstones_name_what_was_removed(self) -> None:
         """The record in the file must still account for every deleted name."""
         text = CONFIG.read_text(encoding="utf-8")
-        self.assertIn("DELETED (syntgrid-8va", text)
+        self.assertIn("DELETED (bd 8va", text)
         missing = sorted(name for name in DELETED if name not in text)
         self.assertEqual([], missing, f"tombstones no longer name {missing}")
 

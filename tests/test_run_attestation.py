@@ -5,7 +5,7 @@ disk to it afterwards. Two things rewrote flagship artifacts without a trace
 in September 2026: a ``--stage`` run (now recorded under ``partial_runs_since``)
 and the plain test suite, whose annual byte-stability seal regenerates a subset
 whenever outputs are present. These tests pin the fingerprint and the check
-that makes the attestation ``syntgrid-qgr.1`` asked for actually checkable.
+that makes the attestation ``bd qgr.1`` asked for actually checkable.
 """
 
 from __future__ import annotations

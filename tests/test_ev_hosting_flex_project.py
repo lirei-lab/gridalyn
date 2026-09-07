@@ -121,7 +121,7 @@ def test_flagship_baselines_value_identical() -> None:
     )
     metrics = baseline["metrics"]
     # 81 through 2026-09-04, then +13 `fleet.*` pins on the declared primary
-    # result (syntgrid-eei.2): 11 headline cells under both rating conventions,
+    # result (bd eei.2): 11 headline cells under both rating conventions,
     # plus k_base and the declared headline convention.
     assert len(metrics) == 94, (
         "the flagship baseline must pin exactly 94 metrics (a different count "

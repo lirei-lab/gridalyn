@@ -342,3 +342,12 @@ spec:
         - projects/ev_hosting_flex/outputs/figures/powerflow_trafo_loading_hist.png
         - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json
 
+    # ── Stage 7: the canonical study report (bd eei.9) ────────────────
+    - id: build_study_reports
+      needs: [analyze_clustered_adoption, analyze_cold_coupling, analyze_cold_insurance, analyze_flexibility_incentive, analyze_locational_contracts, analyze_network_performance, analyze_nonwires_value, analyze_phase_imbalance, analyze_voltage_risk, analyze_voltage_risk_network, compute_curtailment_economics, export_twin_network_model, validate_powerflow]
+      command: '{python} -m projects.ev_hosting_flex.scripts.pipeline.build_study_reports'
+      inputs:
+        - projects/ev_hosting_flex/outputs/json/fleet_triage.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/reports/study_report.json
+        - projects/ev_hosting_flex/outputs/reports/study_report.md

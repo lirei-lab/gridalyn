@@ -649,7 +649,7 @@ def run_stage() -> dict[str, Any]:
         "draws that share realization families are not a distribution this "
         "stage can defend an interval from, and the contract carries an interval "
         "where it can be defended and omits it rather than fakes it where it "
-        "cannot (syntgrid-eei.2). Raising K_BASE is a recorded re-base.",
+        "cannot (bd eei.2). Raising K_BASE is a recorded re-base.",
     ]
     if derived["pool_limited_sizes"]:
         warnings.append(

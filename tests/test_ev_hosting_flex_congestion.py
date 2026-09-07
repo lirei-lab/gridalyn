@@ -183,7 +183,7 @@ def test_governed_congestion_report_contract() -> None:
         assert key in report["summary"], sorted(report["summary"])
 
 
-# ─── 4. The shared base-MC cache (syntgrid-lx7) ──────────────────────────
+# ─── 4. The shared base-MC cache (bd lx7) ──────────────────────────
 #
 # Four stages share ``base_mc_by_size.npz`` under two K values. Keying it on the
 # caller's ``k_base`` made every alternation a miss, so each of the four

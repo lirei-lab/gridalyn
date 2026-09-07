@@ -80,7 +80,7 @@ def test_both_conventions_are_pinned_not_just_the_headline() -> None:
     """Every evaluated convention has a pinned cell.
 
     Pinning only the declared headline would re-hide the 6.7x gap between
-    conventions one commit after it was made visible (syntgrid-eei.1).
+    conventions one commit after it was made visible (bd eei.1).
     """
     assert set(PINNED_HEADLINE_INDEX) == set(TRIAGE_RATING_CONVENTIONS)
     assert TRIAGE_HEADLINE_RATING_CONVENTION in PINNED_HEADLINE_INDEX
@@ -178,7 +178,7 @@ def test_governed_no_uncertainty_block_and_the_reason_is_stated() -> None:
     assert "uncertainty" not in r, (
         "an uncertainty block appeared on fleet_triage_report; if k_base was "
         "raised and the interval is now defensible, update this test and "
-        "syntgrid-eei.2 together"
+        "bd eei.2 together"
     )
     warnings = " ".join(r["validation"]["warnings"])
     assert "K_BASE" in warnings and "sampling error" in warnings

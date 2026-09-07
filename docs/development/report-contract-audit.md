@@ -592,6 +592,18 @@ dropped.
 
 ---
 
+### Helper-routed total: 53 (2026-09-04)
+
+Three sites were added to `gridalyn/projects/runner.py` when the run record was
+made to survive a hard kill: the open manifest written before any stage runs,
+the rewrite after each stage, and the partial-run path that annotates a full
+run's record rather than replacing it. All three write the same run manifest
+through the same `_write_manifest` helper as the two sites already classified,
+and are `NOT-A-REPORT` for the same reason: a manifest carries a `manifest_id`
+and the run's stage list, not a `report_id` and a summary. Wrapping it in a
+report envelope would break its consumers, which is the mistake §2 warns
+against.
+
 ## 6. Not examined, and why
 
 Nothing in scope was excluded. For completeness, the following were deliberately **outside**

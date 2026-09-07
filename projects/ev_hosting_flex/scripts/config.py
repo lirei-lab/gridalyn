@@ -276,7 +276,7 @@ SDK ``gridalyn.simulation.analytics.topology`` sizing + the study-local
 # contract (LINE_LOADING_LIMIT_PERCENT, DTYPE, SEED, ROUND_DECIMALS, EV_SWEEP,
 # POWER_FACTOR) above is untouched.
 
-# ─── DELETED (syntgrid-8va, 2026-09-07) ─────────────────────────────
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
 # TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX, TOLERANCE_ACTIVATION_HOURS_MAX, TOLERANCE_PRIMARY
 # stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
 # importable for a consumer its own docstring named. Every one of those
@@ -433,7 +433,7 @@ BG_KW = _CONFIG["bgKw"]
 """Per-home non-heating background load (kW), occupancy-shaped (D-08). Manuscript
 anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
 
-# ─── DELETED (syntgrid-8va, 2026-09-07) ─────────────────────────────
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
 # PLUGIN_WINDOW
 # stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
 # importable for a consumer its own docstring named. Every one of those
@@ -445,7 +445,7 @@ anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
 
 # ─── Monte-Carlo + penetration sweep (D-05/D-07, discretion) ─────────────
 
-# ─── DELETED (syntgrid-8va, 2026-09-07) ─────────────────────────────
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
 # K
 # stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
 # importable for a consumer its own docstring named. Every one of those
@@ -471,7 +471,7 @@ LV-transformer rating over the K realizations). Replaces the Phase-9 CONG-03
 "zero overloads at any hour" definition, which collapses to ~0 under the
 cold-evening tail. Mirrors the existing ``TOLERANCE_*`` style."""
 
-# ─── DELETED (syntgrid-8va, 2026-09-07) ─────────────────────────────
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
 # TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95
 # stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
 # importable for a consumer its own docstring named. Every one of those
@@ -569,7 +569,7 @@ falls back to the oracle and records the divergence."""
 # re-baselined under three availability scenarios (overnight / +workplace[9-16] /
 # all-day ceiling) on the locked idx-62 71.25 kW / 7-home unit (Plan 02).
 
-# ─── DELETED (syntgrid-8va, 2026-09-07) ─────────────────────────────
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
 # WORKPLACE_WINDOW, AVAILABILITY_SCENARIOS,
 # TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95, EXTENDED_PENETRATION_SWEEP
 # stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept

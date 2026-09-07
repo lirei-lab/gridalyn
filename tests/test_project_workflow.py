@@ -966,7 +966,10 @@ class EVCapacityLimitationProjectTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(payload["valid"], payload)
-        self.assertEqual(payload["checked_count"], 81)
+        # 81 through 2026-09-04, then +13 fleet.* pins on the declared
+        # primary result (bd eei.2). Kept exact: a changed count means
+        # the baseline moved, which is a decision, not a detail.
+        self.assertEqual(payload["checked_count"], 94)
 
 
 if __name__ == "__main__":

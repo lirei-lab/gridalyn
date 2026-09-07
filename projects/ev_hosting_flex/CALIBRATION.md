@@ -71,7 +71,7 @@ seeds with the per-size limits held fixed, `flex_defers` has sd ≈ 1.9 (95 %
 [68, 76] around the pinned 73) and `n_at_risk` sd ≈ 1.9 ([495, 502] around
 500); the single-draw spread is 2.6× the 6-draw spread against √6 = 2.45, so
 the averaged draws scale as independent samples (measured 2026-09-04,
-`syntgrid-eei.3`). The **base-MC** axis — the `triageKBase` = 3 realizations
+`bd eei.3`). The **base-MC** axis — the `triageKBase` = 3 realizations
 behind those limits, shared by every transformer of equal home count — is
 *uncharacterised and non-independent by construction*, and it is the binding
 one. Two different reasons: one axis is quotable, the other is not. An
@@ -220,7 +220,7 @@ peak. They partly offset, but both should move toward the Canadian values.
 > `AVAILABILITY_SCENARIOS`, `TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95`,
 > `TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`, `EXTENDED_PENETRATION_SWEEP`,
 > `PLUGIN_WINDOW`) were **physically deleted from `scripts/config.py`** on
-> 2026-09-07 (`syntgrid-8va`), together with the four other constants the file
+> 2026-09-07 (`bd 8va`), together with the four other constants the file
 > marked RETIRED. Each had been kept importable for a consumer its own
 > docstring named; every one of those consumers was already gone — measured by
 > AST across 492 files, zero reads. `config.py` carries deletion tombstones at
@@ -1116,7 +1116,7 @@ stages had not been re-run on the fixed base. "Value-identical" was true of the
 files and false of the code.
 
 The first run of all 23 stages from committed code (`7f8cbb03`, 15:30–19:21
-UTC, outputs backed up first as `syntgrid-ev-outputs-PRE-clean-run-20260904`)
+UTC, outputs backed up first as `bd ev-outputs-PRE-clean-run-20260904`)
 is the first measurement of what the cooling fix did downstream. 31 pins
 differ; 27 are re-based here, on that run. Nothing since `bd1253ac` can have
 moved them: the five scripts whose pins drifted have zero commits, `_annual.py`'s
@@ -1147,14 +1147,14 @@ interpolation; `pf.post_ev_1p5_n_trafos_over_dynamic` 0 → 2 at a count boundar
 **Four pins are deliberately NOT re-based here:** `nonwires.*`. The clean run's
 `total_deferral_npv` came out −19054, a sign flip, and it is a defect rather
 than a measurement — `_substation_deferral` let the firm crossing run past the
-planning horizon and booked a *negative* deferral (`syntgrid-eei.7`, fixed in
+planning horizon and booked a *negative* deferral (`bd eei.7`, fixed in
 `dd50e374`). Those four land on an artifact the fixed code produced; expected
 LV-only total +6359.52.
 
 **Headline unchanged:** firm 11, flexible 16, +45 % expansion, break-even 6.
 
 **The four `nonwires.*` pins, re-based on the second clean run** (from
-`88c225f6`, which carries the `syntgrid-eei.7` fix):
+`88c225f6`, which carries the `bd eei.7` fix):
 
 | Pin | Was | Now |
 |---|---|---|

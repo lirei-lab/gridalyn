@@ -116,11 +116,14 @@ class FlagshipVerifyTests(unittest.TestCase):
 
     def test_real_workflow_parses_and_enumerates_stages(self) -> None:
         stages = tool.topo_sort(tool.load_stages(_REPO_ROOT))
-        self.assertEqual(22, len(stages))
+        self.assertEqual(23, len(stages))
         ids = {s["id"] for s in stages}
         # Every heavy id names a real stage, and the set is the MEASURED one:
         # generate_annual_mc (295 s on the clean run) is no longer in it, so the
-        # subset covers 15 stages rather than 3 (syntgrid-zpz).
+        # 15 of 23: build_study_reports depends on analyze_cold_insurance,
+        # which is heavy, so the study report is skipped with the rest of the
+        # heavy chain -- correct, since it aggregates reports those stages
+        # would not have written (bd zpz, bd eei.9).
         self.assertTrue(tool.HEAVY_STAGES <= ids, tool.HEAVY_STAGES - ids)
         self.assertNotIn("generate_annual_mc", tool.HEAVY_STAGES)
         decisions = tool.classify_runs(stages)
@@ -189,7 +192,7 @@ class FlagshipVerifyTests(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertTrue(out.exists())
             payload = json.loads(out.read_text())
-            self.assertEqual(22, len(payload["stages"]))
+            self.assertEqual(23, len(payload["stages"]))
 
     def test_main_list_stages_exits_zero(self) -> None:
         from contextlib import redirect_stdout
@@ -199,7 +202,7 @@ class FlagshipVerifyTests(unittest.TestCase):
         with redirect_stdout(buffer):
             code = tool.main(["--list-stages", "--workspace", str(_REPO_ROOT)])
         self.assertEqual(0, code)
-        self.assertEqual(22, len(buffer.getvalue().splitlines()))
+        self.assertEqual(23, len(buffer.getvalue().splitlines()))
 
     def test_main_usage_error_exits_two(self) -> None:
         with self.assertRaises(SystemExit) as ctx:

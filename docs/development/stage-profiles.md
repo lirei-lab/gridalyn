@@ -167,7 +167,7 @@ rather than the 3.29x the DAG's shape suggests.
 ### The flagship, measured again after the cache fix
 
 The profile above was read from a run that regenerated the shared base-MC
-cache four times (`syntgrid-lx7`). The first clean 23-stage run *after* that
+cache four times (`bd lx7`). The first clean 23-stage run *after* that
 fix — 2026-09-04, from `7f8cbb03`, recorded in one manifest with no
 `stage_filter` — is the profile a reader should now size anything against.
 
