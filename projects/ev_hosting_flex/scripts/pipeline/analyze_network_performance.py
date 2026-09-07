@@ -26,6 +26,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     load_annual_tmy,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import (
     annual_performance_metrics,
     flexible_share,
@@ -42,9 +43,6 @@ from projects.ev_hosting_flex.scripts.config import (
 )
 from projects.ev_hosting_flex.scripts.pipeline.analyze_flexibility_incentive import (
     _policy_ceiling_ev_per_home,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
 )
 
 

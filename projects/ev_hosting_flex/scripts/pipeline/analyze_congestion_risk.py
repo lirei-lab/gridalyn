@@ -30,6 +30,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     load_annual_tmy,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import (
     _cold_day_peaks,
     congestion_stats,
@@ -48,9 +49,6 @@ from projects.ev_hosting_flex.scripts.config import (
     ROUND_DECIMALS,
     SEED,
     TRIAGE_K_BASE,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
 )
 
 _STEPS_PER_DAY = 24 * (60 // int(ANNUAL_RES_MINUTES))

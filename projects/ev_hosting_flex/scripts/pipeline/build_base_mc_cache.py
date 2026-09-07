@@ -31,12 +31,10 @@ import pickle
 from typing import Any
 
 from projects.ev_hosting_flex.scripts._annual import day_mean_temps, load_annual_tmy
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
     _MAX_K_BASE,
     _ensure_base_mc_cache,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
 )
 
 # SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py.

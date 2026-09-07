@@ -39,6 +39,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     simulate_curtailment,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
@@ -66,9 +67,6 @@ from projects.ev_hosting_flex.scripts.config import (
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
     _ev_pools,
     load_base_mc_cache,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
 )
 
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0

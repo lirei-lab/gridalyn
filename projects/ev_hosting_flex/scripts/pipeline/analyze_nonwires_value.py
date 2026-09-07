@@ -29,6 +29,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     tmy_hour_of_day,
     year_at_adoption,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import flex_deferral_curves
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
@@ -53,9 +54,6 @@ from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
 )
 from projects.ev_hosting_flex.scripts.pipeline.compute_curtailment_economics import (
     capital_recovery_factor,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
 )
 
 
