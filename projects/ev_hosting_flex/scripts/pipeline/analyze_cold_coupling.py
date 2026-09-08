@@ -32,6 +32,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     simulate_curtailment,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
@@ -276,15 +277,7 @@ def run_stage() -> dict[str, Any]:
 
     script = project_script()
     derived = derive_cold_coupling(script)
-    return script.write_report(
-        "cold_coupling_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": []},
-    )
+    return emit_stage_report(script, "cold_coupling_report", derived)
 
 
 def main() -> None:

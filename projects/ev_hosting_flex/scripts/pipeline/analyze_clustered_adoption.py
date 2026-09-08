@@ -42,6 +42,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (
     gini,
     native_backend,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     CLUSTER_DISPERSION_GRID,
     CLUSTER_MC_DRAWS,
@@ -477,14 +478,11 @@ def run_stage() -> dict[str, Any]:
         "cold network; see the flexibility value-map spec). The AC re-solve then "
         "measures the recovered loading.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "clustered_adoption_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

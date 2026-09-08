@@ -43,6 +43,7 @@ from projects.ev_hosting_flex.scripts._annual import (
 )
 from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -481,14 +482,11 @@ def run_stage() -> dict[str, Any]:
         "the uncertainty band. Read it beside the fleet triage, which sweeps "
         "dispersion and both rating conventions.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "locational_contracts_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

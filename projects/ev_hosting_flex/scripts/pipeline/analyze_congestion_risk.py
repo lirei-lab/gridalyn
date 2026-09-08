@@ -35,6 +35,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (
     _cold_day_peaks,
     congestion_stats,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
@@ -545,14 +546,11 @@ def run_stage() -> dict[str, Any]:
         "electrification growth at zero EV (first_risk_g). Either alone can trip "
         "the planning threshold; do not read the EV trigger as the only driver.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "congestion_risk_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

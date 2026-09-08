@@ -27,6 +27,7 @@ from projects.ev_hosting_flex.scripts._annual import (
 )
 from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import to_three_phase_mv, vuf
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     PHASE_EV_GRID,
@@ -308,14 +309,11 @@ def run_stage() -> dict[str, Any]:
         "The substation Dyn transformer uses shift_degree=0 (a phase rotation "
         "does not change per-phase voltage magnitudes or the VUF).",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "phase_imbalance_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

@@ -33,6 +33,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     valley_fill_shift,
 )
 from projects.ev_hosting_flex.scripts._powerflow import apply_local_curtailment
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     CLIMATE_BIN_EDGES,
     DTYPE,
@@ -508,14 +509,11 @@ def run_stage() -> dict[str, Any]:
             "and the crossover temperature is unreliable. Increase POOL_TILES to "
             "resolve it, or lower INCENTIVE_TARGET_EV_PER_HOME."
         )
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "flexibility_incentive_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

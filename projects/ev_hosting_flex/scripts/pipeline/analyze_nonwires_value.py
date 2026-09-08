@@ -31,6 +31,7 @@ from projects.ev_hosting_flex.scripts._annual import (
 )
 from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import flex_deferral_curves
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -459,14 +460,11 @@ def run_stage() -> dict[str, Any]:
         "(transformers + CAPEX deferred vs EV/home) is ramp-shape-robust. The "
         "substation flex-lift is a documented aggregate proxy.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "nonwires_value_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

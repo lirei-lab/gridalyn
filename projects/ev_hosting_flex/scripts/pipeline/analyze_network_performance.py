@@ -31,6 +31,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (
     annual_performance_metrics,
     flexible_share,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     CLIMATE_BIN_EDGES,
     DTYPE,
@@ -349,14 +350,11 @@ def run_stage() -> dict[str, Any]:
         "SCOPE: pure-kW (static rating), no AC. The load-growth factor G scales "
         "the INFLEXIBLE heating base only; EVs are the flexible overlay.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "network_performance_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 
