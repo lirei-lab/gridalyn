@@ -35,16 +35,55 @@ bannered below — Cold-load pickup (retired Phase 15) and Recommended values
 | Hosting expansion | 0.4545 | `annual.hosting_expansion_percent` |
 | Firm hosting, P05 | 10.0 EVs | `cred.firm_p05` |
 | Firm hosting, P50 | 11.0 EVs | `cred.firm_p50` |
-| Firm hosting, P95 | 13.0 EVs | `cred.firm_p95` |
+| Firm hosting, P95 | 12.55 EVs | `cred.firm_p95` |
 | Flexible hosting, P50 | 16.0 EVs | `cred.flex_p50` |
-| Base peak, P50 | 66.10 kW | `cred.base_peak_p50` |
+| Base peak, P50 | 65.76 kW | `cred.base_peak_p50` |
 | Congested hours at pool top | 19.5 h/yr | `annual.congested_hours_at_pool_top` |
 | Economic break-even | 6 EVs | `annual.econ_breakeven_ev_count` |
 | Naive-model firm overestimate | 45.45 % | `coldcoupling.firm_overestimate_percent` |
 | Insurance crossover adoption | 11 EVs | `insurance.crossover_adoption` |
-| Expected flexibility cost at reference | 480.06 $ | `insurance.expected_cost_flex_at_ref` |
-| Short years if planning at P50 | 0.26 | `insurance.short_years_if_plan_p50` |
-| corr(winter severity, firm) | 0.42 | `insurance.delta_firm_correlation` |
+| Expected flexibility cost at reference | 480.05 $ | `insurance.expected_cost_flex_at_ref` |
+| Short years if planning at P50 | 0.24 | `insurance.short_years_if_plan_p50` |
+| corr(winter severity, firm) | 0.36 | `insurance.delta_firm_correlation` |
+| Fleet: transformers in the fleet | 540 | `fleet.n_transformers` |
+| Fleet at risk at 1 EV/home, static rating | 500 | `fleet.n_at_risk_at_1ev_static` |
+| Fleet deferred by flexibility at 1 EV/home, static | 73 | `fleet.flex_defers_at_1ev_static` |
+| Fleet needing steel at 1 EV/home, static | 1 | `fleet.needs_steel_at_1ev_static` |
+| Fleet base-constrained at 1 EV/home, static | 426 | `fleet.base_constrained_at_1ev_static` |
+| Fleet deferred fraction of at-risk, static | 0.146 | `fleet.deferred_fraction_at_1ev_static` |
+| Fleet at risk at 1 EV/home, hourly rating | 185 | `fleet.n_at_risk_at_1ev_hourly_kt` |
+| Fleet deferred by flexibility at 1 EV/home, hourly | 182 | `fleet.flex_defers_at_1ev_hourly_kt` |
+| Fleet needing steel at 1 EV/home, hourly | 3 | `fleet.needs_steel_at_1ev_hourly_kt` |
+| Fleet base-constrained at 1 EV/home, hourly | 0 | `fleet.base_constrained_at_1ev_hourly_kt` |
+| Fleet deferred fraction of at-risk, hourly | 0.983784 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
+
+**The fleet rows are the study's declared primary result** — `project.yaml`
+calls `fleet_triage` "the study's primary result; the per-feeder stages below
+are the worked example behind it" — and until 2026-09-04 they were the only
+substantive figures in the study with no pin. They are pinned under **both**
+rating conventions, not only the declared headline (`static`), because the two
+disagree by 6.7x on the deferred fraction and pinning one would re-hide that
+one commit after it was made visible. **They carry no `uncertainty` block, on
+purpose, and the reason is specific.** Two sampling axes sit under these
+counts. The **allocation** axis — which homes get the EVs, at clustered
+dispersion 0.7 — is characterised and independent: across 200 allocation
+seeds with the per-size limits held fixed, `flex_defers` has sd ≈ 1.9 (95 %
+[68, 76] around the pinned 73) and `n_at_risk` sd ≈ 1.9 ([495, 502] around
+500); the single-draw spread is 2.6× the 6-draw spread against √6 = 2.45, so
+the averaged draws scale as independent samples (measured 2026-09-04,
+`bd eei.3`). The **base-MC** axis — the `triageKBase` = 3 realizations
+behind those limits, shared by every transformer of equal home count — is
+*uncharacterised and non-independent by construction*, and it is the binding
+one. Two different reasons: one axis is quotable, the other is not. An
+interval is carried where it can be defended and is absent rather than faked
+where it cannot; the honest interval here would have to include the axis
+nobody has measured. Two consequences for a reader: `needs_steel` = 1 is a
+pinned value, not a finding — its allocation range is [0, 2], so "1 of 540
+needs reinforcement" is equally consistent with 0 and with 2; and raising
+`triageKBase` is a deliberate re-base to be recorded here, not a free change —
+since 7f8cbb03 the shared base-MC cache already holds six realizations, so its
+generation cost is paid, but it buys exactly the unmeasured axis, and measuring
+`per_size_limits` across base seeds first would say whether six is enough.
 
 ## Current knob values
 
@@ -62,6 +101,7 @@ so a recalibration cannot leave a knob stated here that the study no longer uses
 | Transformer utilization margin | 0.8 | `transformerUtilizationMargin` |
 | EV coincidence mixing weight | 0.5 | `evCoincidenceRho` |
 | Per-home thermal resistance | 7.0 | `rQuebec` |
+| Fleet triage base realizations | 3 | `triageKBase` |
 
 Sequence-valued knobs are deliberately **not** restated here — `evSweep` and
 `chargingWindow` are declared in the same `studyConfig` block and should be read
@@ -174,6 +214,22 @@ quantitative biases: (a) **per-EV energy ~2× high** (flat 5 h vs ~2 h active, 2
 peak. They partly offset, but both should move toward the Canadian values.
 
 ## Power-limited multi-session availability (Phase 10.3)
+
+> **RETIRED — Phase 15 (RETIRE-02, D-13). Historical record; nothing below is
+> live.** The constants this section chooses (`WORKPLACE_WINDOW`,
+> `AVAILABILITY_SCENARIOS`, `TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95`,
+> `TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`, `EXTENDED_PENETRATION_SWEEP`,
+> `PLUGIN_WINDOW`) were **physically deleted from `scripts/config.py`** on
+> 2026-09-07 (`bd 8va`), together with the four other constants the file
+> marked RETIRED. Each had been kept importable for a consumer its own
+> docstring named; every one of those consumers was already gone — measured by
+> AST across 492 files, zero reads. `config.py` carries deletion tombstones at
+> the points the blocks used to be, and
+> `tests/test_ev_hosting_flex_retired_constants.py` fails if any of them
+> returns or if any constant still marked RETIRED is read. The scenarios,
+> windows and energy gates described below therefore record what the study
+> once did; the live flexible leg is the deferral model, and acceptability is
+> reliability-only (see *RETIRE-02 framing change* below).
 
 The flexible leg was re-baselined from the 10.1 in-window valley-fill **deferral**
 mechanism to **power-limited natural charging** (V1G smart-charging) over multiple
@@ -1048,3 +1104,93 @@ flips one step earlier separates the trajectories discretely.
 cooling-capable dwelling ends colder than the same dwelling without cooling.
 The defect lived in exactly one branch, so a mode-agnostic assertion is the one
 that would have caught it.
+
+## First coherent run, and the re-base it forced (2026-09-04) — 27 pins
+
+**Read this with the "Cooling coupled to the thermal node (2026-09-01)"
+section above.** That re-base measured its blast radius on the base trace
+alone, moved three `annual.*` pins, and declared the other 78 value-identical —
+against artifacts on disk that the cooling fix had never regenerated. Every one
+of those artifacts dated from 08-04, 08-18 or 08-19. The eleven downstream
+stages had not been re-run on the fixed base. "Value-identical" was true of the
+files and false of the code.
+
+The first run of all 23 stages from committed code (`7f8cbb03`, 15:30–19:21
+UTC, outputs backed up first as `bd ev-outputs-PRE-clean-run-20260904`)
+is the first measurement of what the cooling fix did downstream. 31 pins
+differ; 27 are re-based here, on that run. Nothing since `bd1253ac` can have
+moved them: the five scripts whose pins drifted have zero commits, `_annual.py`'s
+one commit is reformatting (`annual.*` pins pass; `base_peak_kw` byte-identical),
+the exported twin's `sha256` is identical across runs, and
+numpy/scipy/pandapower/python match the 09-03 manifest.
+
+Two magnitudes inside the 27. Eighteen drift under 1 % — annual energy −1.46 %
+propagating through the AC solves (`pf.*`, `netchar.*`, `voltage*.*`). Nine
+drift more, each with a mechanism: `coldcoupling.curtailment_underestimate_ratio`
++50 % because the *naive* model's summer-driven curtailment (its denominator,
+7 kWh/yr) fell 37 % while the cold-coupled numerator fell 6 %;
+`flexincentive.shift_ceiling_warmest` 2.5 → 1.83 and the `cluster.*` block
+because summer peaks moved; `cred.firm_p95` 13 → 12.55 because one of K=50
+realizations crossed the 95th-percentile position under numpy's linear
+interpolation; `pf.post_ev_1p5_n_trafos_over_dynamic` 0 → 2 at a count boundary.
+
+| Pin | Was | Now |
+|---|---|---|
+| `cred.firm_p95` | 13.0 | 12.55 |
+| `cred.base_peak_p50` | 66.10 | 65.76 |
+| `insurance.expected_cost_flex_at_ref` | 480.06 | 480.054 |
+| `insurance.short_years_if_plan_p50` | 0.26 | 0.24 |
+| `insurance.delta_firm_correlation` | 0.42 | 0.360694 |
+
+(The full 27 are the diff of `baselines/results_baseline.json` in this commit.)
+
+**Four pins are deliberately NOT re-based here:** `nonwires.*`. The clean run's
+`total_deferral_npv` came out −19054, a sign flip, and it is a defect rather
+than a measurement — `_substation_deferral` let the firm crossing run past the
+planning horizon and booked a *negative* deferral (`bd eei.7`, fixed in
+`dd50e374`). Those four land on an artifact the fixed code produced; expected
+LV-only total +6359.52.
+
+**Headline unchanged:** firm 11, flexible 16, +45 % expansion, break-even 6.
+
+**The four `nonwires.*` pins, re-based on the second clean run** (from
+`88c225f6`, which carries the `bd eei.7` fix):
+
+| Pin | Was | Now |
+|---|---|---|
+| `nonwires.total_deferral_npv` | 6807.31 | 6359.52 |
+| `nonwires.total_trafo_years_deferred` | 267.258 | 266.288 |
+| `nonwires.first_reinforcement_year` | 5.37536 | 5.62674 |
+
+The substation term is 0 with `needed_within_horizon: false` — the N-1
+crossing at 1.31 EV/home is reached only after the 15-year horizon, so there
+is nothing to defer. The total is the LV deferral alone.
+
+## Fleet categories now partition the fleet (2026-09-07) — 3 pins, hourly_kt only
+
+`triage_fleet` rounded each category's mean independently, so the four counts
+need not sum to the fleet: measured 541 of 540 under `hourly_kt`. Largest-
+remainder apportionment fixes it (bd eei.6); the classification logic is
+untouched — it was never wrong, only the presentation of its averages was.
+Three pins move, all `hourly_kt`; `static` already summed to 540:
+
+| Pin | Was | Now |
+|---|---|---|
+| `fleet.n_at_risk_at_1ev_hourly_kt` | 186 | 185 |
+| `fleet.needs_steel_at_1ev_hourly_kt` | 4 | 3 |
+| `fleet.deferred_fraction_at_1ev_hourly_kt` | 0.978495 | 0.983784 |
+
+Re-based on the **third clean run** (2026-09-07, from `f6a35e47`, 24 stages,
+one manifest, no stage filter). That run is also the first to carry **artifact
+fingerprints**: 129 files recorded with their `sha256` at close, so a later
+rewrite is detectable rather than inferred from mtimes (bd qgr.1). Against the
+second clean run, 91 of the 94 pins are byte-identical and the three that
+differ are exactly these — two code changes landed between the runs
+(`bd c7f.2.1`, `bd eei.6`) and moved nothing else.
+
+One honest caveat on the run's wall time. It measures 2.60 h, against 3.84 h
+for the first clean run, but the two are not comparable: `build_base_mc_cache`
+found a valid cache and completed in 8.5 s rather than building the set. A
+genuinely cold run pays roughly 75 min there, which the first run paid inside
+`analyze_congestion_risk`.
+

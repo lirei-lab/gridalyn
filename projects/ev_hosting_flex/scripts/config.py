@@ -276,38 +276,15 @@ SDK ``gridalyn.simulation.analytics.topology`` sizing + the study-local
 # contract (LINE_LOADING_LIMIT_PERCENT, DTYPE, SEED, ROUND_DECIMALS, EV_SWEEP,
 # POWER_FACTOR) above is untouched.
 
-TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX = 0.01
-"""RETIRED (Phase 15 RETIRE-02, D-13): the energy-fraction acceptability gate is
-removed from the pipeline path — Phase 15 gates ``flexible_ev_count`` on realized
-``P(overload) ≤ ε`` ALONE; energy is reported, never gated. KEPT importable this
-plan because the retired ``_flexibility.flexible_ev_count`` default + the stage-5
-``apply_flexibility_contracts`` body still reference it; physically deleted in
-Plan 03 when that body + ``_flexibility.py`` are removed (banner-now /
-delete-when-import-gone, Pitfall 3).
-
-Strict-``<`` primary acceptability gate (D-06): the annual curtailed-energy
-fraction must be < 1% for a swept EV count to pass. A point sitting EXACTLY at
-this value does NOT pass (strict ``<``, pinned)."""
-
-TOLERANCE_ACTIVATION_HOURS_MAX = 100
-"""RETIRED (Phase 15 RETIRE-02, D-13): a secondary energy/activation acceptability
-gate; removed from the pipeline path (reliability-only gating). KEPT importable
-this plan (referenced by ``_flexibility.flexible_ev_count`` default); physically
-deleted in Plan 03 with ``_flexibility.py``.
-
-Secondary acceptability gate (D-06): the max total contract activation hours
-a swept EV count may incur and still pass when ``TOLERANCE_PRIMARY`` selects
-``"activation_hours"``."""
-
-TOLERANCE_PRIMARY = "curtailed_energy_fraction"
-"""RETIRED (Phase 15 RETIRE-02, D-13): the energy/activation acceptability-criterion
-selector; removed from the pipeline path (reliability-only gating). KEPT importable
-this plan (referenced by ``_flexibility.flexible_ev_count`` default); physically
-deleted in Plan 03 with ``_flexibility.py``.
-
-Active acceptability-criterion selector (D-06): the only accepted values are
-``"curtailed_energy_fraction"`` (the default primary strict-``<`` gate) and
-``"activation_hours"`` (the secondary ``<=`` gate)."""
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
+# TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX, TOLERANCE_ACTIVATION_HOURS_MAX, TOLERANCE_PRIMARY
+# stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
+# importable for a consumer its own docstring named. Every one of those
+# consumers is gone: measured 2026-09-04 by AST across 492 files under
+# projects/, gridalyn/, tests/ and tools/ -- zero reads, resolving both
+# `from ...config import X` and `config.X`. The stated reason for keeping
+# them had expired, so they are physically deleted rather than left to read
+# as live. tests/test_ev_hosting_flex_retired_constants.py pins the zero.
 
 # ─── Phase-10.1 (RECAL-01/02/09): HQ-transformer + TMY + stochastic-EV block ──
 # APPENDED below the locked constants (do NOT edit any constant above). This is
@@ -456,33 +433,27 @@ BG_KW = _CONFIG["bgKw"]
 """Per-home non-heating background load (kW), occupancy-shaped (D-08). Manuscript
 anchor; with the heating-degree term gives ~6.5 kW/home at design cold."""
 
-PLUGIN_WINDOW = (18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7)
-"""RETIRED (Phase 15 RETIRE-02, D-13): the deferral/availability plug-in window is
-removed from the pipeline path (the controller activates ``a_t = min(r_t,
-required)`` directly, no deferral session machinery). KEPT importable this plan
-because the retired ``_flexibility.flex_deferral``/``flex_power_limited`` legs
-still reference it; physically deleted in Plan 03 with ``_flexibility.py``
-(banner-now / delete-when-import-gone, Pitfall 3).
-
-Hours an EV is physically present and may host deferred energy (D-11). The
-wrap-midnight ~18:00 arrival → ~07:00 departure plug-in window (~11 h plugged vs
-~2 h charging, CALIBRATION.md §5). Deferral (valley-fill) may only re-place EV
-energy in hours inside this set — NOT a fixed off-peak ``[22..6]`` block (which
-ignores early departures, D-11)."""
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
+# PLUGIN_WINDOW
+# stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
+# importable for a consumer its own docstring named. Every one of those
+# consumers is gone: measured 2026-09-04 by AST across 492 files under
+# projects/, gridalyn/, tests/ and tools/ -- zero reads, resolving both
+# `from ...config import X` and `config.X`. The stated reason for keeping
+# them had expired, so they are physically deleted rather than left to read
+# as live. tests/test_ev_hosting_flex_retired_constants.py pins the zero.
 
 # ─── Monte-Carlo + penetration sweep (D-05/D-07, discretion) ─────────────
 
-K = 1000
-"""RETIRED (Phase 15 RETIRE-02, D-13): the retired annual Monte-Carlo realization
-count. The design-day path uses ``K_DESIGN = 60`` (read from ``q_real.shape[0]``,
-never ``config.K``). KEPT importable this plan because the stage-6
-``solve_twostage_program`` body + ``test_ev_hosting_flex_twostage`` still reference
-it; physically deleted in Plan 02 when stage 6 re-points off the annual stack.
-
-Monte-Carlo realizations per penetration point (D-05, Claude's discretion;
-manuscript used 1500–2000). Default 1000 — the smallest K targeted to keep P95
-stable to the Phase-12 1e-6 baseline while staying fast over 8760 h. Part of the
-reproducibility contract with ``SEED`` (D-13); revisit in Plan 02 if P95 drifts."""
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
+# K
+# stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
+# importable for a consumer its own docstring named. Every one of those
+# consumers is gone: measured 2026-09-04 by AST across 492 files under
+# projects/, gridalyn/, tests/ and tools/ -- zero reads, resolving both
+# `from ...config import X` and `config.X`. The stated reason for keeping
+# them had expired, so they are physically deleted rather than left to read
+# as live. tests/test_ev_hosting_flex_retired_constants.py pins the zero.
 
 PENETRATION_SWEEP = tuple(_CONFIG["penetrationSweep"])
 """EV-per-home penetration grid (0 → 2.0) swept on the small LV transformer
@@ -500,21 +471,19 @@ LV-transformer rating over the K realizations). Replaces the Phase-9 CONG-03
 "zero overloads at any hour" definition, which collapses to ~0 under the
 cold-evening tail. Mirrors the existing ``TOLERANCE_*`` style."""
 
-TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95 = 0.01
-"""RETIRED (Phase 15 RETIRE-02, D-13): the deferral energy-fraction acceptability
-gate; removed from the pipeline path (reliability-only gating). KEPT importable
-this plan because the stage-6 ``solve_twostage_program`` body still references it;
-physically deleted in Plan 02 when stage 6 re-points off the deferral path.
-
-Flexible-leg (deferral) acceptability gate (D-12, FLEX-03 successor). The
-irreducible-lost-energy fraction — energy that fits in NEITHER the congested hour
-NOR any in-window valley (the ``remaining`` after valley-fill deferral) divided by
-annual EV demand — must be strict-``<`` 1% at P95 for a swept point to pass. The
-curtailment curve keeps its own ``TOLERANCE_CURTAILED_ENERGY_FRACTION_MAX``."""
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
+# TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95
+# stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
+# importable for a consumer its own docstring named. Every one of those
+# consumers is gone: measured 2026-09-04 by AST across 492 files under
+# projects/, gridalyn/, tests/ and tools/ -- zero reads, resolving both
+# `from ...config import X` and `config.X`. The stated reason for keeping
+# them had expired, so they are physically deleted rather than left to read
+# as live. tests/test_ev_hosting_flex_retired_constants.py pins the zero.
 
 # ─── Phase-10.2 (TWOSTAGE-01..07, D-01..D-10): two-stage stochastic program ──
 # APPEND-ONLY block below the locked Phase-10.1 constants (everything above —
-# through ``TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` — is byte-frozen, mirrors
+# through ``FIRM_PCONG_TOLERANCE`` — is byte-frozen, mirrors
 # RECAL-09). These pin the two-stage chance-constrained EV-curtailment program:
 # day-ahead reservation of a reliability quantile (``r_t = Q_{1−ε}[required_t]``)
 # + real-time activation recourse (``a_t = min(r_t, required_t)``) over scenarios
@@ -589,7 +558,7 @@ falls back to the oracle and records the divergence."""
 
 # ─── Phase-10.3 (DAYTIME-01..06): power-limited multi-session availability ───
 # APPEND-ONLY block below the locked 10.1/10.2 blocks; do NOT redefine
-# PLUGIN_WINDOW, DTYPE, ROUND_DECIMALS, K, PENETRATION_SWEEP, TOLERANCE_* (every
+# DTYPE, ROUND_DECIMALS, PENETRATION_SWEEP (every
 # constant above — through ``TWOSTAGE_SOLVER`` — is byte-frozen, mirroring
 # RECAL-09 / TWOSTAGE-07). These pin the power-limited natural-charging
 # (V1G smart-charging) flexible leg that REPLACES the 10.1 valley-fill deferral
@@ -600,109 +569,20 @@ falls back to the oracle and records the divergence."""
 # re-baselined under three availability scenarios (overnight / +workplace[9-16] /
 # all-day ceiling) on the locked idx-62 71.25 kW / 7-home unit (Plan 02).
 
-WORKPLACE_WINDOW = (9, 10, 11, 12, 13, 14, 15, 16)
-"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited availability-sweep window
-is removed from the pipeline path (the controller replaces the availability sweep).
-KEPT importable this plan because the stage-5 ``apply_flexibility_contracts`` body +
-``AVAILABILITY_SCENARIOS`` still reference it; physically deleted in Plan 03 when
-that body is removed (banner-now / delete-when-import-gone, Pitfall 3).
-
-Daytime workplace plug-in window (hours-of-day 9..16, D-05). The same-day
-contiguous ``[9-16]`` window an EV is plugged in at the workplace; unlike
-``PLUGIN_WINDOW`` it does NOT wrap midnight, so its multi-session segmentation is
-a simple same-day run (no evening-anchoring). Power-limiting + unserved-energy
-accounting apply to this session in chronological order alongside the overnight
-home session (D-04). The midday headroom that motivates it holds only marginally
-(workplace ~33.57 kW vs overnight ~31.95 kW over the 14 coldest days, RESEARCH
-Pitfall 1); the dominant lift is the extra available HOURS, not midday richness."""
-
-AVAILABILITY_SCENARIOS = {
-    "overnight": (PLUGIN_WINDOW,),
-    "workplace": (PLUGIN_WINDOW, WORKPLACE_WINDOW),  # ← HEADLINE (D-07)
-    "all_day": (tuple(range(24)),),
-}
-"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited availability-scenario sweep
-is removed from the pipeline path (the controller replaces it). KEPT importable this
-plan because the stage-5 ``apply_flexibility_contracts`` body still references it;
-physically deleted in Plan 03 when that body is removed.
-
-Ordered availability-scenario session sets for the three-scenario re-baseline
-(D-06/D-07). Each value is a tuple of session windows (each window itself a tuple
-of hour-of-day ints) the power-limited kernel iterates per day. ``"overnight"`` is
-the 18→07 home-only baseline; ``"workplace"`` adds the daytime ``WORKPLACE_WINDOW``
-and is the citable HEADLINE (D-07); ``"all_day"`` is the full-availability ceiling
-(all 24 hours). Insertion order (overnight → workplace → all_day) is the report
-emission order (Plan 02 wraps the per-penetration K-loop in this scenario loop)."""
-
-TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95 = 0.01
-"""RETIRED (Phase 15 RETIRE-02, D-13): the power-limited energy-fraction acceptability
-gate; removed from the pipeline path (reliability-only gating). KEPT importable this
-plan because the stage-5 ``apply_flexibility_contracts`` body still references it;
-physically deleted in Plan 03 when that body is removed.
-
-Power-limited flexible-leg acceptability gate (DAYTIME-02). The unserved-energy
-fraction (energy undelivered at throttled power across ALL available session-hours,
-divided by annual EV demand) must be strict-``<`` 1% at P95 for a swept point to
-pass. This ADDS an aliased constant (RESEARCH Pitfall 4) reusing the value 0.01;
-it does NOT rename or edit ``TOLERANCE_IRREDUCIBLE_LOST_FRACTION_MAX_P95`` (which
-stays for the now-dormant valley-fill deferral path). Same value, different
-meaning: "unserved energy" (power-limited) vs "irreducible lost" (deferral)."""
-
-EXTENDED_PENETRATION_SWEEP = PENETRATION_SWEEP + (
-    2.1,
-    2.2,
-    2.3,
-    2.4,
-    2.5,
-    2.6,
-    2.7,
-    2.8,
-    2.9,
-    3.0,
-    3.1,
-    3.2,
-    3.3,
-    3.4,
-    3.5,
-    3.6,
-    3.7,
-    3.8,
-    3.9,
-    4.0,
-    4.1,
-    4.2,
-    4.3,
-    4.4,
-    4.5,
-    4.6,
-    4.7,
-    4.8,
-    4.9,
-    5.0,
-)
-"""RETIRED (Phase 15 RETIRE-02, D-13): the extended power-limited availability sweep
-grid is removed from the pipeline path (the controller replaces the sweep). KEPT
-importable this plan because the stage-5 ``apply_flexibility_contracts`` body still
-references it; physically deleted in Plan 03 when that body is removed.
-
-Extended EV-per-home penetration grid (0 → 5.0) for the power-limited
-availability sweep (DAYTIME-04, Plan 02). APPEND-ONLY — the frozen
-``PENETRATION_SWEEP`` (0 → 2.0, byte-frozen inside the locked Phase-10.1 block
-above) is left UNEDITED; this constant is ``PENETRATION_SWEEP`` plus the additional
-``2.1 → 5.0`` grid at the same 0.1 step. RATIONALE (RESEARCH Pitfall 2 / A2): under
-power-limited natural charging the per-hour headroom (~27-34 kW) vastly exceeds the
-aggregate EV draw until VERY high penetration, so the overnight-only unserved-energy
-P95 stays below the 1% gate across the entire frozen 0 → 2.0 grid (flat-zero
-saturation — the flexible count pins at the sweep top, an UNINFORMATIVE result). The
-overnight unserved cliff crosses 1% near ~4.6 EV/home; extending to 5.0 lands the
-cliff INSIDE the effective sweep so the gate is informative for every scenario. The
-single re-point site is ``_availability_sweep``'s penetration loop in
-``apply_flexibility_contracts.py`` (Plan 02); the frozen ``PENETRATION_SWEEP`` and
-the golden config bytes are never mutated."""
+# ─── DELETED (bd 8va, 2026-09-07) ─────────────────────────────
+# WORKPLACE_WINDOW, AVAILABILITY_SCENARIOS,
+# TOLERANCE_UNSERVED_ENERGY_FRACTION_MAX_P95, EXTENDED_PENETRATION_SWEEP
+# stood here, each marked RETIRED (Phase 15 RETIRE-02, D-13) and each kept
+# importable for a consumer its own docstring named. Every one of those
+# consumers is gone: measured 2026-09-04 by AST across 492 files under
+# projects/, gridalyn/, tests/ and tools/ -- zero reads, resolving both
+# `from ...config import X` and `config.X`. The stated reason for keeping
+# them had expired, so they are physically deleted rather than left to read
+# as live. tests/test_ev_hosting_flex_retired_constants.py pins the zero.
 
 # ─── Partial EV coincidence / diversity (260625-lgg, EV-COINCIDENCE-RECAL) ────
 # APPEND-ONLY block below every locked constant above (everything through
-# ``EXTENDED_PENETRATION_SWEEP`` is byte-frozen — do NOT edit any constant above).
+# ``TWOSTAGE_SOLVER`` is byte-frozen — do NOT edit any constant above).
 # This knob replaces the implicit FULL-coincidence assumption baked into the
 # four EV-demand consume sites (each built EV demand as ONE per-EV-unit shape
 # scaled by the EV count → every EV charging the same shape at the same time, a
@@ -1712,6 +1592,33 @@ and rise together, so the choice changes not only HOW MUCH congestion is found
 but WHAT IT IS ATTRIBUTED TO. Both are emitted so the reader sees the spread
 instead of inheriting one convention silently.
 """
+
+TRIAGE_HEADLINE_RATING_CONVENTION = _CONFIG["triageHeadlineRatingConvention"]
+"""Which of `TRIAGE_RATING_CONVENTIONS` the fleet triage HEADLINE is quoted under.
+
+Declared rather than positional. This was `TRIAGE_RATING_CONVENTIONS[0]` until
+2026-09-03, which made reordering a YAML list silently rewrite the study's
+primary result -- and the two conventions are not a small correction apart. At
+1 EV/home the study measures 500 at-risk / 73 deferred under `static` and
+186 / 182 under `hourly_kt`: a 6.7x swing on the headline claim, larger than
+any other choice the study makes.
+
+Note this is deliberately allowed to DIFFER from `RATING_CONVENTION`, which the
+per-feeder stages use. A fleet-wide triage is a screen and may reasonably want
+the conservative nameplate convention where the feeder analysis wants the
+physically correct one. What is not acceptable is that difference being
+undeclared, which is what it was.
+"""
+
+if TRIAGE_HEADLINE_RATING_CONVENTION not in TRIAGE_RATING_CONVENTIONS:
+    raise ValueError(
+        f"{PROJECT_ROOT / 'project.yaml'}: spec.inputs.studyConfig."
+        "triageHeadlineRatingConvention is "
+        f"{TRIAGE_HEADLINE_RATING_CONVENTION!r}, which is not among the "
+        "evaluated triageRatingConventions "
+        f"({', '.join(TRIAGE_RATING_CONVENTIONS)}). The headline must be "
+        "quoted under a convention the triage actually computes."
+    )
 
 TRIAGE_HOTSPOT_LIMIT_C = _CONFIG["triageHotspotLimitC"]
 """Hot-spot limit defining the C57.91 capability (normal insulation life)."""

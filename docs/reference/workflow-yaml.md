@@ -106,6 +106,7 @@ flowchart LR
     compute_curtailment_economics["compute_curtailment_economics"]
     analyze_credibility["analyze_credibility"]
     analyze_cold_insurance["analyze_cold_insurance"]
+    build_study_reports["build_study_reports"]
     analyze_cold_coupling["analyze_cold_coupling"]
     analyze_network_characterization["analyze_network_characterization"]
     analyze_clustered_adoption["analyze_clustered_adoption"]
@@ -119,7 +120,6 @@ flowchart LR
     analyze_voltage_risk["analyze_voltage_risk"]
     analyze_voltage_risk_network["analyze_voltage_risk_network"]
     validate_powerflow["validate_powerflow"]
-    build_study_reports["build_study_reports"]
 
     prepare_workspace --> prepare_topology_cache
     prepare_topology_cache --> export_twin_network_model
@@ -147,12 +147,13 @@ flowchart LR
     generate_annual_mc --> analyze_voltage_risk_network
     compute_congestion_annual --> validate_powerflow
     apply_curtailment_contracts --> validate_powerflow
-    compute_curtailment_economics --> build_study_reports
-    validate_powerflow --> build_study_reports
 
     classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
     classDef hub fill:#e8eaf6,stroke:#3f51b5,color:#1a237e,stroke-width:2px
     classDef step fill:#e0f2f1,stroke:#00897b,color:#004d40
+    analyze_cold_insurance --> build_study_reports
+    validate_powerflow --> build_study_reports
+    analyze_nonwires_value --> build_study_reports
     class prepare_workspace,build_study_reports entry
     class generate_annual_mc hub
     class prepare_topology_cache,export_twin_network_model,compute_congestion_annual,apply_curtailment_contracts,compute_curtailment_economics,analyze_credibility,analyze_cold_insurance,analyze_cold_coupling,analyze_network_characterization,analyze_clustered_adoption,analyze_flexibility_incentive,analyze_network_performance,analyze_congestion_risk,analyze_fleet_triage,analyze_locational_contracts,analyze_nonwires_value,analyze_phase_imbalance,analyze_voltage_risk,analyze_voltage_risk_network,validate_powerflow step
@@ -185,8 +186,8 @@ never touched. Treat the fallback as support for contracts already written, and
 | `id` | yes | Stable stage identifier used in logs and run manifests. |
 | `command` | yes | Shell command executed from repository root when `pathBase: repo`. Use `{python}` for the interpreter. |
 | `needs` | optional | Stage IDs that should run before this stage. |
-| `inputs` | optional | Files consumed by the stage. |
-| `outputs` | optional | Files produced by the stage. |
+| `inputs` | optional | Artifacts the stage reads. Declarative: nothing checks them at run time yet, so keep them to artifacts (not source files — git and the manifest's `git_commit` are the provenance of code) and keep them true. |
+| `outputs` | optional | Files the stage produces. **Enforced:** after the stage exits zero, every listed path must exist, or the run fails naming the stage and the missing paths. A stage that lists none is not checked. |
 
 ## Path Rules
 

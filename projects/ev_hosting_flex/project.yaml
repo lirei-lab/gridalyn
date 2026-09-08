@@ -409,6 +409,7 @@ spec:
       triageRatingConventions:
       - static
       - hourly_kt
+      triageHeadlineRatingConvention: static
       triageHotspotLimitC: 110.0
       ratingConvention: hourly_kt
       evKwhPerYear: 2509.0
@@ -433,6 +434,7 @@ spec:
   validation:
     senseChecker: scripts/sense_checks.py:check
     objectiveArtifacts:
+      - outputs/reports/study_report.json
       - outputs/reports/topology_cache_report.json
       - outputs/reports/annual_mc_report.json
       - outputs/reports/fleet_triage_report.json

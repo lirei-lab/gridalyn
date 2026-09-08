@@ -41,6 +41,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     load_annual_tmy,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
@@ -57,10 +58,7 @@ from projects.ev_hosting_flex.scripts.config import (
     TRIAGE_K_BASE,
 )
 from projects.ev_hosting_flex.scripts.pipeline.analyze_congestion_risk import (
-    _ensure_base_mc_cache,
-)
-from projects.ev_hosting_flex.scripts.pipeline.validate_powerflow import (
-    size_network_to_load,
+    load_base_mc_cache,
 )
 
 _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
@@ -313,7 +311,19 @@ def _persist_operational(
 
     written.update(
         materialize_flexibility_operation_artifacts(
-            root=script.root,
+            # base_dir, not root. This function takes the WORKSPACE root -- it
+            # builds `root / "projects" / <id> / "outputs"` and reads the twin's
+            # base metadata through ArtifactLayout(root) to resolve the model
+            # version id. `script.root` is the PROJECT directory, so passing it
+            # pointed ArtifactLayout at a path that does not exist, the model
+            # version resolved to None, and write_operation_run rejected the
+            # empty governance field.
+            #
+            # It was `root=ROOT` (the workspace) until the 2026-08-17
+            # boilerplate migration swapped in script.root. Nothing caught it
+            # for seventeen days because this is the only caller and it runs
+            # only in a full flagship run.
+            root=script.base_dir,
             project_id="ev_hosting_flex",
             scenario_id=scenario_id,
             flexibility_dir=flex_dir,
@@ -349,7 +359,7 @@ def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
     }
     sizes = sorted(set(homes_by_trafo.values()))
 
-    base_mc = _ensure_base_mc_cache(data_dir, temp, sizes, int(TRIAGE_K_BASE))
+    base_mc = load_base_mc_cache(data_dir, sizes, int(TRIAGE_K_BASE))
     base_by_size = {h: base_mc[h][0] for h in sizes}
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(float)
     _cap, series = feeder_rating(temp)

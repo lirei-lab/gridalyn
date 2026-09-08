@@ -37,19 +37,18 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     cold_capability_curve,
-    design_day_base_per_home,
     feeder_rating,
     load_annual_tmy,
     simulate_curtailment,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._network import size_network_to_load
 from projects.ev_hosting_flex.scripts._powerflow import (
     N_DESIGN_HOURS,
     count_violations,
     extract_feeder_subnet,
     run_design_day_powerflow,
     run_feeder_mc,
-    standard_kva_for_load,
 )
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
@@ -57,18 +56,15 @@ from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     LV_DYNAMIC_RATING_K,
     LV_LINE_UTIL_TARGET,
-    LV_LINE_VDROP_BUDGET_PU,
     NETWORK_PENETRATION_SCENARIOS,
     POWER_FACTOR,
     ROUND_DECIMALS,
-    SEED,
     SLACK_VM_PU,
-    SUBSTATION_EMERGENCY_FACTOR,
-    SUBSTATION_MVA_LADDER,
-    SUBSTATION_N1_CONTINGENCY_TARGET,
-    SUBSTATION_N_TRANSFORMERS,
     TRANSFORMER_KVA,
     VOLTAGE_LIMITS_PU,
+)
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
+    feeder_home_count,
 )
 
 # SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
@@ -82,210 +78,6 @@ def _load_net(cache_dir: Path) -> Any:
     """Load the cached pandapower net as an attribute-bag (GUARD-02)."""
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         return pickle.load(handle)
-
-
-def size_network_to_load(
-    net: Any,
-    script: ProjectScript,
-    temp_hourly: Any,
-    design_day_idx: int,
-    feeder_idx: int,
-) -> dict[str, Any]:
-    """Size the LV transformers AND secondary conductors to their design load.
-
-    HQ-style sizing (2026-07-07): each LV transformer's downstream homes carry
-    the SDK per-home design-cold base of THEIR cluster's home count; the
-    transformer takes the smallest standard kVA covering that aggregate load,
-    and each LV line is upsized so its design-cold current sits at
-    ``LV_LINE_UTIL_TARGET`` of the (re-sized) conductor ampacity — a thicker
-    conductor raises ampacity AND lowers impedance, recovering both the thermal
-    margin and the LV voltage (the network verification found the SDK
-    load_aware LV lines undersized for the winter peak). Mutates
-    ``net.trafo.sn_mva`` and the LV ``net.line`` impedance/ampacity in place
-    (physical AC). The GOVERNED study feeder transformer is pinned at
-    ``TRANSFORMER_KVA``.
-
-    Args:
-        net: Loaded pandapower net (mutated in place).
-        script: The project workspace handle (cache JSON reads).
-        temp_hourly: Committed annual TMY series.
-        design_day_idx: Day-of-year index of the coldest design day.
-        feeder_idx: Study feeder transformer index (kept at TRANSFORMER_KVA).
-
-    Returns:
-        Dict with the per-home design-day base per size, the size→bus map, the
-        assigned kVA per size, and the LV-line upsizing count.
-    """
-    downstream_map = script.read_json("outputs/cache/downstream_bus_map.json")
-    homes_by_bus = net.load.groupby("bus").size()
-    lv_trafos = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-
-    size_by_trafo: dict[int, int] = {}
-    size_by_loadbus: dict[int, int] = {}
-    for idx in lv_trafos:
-        downstream = [int(b) for b in downstream_map.get(f"transformer:{int(idx)}", [])]
-        n = int(homes_by_bus.reindex(downstream).fillna(0).sum())
-        size_by_trafo[int(idx)] = n
-        for bus in downstream:
-            if bus in homes_by_bus.index:
-                size_by_loadbus[bus] = n
-
-    sizes = sorted({n for n in size_by_trafo.values() if n > 0})
-    base_by_size = {
-        n: design_day_base_per_home(temp_hourly, n, SEED, design_day_idx) for n in sizes
-    }
-    kva_by_size = {
-        n: standard_kva_for_load(float(n) * float(base_by_size[n].max())) for n in sizes
-    }
-    for idx in lv_trafos:
-        n = size_by_trafo[int(idx)]
-        if int(idx) == int(feeder_idx) or n == 0:
-            kva = float(TRANSFORMER_KVA)
-        else:
-            kva = kva_by_size[n]
-        net.trafo.at[idx, "sn_mva"] = kva / 1000.0
-
-    # ── LV secondary conductors sized to design-cold current + voltage drop ─
-    # Each LV line's design current follows from the homes downstream of it
-    # (all on one transformer -> one cluster size). Real LV design sizes for
-    # BOTH thermal ampacity AND voltage drop; the binding scale is the max.
-    # A thicker conductor (scale s) raises ampacity xs and lowers impedance /s,
-    # so both the thermal margin and the per-line voltage drop improve by s.
-    pf = float(POWER_FACTOR)
-    sinphi = float(np.sqrt(1.0 - pf * pf))
-    n_lines_upsized = 0
-    vn_by_bus = net.bus["vn_kv"]
-    for line_idx in net.line.index:
-        from_bus = int(net.line.at[line_idx, "from_bus"])
-        if float(vn_by_bus.loc[from_bus]) >= 1.0:  # LV lines only
-            continue
-        downstream = downstream_map.get(f"line:{int(line_idx)}", [])
-        down_buses = [int(b) for b in downstream if int(b) in homes_by_bus.index]
-        if not down_buses:
-            continue
-        n_down_homes = int(homes_by_bus.reindex(down_buses).fillna(0).sum())
-        cluster_size = size_by_loadbus[down_buses[0]]
-        per_home_peak = float(base_by_size[cluster_size].max())
-        design_load_mw = n_down_homes * per_home_peak / 1000.0
-        vn_kv = float(vn_by_bus.loc[from_bus])
-        design_i_ka = design_load_mw / (np.sqrt(3.0) * vn_kv * pf)
-        r = float(net.line.at[line_idx, "r_ohm_per_km"])
-        x = float(net.line.at[line_idx, "x_ohm_per_km"])
-        length_km = float(net.line.at[line_idx, "length_km"])
-        current_i_ka = float(net.line.at[line_idx, "max_i_ka"])
-        thermal_scale = design_i_ka / (float(LV_LINE_UTIL_TARGET) * current_i_ka)
-        vdrop_pu = (
-            np.sqrt(3.0) * design_i_ka * (r * pf + x * sinphi) * length_km / vn_kv
-        )
-        voltage_scale = vdrop_pu / float(LV_LINE_VDROP_BUDGET_PU)
-        scale = max(1.0, thermal_scale, voltage_scale)
-        if scale > 1.0:
-            net.line.at[line_idx, "max_i_ka"] = current_i_ka * scale
-            net.line.at[line_idx, "r_ohm_per_km"] = r / scale
-            net.line.at[line_idx, "x_ohm_per_km"] = x / scale
-            n_lines_upsized += 1
-
-    substation = configure_substation_n1(
-        net, homes_by_bus, base_by_size, size_by_loadbus, pf
-    )
-
-    return {
-        "base_by_size": base_by_size,
-        "size_by_loadbus": size_by_loadbus,
-        "kva_by_size": kva_by_size,
-        "size_by_trafo": size_by_trafo,
-        "n_lv_lines_upsized": n_lines_upsized,
-        "substation": substation,
-    }
-
-
-def configure_substation_n1(
-    net: Any,
-    homes_by_bus: Any,
-    base_by_size: dict[int, np.ndarray],
-    size_by_loadbus: dict[int, int],
-    pf: float,
-) -> dict[str, Any]:
-    """Reconfigure the substation into an HQ-realistic N-1 transformer bank.
-
-    Ties the existing substation transformers' MV (25 kV) buses onto a common
-    bus (a near-zero-impedance coupler — the normal closed-tie operating state),
-    adds transformers until the bank has ``SUBSTATION_N_TRANSFORMERS`` units, and
-    sizes every unit to the smallest ``SUBSTATION_MVA_LADDER`` rung whose usable
-    MW ``× (N−1) × SUBSTATION_N1_CONTINGENCY_TARGET`` covers the total area
-    design-cold load — so on a single-unit contingency the ``N−1`` remaining
-    units carry the full load at ≈ the N-1 contingency-loading target (~120 %,
-    well within the ``SUBSTATION_EMERGENCY_FACTOR`` capability). For N = 2 that is
-    the standard HQ two-identical-parallel-unit redundant substation. Diversity
-    is ~0 at design cold, so the area load is the hourly max of the summed
-    per-home base of every home. Mutates the net in place.
-
-    Returns:
-        Dict with the per-unit MVA, unit count, total area load, and the N-1 firm
-        capacity at the normal and emergency ratings (MW).
-    """
-    import pandapower as pp
-
-    # Total area design-cold load (coincident; MV diversity ~0 at design cold).
-    day_profile = np.zeros(24, dtype=DTYPE)
-    for bus, size in size_by_loadbus.items():
-        day_profile = day_profile + int(homes_by_bus.loc[bus]) * base_by_size[size]
-    total_load_mw = float(day_profile.max()) / 1000.0
-    total_load_mva = total_load_mw / float(pf)
-
-    n = int(SUBSTATION_N_TRANSFORMERS)
-    per_unit_min_mva = total_load_mva / (
-        max(n - 1, 1) * float(SUBSTATION_N1_CONTINGENCY_TARGET)
-    )
-    mva = next(
-        (m for m in SUBSTATION_MVA_LADDER if m >= per_unit_min_mva),
-        SUBSTATION_MVA_LADDER[-1],
-    )
-
-    sub_idx = list(net.trafo.index[net.trafo["vn_lv_kv"] >= 1.0])
-    mv_buses = [int(net.trafo.at[i, "lv_bus"]) for i in sub_idx]
-    # Tie the MV LV-side buses onto a common node with closed bus-bus switches
-    # (the normal closed-tie operating state) — a zero-impedance fuse, unlike a
-    # near-zero line which ill-conditions the power flow.
-    for other in mv_buses[1:]:
-        pp.create_switch(net, bus=mv_buses[0], element=other, et="b", closed=True)
-    # Add transformers (copied from the first) until the bank has N units.
-    template = net.trafo.loc[sub_idx[0]]
-    while len(sub_idx) < n:
-        new_idx = pp.create_transformer_from_parameters(
-            net,
-            hv_bus=int(template.hv_bus),
-            lv_bus=mv_buses[0],
-            sn_mva=mva,
-            vn_hv_kv=float(template.vn_hv_kv),
-            vn_lv_kv=float(template.vn_lv_kv),
-            vk_percent=float(template.vk_percent),
-            vkr_percent=float(template.vkr_percent),
-            pfe_kw=float(template.pfe_kw),
-            i0_percent=float(template.i0_percent),
-            shift_degree=float(template.shift_degree),
-        )
-        sub_idx.append(int(new_idx))
-    for i in sub_idx:
-        net.trafo.at[i, "sn_mva"] = mva
-    # The synthetic template carries a tap-dependency flag with no lookup table;
-    # the parallel N-1 bank uses fixed taps, so disable it to keep runpp clean.
-    if "tap_dependency_table" in net.trafo.columns:
-        net.trafo["tap_dependency_table"] = False
-
-    usable_mw = mva * float(pf)
-    return {
-        "n_transformers": n,
-        "mva_per_transformer": float(mva),
-        "total_area_load_mw": round(total_load_mw, ROUND_DECIMALS),
-        "normal_loading_percent": round(
-            total_load_mw / (n * usable_mw) * 100.0, ROUND_DECIMALS
-        ),
-        "firm_capacity_normal_mw": round((n - 1) * usable_mw, ROUND_DECIMALS),
-        "firm_capacity_emergency_mw": round(
-            (n - 1) * usable_mw * float(SUBSTATION_EMERGENCY_FACTOR), ROUND_DECIMALS
-        ),
-    }
 
 
 def build_scenario_profiles(
@@ -313,9 +105,7 @@ def build_scenario_profiles(
     flexible = int(
         script.read_json("outputs/json/curtailment_hosting.json")["flexible_ev_count"]
     )
-    n_homes = int(
-        script.read_json("outputs/reports/annual_mc_report.json")["summary"]["n_homes"]
-    )
+    n_homes = feeder_home_count(script)
 
     temp_hourly = load_annual_tmy()
     hod0 = tmy_hour_of_day(temp_hourly)

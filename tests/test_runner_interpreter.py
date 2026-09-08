@@ -109,7 +109,7 @@ class TestUnrelatedCommandsAreUnchanged(unittest.TestCase):
     """Assertion 4: a command using neither form is returned unchanged."""
 
     def test_echo_stub_is_unchanged(self) -> None:
-        command = 'echo "STUB build_study_reports — canonical study report pending"'
+        command = 'echo "an ordinary shell command, no interpreter token"'
 
         self.assertEqual(command, _resolve_interpreter(command))
 
@@ -231,8 +231,11 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # admm_thermal_consensus (all Milestone 14) + 6 validate_project_outputs
         # stages closing the six light governed studies, so a study's own DAG
         # ends by checking itself rather than trusting a separate CLI call
-        # (syntgrid-h85).
-        self.assertEqual(64, declared)
+        # (bd h85) + 1 build_study_reports stage, the canonical study report
+        # that replaces the ten-week-old `echo "STUB ..."` (bd eei.9) + 1
+        # build_base_mc_cache stage, the sole writer of the shared base-MC set
+        # (bd c7f.2.1).
+        self.assertEqual(66, declared)
 
 
 if __name__ == "__main__":

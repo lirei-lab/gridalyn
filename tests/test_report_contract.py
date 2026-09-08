@@ -340,6 +340,13 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         # The same run manifest, written on the provenance-assembly failure
         # path so a malformed declaration still leaves a trace on disk.
         "gridalyn/projects/runner.py::_attach_provenance::_write_manifest#0",
+        # The same run manifest again, from the three sites added 2026-09-04:
+        # the open manifest written before any stage runs and again after each
+        # (so a hard kill keeps every completed stage), and the partial-run
+        # path that annotates a full run's record rather than replacing it.
+        "gridalyn/projects/runner.py::run_project::_write_manifest#1",
+        "gridalyn/projects/runner.py::run_project::_write_manifest#2",
+        "gridalyn/projects/runner.py::_preserve_full_run::_write_manifest#0",
         "gridalyn/projects/workflows/digital_twin/build.py::"
         "run_digital_twin_build::write_build_manifest#0",
         "gridalyn/projects/workflows/digital_twin/build.py::"
@@ -968,7 +975,7 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            50,
+            53,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
@@ -988,7 +995,13 @@ class ReportContractAuditTest(unittest.TestCase):
             "twin-network-model export stages added 4 more "
             "script.write_json(twin_network_model_config.json) sites (admm, "
             "der_voltage_optimization, prosumer_battery_market, "
-            "rl_voltage_control_lightsim), bringing the total to 50. A "
+            "rl_voltage_control_lightsim), bringing the total to 50. Making the "
+            "run record survive a hard kill (2026-09-04) added three more "
+            "manifest writes in runner.py -- the open manifest before any "
+            "stage runs, the rewrite after each stage, and the partial-run "
+            "path that annotates a full run's record instead of replacing "
+            "it -- 53, all the same manifest and NOT-A-REPORT alongside the "
+            "two already there. A "
             "different number means the tree moved; reconcile before "
             "adjusting this number.",
         )

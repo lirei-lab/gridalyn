@@ -33,7 +33,13 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
 globalThis.window = dom.window;
 globalThis.document = dom.window.document;
-globalThis.navigator = dom.window.navigator;
+// Node >= 21 exposes `navigator` as a getter-only global; plain assignment
+// throws TypeError there while Node 20 (CI) accepts it. Define it instead.
+Object.defineProperty(globalThis, "navigator", {
+  value: dom.window.navigator,
+  configurable: true,
+  writable: true,
+});
 
 const { default: mermaid } = await import("mermaid");
 

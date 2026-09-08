@@ -34,6 +34,9 @@ from projects.ev_hosting_flex.scripts.config import (
     ROUND_DECIMALS,
     TRANSFORMER_KVA,
 )
+from projects.ev_hosting_flex.scripts.pipeline.generate_annual_mc import (
+    feeder_home_count,
+)
 
 # SEAL-01: the BLAS thread cap lives in projects/ev_hosting_flex/scripts/__init__.py
 # (imported before this stage under `{python} -m`).
@@ -84,9 +87,7 @@ def derive_curtailment_economics(script: ProjectScript) -> dict[str, Any]:
     firm = int(
         script.read_json("outputs/json/firm_hosting_annual.json")["firm_ev_count"]
     )
-    n_homes = int(
-        script.read_json("outputs/reports/annual_mc_report.json")["summary"]["n_homes"]
-    )
+    n_homes = feeder_home_count(script)
     pool_max = pool.shape[0]
 
     crf = capital_recovery_factor(float(DISCOUNT_RATE), int(LIFE_YEARS))
