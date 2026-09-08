@@ -85,6 +85,33 @@ since 7f8cbb03 the shared base-MC cache already holds six realizations, so its
 generation cost is paid, but it buys exactly the unmeasured axis, and measuring
 `per_size_limits` across base seeds first would say whether six is enough.
 
+**Why the fleet screens under `static` while every other stage analyses under
+`hourly_kt`** (settled 2026-09-08, `syntgrid-eei.1`). The split is deliberate
+and is a screen-then-analyse method: the fleet triage asks which transformers
+*might* be in trouble and takes the conservative nameplate limit; the
+per-feeder chain asks what is *actually* happening at one of them and takes the
+IEEE C57.91 capability at each hour's ambient, which `config.py` states is the
+physically correct comparison and matches Hydro-Québec practice. Screening wide
+and analysing precisely is ordinary planning practice. What was not acceptable,
+and is fixed, is that the screen's convention was selected by list position
+(`TRIAGE_RATING_CONVENTIONS[0]`) rather than declared, so reordering a YAML list
+rewrote the study's headline; it is now `triageHeadlineRatingConvention` and
+pinned as `fleet.headline_rating_convention`.
+
+**The consequence a reader meets, stated here rather than discovered.** The two
+halves describe the *same physical transformer* and disagree about it. The
+worked example's feeder has 6 homes — the median size across the 540
+transformers (histogram 1:6, 2:9, 3:34, 4:60, 5:111, 6:107, 7:100, 8:66, 9:34,
+10:6, 11:6, 12:1, verified against the cached network 2026-09-08). At the same
+71.25 kW rating and the same load, firm hosting for that unit is **3 EVs** under
+`static` and **11 EVs** under `hourly_kt` — 3.7x. At 1 EV/home it carries 6, so
+the fleet screen counts it among the 500 at risk while the worked example finds
+it has nothing to insure (activation frequency 0, $0/yr deferred). Both are
+correct under their stated convention. Neither is the whole answer. **Do not
+carry a fleet count and a feeder finding into one sentence without naming the
+convention each was computed under** — which is why the pins carry both
+(`fleet.*_static` and `fleet.*_hourly_kt`) rather than only the headline.
+
 ## Current knob values
 
 The same rule, against the other source of truth. Headline figures are pinned in

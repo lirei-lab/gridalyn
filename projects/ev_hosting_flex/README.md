@@ -277,6 +277,43 @@ The extra capability is not borrowed against transformer life: across the whole
 reachable adoption range the resulting hot spot stays below the 110 °C
 normal-insulation-life limit.
 
+### The study uses both conventions, on purpose, at different stages
+
+This is the one thing to understand before reading a number out of this study.
+It screens the fleet under `static` and analyses the feeder under `hourly_kt`:
+
+| | convention | declared by | what it answers |
+|---|---|---|---|
+| Fleet triage (the primary result) | `static` | `triageHeadlineRatingConvention` | which transformers **might** be in trouble |
+| Per-feeder analysis (the worked example) | `hourly_kt` | `ratingConvention` | what is **actually** happening at one of them |
+
+Screen wide against the conservative limit, then analyse precisely against the
+physical one. That is ordinary planning practice and it is deliberate here —
+but it has a consequence a reader must meet head-on rather than discover:
+
+**The same transformer is described both ways.** The worked example's feeder
+has 6 homes, which is the *median* size across all 540 transformers (the
+histogram runs 1:6, 2:9, 3:34, 4:60, 5:111, 6:107, 7:100, 8:66, 9:34, 10:6,
+11:6, 12:1). For that one unit, at the same 71.25 kW rating and the same load:
+
+| convention | firm hosting | at 1 EV/home it carries 6 EVs |
+|---|---|---|
+| `static` | **3 EVs** | exceeds firm → counted among the fleet's 500 at risk |
+| `hourly_kt` | **11 EVs** | within firm → "nothing to insure", activation 0, $0/yr |
+
+Firm hosting differs **3.7×** on the convention alone, and the unit crosses
+from endangered to comfortable. So the fleet headline counts this transformer
+as at risk while the worked example finds it has nothing to insure. Both are
+correct under their stated convention; neither is the whole answer; and lined
+up without this paragraph they read as a contradiction rather than as the two
+halves of a screen-then-analyse method.
+
+**What follows for a reader.** Do not carry a fleet count and a feeder finding
+into the same sentence without naming the convention each was computed under.
+The baseline pins both conventions side by side for exactly this reason
+(`fleet.*_static` and `fleet.*_hourly_kt`), and the headline convention is a
+declared key rather than a list position, so it cannot change silently.
+
 ## History
 
 The design-day two-stage-reserve pipeline (Phases 8–17, firm=6/deferral=12 on

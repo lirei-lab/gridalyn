@@ -460,3 +460,141 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund mermaid@11 jsdom
           node tools/check_mermaid_diagrams.mjs
+
+  # ---------------------------------------------------------------------------
+  # A red `main` has to interrupt someone. It did not, for ten days.
+  #
+  # `README.md` already carries the CI badge, which renders `main`'s conclusion
+  # on the repository front page. It was red there from 2026-08-28 to
+  # 2026-09-08 -- every visitor's first screen -- and nobody acted. So the
+  # failure was never absent signal; it was PASSIVE signal, and a second
+  # passive signal would have changed nothing. The badge stays; it is a fine
+  # summary. It is just not a notification.
+  #
+  # This job files the failure into the place work is actually tracked. It
+  # keeps ONE issue: opens it on the first red, updates it with each subsequent
+  # red, and CLOSES it when `main` goes green again. The close matters as much
+  # as the open -- an issue that opens on failure and never resolves becomes
+  # the same ignored ornament the badge became, one indirection further away.
+  #
+  # `main` only. A red PR is already in front of the person who opened it; the
+  # gap this closes is a failure with no author standing in front of it.
+  #
+  # `issues: write` is scoped to THIS job rather than raised at the top of the
+  # file, so the rest of the workflow keeps `contents: read`. A CI workflow
+  # that can write issues repo-wide is a larger grant than the problem needs.
+  # ---------------------------------------------------------------------------
+  report-main-failure:
+    name: File a red main into the tracker
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, test, projects, dashboard, lint, docs]
+    runs-on: sti-k8s
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open, update or close the CI-status issue
+        uses: actions/github-script@v7
+        env:
+          # `skipped` and `cancelled` are not failures. The `changes` job skips
+          # the study loop on docs-only pushes by design, and `dashboard` skips
+          # whenever the SPA is untouched -- treating either as red would make
+          # this job cry wolf on the majority of pushes and earn exactly the
+          # ignoring the badge earned.
+          FAILED: ${{ contains(needs.*.result, 'failure') }}
+          # The whole `needs` context, so the issue can NAME the jobs that
+          # failed instead of saying "something did". A reader who has to open
+          # the run to learn which job broke is one click from ignoring this.
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const failed = process.env.FAILED === 'true';
+            const marker = '<!-- ci-main-status -->';
+            const sha = context.sha.slice(0, 8);
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // The label must exist before `issues.create` can apply it, and a
+            // job that fails on its own first invocation is worse than no job
+            // at all -- it would fail at exactly the moment it is needed, on a
+            // day someone is already debugging something else. Create it
+            // idempotently rather than depending on a manual repo setup step
+            // that a fork or a fresh clone would not have.
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'ci-failure',
+                color: 'b60205',
+                description: 'Opened automatically when CI fails on main; closes when it goes green.',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e;   // 422 = already exists
+            }
+
+            const { data: found } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ci-failure',
+              per_page: 100,
+            });
+            const existing = found.find((i) => (i.body || '').includes(marker));
+
+            if (!failed) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `\`main\` is green again at ${sha}. Closing.\n\n${run}`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+                core.notice(`main is green; closed #${existing.number}`);
+              } else {
+                core.info('main is green and no CI-status issue is open.');
+              }
+              return;
+            }
+
+            const broken = Object.entries(needsResults())
+              .filter(([, r]) => r === 'failure')
+              .map(([j]) => j);
+            const body = [
+              marker,
+              `\`main\` is failing at **${sha}**.`,
+              '',
+              `Jobs that failed: ${broken.length ? broken.map((j) => `\`${j}\``).join(', ') : 'see the run'}`,
+              '',
+              run,
+              '',
+              'This issue is opened and closed automatically by the `report-main-failure`',
+              'job in `ci.yml`. It closes itself when `main` goes green. Do not close it',
+              'by hand while `main` is red -- it will reopen on the next push and you will',
+              'have lost the history in this one.',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+              core.warning(`main still red; updated #${existing.number}`);
+            } else {
+              const { data: made } = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `CI is failing on main (${sha})`,
+                body,
+                labels: ['ci-failure'],
+              });
+              core.warning(`main went red; opened #${made.number}`);
+            }
+
+            function needsResults() {
+              const raw = JSON.parse(process.env.NEEDS_JSON || '{}');
+              return Object.fromEntries(
+                Object.entries(raw).map(([job, v]) => [job, v && v.result]),
+              );
+            }
