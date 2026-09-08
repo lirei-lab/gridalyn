@@ -126,6 +126,17 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
+      # For `tests/test_ci_main_status.py`, which drives the Node notifier in
+      # `tools/ci_main_status.mjs` against a mocked octokit. That test SKIPS
+      # when `node` is absent, so without this step it would skip here and the
+      # notifier would ship ungated -- which is precisely the failure it is
+      # meant to prevent, since the job it gates runs only on pushes to `main`
+      # and so is never exercised by the pull request that changes it.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install package with runtime, test and typing extras
         # ".[all,test]" not ".[dev]": the dev extra additionally pulls
         # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
@@ -460,3 +471,80 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund mermaid@11 jsdom
           node tools/check_mermaid_diagrams.mjs
+
+  # ---------------------------------------------------------------------------
+  # A red `main` has to interrupt someone. It did not, for ten days.
+  #
+  # `README.md` already carries the CI badge, which renders `main`'s conclusion
+  # on the repository front page. It was red there from 2026-08-28 to
+  # 2026-09-08 -- every visitor's first screen -- and nobody acted. So the
+  # failure was never absent signal; it was PASSIVE signal, and a second
+  # passive signal would have changed nothing. The badge stays; it is a fine
+  # summary. It is just not a notification.
+  #
+  # This job files the failure into the place work is actually tracked. It
+  # keeps ONE issue: opens it on the first red, updates it with each subsequent
+  # red, and CLOSES it when `main` goes green again. The close matters as much
+  # as the open -- an issue that opens on failure and never resolves becomes
+  # the same ignored ornament the badge became, one indirection further away.
+  #
+  # `main` only. A red PR is already in front of the person who opened it; the
+  # gap this closes is a failure with no author standing in front of it.
+  #
+  # `issues: write` is scoped to THIS job rather than raised at the top of the
+  # file, so the rest of the workflow keeps `contents: read`. A CI workflow
+  # that can write issues repo-wide is a larger grant than the problem needs.
+  # ---------------------------------------------------------------------------
+  # NOT BLOCKING, and the reasoning is the inverse of what it first looks like.
+  #
+  # A blocking notifier turns `main` red when the NOTIFIER breaks -- and the
+  # mechanism that reports a red `main` is the job that just broke. The red
+  # goes unreported, every later push stays red, and no issue is ever opened:
+  # the same silent death this job exists to end, plus noise. The argument for
+  # blocking was "a loud false alarm, someone investigates", and syntgrid-d6f
+  # disproved exactly that premise -- the README badge showed `main` red on the
+  # repository front page for ten days and nobody acted.
+  #
+  # What prevents a broken notifier is not blocking, it is a test that runs
+  # BEFORE merge. The logic lives in `tools/ci_main_status.mjs` and
+  # `tests/test_ci_main_status.py` drives every branch of it against a mocked
+  # octokit in the `test` job, on every pull request. That matters here more
+  # than for most code: this job runs only on pushes to `main`, so the pull
+  # request that changes it can never exercise it.
+  report-main-failure:
+    name: File a red main into the tracker
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, test, projects, dashboard, lint, docs]
+    runs-on: sti-k8s
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Open, update or close the CI-status issue
+        uses: actions/github-script@v7
+        env:
+          FAILED: ${{ contains(needs.*.result, 'failure') }}
+          # The whole `needs` context, so the issue can NAME the jobs that
+          # failed instead of saying "something did". A reader who has to open
+          # the run to learn which job broke is one click from ignoring this.
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        with:
+          script: |
+            // Logic in tools/ so the suite can reach it; see the file header.
+            const mod = `${process.env.GITHUB_WORKSPACE}/tools/ci_main_status.mjs`;
+            try {
+              const { run } = await import(mod);
+              await run({ github, context, core, env: process.env });
+            } catch (e) {
+              // Say plainly which thing broke. Without this a reader looking at
+              // a failed step here spends time hunting a bug in the study.
+              core.setFailed(
+                `THE CI NOTIFIER ITSELF FAILED -- this is not a failure of the ` +
+                `code under test. ${e.stack || e.message}`,
+              );
+            }

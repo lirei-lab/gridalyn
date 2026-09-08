@@ -1,8 +1,9 @@
 # `tools/`
 
-Eleven scripts at this level. Ten Python, one Node (`check_mermaid_diagrams.mjs`
-— the mermaid parser this repo needs isn't available in Python, so it stands
-alone as the one non-Python tool here). Plus one directory,
+Twelve scripts at this level. Ten Python, two Node
+(`check_mermaid_diagrams.mjs` — the mermaid parser this repo needs isn't
+available in Python — and `ci_main_status.mjs`, which runs inside
+`actions/github-script` and so must be JavaScript). Plus one directory,
 [`ochre_calibration/`](#ochre_calibration), which is a harness rather than a
 check and so gets its own section instead of ten near-identical table rows.
 Each script carries a substantial module docstring explaining *why* it exists;
@@ -34,6 +35,7 @@ Three ways, and they are not equivalent:
 | `check_doc_instructions.py` (1,098 lines) | pytest-gated (`tests/test_doc_instructions.py`) | Classifies every fenced code block in the docs into six verification classes and pins each one's content hash; a changed block or a new unclassified one fails the gate. |
 | `check_doc_paths.py` (771 lines) | pytest-gated (`tests/test_doc_path_references.py`) | Classifies every path reference in the docs (SOURCE / SHORTHAND / RUNTIME / UNCLASSIFIED); a stale SOURCE reference fails unless individually allowlisted with a reason. |
 | `check_mermaid_diagrams.mjs` (150 lines) | CI-wired (`Documentation build` job) | Parses every ` ```mermaid ` fence with the real Mermaid parser Material loads from its CDN. `mkdocs build --strict` cannot see a broken diagram — this is the gate that can. |
+| `ci_main_status.mjs` (155 lines) | pytest-gated (`tests/test_ci_main_status.py`) + CI-wired (`report-main-failure` job) | Keeps ONE tracker issue in step with `main`'s CI conclusion — opens it on the first red naming the failed jobs, comments on each later red, closes it when `main` goes green. It exists because the README's CI badge is a *passive* signal: it showed `main` red on the repository front page for ten days and nobody acted. Gated by pytest rather than trusted, because the job runs only on pushes to `main` and so is never exercised by the pull request that changes it. |
 | `mypy_ratchet.py` (148 lines) | CI-wired (`test` job) + pre-commit | Runs mypy over `gridalyn/` and fails only if the error count *rose* from the committed baseline — a ratchet, not a zero-errors gate, because the tree does not pass mypy clean today. |
 | `verification_receipt.py` (443 lines) | CI-wired (`test` job) + pytest-gated (`tests/test_verification_receipts.py`) | Accounts for the operator-only verification protocols below: every required protocol must be declared, every declared receipt must be complete, and every receipt's pinned commit must really exist and lead to `HEAD`. Reports staleness (a receipt whose watched paths changed since) without failing on it. |
 | `flagship_verify.py` (366 lines) | pytest-gated (`tests/test_flagship_verify.py`) | A shape-covering subset of the flagship `ev_hosting_flex` reproduce-and-pin protocol — 16 of 24 stages in ~24 min, skipping the four a clean run measured above ten minutes; the full ~4 h cold regen is operator-only, receipted separately. The heavy set is measured, not assumed: its previous sole member took five minutes and its exclusion left the subset running 3 stages. |
