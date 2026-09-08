@@ -20,6 +20,7 @@ on the repository front page (syntgrid-d6f, syntgrid-di6).
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -32,9 +33,36 @@ MODULE = ROOT / "tools" / "ci_main_status.mjs"
 # `node` is provisioned in CI's `test` job (actions/setup-node). Locally it may
 # be absent; skipping there is fine, skipping in CI would make this a gate that
 # does not run, which is the failure this file exists to prevent elsewhere.
-pytestmark = pytest.mark.skipif(
+# Applied to the driving classes, NOT to the module. A module-level
+# `pytestmark` would also skip `test_this_gate_cannot_be_silently_disabled_in_ci`
+# below -- the one check whose whole job is to fire when node is missing. A
+# guard that skips under the condition it guards against proves nothing.
+_needs_node = pytest.mark.skipif(
     shutil.which("node") is None, reason="node is not installed"
 )
+
+
+def test_this_gate_cannot_be_silently_disabled_in_ci() -> None:
+    """Removing `setup-node` must fail the pull request that removes it.
+
+    The skip above is the right behaviour locally and the wrong behaviour in
+    CI: without `node` the whole module skips, the notifier ships ungated, and
+    the only trace is a skip reason in a summary nobody reads. That is passive
+    signal -- the precise defect ``syntgrid-di6`` exists to remove, reappearing
+    one level up in the guard for it.
+
+    GitHub Actions always sets ``CI``, so this converts that silent degradation
+    into a failure on the change that causes it. It deliberately sits OUTSIDE
+    the ``skipif`` above, because a check that skips under the condition it is
+    checking for proves nothing.
+    """
+    if os.environ.get("CI") and shutil.which("node") is None:
+        pytest.fail(
+            "node is absent in CI, so tests/test_ci_main_status.py skipped and "
+            "tools/ci_main_status.mjs would ship ungated. Restore the "
+            "`Set up Node` step in the `test` job of .github/workflows/ci.yml."
+        )
+
 
 _DRIVER = """
 import {{ run }} from {module};
@@ -117,6 +145,7 @@ RED = {
 GREEN = {**RED, "test": "success", "projects": "success"}
 
 
+@_needs_node
 class TestTrackerIssueFollowsMain:
     """The four transitions the job exists to perform."""
 
@@ -155,6 +184,7 @@ class TestTrackerIssueFollowsMain:
         assert [c[0] for c in got["calls"]] == ["createLabel"]
 
 
+@_needs_node
 class TestLabelBootstrap:
     """The job must work on its first invocation, and in a fork."""
 
