@@ -86,7 +86,7 @@ generation cost is paid, but it buys exactly the unmeasured axis, and measuring
 `per_size_limits` across base seeds first would say whether six is enough.
 
 **Why the fleet screens under `static` while every other stage analyses under
-`hourly_kt`** (settled 2026-09-08, `syntgrid-eei.1`). The split is deliberate
+`hourly_kt`** (settled 2026-09-08, `bd eei.1`). The split is deliberate
 and is a screen-then-analyse method: the fleet triage asks which transformers
 *might* be in trouble and takes the conservative nameplate limit; the
 per-feeder chain asks what is *actually* happening at one of them and takes the
