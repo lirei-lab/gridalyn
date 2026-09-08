@@ -484,6 +484,19 @@ jobs:
   # file, so the rest of the workflow keeps `contents: read`. A CI workflow
   # that can write issues repo-wide is a larger grant than the problem needs.
   # ---------------------------------------------------------------------------
+  # DELIBERATELY BLOCKING, not `continue-on-error`. If this job itself breaks it
+  # turns `main` red for a reason unrelated to the code, which is a loud false
+  # alarm -- annoying, self-limiting, and someone investigates. Made
+  # non-blocking it would fail silently instead, leaving a dead notifier and
+  # the next real failure unreported: exactly the state this job exists to end,
+  # now one layer harder to see. For a notification system a loud false alarm
+  # beats a quiet death.
+  #
+  # It cannot be exercised by a pull request (it runs only on `main` pushes, by
+  # design), so its logic was tested offline against mocked octokit before
+  # merge: all four state transitions, a missing label, a 422 already-exists,
+  # and a 403 -- which is rethrown rather than swallowed, so a permission
+  # misconfiguration fails loudly instead of quietly doing nothing.
   report-main-failure:
     name: File a red main into the tracker
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
