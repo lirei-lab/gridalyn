@@ -126,6 +126,17 @@ jobs:
           cache: "pip"
           cache-dependency-path: pyproject.toml
 
+      # For `tests/test_ci_main_status.py`, which drives the Node notifier in
+      # `tools/ci_main_status.mjs` against a mocked octokit. That test SKIPS
+      # when `node` is absent, so without this step it would skip here and the
+      # notifier would ship ungated -- which is precisely the failure it is
+      # meant to prevent, since the job it gates runs only on pushes to `main`
+      # and so is never exercised by the pull request that changes it.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install package with runtime, test and typing extras
         # ".[all,test]" not ".[dev]": the dev extra additionally pulls
         # JupyterLab, the docs toolchain, Sphinx/furo and the linters -- 97
@@ -484,37 +495,39 @@ jobs:
   # file, so the rest of the workflow keeps `contents: read`. A CI workflow
   # that can write issues repo-wide is a larger grant than the problem needs.
   # ---------------------------------------------------------------------------
-  # DELIBERATELY BLOCKING, not `continue-on-error`. If this job itself breaks it
-  # turns `main` red for a reason unrelated to the code, which is a loud false
-  # alarm -- annoying, self-limiting, and someone investigates. Made
-  # non-blocking it would fail silently instead, leaving a dead notifier and
-  # the next real failure unreported: exactly the state this job exists to end,
-  # now one layer harder to see. For a notification system a loud false alarm
-  # beats a quiet death.
+  # NOT BLOCKING, and the reasoning is the inverse of what it first looks like.
   #
-  # It cannot be exercised by a pull request (it runs only on `main` pushes, by
-  # design), so its logic was tested offline against mocked octokit before
-  # merge: all four state transitions, a missing label, a 422 already-exists,
-  # and a 403 -- which is rethrown rather than swallowed, so a permission
-  # misconfiguration fails loudly instead of quietly doing nothing.
+  # A blocking notifier turns `main` red when the NOTIFIER breaks -- and the
+  # mechanism that reports a red `main` is the job that just broke. The red
+  # goes unreported, every later push stays red, and no issue is ever opened:
+  # the same silent death this job exists to end, plus noise. The argument for
+  # blocking was "a loud false alarm, someone investigates", and syntgrid-d6f
+  # disproved exactly that premise -- the README badge showed `main` red on the
+  # repository front page for ten days and nobody acted.
+  #
+  # What prevents a broken notifier is not blocking, it is a test that runs
+  # BEFORE merge. The logic lives in `tools/ci_main_status.mjs` and
+  # `tests/test_ci_main_status.py` drives every branch of it against a mocked
+  # octokit in the `test` job, on every pull request. That matters here more
+  # than for most code: this job runs only on pushes to `main`, so the pull
+  # request that changes it can never exercise it.
   report-main-failure:
     name: File a red main into the tracker
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [changes, test, projects, dashboard, lint, docs]
     runs-on: sti-k8s
     timeout-minutes: 10
+    continue-on-error: true
     permissions:
       contents: read
       issues: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Open, update or close the CI-status issue
         uses: actions/github-script@v7
         env:
-          # `skipped` and `cancelled` are not failures. The `changes` job skips
-          # the study loop on docs-only pushes by design, and `dashboard` skips
-          # whenever the SPA is untouched -- treating either as red would make
-          # this job cry wolf on the majority of pushes and earn exactly the
-          # ignoring the badge earned.
           FAILED: ${{ contains(needs.*.result, 'failure') }}
           # The whole `needs` context, so the issue can NAME the jobs that
           # failed instead of saying "something did". A reader who has to open
@@ -522,92 +535,16 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         with:
           script: |
-            const failed = process.env.FAILED === 'true';
-            const marker = '<!-- ci-main-status -->';
-            const sha = context.sha.slice(0, 8);
-            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-
-            // The label must exist before `issues.create` can apply it, and a
-            // job that fails on its own first invocation is worse than no job
-            // at all -- it would fail at exactly the moment it is needed, on a
-            // day someone is already debugging something else. Create it
-            // idempotently rather than depending on a manual repo setup step
-            // that a fork or a fresh clone would not have.
+            // Logic in tools/ so the suite can reach it; see the file header.
+            const mod = `${process.env.GITHUB_WORKSPACE}/tools/ci_main_status.mjs`;
             try {
-              await github.rest.issues.createLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'ci-failure',
-                color: 'b60205',
-                description: 'Opened automatically when CI fails on main; closes when it goes green.',
-              });
+              const { run } = await import(mod);
+              await run({ github, context, core, env: process.env });
             } catch (e) {
-              if (e.status !== 422) throw e;   // 422 = already exists
-            }
-
-            const { data: found } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'ci-failure',
-              per_page: 100,
-            });
-            const existing = found.find((i) => (i.body || '').includes(marker));
-
-            if (!failed) {
-              if (existing) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner, repo: context.repo.repo,
-                  issue_number: existing.number,
-                  body: `\`main\` is green again at ${sha}. Closing.\n\n${run}`,
-                });
-                await github.rest.issues.update({
-                  owner: context.repo.owner, repo: context.repo.repo,
-                  issue_number: existing.number, state: 'closed',
-                });
-                core.notice(`main is green; closed #${existing.number}`);
-              } else {
-                core.info('main is green and no CI-status issue is open.');
-              }
-              return;
-            }
-
-            const broken = Object.entries(needsResults())
-              .filter(([, r]) => r === 'failure')
-              .map(([j]) => j);
-            const body = [
-              marker,
-              `\`main\` is failing at **${sha}**.`,
-              '',
-              `Jobs that failed: ${broken.length ? broken.map((j) => `\`${j}\``).join(', ') : 'see the run'}`,
-              '',
-              run,
-              '',
-              'This issue is opened and closed automatically by the `report-main-failure`',
-              'job in `ci.yml`. It closes itself when `main` goes green. Do not close it',
-              'by hand while `main` is red -- it will reopen on the next push and you will',
-              'have lost the history in this one.',
-            ].join('\n');
-
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                issue_number: existing.number, body,
-              });
-              core.warning(`main still red; updated #${existing.number}`);
-            } else {
-              const { data: made } = await github.rest.issues.create({
-                owner: context.repo.owner, repo: context.repo.repo,
-                title: `CI is failing on main (${sha})`,
-                body,
-                labels: ['ci-failure'],
-              });
-              core.warning(`main went red; opened #${made.number}`);
-            }
-
-            function needsResults() {
-              const raw = JSON.parse(process.env.NEEDS_JSON || '{}');
-              return Object.fromEntries(
-                Object.entries(raw).map(([job, v]) => [job, v && v.result]),
+              // Say plainly which thing broke. Without this a reader looking at
+              // a failed step here spends time hunting a bug in the study.
+              core.setFailed(
+                `THE CI NOTIFIER ITSELF FAILED -- this is not a failure of the ` +
+                `code under test. ${e.stack || e.message}`,
               );
             }
