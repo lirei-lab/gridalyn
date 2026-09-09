@@ -225,16 +225,16 @@ def _sweep_one_dispersion(
 
 
 def derive_clustered(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Sweep dispersion x mean-adoption; compute the penalty + recovery metrics.
 
     Args:
-        cache_dir: Topology cache directory.
-        data_dir: Annual artifact directory (EV pool).
+        script: The project workspace handle; supplies the topology cache
+            and the annual artifact directory (EV pool).
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     net = feeder.net
     feeder_idx = feeder.feeder_idx

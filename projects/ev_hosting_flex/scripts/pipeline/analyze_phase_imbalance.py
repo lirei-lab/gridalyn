@@ -97,8 +97,8 @@ def _coincident_peak(base_day: np.ndarray, ev_day: np.ndarray, n_evs: float) -> 
 
 
 def derive_phase(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """MC EV adoption x adoption sweep; runpp_3ph unbalanced vs balanced."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     net = feeder.net
     hod0 = feeder.hod0

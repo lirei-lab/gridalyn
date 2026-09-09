@@ -43,16 +43,16 @@ _HOURS_PER_STEP = float(ANNUAL_RES_MINUTES) / 60.0
 
 
 def derive_annual_congestion(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Compute the annual firm count + congestion diagnostics and persist them.
 
     Args:
-        data_dir: Directory holding the F1 annual artifacts.
-        json_dir: Governed JSON output directory.
+        script: The project workspace handle; supplies the F1 annual artifact
+            directory and the governed JSON output directory.
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)

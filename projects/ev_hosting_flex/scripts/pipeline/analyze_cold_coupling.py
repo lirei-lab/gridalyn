@@ -106,16 +106,16 @@ def _cold_day_ev_energy_per_ev(pool: np.ndarray, cold_days: np.ndarray) -> float
 
 
 def derive_cold_coupling(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Compute the cold-coupled vs naive comparison and persist it.
 
     Args:
-        data_dir: Directory holding the F1 annual artifacts.
-        json_dir: Governed JSON output directory.
+        script: The project workspace handle; supplies the F1 annual artifact
+            directory and the governed JSON output directory.
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     tday = np.load(data_dir / "tday_mean_c.npy").astype(DTYPE)
     temp = load_annual_tmy()

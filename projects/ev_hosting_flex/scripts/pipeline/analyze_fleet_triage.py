@@ -364,8 +364,8 @@ def triage_fleet(
 
 
 def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Compute per-size hosting limits and triage the whole transformer fleet."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     feeder_idx = feeder.feeder_idx
     temp = feeder.temp

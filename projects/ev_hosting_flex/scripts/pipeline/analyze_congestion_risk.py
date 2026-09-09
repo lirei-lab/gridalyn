@@ -262,8 +262,8 @@ def _size_congestion(
 
 
 def derive_congestion(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Size at G=1, MC both generators per size, assemble the risk surface."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     feeder_idx = feeder.feeder_idx
     temp = feeder.temp

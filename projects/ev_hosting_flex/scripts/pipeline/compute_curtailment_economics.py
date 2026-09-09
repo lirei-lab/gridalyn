@@ -69,16 +69,17 @@ def capital_recovery_factor(rate: float, years: int) -> float:
 
 
 def derive_curtailment_economics(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Compute the contract-vs-reinforcement economics and persist them.
 
     Args:
-        data_dir: Directory holding the F1 annual artifacts.
-        json_dir: Governed JSON directory (reads F2 firm, writes results).
+        script: The project workspace handle; supplies the F1 annual artifact
+            directory and the governed JSON directory (reads F2 firm, writes
+            results).
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     base = np.load(data_dir / "base_annual.npy").astype(DTYPE)[0]
     pool = np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
     # Each hour is judged against the capability its OWN ambient allows

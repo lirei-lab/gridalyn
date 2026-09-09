@@ -291,9 +291,9 @@ def _crossover_from_ceiling(bins: list[dict[str, Any]], target: float) -> float 
 
 
 def derive_incentive(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Bin the year; per bin compute the shift-hosting ceiling + the incentive
     optimum at the high-adoption target; assemble the payload + figure."""
+    data_dir = script.data_dir
     base_h = aggregate_to_hourly(np.load(data_dir / "base_annual.npy").astype(DTYPE))[0]
     pool_1 = aggregate_to_hourly(
         np.load(data_dir / "ev_fleet_annual.npy").astype(DTYPE)
