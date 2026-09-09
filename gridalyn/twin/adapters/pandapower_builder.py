@@ -41,10 +41,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandapower as pp
 import pandas as pd
-from geopy.distance import geodesic
 from networkx import Graph
 
-from gridalyn.twin.core.graph import PowerGridGraph
+from gridalyn.twin.core.graph import PowerGridGraph, geodesic_length_m
 
 
 class PandapowerGridBuilder:
@@ -201,10 +200,8 @@ class PandapowerGridBuilder:
                 from_buses.append(node_to_bus_mapping[source])
                 to_buses.append(node_to_bus_mapping[target])
 
-                from_pos = (graph.nodes[source]["y"], graph.nodes[source]["x"])
-                to_pos = (graph.nodes[target]["y"], graph.nodes[target]["x"])
                 length_km = max(
-                    geodesic(from_pos, to_pos).meters / 1000,
+                    geodesic_length_m(graph.nodes[source], graph.nodes[target]) / 1000,
                     line_config["min_length_km"],
                 )
                 lengths_km.append(length_km)

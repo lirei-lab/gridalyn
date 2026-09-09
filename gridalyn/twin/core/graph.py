@@ -30,6 +30,29 @@ from sklearn.cluster import KMeans
 from gridalyn.twin.core.ontology import create_node_payload
 
 
+def geodesic_length_m(source: Dict, target: Dict) -> float:
+    """Return the geodesic distance in metres between two graph nodes.
+
+    Args:
+        source: Node attribute mapping carrying ``x`` (longitude) and ``y``
+            (latitude).
+        target: The other node's attribute mapping.
+
+    Returns:
+        The distance in metres.
+
+    Note:
+        The argument order is the whole point of this helper. Node attributes
+        store ``x`` as LONGITUDE and ``y`` as LATITUDE, while ``geodesic``
+        takes ``(latitude, longitude)``. Two call sites in this repository
+        computed the same quantity and disagreed on that order, so one of them
+        transposed every coordinate pair. Both now go through here.
+    """
+    return float(
+        geodesic((source["y"], source["x"]), (target["y"], target["x"])).meters
+    )
+
+
 class PowerGridError(Exception):
     """Base exception class for power grid errors."""
 
@@ -800,9 +823,7 @@ class PowerGridGraph:
             source_node = graph.nodes[source]
             target_node = graph.nodes[target]
 
-            from_pos = (source_node["x"], source_node["y"])
-            to_pos = (target_node["x"], target_node["y"])
-            length = geodesic(from_pos, to_pos).meters
+            length = geodesic_length_m(source_node, target_node)
             if length < 1:
                 length = 1  # Enforce minimum length
 
