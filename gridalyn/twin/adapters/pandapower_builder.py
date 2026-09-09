@@ -37,13 +37,16 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import pandapower as pp
 import pandas as pd
 from networkx import Graph
 
 from gridalyn.twin.core.graph import PowerGridGraph, geodesic_length_m
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from gridalyn.twin.geoprocess.streets import StreetSnapper
 
 
 class PandapowerGridBuilder:
@@ -646,6 +649,7 @@ def build_power_grid_and_network(
     footprints_path: str | Path,
     config: Dict[str, Any],
     clustering_crs: str | int | None = "auto",
+    snap_transformers_to_streets: bool = False,
 ) -> Tuple[PowerGridGraph, pp.pandapowerNet]:
     """Build a `PowerGridGraph` and `pandapower` network from building footprints.
 
@@ -663,6 +667,14 @@ def build_power_grid_and_network(
         clustering_crs: Metric CRS for clustering. `"auto"` estimates a local
             UTM CRS from the footprint layer. Graph geodata stays
             longitude/latitude.
+        snap_transformers_to_streets: When true, site every transformer on the
+            nearest street instead of on the building it serves. Requires the
+            `geo` extra and a network fetch. **Defaults to false, and the
+            default is load-bearing**: the transformer-to-building link is a
+            pandapower line, pinned today at `min_length_km` because the two
+            nodes coincide. Siting on the street turns that stub into roughly
+            20 m of conductor and moves the power flow, so enabling this is a
+            deliberate re-base, not a display change.
 
     Returns:
         `(power_grid, net)`. `power_grid.building_data` carries the extracted
@@ -672,9 +684,35 @@ def build_power_grid_and_network(
     power_grid.extract_building_centers_and_areas(
         str(Path(footprints_path)), clustering_crs=clustering_crs
     )
+    if snap_transformers_to_streets:
+        power_grid.street_snapper = _street_snapper_for(power_grid, footprints_path)
     _build_graph_hierarchy(power_grid, config)
     net = _build_uniform_pandapower_network(power_grid, config)
     return power_grid, net
+
+
+def _street_snapper_for(
+    power_grid: PowerGridGraph, footprints_path: str | Path
+) -> "StreetSnapper":
+    """Build a street snapper covering the footprint layer's extent.
+
+    Args:
+        power_grid: The graph whose buildings have already been extracted, so
+            its resolved `clustering_crs` can be reused.
+        footprints_path: The GeoJSON the buildings came from, read again only
+            for its extent.
+
+    Returns:
+        A `StreetSnapper` measuring in the same metric CRS the clustering used,
+        so siting and clustering cannot disagree about distance.
+    """
+    import geopandas as gpd
+
+    from gridalyn.twin.geoprocess.streets import load_street_snapper
+
+    footprints = gpd.read_file(str(Path(footprints_path)))
+    metric_crs = power_grid.clustering_crs or str(footprints.estimate_utm_crs())
+    return load_street_snapper(footprints.total_bounds, metric_crs=metric_crs)
 
 
 def _build_graph_hierarchy(power_grid: PowerGridGraph, config: Dict[str, Any]) -> None:
