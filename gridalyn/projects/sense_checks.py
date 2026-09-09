@@ -165,10 +165,58 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
 
 
 def _project_file(path: Path | str) -> Path:
+    """Resolve a project reference to its ``project.yaml``.
+
+    Args:
+        path: A project directory, or the ``project.yaml`` file itself.
+
+    Returns:
+        The resolved path to the study contract.
+
+    Raises:
+        FileNotFoundError: If no ``project.yaml`` exists there. The message
+            names the path checked and states the remedy, rather than letting
+            an unlocated ``FileNotFoundError`` escape from ``read_text`` three
+            frames down.
+    """
     candidate = Path(path)
-    if candidate.name == "project.yaml":
-        return candidate
-    return candidate / "project.yaml"
+    resolved = (
+        candidate if candidate.name == "project.yaml" else candidate / "project.yaml"
+    )
+    if resolved.is_file():
+        return resolved
+    raise FileNotFoundError(
+        f"{resolved.resolve()}: no project.yaml here, so there is no study to "
+        f"sense-check. "
+        f"Pass a project directory or its project.yaml"
+        f"{_available_projects_hint(candidate)}."
+    )
+
+
+def _available_projects_hint(candidate: Path) -> str:
+    """Return a comma-listed hint of nearby projects, or an empty string.
+
+    Args:
+        candidate: The path the caller asked for.
+
+    Returns:
+        A parenthesised list of project directories found under a ``projects/``
+        directory beside ``candidate`` or above it, or ``""`` when none is
+        discoverable. Empty rather than misleading: a wrong guess about where
+        the workspace is would send the reader further from the answer.
+    """
+    for base in (candidate, *candidate.resolve().parents):
+        projects_dir = base / "projects"
+        if not projects_dir.is_dir():
+            continue
+        names = sorted(
+            entry.name
+            for entry in projects_dir.iterdir()
+            if (entry / "project.yaml").is_file()
+        )
+        if names:
+            return f" (available under {projects_dir}: {', '.join(names)})"
+    return ""
 
 
 def _read_json(project: StudyProject, relative: str) -> dict[str, Any]:
