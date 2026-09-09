@@ -22,20 +22,14 @@ pool. GUARD-02: no module-scope pandapower. Out of scope: phase imbalance
 from __future__ import annotations
 
 import argparse
-import pickle
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from gridalyn.projects.scripting import ProjectScript
-from projects.ev_hosting_flex.scripts._annual import (
-    aggregate_to_hourly,
-    day_mean_temps,
-    load_annual_tmy,
-    tmy_hour_of_day,
-)
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._annual import aggregate_to_hourly
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import (
     apply_local_curtailment,
     draw_clustered_adoption,
@@ -231,7 +225,6 @@ def _sweep_one_dispersion(
 
 
 def derive_clustered(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Sweep dispersion x mean-adoption; compute the penalty + recovery metrics.
 
@@ -242,19 +235,13 @@ def derive_clustered(script: ProjectScript) -> dict[str, Any]:
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
+    feeder = load_sized_feeder(script)
+    net = feeder.net
+    feeder_idx = feeder.feeder_idx
+    hod0 = feeder.hod0
+    design_day = feeder.design_day
+    sizing = feeder.sizing
     downstream = script.read_json("outputs/cache/downstream_bus_map.json")
-    temp = load_annual_tmy()
-    hod0 = tmy_hour_of_day(temp)
-    design_day = int(np.argmin(day_mean_temps(temp)))
-
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     base_by_size = sizing["base_by_size"]
     size_by_trafo = sizing["size_by_trafo"]
 

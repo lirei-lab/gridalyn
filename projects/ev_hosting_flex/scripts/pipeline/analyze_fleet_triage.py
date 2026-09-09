@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import math
-import pickle
 from pathlib import Path
 from typing import Any
 
@@ -33,13 +32,10 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     ANNUAL_RES_MINUTES,
     cold_capability_curve,
-    day_mean_temps,
     firm_annual,
-    load_annual_tmy,
     simulate_curtailment,
-    tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
 from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
@@ -368,21 +364,15 @@ def triage_fleet(
 
 
 def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Compute per-size hosting limits and triage the whole transformer fleet."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
-    design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
+    feeder = load_sized_feeder(script)
+    net = feeder.net
+    feeder_idx = feeder.feeder_idx
+    temp = feeder.temp
+    hod0 = feeder.hod0
+    tday = feeder.tday
+    sizing = feeder.sizing
     size_by_trafo = sizing["size_by_trafo"]
 
     pf = float(POWER_FACTOR)

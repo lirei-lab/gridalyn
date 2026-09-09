@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import math
-import pickle
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,13 +23,10 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     annual_base_realization,
     cold_capability_curve,
-    day_mean_temps,
     ev_fleet_annual,
     feeder_rating,
-    load_annual_tmy,
-    tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import (
     _cold_day_peaks,
     congestion_stats,
@@ -267,22 +263,16 @@ def _size_congestion(
 
 
 def derive_congestion(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Size at G=1, MC both generators per size, assemble the risk surface."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
+    feeder = load_sized_feeder(script)
+    net = feeder.net
+    feeder_idx = feeder.feeder_idx
+    temp = feeder.temp
+    hod0 = feeder.hod0
+    tday = feeder.tday
+    sizing = feeder.sizing
     cold_mask = tday < float(COLD_DAY_TMEAN_C)
-    design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_trafo = sizing["size_by_trafo"]
 
     pf = float(POWER_FACTOR)
