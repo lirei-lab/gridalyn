@@ -260,7 +260,7 @@ spec:
         - projects/ev_hosting_flex/outputs/reports/fleet_triage_report.json
 
     - id: analyze_locational_contracts
-      needs: [analyze_fleet_triage, build_base_mc_cache]
+      needs: [generate_annual_mc, build_base_mc_cache]
       command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.analyze_locational_contracts"
       inputs:
         - projects/ev_hosting_flex/outputs/cache/pp_net_cache.pkl
