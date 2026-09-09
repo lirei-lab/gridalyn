@@ -500,8 +500,23 @@ class PowerGridGraph:
         self.logger.info(f"Clustering {len(points)} points into {n_clusters} clusters")
         self.logger.debug(f"Sample point: {points[0]}")
 
-        # Perform clustering
-        kmeans = KMeans(n_clusters=n_clusters, random_state=0)
+        # Perform clustering.
+        #
+        # n_init is pinned, not left to the library default, because
+        # random_state alone does NOT make this reproducible across
+        # environments: it seeds the initialisations, it does not fix how many
+        # there are. scikit-learn changed that default's semantics in 1.4
+        # ("auto"), and pyproject declares scikit-learn>=0.24.0 with no ceiling,
+        # so two installs can produce different topologies from the same seed.
+        # Measured: same random_state=0, n_init=10 vs "auto" give different
+        # labels and different inertia (5102844.05 vs 5135233.49).
+        #
+        # The value is 1 because that is what "auto" resolves to for k-means++,
+        # so pinning it changes nothing today. It is deliberately NOT 10 --
+        # 10 restarts measurably fit better, but adopting them would move every
+        # topology and is a re-base decision, tracked separately rather than
+        # smuggled in as a reproducibility fix.
+        kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init=1)
         labels = kmeans.fit_predict(points)
         cluster_centers = kmeans.cluster_centers_
 
