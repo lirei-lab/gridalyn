@@ -39,7 +39,6 @@ from projects.ev_hosting_flex.scripts.config import (
     NONWIRES_ADOPTION_GRID,
     NONWIRES_CURTAIL_TOLERANCE,
     POOL_MAX_ANNUAL,
-    POWER_FACTOR,
     RAMP_HORIZON_YEARS,
     ROUND_DECIMALS,
     SEED,
@@ -183,20 +182,14 @@ def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
     data_dir = script.data_dir
     """Per-size deferral + network aggregate + substation + per-adoption snapshot."""
     feeder = load_sized_feeder(script)
-    net = feeder.net
     hod0 = feeder.hod0
     tday = feeder.tday
     design_day = feeder.design_day
     sizing = feeder.sizing
     n_cold_days = int((tday < float(COLD_DAY_TMEAN_C)).sum())
-    size_by_trafo = sizing["size_by_trafo"]
     kva_by_size = sizing["kva_by_size"]
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
     sizes = sorted({h for h in homes_by_trafo.values() if h > 0})
     rating_by_size = {}
     for h in sizes:

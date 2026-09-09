@@ -189,18 +189,12 @@ def derive_performance(script: ProjectScript) -> dict[str, Any]:
     """Size the net at G=1, build the panel, the flexible share, and the feeder
     flexibility window; assemble the payload + figure."""
     feeder = load_sized_feeder(script)
-    net = feeder.net
     temp = feeder.temp
     hod0 = feeder.hod0
-    sizing = feeder.sizing
-    size_by_trafo = sizing["size_by_trafo"]
 
     pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
 
     base_feeder = aggregate_to_hourly(
         np.load(data_dir / "base_annual.npy").astype(DTYPE)

@@ -333,20 +333,13 @@ def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
     data_dir = script.data_dir
     """Clear locational contracts across the anchored adoption grid."""
     feeder = load_sized_feeder(script)
-    net = feeder.net
     temp = feeder.temp
     hod0 = feeder.hod0
-    sizing = feeder.sizing
     cold_days = np.where(feeder.tday < float(COLD_DAY_TMEAN_C))[0]
-    size_by_trafo = sizing["size_by_trafo"]
 
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
-    sizes = sorted(set(homes_by_trafo.values()))
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
+    sizes = feeder.sizes
 
     base_mc = load_base_mc_cache(data_dir, sizes, int(TRIAGE_K_BASE))
     base_by_size = {h: base_mc[h][0] for h in sizes}

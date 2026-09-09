@@ -42,7 +42,6 @@ from projects.ev_hosting_flex.scripts.config import (
     CONGESTION_K_EV,
     CONGESTION_RISK_THRESHOLD,
     DTYPE,
-    POWER_FACTOR,
     ROUND_DECIMALS,
     SEED,
     TRIAGE_K_BASE,
@@ -266,32 +265,16 @@ def derive_congestion(script: ProjectScript) -> dict[str, Any]:
     data_dir = script.data_dir
     """Size at G=1, MC both generators per size, assemble the risk surface."""
     feeder = load_sized_feeder(script)
-    net = feeder.net
     feeder_idx = feeder.feeder_idx
     temp = feeder.temp
     hod0 = feeder.hod0
     tday = feeder.tday
-    sizing = feeder.sizing
     cold_mask = tday < float(COLD_DAY_TMEAN_C)
-    size_by_trafo = sizing["size_by_trafo"]
 
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
+    homes_by_trafo = feeder.homes_by_trafo
     feeder_homes = homes_by_trafo[feeder_idx]
-    sizes = sorted(set(homes_by_trafo.values()))
-    rating_by_size = {}
-    for h in sizes:
-        group = {rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h}
-        if len(group) != 1:
-            raise ValueError(
-                f"transformers with {h} homes have non-uniform ratings {group}; "
-                "the per-size congestion mapping assumes one rating per size."
-            )
-        rating_by_size[h] = group.pop()
+    sizes = feeder.sizes
+    rating_by_size = feeder.rating_by_size()
 
     _cap, _series = feeder_rating(temp)
     k_curve = (

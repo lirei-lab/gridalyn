@@ -367,21 +367,14 @@ def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
     data_dir = script.data_dir
     """Compute per-size hosting limits and triage the whole transformer fleet."""
     feeder = load_sized_feeder(script)
-    net = feeder.net
     feeder_idx = feeder.feeder_idx
     temp = feeder.temp
     hod0 = feeder.hod0
     tday = feeder.tday
-    sizing = feeder.sizing
-    size_by_trafo = sizing["size_by_trafo"]
 
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
-    sizes = sorted(set(homes_by_trafo.values()))
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
+    sizes = feeder.sizes
     rating_by_size: dict[int, float] = {}
     for h in sizes:
         group = {rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h}
