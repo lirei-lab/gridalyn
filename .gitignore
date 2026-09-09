@@ -181,7 +181,7 @@ dashboard/public
 # locally (`dashboard/.gitignore` already covers the SPA's own tree).
 node_modules/
 cache/
-projects/*/outputs/
+# projects/*/outputs/ -- see the depth-independent rule below
 # examples/outputs
 
 # Gridalyn generated digital twin artifacts
@@ -202,7 +202,7 @@ instances/*/digital_twin/semantic/*.parquet
 instances/*/digital_twin/models/**/*.parquet
 
 # Gridalyn project and legacy outputs
-projects/*/outputs/
+projects/**/outputs/
 
 # Dashboard generated data bundles
 dashboard/public/
