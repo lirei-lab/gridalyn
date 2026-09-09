@@ -23,6 +23,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     p95_cold_evening_loading,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     DTYPE,
@@ -145,15 +146,7 @@ def run_stage() -> dict[str, Any]:
 
     script = project_script()
     derived = derive_annual_congestion(script)
-    return script.write_report(
-        "annual_congestion_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": []},
-    )
+    return emit_stage_report(script, "annual_congestion_report", derived)
 
 
 def main() -> None:

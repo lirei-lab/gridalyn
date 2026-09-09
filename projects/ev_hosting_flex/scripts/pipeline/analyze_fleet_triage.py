@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import math
-import pickle
 from pathlib import Path
 from typing import Any
 
@@ -33,14 +32,12 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     ANNUAL_RES_MINUTES,
     cold_capability_curve,
-    day_mean_temps,
     firm_annual,
-    load_annual_tmy,
     simulate_curtailment,
-    tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import draw_clustered_adoption
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -367,30 +364,17 @@ def triage_fleet(
 
 
 def derive_fleet_triage(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Compute per-size hosting limits and triage the whole transformer fleet."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
-    design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
-    size_by_trafo = sizing["size_by_trafo"]
+    feeder = load_sized_feeder(script)
+    feeder_idx = feeder.feeder_idx
+    temp = feeder.temp
+    hod0 = feeder.hod0
+    tday = feeder.tday
 
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
-    sizes = sorted(set(homes_by_trafo.values()))
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
+    sizes = feeder.sizes
     rating_by_size: dict[int, float] = {}
     for h in sizes:
         group = {rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h}
@@ -673,15 +657,7 @@ def run_stage() -> dict[str, Any]:
             "bound within the searched pool, so their flexible count is a LOWER "
             "BOUND. Raise TRIAGE_POOL_PER_HOME and re-run before citing them."
         )
-    return script.write_report(
-        "fleet_triage_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
-    )
+    return emit_stage_report(script, "fleet_triage_report", derived, warnings=warnings)
 
 
 def main() -> None:

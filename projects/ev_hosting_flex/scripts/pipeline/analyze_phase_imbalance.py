@@ -12,21 +12,16 @@ LV, full-net LV 3-phase.
 from __future__ import annotations
 
 import argparse
-import pickle
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from gridalyn.projects.scripting import ProjectScript
-from projects.ev_hosting_flex.scripts._annual import (
-    aggregate_to_hourly,
-    day_mean_temps,
-    load_annual_tmy,
-    tmy_hour_of_day,
-)
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._annual import aggregate_to_hourly
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import to_three_phase_mv, vuf
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     DTYPE,
     PHASE_EV_GRID,
@@ -102,21 +97,13 @@ def _coincident_peak(base_day: np.ndarray, ev_day: np.ndarray, n_evs: float) -> 
 
 
 def derive_phase(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """MC EV adoption x adoption sweep; runpp_3ph unbalanced vs balanced."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
-    design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
+    feeder = load_sized_feeder(script)
+    net = feeder.net
+    hod0 = feeder.hod0
+    design_day = feeder.design_day
+    sizing = feeder.sizing
     base_day_by_size = _base_day_by_size(sizing)
     size_by_trafo = sizing["size_by_trafo"]
 
@@ -308,14 +295,11 @@ def run_stage() -> dict[str, Any]:
         "The substation Dyn transformer uses shift_degree=0 (a phase rotation "
         "does not change per-phase voltage magnitudes or the VUF).",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "phase_imbalance_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

@@ -29,6 +29,7 @@ from projects.ev_hosting_flex.scripts._powerflow import (
     extract_feeder_subnet,
     feeder_min_voltage,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     COLD_DAY_TMEAN_C,
     DTYPE,
@@ -289,15 +290,7 @@ def run_stage() -> dict[str, Any]:
         "LARGER / deeper feeders, not this one — a follow-up should target the "
         "largest feeder size to quantify that voltage risk probabilistically.",
     ]
-    return script.write_report(
-        "voltage_risk_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
-    )
+    return emit_stage_report(script, "voltage_risk_report", derived, warnings=warnings)
 
 
 def main() -> None:

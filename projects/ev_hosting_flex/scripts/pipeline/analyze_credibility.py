@@ -32,6 +32,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     simulate_curtailment,
     tmy_hour_of_day,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
@@ -410,15 +411,12 @@ def run_stage() -> dict[str, Any]:
         "consistency anchor). Governed feeder / pilar-1 trio only; K finite -> the "
         "P5/P95 tails carry sampling error.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "credibility_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
+        derived,
+        warnings=warnings,
         uncertainty=derived["uncertainty"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
     )
 
 

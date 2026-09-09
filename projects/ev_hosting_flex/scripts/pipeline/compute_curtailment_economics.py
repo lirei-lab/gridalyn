@@ -21,6 +21,7 @@ from projects.ev_hosting_flex.scripts._annual import (
     load_annual_tmy,
     simulate_curtailment,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     C_A_CURTAIL,
@@ -164,15 +165,7 @@ def run_stage() -> dict[str, Any]:
 
     script = project_script()
     derived = derive_curtailment_economics(script)
-    return script.write_report(
-        "curtailment_economics_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": []},
-    )
+    return emit_stage_report(script, "curtailment_economics_report", derived)
 
 
 def main() -> None:

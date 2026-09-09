@@ -13,7 +13,6 @@ base_mc_by_size cache. No SDK edit.
 from __future__ import annotations
 
 import argparse
-import pickle
 from pathlib import Path
 from typing import Any
 
@@ -23,14 +22,12 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     adoption_at_year,
     aggregate_to_hourly,
-    day_mean_temps,
     ev_fleet_annual,
-    load_annual_tmy,
-    tmy_hour_of_day,
     year_at_adoption,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import flex_deferral_curves
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     C_A_CURTAIL,
     C_AVAIL_EV_YR,
@@ -42,7 +39,6 @@ from projects.ev_hosting_flex.scripts.config import (
     NONWIRES_ADOPTION_GRID,
     NONWIRES_CURTAIL_TOLERANCE,
     POOL_MAX_ANNUAL,
-    POWER_FACTOR,
     RAMP_HORIZON_YEARS,
     ROUND_DECIMALS,
     SEED,
@@ -183,31 +179,17 @@ def _size_deferral(
 
 
 def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Per-size deferral + network aggregate + substation + per-adoption snapshot."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
-    design_day = int(np.argmin(tday))
+    feeder = load_sized_feeder(script)
+    hod0 = feeder.hod0
+    tday = feeder.tday
+    design_day = feeder.design_day
+    sizing = feeder.sizing
     n_cold_days = int((tday < float(COLD_DAY_TMEAN_C)).sum())
-
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
-    size_by_trafo = sizing["size_by_trafo"]
     kva_by_size = sizing["kva_by_size"]
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
+    homes_by_trafo = feeder.homes_by_trafo
+    rating_by_trafo = feeder.rating_by_trafo
     sizes = sorted({h for h in homes_by_trafo.values() if h > 0})
     rating_by_size = {}
     for h in sizes:
@@ -459,14 +441,11 @@ def run_stage() -> dict[str, Any]:
         "(transformers + CAPEX deferred vs EV/home) is ramp-shape-robust. The "
         "substation flex-lift is a documented aggregate proxy.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "nonwires_value_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import math
-import pickle
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,17 +23,15 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     annual_base_realization,
     cold_capability_curve,
-    day_mean_temps,
     ev_fleet_annual,
     feeder_rating,
-    load_annual_tmy,
-    tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import (
     _cold_day_peaks,
     congestion_stats,
 )
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     ANNUAL_RES_MINUTES,
     COLD_DAY_TMEAN_C,
@@ -45,7 +42,6 @@ from projects.ev_hosting_flex.scripts.config import (
     CONGESTION_K_EV,
     CONGESTION_RISK_THRESHOLD,
     DTYPE,
-    POWER_FACTOR,
     ROUND_DECIMALS,
     SEED,
     TRIAGE_K_BASE,
@@ -266,41 +262,19 @@ def _size_congestion(
 
 
 def derive_congestion(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     data_dir = script.data_dir
     """Size at G=1, MC both generators per size, assemble the risk surface."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
+    feeder = load_sized_feeder(script)
+    feeder_idx = feeder.feeder_idx
+    temp = feeder.temp
+    hod0 = feeder.hod0
+    tday = feeder.tday
     cold_mask = tday < float(COLD_DAY_TMEAN_C)
-    design_day = int(np.argmin(tday))
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
-    size_by_trafo = sizing["size_by_trafo"]
 
-    pf = float(POWER_FACTOR)
-    lv = net.trafo.index[net.trafo["vn_lv_kv"] < 1.0]
-    homes_by_trafo = {int(t): int(size_by_trafo[int(t)]) for t in lv}
-    rating_by_trafo = {
-        int(t): float(net.trafo.at[int(t), "sn_mva"]) * 1000.0 * pf for t in lv
-    }
+    homes_by_trafo = feeder.homes_by_trafo
     feeder_homes = homes_by_trafo[feeder_idx]
-    sizes = sorted(set(homes_by_trafo.values()))
-    rating_by_size = {}
-    for h in sizes:
-        group = {rating_by_trafo[t] for t in homes_by_trafo if homes_by_trafo[t] == h}
-        if len(group) != 1:
-            raise ValueError(
-                f"transformers with {h} homes have non-uniform ratings {group}; "
-                "the per-size congestion mapping assumes one rating per size."
-            )
-        rating_by_size[h] = group.pop()
+    sizes = feeder.sizes
+    rating_by_size = feeder.rating_by_size()
 
     _cap, _series = feeder_rating(temp)
     k_curve = (
@@ -545,14 +519,11 @@ def run_stage() -> dict[str, Any]:
         "electrification growth at zero EV (first_risk_g). Either alone can trip "
         "the planning threshold; do not read the EV trigger as the only driver.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "congestion_risk_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 

@@ -15,7 +15,6 @@ the deep-feeder residual held by LTC/regulators.
 from __future__ import annotations
 
 import argparse
-import pickle
 from pathlib import Path
 from typing import Any
 
@@ -25,13 +24,11 @@ from gridalyn.projects.scripting import ProjectScript
 from projects.ev_hosting_flex.scripts._annual import (
     aggregate_to_hourly,
     annual_base_realization,
-    day_mean_temps,
     ev_fleet_annual,
-    load_annual_tmy,
-    tmy_hour_of_day,
 )
-from projects.ev_hosting_flex.scripts._network import size_network_to_load
+from projects.ev_hosting_flex.scripts._network import load_sized_feeder
 from projects.ev_hosting_flex.scripts._powerflow import network_min_voltage
+from projects.ev_hosting_flex.scripts._report import emit_stage_report
 from projects.ev_hosting_flex.scripts.config import (
     COLD_DAY_TMEAN_C,
     DTYPE,
@@ -125,24 +122,17 @@ def _sweep_network(
 
 
 def derive_voltage_network(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
     """Size the full net, MC the EV fleet x cold days; per adoption level compute
     the network LV undervoltage probability + voltage tail."""
-    with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
-        net = pickle.load(handle)
-    feeder_idx = int(
-        script.read_json("outputs/cache/feeder_selection.json")[
-            "feeder_transformer_idx"
-        ]
-    )
-    temp = load_annual_tmy()
-    hod0 = int(tmy_hour_of_day(temp))
-    tday = day_mean_temps(temp)
-    design_day = int(np.argmin(tday))
+    # ``load_sized_feeder`` sizes net's trafos, lines and substation in place.
+    feeder = load_sized_feeder(script)
+    net = feeder.net
+    temp = feeder.temp
+    hod0 = feeder.hod0
+    tday = feeder.tday
+    design_day = feeder.design_day
+    sizing = feeder.sizing
     cold_days = [int(d) for d in np.where(tday < float(COLD_DAY_TMEAN_C))[0]]
-
-    # ── HQ-style sizing (mutates net trafo/lines/substation in place) ──────
-    sizing = size_network_to_load(net, script, temp, design_day, feeder_idx)
     size_by_loadbus = sizing["size_by_loadbus"]
 
     # ── Per-load base by cluster size (annual, one deterministic realization) ─
@@ -345,14 +335,11 @@ def run_stage() -> dict[str, Any]:
         "held by LTC / regulators in reality, not conductor gauge — documented in "
         "the network-model verification.",
     ]
-    return script.write_report(
+    return emit_stage_report(
+        script,
         "voltage_risk_network_report",
-        artifacts=[
-            p if isinstance(p, dict) else script.file_reference(p)
-            for p in derived["artifact_paths"]
-        ],
-        summary=derived["summary"],
-        validation={"valid": True, "errors": [], "warnings": warnings},
+        derived,
+        warnings=warnings,
     )
 
 
