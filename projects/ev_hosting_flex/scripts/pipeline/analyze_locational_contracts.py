@@ -330,8 +330,8 @@ def _persist_operational(
 
 
 def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Clear locational contracts across the anchored adoption grid."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     temp = feeder.temp
     hod0 = feeder.hod0

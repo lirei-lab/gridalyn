@@ -185,9 +185,9 @@ def _feeder_window(
 
 
 def derive_performance(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Size the net at G=1, build the panel, the flexible share, and the feeder
     flexibility window; assemble the payload + figure."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     temp = feeder.temp
     hod0 = feeder.hod0

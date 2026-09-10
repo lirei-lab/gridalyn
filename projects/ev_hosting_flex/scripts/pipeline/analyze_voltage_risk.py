@@ -77,10 +77,10 @@ def _adoption_voltage_stats(
 
 
 def derive_voltage(script: ProjectScript) -> dict[str, Any]:
-    cache_dir = script.cache_dir
-    data_dir = script.data_dir
     """MC the EV fleet x cold days; per adoption level compute the LV
     undervoltage probability + voltage tail on the governed feeder."""
+    cache_dir = script.cache_dir
+    data_dir = script.data_dir
     with open(cache_dir / "pp_net_cache.pkl", "rb") as handle:
         net = pickle.load(handle)
     feeder_idx = int(

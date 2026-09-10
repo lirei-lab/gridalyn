@@ -63,16 +63,16 @@ def _interp_crossing(pens: np.ndarray, loadings: np.ndarray, limit: float) -> fl
 
 
 def derive_characterization(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Sweep EV adoption and compute the three network-characterization metrics.
 
     Args:
-        cache_dir: Topology cache directory.
-        data_dir: Annual artifact directory (EV pool for the overlay).
+        script: The project workspace handle; supplies the topology cache and
+            the annual artifact directory (EV pool for the overlay).
 
     Returns:
         Dict with ``artifact_paths`` and the report ``summary``.
     """
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     net = feeder.net
     feeder_idx = feeder.feeder_idx

@@ -179,8 +179,8 @@ def _size_deferral(
 
 
 def derive_nonwires_value(script: ProjectScript) -> dict[str, Any]:
-    data_dir = script.data_dir
     """Per-size deferral + network aggregate + substation + per-adoption snapshot."""
+    data_dir = script.data_dir
     feeder = load_sized_feeder(script)
     hod0 = feeder.hod0
     tday = feeder.tday
