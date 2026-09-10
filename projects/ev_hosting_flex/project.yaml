@@ -422,13 +422,6 @@ spec:
       role: Project-local Trois-Rivieres building footprints used to synthesize the topology cache (D-03).
     grid:
       config: projects/ev_hosting_flex/inputs/synthetic_network_config.json
-  artifacts:
-    project:
-      data: projects/ev_hosting_flex/outputs/data
-      json: projects/ev_hosting_flex/outputs/json
-      reports: projects/ev_hosting_flex/outputs/reports
-      cache: projects/ev_hosting_flex/outputs/cache
-      figures: projects/ev_hosting_flex/outputs/figures
   workflow:
     file: projects/ev_hosting_flex/workflow.yaml
   validation:

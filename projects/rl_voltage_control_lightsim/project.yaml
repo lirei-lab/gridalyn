@@ -143,13 +143,6 @@ spec:
       simulator: lightsim2grid
       episodeCount: 90
       evaluationSteps: 24
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   workflow:
     file: workflow.yaml
   validation:

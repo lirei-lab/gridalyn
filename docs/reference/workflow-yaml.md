@@ -51,7 +51,7 @@ and validates.
 | `metadata.version` | required | Project contract version. |
 | `spec.pathBase` | recommended | `repo` resolves paths from repository root; default behavior may resolve from the project folder. |
 | `spec.inputs` | yes | Raw geography, grid configuration, external datasets, and assumptions. |
-| `spec.artifacts` | yes | Canonical artifact locations. |
+| `spec.artifacts` | no | Accepted and **not read**. Output directories are fixed by `ProjectScript` (`outputs/data`, `figures`, `reports`, `manifests`, `operations`, `cache`), not by this block; declaring them here governs nothing. |
 | `spec.workflow.file` | yes | Workflow resource path. |
 | `spec.validation.requiredReports` | recommended | Report JSON files that must exist and satisfy the report contract. |
 | `spec.validation.requiredFigures` | recommended | Figures that must exist and be non-empty. |

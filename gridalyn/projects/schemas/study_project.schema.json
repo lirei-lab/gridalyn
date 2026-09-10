@@ -20,7 +20,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["problem", "inputs", "artifacts", "workflow", "validation"],
+      "required": ["problem", "inputs", "workflow", "validation"],
       "properties": {
         "pathBase": {
           "type": "string",
@@ -149,7 +149,10 @@
           }
         },
         "inputs": { "type": "object" },
-        "artifacts": { "type": "object" },
+        "artifacts": {
+          "type": "object",
+          "description": "Accepted for compatibility and NOT READ. No code consumes spec.artifacts: the output directories are fixed by ProjectScript (data, figures, reports, manifests, operations, cache under outputs/), and the run manifest fingerprints its own fixed set. Declaring directories here governs nothing. Kept as a defined property, rather than removed, because additionalProperties is false and removing it would invalidate existing project files that still carry the block (bd 6ns.2)."
+        },
         "scenarios": {
           "type": "object",
           "additionalProperties": false,
