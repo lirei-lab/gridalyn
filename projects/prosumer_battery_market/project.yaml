@@ -158,13 +158,6 @@ spec:
       intervalCount: 12
       participantCount: 5
       product: battery discharge to reduce feeder import above a real-time operating limit
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   workflow:
     file: workflow.yaml
   validation:

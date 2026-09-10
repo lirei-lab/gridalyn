@@ -68,13 +68,6 @@ spec:
         lineCNfPerKm: 5.0
         lineMaxIKa: 0.25
         busYStep: 0.15
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   workflow:
     file: workflow.yaml
   validation:

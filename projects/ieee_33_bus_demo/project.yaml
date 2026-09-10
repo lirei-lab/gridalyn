@@ -79,13 +79,6 @@ spec:
       day: peak
       resolutionMinutes: 60
       weather: synthetic
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   # This study's scenarios, declared so the dashboard can enumerate and read
   # them without knowing anything about this study. Partitioning is `column`
   # because every artifact below holds ALL five scenarios discriminated by a

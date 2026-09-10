@@ -119,13 +119,6 @@ spec:
     optimization:
       solver: gridalyn_der_voltage_dispatch
       product: voltage-constrained DER hosting and battery charging dispatch
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   workflow:
     file: workflow.yaml
   validation:

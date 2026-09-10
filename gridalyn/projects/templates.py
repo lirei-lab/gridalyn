@@ -75,13 +75,6 @@ spec:
       artifacts: {experiment_artifacts}
   inputs:
     raw: inputs
-  artifacts:
-    project:
-      data: outputs/data
-      reports: outputs/reports
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
   workflow:
     file: workflow.yaml
   validation:
@@ -274,13 +267,6 @@ spec:
         - outputs/figures/powerflow_demo_voltage_profile.png
   inputs:
     raw: inputs
-  artifacts:
-    project:
-      data: outputs/data
-      reports: outputs/reports
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
   workflow:
     file: workflow.yaml
   validation:

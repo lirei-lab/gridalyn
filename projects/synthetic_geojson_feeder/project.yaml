@@ -49,13 +49,6 @@ spec:
       day: peak
       resolutionMinutes: 15
       weather: synthetic
-  artifacts:
-    project:
-      data: outputs/data
-      figures: outputs/figures
-      manifests: outputs/manifests
-      operations: outputs/operations
-      reports: outputs/reports
   workflow:
     file: workflow.yaml
   validation:

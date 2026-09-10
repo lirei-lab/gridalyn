@@ -91,13 +91,6 @@ spec:
       uqBandHighPct: 95.0
       comparisonRepRho: 0.5
       comparisonMcDraws: 100
-  artifacts:
-    project:
-      data: projects/admm_thermal_consensus/outputs/data
-      json: projects/admm_thermal_consensus/outputs/json
-      reports: projects/admm_thermal_consensus/outputs/reports
-      cache: projects/admm_thermal_consensus/outputs/cache
-      figures: projects/admm_thermal_consensus/outputs/figures
   workflow:
     file: projects/admm_thermal_consensus/workflow.yaml
   validation:
