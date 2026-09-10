@@ -118,6 +118,29 @@ class ProjectScript:
         target.parent.mkdir(parents=True, exist_ok=True)
         return target
 
+    def relative(self, path: Path | str) -> str:
+        """Render an absolute path the way an artifact should record it.
+
+        The inverse of :meth:`path`. A study artifact that stores where the
+        machine that produced it kept its files cannot reproduce byte-for-byte
+        anywhere else, and a reader diffing two runs across machines sees a
+        difference that looks like a regression and is not one (bd r5j).
+
+        Args:
+            path: A path, normally under this project's ``outputs/``.
+
+        Returns:
+            The POSIX path relative to the project root. A path outside the
+            project is returned unchanged rather than rewritten with ``..``,
+            because an artifact naming something outside its own study is a
+            fact worth seeing rather than hiding.
+        """
+        target = Path(path)
+        try:
+            return target.resolve().relative_to(self.project.root.resolve()).as_posix()
+        except ValueError:
+            return target.as_posix()
+
     def read_json(self, relative: Path | str) -> Any:
         """Read a project-relative JSON file and return the parsed payload.
 

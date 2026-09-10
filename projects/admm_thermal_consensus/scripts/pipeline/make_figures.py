@@ -126,7 +126,7 @@ def main() -> None:
     script.write_report(
         "figures_report",
         artifacts=[script.file_reference(p) for p in all_figs],
-        summary={"n_figures": 3, "figure_dir": str(C.FIGURES_DIR)},
+        summary={"n_figures": 3, "figure_dir": script.relative(C.FIGURES_DIR)},
     )
     print(f"make_figures: wrote {len(all_figs)} figure files")
 

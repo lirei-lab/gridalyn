@@ -382,7 +382,9 @@ def derive_locational_contracts(script: ProjectScript) -> dict[str, Any]:
             cell.pop(key, None)
 
     payload: dict[str, Any] = {
-        "operational_artifacts": {k: str(v) for k, v in operational.items()},
+        "operational_artifacts": {
+            k: script.relative(v) for k, v in operational.items()
+        },
         "n_transformers": len(homes_by_trafo),
         "n_cold_days": int(cold_days.size),
         "dispersion": float(TRIAGE_BASE_DISPERSION),
