@@ -170,7 +170,15 @@ def build_project_catalog(
     """
     entries: list[dict[str, Any]] = []
     for project in sorted(projects, key=lambda item: str(getattr(item, "name", ""))):
-        project_dir = Path(getattr(project, "base_dir", getattr(project, "root", root)))
+        # `root`, not `base_dir`. They are adjacent properties on StudyProject
+        # and identical for the six studies declaring pathBase: project -- but
+        # loader.py resolves base_dir to the REPO ROOT when pathBase is 'repo',
+        # because that is the cwd the runner needs for `python -m
+        # projects.<study>...`. It is not where the study's files live. Using it
+        # here served base_path '/.', reported every artifact absent, and lost
+        # ev_hosting_flex's 81 baseline pins, all for the two studies whose
+        # outputs no gate exercises.
+        project_dir = Path(getattr(project, "root", getattr(project, "base_dir", root)))
         try:
             relative_dir = project_dir.resolve().relative_to(root.resolve())
         except (OSError, ValueError):

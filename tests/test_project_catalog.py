@@ -351,3 +351,65 @@ class ShippedStudyHierarchyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ServedPathShapeTest(unittest.TestCase):
+    """Every study is served from its own directory, whatever its pathBase.
+
+    ``StudyProject`` carries ``root`` (the study's directory) and ``base_dir``
+    (the cwd the runner resolves a stage command from) as separate fields, and
+    ``loader.project_base_dir`` makes the second the REPO ROOT when a study
+    declares ``pathBase: repo``. The two coincide for the six studies declaring
+    ``pathBase: project``, so reading the wrong one is invisible until one of
+    the two heavy studies is described.
+
+    These assertions are about path SHAPE, not about files: they hold whether
+    or not a study's gitignored outputs are present, which is what makes them
+    run in CI. That is deliberate -- the defect they pin (syntgrid-9jq) shipped
+    precisely because the only studies it affected were the two whose outputs
+    no gate exercises.
+    """
+
+    def _shipped_entries(self) -> list[dict[str, Any]]:
+        from gridalyn.projects.loader import load_project
+
+        root = Path(__file__).resolve().parents[1]
+        manifests = sorted((root / "projects").glob("*/project.yaml"))
+        self.assertGreaterEqual(len(manifests), 6)
+        return build_project_catalog(
+            [load_project(path) for path in manifests], root=root
+        )
+
+    def test_every_study_is_served_from_its_own_directory(self):
+        for entry in self._shipped_entries():
+            with self.subTest(project=entry["project_id"]):
+                self.assertEqual(
+                    entry["base_path"],
+                    f"/projects/{entry['project_id']}",
+                    "base_path must name the study's own directory; '/.' means "
+                    "base_dir was read where root was meant",
+                )
+
+    def test_no_declared_path_needs_normalising_away(self):
+        for entry in self._shipped_entries():
+            declared = json.dumps(entry)
+            with self.subTest(project=entry["project_id"]):
+                self.assertNotIn(
+                    "/./",
+                    declared,
+                    "a browser normalises '/./outputs/...' to '/outputs/...', "
+                    "which neither the vite dev server nor the compose mounts "
+                    "serve",
+                )
+
+    def test_a_repo_based_study_still_finds_its_own_baseline(self):
+        entries = {entry["project_id"]: entry for entry in self._shipped_entries()}
+        flagship = entries.get("ev_hosting_flex")
+        if flagship is None:  # pragma: no cover - study not shipped
+            self.skipTest("ev_hosting_flex is not present in this checkout")
+        self.assertTrue(
+            flagship["governed_metrics"],
+            "ev_hosting_flex pins its results in projects/ev_hosting_flex/"
+            "baselines/; resolving from the repo root finds no baseline at all "
+            "and publishes the study as governing nothing",
+        )

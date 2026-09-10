@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-02T18:03:03.909037+00:00",
+  "created_at": "2026-09-10T00:49:22.672870+00:00",
   "network_model": {
     "counts": {
       "buildings": 3235,
@@ -137,37 +137,95 @@
     {
       "artifacts": [
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/agents_report.json",
-          "relative": "outputs/reports/agents_report.json"
+          "path": "/projects/admm_thermal_consensus/outputs/reports/agents_report.json",
+          "relative": "outputs/reports/agents_report.json",
+          "report_id": "agents_report",
+          "schema_version": "1.0",
+          "source_domain": "admm_thermal_consensus",
+          "summary_keys": [
+            "min_temperature_c",
+            "n_agents",
+            "n_steps",
+            "total_heating_kwh",
+            "uncoordinated_peak_kw"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/network_report.json",
-          "relative": "outputs/reports/network_report.json"
+          "path": "/projects/admm_thermal_consensus/outputs/reports/network_report.json",
+          "relative": "outputs/reports/network_report.json",
+          "report_id": "network_report",
+          "schema_version": "1.0",
+          "source_domain": "admm_thermal_consensus",
+          "summary_keys": [
+            "feeder",
+            "n_homes",
+            "n_load_buses",
+            "transformer_kva",
+            "uncoordinated_min_lv_voltage_pu",
+            "uncoordinated_transformer_loading_pct"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/forecast_report.json",
-          "relative": "outputs/reports/forecast_report.json"
+          "path": "/projects/admm_thermal_consensus/outputs/reports/forecast_report.json",
+          "relative": "outputs/reports/forecast_report.json",
+          "report_id": "forecast_report",
+          "schema_version": "1.0",
+          "source_domain": "admm_thermal_consensus",
+          "summary_keys": [
+            "cv_mae_kw_mean",
+            "cv_rmse_kw_mean",
+            "cv_rmse_kw_std",
+            "heating_std_kw"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/admm_report.json",
-          "relative": "outputs/reports/admm_report.json"
+          "path": "/projects/admm_thermal_consensus/outputs/reports/admm_report.json",
+          "relative": "outputs/reports/admm_report.json",
+          "report_id": "admm_report",
+          "schema_version": "1.0",
+          "source_domain": "admm_thermal_consensus",
+          "summary_keys": [
+            "coordinated_ideal_peak_kw",
+            "ideal_par",
+            "ideal_peak_reduction_fraction",
+            "rho_sweep",
+            "uncoordinated_par",
+            "uncoordinated_peak_kw"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/powerflow_report.json",
-          "relative": "outputs/reports/powerflow_report.json"
+          "path": "/projects/admm_thermal_consensus/outputs/reports/powerflow_report.json",
+          "relative": "outputs/reports/powerflow_report.json",
+          "report_id": "powerflow_report",
+          "schema_version": "1.0",
+          "source_domain": "admm_thermal_consensus",
+          "summary_keys": [
+            "ideal_worst_min_voltage_pu",
+            "ideal_worst_transformer_loading_pct",
+            "scenarios",
+            "transformer_loading_limit_pct",
+            "uncoordinated_worst_min_voltage_pu",
+            "uncoordinated_worst_transformer_loading_pct",
+            "voltage_lower_pu"
+          ],
+          "valid": true
         }
       ],
-      "base_path": "/.",
+      "base_path": "/projects/admm_thermal_consensus",
       "description": "Network-validated distributed ADMM coordination of cold-climate electric- heating homes with ML imputation of communication-failed agents, validated on the IEEE-33 feeder with pandapower.",
       "experiments": [
         {
@@ -179,7 +237,106 @@
           ]
         }
       ],
-      "governed_metrics": [],
+      "governed_metrics": [
+        {
+          "block": "summary",
+          "id": "summary.coordinated_ideal_peak_kw",
+          "key": "coordinated_ideal_peak_kw",
+          "source": "outputs/reports/admm_report.json",
+          "tolerance": 0.47823812362445123
+        },
+        {
+          "block": "summary",
+          "id": "summary.uncoordinated_peak_kw",
+          "key": "uncoordinated_peak_kw",
+          "source": "outputs/reports/admm_report.json",
+          "tolerance": 0.5722238985502208
+        },
+        {
+          "block": "summary",
+          "id": "summary.ideal_peak_reduction_fraction",
+          "key": "ideal_peak_reduction_fraction",
+          "source": "outputs/reports/admm_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.ideal_par",
+          "key": "ideal_par",
+          "source": "outputs/reports/admm_report.json",
+          "tolerance": 0.0010053398541972488
+        },
+        {
+          "block": "summary",
+          "id": "summary.uncoordinated_par",
+          "key": "uncoordinated_par",
+          "source": "outputs/reports/admm_report.json",
+          "tolerance": 0.0012029143272325425
+        },
+        {
+          "block": "summary",
+          "id": "summary.ideal_worst_min_voltage_pu",
+          "key": "ideal_worst_min_voltage_pu",
+          "source": "outputs/reports/powerflow_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.ideal_worst_transformer_loading_pct",
+          "key": "ideal_worst_transformer_loading_pct",
+          "source": "outputs/reports/powerflow_report.json",
+          "tolerance": 0.10448451217611823
+        },
+        {
+          "block": "summary",
+          "id": "summary.uncoordinated_worst_min_voltage_pu",
+          "key": "uncoordinated_worst_min_voltage_pu",
+          "source": "outputs/reports/powerflow_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.cv_rmse_kw_mean",
+          "key": "cv_rmse_kw_mean",
+          "source": "outputs/reports/forecast_report.json",
+          "tolerance": 0.0022058047349412815
+        },
+        {
+          "block": "summary",
+          "id": "summary.cv_mae_kw_mean",
+          "key": "cv_mae_kw_mean",
+          "source": "outputs/reports/forecast_report.json",
+          "tolerance": 0.0018934461285635014
+        },
+        {
+          "block": "summary",
+          "id": "summary.n_scenarios",
+          "key": "n_scenarios",
+          "source": "outputs/reports/study_report.json",
+          "tolerance": 0
+        },
+        {
+          "block": "summary",
+          "id": "summary.peak_spread_kw",
+          "key": "peak_spread_kw",
+          "source": "outputs/reports/imputer_comparison_report.json",
+          "tolerance": 0.035925998272485854
+        },
+        {
+          "block": "summary",
+          "id": "summary.coordinated_headroom_pct",
+          "key": "coordinated_headroom_pct",
+          "source": "outputs/reports/imputer_comparison_report.json",
+          "tolerance": 0.001
+        },
+        {
+          "block": "summary",
+          "id": "summary.uncoordinated_worst_transformer_loading_pct",
+          "key": "uncoordinated_worst_transformer_loading_pct",
+          "source": "outputs/reports/powerflow_report.json",
+          "tolerance": 0.12594109469465256
+        }
+      ],
       "label": "Admm Thermal Consensus",
       "objective": "Coordinate residential electric heating with sharing-ADMM to flatten the feeder peak, keep coordination consistent under agent communication failures via ML imputation, and quantify how imputation error propagates into IEEE-33 voltage and line-loading violations.",
       "project_id": "admm_thermal_consensus",
@@ -305,37 +462,136 @@
     {
       "artifacts": [
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/topology_cache_report.json",
-          "relative": "outputs/reports/topology_cache_report.json"
+          "path": "/projects/ev_hosting_flex/outputs/reports/study_report.json",
+          "relative": "outputs/reports/study_report.json",
+          "report_id": "study_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "fleet_headline",
+            "reports",
+            "run"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/annual_mc_report.json",
-          "relative": "outputs/reports/annual_mc_report.json"
+          "path": "/projects/ev_hosting_flex/outputs/reports/topology_cache_report.json",
+          "relative": "outputs/reports/topology_cache_report.json",
+          "report_id": "topology_cache_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "feeder_transformer_idx",
+            "feeder_transformer_rating_kw",
+            "n_buses",
+            "n_downstream_lines",
+            "n_lines",
+            "n_load_buses",
+            "n_transformers",
+            "selected_feeder_load_kw"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/fleet_triage_report.json",
-          "relative": "outputs/reports/fleet_triage_report.json"
+          "path": "/projects/ev_hosting_flex/outputs/reports/annual_mc_report.json",
+          "relative": "outputs/reports/annual_mc_report.json",
+          "report_id": "annual_mc_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "base_floor_hours",
+            "base_peak_kw",
+            "base_peak_pct_capability",
+            "base_peak_pct_rating",
+            "base_peak_per_home_kw",
+            "ev_pool_annual_kwh_mean",
+            "fc_base_peaks_kw",
+            "k_annual",
+            "n_homes",
+            "n_steps",
+            "pool_max",
+            "rating_kw",
+            "res_minutes",
+            "tmy_hour_of_day_0"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/annual_congestion_report.json",
-          "relative": "outputs/reports/annual_congestion_report.json"
+          "path": "/projects/ev_hosting_flex/outputs/reports/fleet_triage_report.json",
+          "relative": "outputs/reports/fleet_triage_report.json",
+          "report_id": "fleet_triage_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "base_constrained_at_1ev",
+            "base_dispersion",
+            "deferred_capex_usd_at_1ev",
+            "deferred_fraction_at_1ev",
+            "feeder_curtailed_fraction_at_flexible",
+            "feeder_firm_ev_count",
+            "feeder_flexible_ev_count",
+            "flex_defers_at_1ev",
+            "flex_defers_at_1ev_uniform",
+            "headline_rating_convention",
+            "n_at_risk_at_1ev",
+            "n_at_risk_at_1ev_uniform",
+            "n_pool_limited_sizes",
+            "n_transformers",
+            "needs_steel_at_1ev"
+          ],
+          "valid": true
         },
         {
-          "exists": false,
+          "exists": true,
           "kind": "governed_report",
-          "path": "/./outputs/reports/curtailment_contracts_report.json",
-          "relative": "outputs/reports/curtailment_contracts_report.json"
+          "path": "/projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json",
+          "relative": "outputs/reports/annual_congestion_report.json",
+          "report_id": "annual_congestion_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "base_floor_hours",
+            "base_p95_cold_evening_percent",
+            "congested_hours_at_pool_top",
+            "firm_ev_count",
+            "p95_at_firm_percent",
+            "p95_at_firm_plus_one_percent",
+            "p95_base_check",
+            "rating_kw"
+          ],
+          "valid": true
+        },
+        {
+          "exists": true,
+          "kind": "governed_report",
+          "path": "/projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json",
+          "relative": "outputs/reports/curtailment_contracts_report.json",
+          "report_id": "curtailment_contracts_report",
+          "schema_version": "1.0",
+          "source_domain": "ev_hosting_flex",
+          "summary_keys": [
+            "curtailed_energy_percent_at_flexible",
+            "firm_ev_count",
+            "flexible_ev_count",
+            "hosting_expansion_percent",
+            "jain_fair",
+            "mean_events_per_ev",
+            "planned_percent_sigma_1.5",
+            "residual_hours_at_flexible",
+            "surprise_percent_sigma_1.5"
+          ],
+          "valid": true
         }
       ],
-      "base_path": "/.",
+      "base_path": "/projects/ev_hosting_flex",
       "description": "EV hosting capacity and flexibility across a 540-transformer distribution fleet, with the transformer rating convention as a declared axis.",
       "experiments": [
         {
@@ -355,7 +611,666 @@
           ]
         }
       ],
-      "governed_metrics": [],
+      "governed_metrics": [
+        {
+          "block": "scenarios",
+          "id": "pf.pre_ev_min_lv_vm_pu",
+          "key": "min_lv_vm_pu",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "scenarios",
+          "id": "pf.pre_ev_n_trafos_over_dynamic",
+          "key": "n_trafos_over_dynamic",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 0
+        },
+        {
+          "block": "scenarios",
+          "id": "pf.post_ev_1p5_n_trafos_over_dynamic",
+          "key": "n_trafos_over_dynamic",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 0
+        },
+        {
+          "block": "scenarios",
+          "id": "pf.post_ev_1p5_min_lv_vm_pu",
+          "key": "min_lv_vm_pu",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "firm_ev_count",
+          "id": "annual.firm_ev_count",
+          "key": "firm_ev_count",
+          "source": "outputs/json/firm_hosting_annual.json",
+          "tolerance": 0
+        },
+        {
+          "block": "p95_cold_evening_curve",
+          "id": "annual.base_p95_cold_evening",
+          "key": "0",
+          "source": "outputs/json/firm_hosting_annual.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "congested_hours_per_year_curve",
+          "id": "annual.congested_hours_at_pool_top",
+          "key": "-1",
+          "source": "outputs/json/firm_hosting_annual.json",
+          "tolerance": 0
+        },
+        {
+          "block": "flexible_ev_count",
+          "id": "annual.flexible_ev_count",
+          "key": "flexible_ev_count",
+          "source": "outputs/json/curtailment_hosting.json",
+          "tolerance": 0
+        },
+        {
+          "block": "hosting_expansion_percent",
+          "id": "annual.hosting_expansion_percent",
+          "key": "hosting_expansion_percent",
+          "source": "outputs/json/curtailment_hosting.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "curtailed_energy_percent_curve",
+          "id": "annual.curtailed_pct_at_pool_top",
+          "key": "-1",
+          "source": "outputs/json/curtailment_hosting.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "fairness",
+          "id": "annual.jain_fair",
+          "key": "jain_fair",
+          "source": "outputs/json/curtailment_hosting.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "breakeven_ev_count",
+          "id": "annual.econ_breakeven_ev_count",
+          "key": "breakeven_ev_count",
+          "source": "outputs/json/curtailment_economics.json",
+          "tolerance": 0
+        },
+        {
+          "block": "reinforcement_annual_yr",
+          "id": "annual.econ_reinforcement_annual",
+          "key": "reinforcement_annual_yr",
+          "source": "outputs/json/curtailment_economics.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "feeder_mc_by_role",
+          "id": "pf.mc_p_overload_ac_at_firm",
+          "key": "p_overload_ac",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "feeder_mc_by_role",
+          "id": "pf.mc_p_overload_ac_unmanaged",
+          "key": "p_overload_ac",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "feeder_mc_by_role",
+          "id": "pf.mc_curtailed_peak_loading_max",
+          "key": "peak_loading_max",
+          "source": "outputs/json/powerflow_violations.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "models",
+          "id": "coldcoupling.firm_cold",
+          "key": "firm_ev_count",
+          "source": "outputs/json/cold_coupling_comparison.json",
+          "tolerance": 0
+        },
+        {
+          "block": "models",
+          "id": "coldcoupling.firm_naive",
+          "key": "firm_ev_count",
+          "source": "outputs/json/cold_coupling_comparison.json",
+          "tolerance": 0
+        },
+        {
+          "block": "firm_overestimate_percent",
+          "id": "coldcoupling.firm_overestimate_percent",
+          "key": "firm_overestimate_percent",
+          "source": "outputs/json/cold_coupling_comparison.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "curtailment_underestimate_ratio",
+          "id": "coldcoupling.curtailment_underestimate_ratio",
+          "key": "curtailment_underestimate_ratio",
+          "source": "outputs/json/cold_coupling_comparison.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "cold_day_ev_energy_uplift_percent",
+          "id": "coldcoupling.cold_day_ev_energy_uplift_percent",
+          "key": "cold_day_ev_energy_uplift_percent",
+          "source": "outputs/json/cold_coupling_comparison.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "losses",
+          "id": "netchar.loss_percent_0ev",
+          "key": "0",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "losses",
+          "id": "netchar.loss_percent_2ev",
+          "key": "-1",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "substation",
+          "id": "netchar.substation_peak_0ev",
+          "key": "0",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "substation",
+          "id": "netchar.n1_reinforcement_penetration_normal",
+          "key": "n1_reinforcement_penetration_normal",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "headroom",
+          "id": "netchar.headroom_p50",
+          "key": "crossing_penetration_p50",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "headroom",
+          "id": "netchar.n_overloaded_at_0ev",
+          "key": "n_overloaded_at_0ev",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 0
+        },
+        {
+          "block": "substation",
+          "id": "netchar.substation_n_transformers",
+          "key": "n_transformers",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 0
+        },
+        {
+          "block": "substation",
+          "id": "netchar.substation_mva",
+          "key": "mva_per_transformer",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "substation",
+          "id": "netchar.substation_normal_loading",
+          "key": "normal_loading_percent",
+          "source": "outputs/json/network_characterization.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "penalty",
+          "id": "cluster.penalty_ratio",
+          "key": "penalty_ratio",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "penalty",
+          "id": "cluster.worst_loading_clustered",
+          "key": "worst_loading_clustered",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "recovery",
+          "id": "cluster.worst_loading_managed_clustered",
+          "key": "worst_loading_managed_clustered",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "recovery",
+          "id": "cluster.curtailed_energy_percent",
+          "key": "curtailed_energy_percent",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "recovery",
+          "id": "cluster.burden_gini",
+          "key": "burden_gini",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "by_dispersion",
+          "id": "cluster.gini_at_max_dispersion",
+          "key": "gini_at_mean_rate",
+          "source": "outputs/json/clustered_adoption.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "shift_ceiling_coldest",
+          "id": "flexincentive.shift_ceiling_coldest",
+          "key": "shift_ceiling_coldest",
+          "source": "outputs/json/flexibility_incentive.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "shift_ceiling_warmest",
+          "id": "flexincentive.shift_ceiling_warmest",
+          "key": "shift_ceiling_warmest",
+          "source": "outputs/json/flexibility_incentive.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "crossover_temp_c",
+          "id": "flexincentive.crossover_temp_c",
+          "key": "crossover_temp_c",
+          "source": "outputs/json/flexibility_incentive.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "optimal_subsidy_coldest",
+          "id": "flexincentive.optimal_subsidy_coldest",
+          "key": "optimal_subsidy_coldest",
+          "source": "outputs/json/flexibility_incentive.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "optimal_subsidy_warmest",
+          "id": "flexincentive.optimal_subsidy_warmest",
+          "key": "optimal_subsidy_warmest",
+          "source": "outputs/json/flexibility_incentive.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "panel",
+          "id": "perf.growth_margin_p50",
+          "key": "growth_margin_p50",
+          "source": "outputs/json/network_performance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "panel",
+          "id": "perf.n_over_100_at_g_high",
+          "key": "-1",
+          "source": "outputs/json/network_performance.json",
+          "tolerance": 0
+        },
+        {
+          "block": "flexible_share_p50",
+          "id": "perf.flexible_share_p50",
+          "key": "flexible_share_p50",
+          "source": "outputs/json/network_performance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "feeder_window",
+          "id": "perf.flex_window_g_low",
+          "key": "flex_window_g_low",
+          "source": "outputs/json/network_performance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "feeder_window",
+          "id": "perf.flex_window_g_high",
+          "key": "flex_window_g_high",
+          "source": "outputs/json/network_performance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "reference_feeder",
+          "id": "congestion.p_cong_g1_1ev",
+          "key": "p_cong_g1_1ev",
+          "source": "outputs/json/congestion_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "reference_feeder",
+          "id": "congestion.peak_max_g1_1ev",
+          "key": "peak_max_g1_1ev",
+          "source": "outputs/json/congestion_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "n_at_risk_at_ref",
+          "id": "congestion.n_at_risk_at_ref",
+          "key": "n_at_risk_at_ref",
+          "source": "outputs/json/congestion_risk.json",
+          "tolerance": 0
+        },
+        {
+          "block": "first_risk_ev_per_home",
+          "id": "congestion.first_risk_ev_per_home",
+          "key": "first_risk_ev_per_home",
+          "source": "outputs/json/congestion_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "first_risk_g",
+          "id": "congestion.first_risk_g",
+          "key": "first_risk_g",
+          "source": "outputs/json/congestion_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "p_undervolt_at_ref",
+          "id": "phase.p_undervolt_at_ref",
+          "key": "p_undervolt_at_ref",
+          "source": "outputs/json/phase_imbalance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "worst_vuf_at_ref",
+          "id": "phase.worst_vuf_at_ref",
+          "key": "worst_vuf_at_ref",
+          "source": "outputs/json/phase_imbalance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "balanced_gap_pu",
+          "id": "phase.balanced_gap_pu",
+          "key": "balanced_gap_pu",
+          "source": "outputs/json/phase_imbalance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "p_undervolt_at_ref",
+          "id": "voltage.p_undervolt_at_ref",
+          "key": "p_undervolt_at_ref",
+          "source": "outputs/json/voltage_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "min_v_p05_at_ref",
+          "id": "voltage.min_v_p05_at_ref",
+          "key": "min_v_p05_at_ref",
+          "source": "outputs/json/voltage_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "min_v_worst_at_ref",
+          "id": "voltage.min_v_worst_at_ref",
+          "key": "min_v_worst_at_ref",
+          "source": "outputs/json/voltage_risk.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "p_undervolt_at_ref",
+          "id": "voltage_net.p_undervolt_at_ref",
+          "key": "p_undervolt_at_ref",
+          "source": "outputs/json/voltage_risk_network.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "min_v_p05_at_ref",
+          "id": "voltage_net.min_v_p05_at_ref",
+          "key": "min_v_p05_at_ref",
+          "source": "outputs/json/voltage_risk_network.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "min_v_worst_at_ref",
+          "id": "voltage_net.min_v_worst_at_ref",
+          "key": "min_v_worst_at_ref",
+          "source": "outputs/json/voltage_risk_network.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "first_risk_ev_per_home",
+          "id": "voltage_net.first_risk_ev_per_home",
+          "key": "first_risk_ev_per_home",
+          "source": "outputs/json/voltage_risk_network.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "total_deferral_npv",
+          "id": "nonwires.total_deferral_npv",
+          "key": "total_deferral_npv",
+          "source": "outputs/json/nonwires_value.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "total_trafo_years_deferred",
+          "id": "nonwires.total_trafo_years_deferred",
+          "key": "total_trafo_years_deferred",
+          "source": "outputs/json/nonwires_value.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "substation_deferral_npv",
+          "id": "nonwires.substation_deferral_npv",
+          "key": "substation_deferral_npv",
+          "source": "outputs/json/nonwires_value.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "peak_capex_deferred",
+          "id": "nonwires.peak_capex_deferred",
+          "key": "peak_capex_deferred",
+          "source": "outputs/json/nonwires_value.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "first_reinforcement_year",
+          "id": "nonwires.first_reinforcement_year",
+          "key": "first_reinforcement_year",
+          "source": "outputs/json/nonwires_value.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "firm",
+          "id": "cred.firm_p05",
+          "key": "p05",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "firm",
+          "id": "cred.firm_p50",
+          "key": "p50",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "firm",
+          "id": "cred.firm_p95",
+          "key": "p95",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "flex",
+          "id": "cred.flex_p05",
+          "key": "p05",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "flex",
+          "id": "cred.flex_p50",
+          "key": "p50",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "flex",
+          "id": "cred.flex_p95",
+          "key": "p95",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "breakeven",
+          "id": "cred.breakeven_p50",
+          "key": "p50",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "base_peak",
+          "id": "cred.base_peak_p50",
+          "key": "p50",
+          "source": "outputs/json/credibility.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "activation_frequency_at_ref",
+          "id": "insurance.activation_frequency_at_ref",
+          "key": "activation_frequency_at_ref",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "coverage_at_ref",
+          "id": "insurance.coverage_at_ref",
+          "key": "coverage_at_ref",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "expected_cost_flex_at_ref",
+          "id": "insurance.expected_cost_flex_at_ref",
+          "key": "expected_cost_flex_at_ref",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "expected_cost_reinforce_at_ref",
+          "id": "insurance.expected_cost_reinforce_at_ref",
+          "key": "expected_cost_reinforce_at_ref",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "short_years_if_plan_p50",
+          "id": "insurance.short_years_if_plan_p50",
+          "key": "short_years_if_plan_p50",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "crossover_adoption",
+          "id": "insurance.crossover_adoption",
+          "key": "crossover_adoption",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 0
+        },
+        {
+          "block": "delta_firm_correlation",
+          "id": "insurance.delta_firm_correlation",
+          "key": "delta_firm_correlation",
+          "source": "outputs/json/cold_insurance.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "n_transformers",
+          "id": "fleet.n_transformers",
+          "key": "n_transformers",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "k_base",
+          "id": "fleet.k_base",
+          "key": "k_base",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "headline_rating_convention",
+          "id": "fleet.headline_rating_convention",
+          "key": "headline_rating_convention",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.n_at_risk_at_1ev_static",
+          "key": "n_at_risk",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.flex_defers_at_1ev_static",
+          "key": "flex_defers",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.needs_steel_at_1ev_static",
+          "key": "needs_steel",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.base_constrained_at_1ev_static",
+          "key": "base_constrained",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.deferred_fraction_at_1ev_static",
+          "key": "deferred_fraction_of_at_risk",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 1e-06
+        },
+        {
+          "block": "triage",
+          "id": "fleet.n_at_risk_at_1ev_hourly_kt",
+          "key": "n_at_risk",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.flex_defers_at_1ev_hourly_kt",
+          "key": "flex_defers",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.needs_steel_at_1ev_hourly_kt",
+          "key": "needs_steel",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.base_constrained_at_1ev_hourly_kt",
+          "key": "base_constrained",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 0
+        },
+        {
+          "block": "triage",
+          "id": "fleet.deferred_fraction_at_1ev_hourly_kt",
+          "key": "deferred_fraction_of_at_risk",
+          "source": "outputs/json/fleet_triage.json",
+          "tolerance": 1e-06
+        }
+      ],
       "label": "Ev Hosting Flex",
       "objective": "Determine, across the whole pole-transformer fleet, how many assets bind as EV adoption grows from today (0.11 EV/home) to Qu\u00e9bec saturation (1.32 EV/home, every household light vehicle electrified), how many a flexibility contract defers, and how many need reinforcement regardless.\nThe unit of analysis is the FLEET, not one feeder. Measured on this network, the median asset and the tail answer differently: the governed 6-home unit hosts full saturation firmly, while a share of the 540 binds well before it. A single-feeder headline reports whichever of those the chosen feeder happens to be.\nThe transformer rating is a declared axis, not an assumption. Judging a winter peak against a nameplate defined at a 30 \u00b0C ambient breaks the coupling between load and thermal capability \u2014 in a heating-dominated feeder both are driven by the same outdoor temperature and rise together. On this network that choice moves more assets than the entire EV transition does, so both conventions are emitted.",
       "project_id": "ev_hosting_flex",
