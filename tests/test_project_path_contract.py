@@ -225,7 +225,7 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
         violation = violations[0]
         self.assertEqual(violation.problem, PROBLEM_DOUBLED_PREFIX)
         self.assertEqual(violation.location, "spec.validation.requiredReports[0]")
-        self.assertIn("pathBase: project", violation.message)
+        self.assertIn("every path in project.yaml is", violation.message)
         self.assertEqual(violation.suggestion, "outputs/reports/r.json")
 
     def test_project_relative_path_in_a_repo_based_study_escapes(self) -> None:
@@ -234,7 +234,7 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
-                required="projects/demo/outputs/reports/r.json",
+                required="outputs/reports/r.json",
                 output="outputs/data/x.csv",
             )
             violations = _violations_for(manifest)
@@ -247,7 +247,25 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
         self.assertEqual(violation.suggestion, "projects/demo/outputs/data/x.csv")
 
     def test_a_correct_repo_based_declaration_passes(self) -> None:
-        """Repo-relative paths are right under pathBase: repo, and are not flagged."""
+        """Under pathBase: repo, project.yaml is project-relative and stages are not."""
+        with tempfile.TemporaryDirectory() as raw:
+            manifest = _write_project(
+                Path(raw),
+                path_base="repo",
+                required="outputs/reports/r.json",
+                output="projects/demo/outputs/data/x.csv",
+            )
+            self.assertEqual(_violations_for(manifest), [])
+
+    def test_repo_based_study_writing_required_reports_repo_relative_is_doubled(
+        self,
+    ) -> None:
+        """The breaking change of bd 6ns.2 part 2a, and what an external user hits.
+
+        Before it, a pathBase: repo study wrote requiredReports repo-relative and
+        was right. Now they resolve against the project directory, so the same
+        declaration doubles it -- and the suggestion is the corrected entry.
+        """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
@@ -255,7 +273,13 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
                 required="projects/demo/outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
             )
-            self.assertEqual(_violations_for(manifest), [])
+            violations = _violations_for(manifest)
+
+        self.assertEqual(
+            [(v.location, v.problem) for v in violations],
+            [("spec.validation.requiredReports[0]", PROBLEM_DOUBLED_PREFIX)],
+        )
+        self.assertEqual(violations[0].suggestion, "outputs/reports/r.json")
 
     def test_a_path_climbing_out_of_the_project_is_caught(self) -> None:
         """A ../ escape is outside the project whatever the base."""
@@ -272,28 +296,31 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
 
 
 class SenseCheckReportTest(unittest.TestCase):
-    """spec.validation.senseChecks[].report resolves against base_dir, one level down."""
+    """spec.validation.senseChecks[].report resolves against root, one level down."""
 
-    def test_repo_based_rule_written_project_relative_escapes(self) -> None:
-        """The case no real study had exercised; the rest of the file is correct."""
+    def test_repo_based_rule_written_repo_relative_is_doubled(self) -> None:
+        """A rule report follows project.yaml's base, not the stage outputs'.
+
+        Under pathBase: repo the stage output is repo-relative and correct; a rule
+        report copying that prefix doubles the project directory. Before bd 6ns.2
+        part 2a this was the correct form and the project-relative one escaped.
+        """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
-                required="projects/demo/outputs/reports/r.json",
+                required="outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
-                sense_checks=[_rule("outputs/reports/r.json")],
+                sense_checks=[_rule("projects/demo/outputs/reports/r.json")],
             )
             violations = _violations_for(manifest)
             report = validate_project_file(manifest)
 
         self.assertEqual(
             [(v.location, v.problem) for v in violations],
-            [("spec.validation.senseChecks[0].report", PROBLEM_OUTSIDE_PROJECT)],
+            [("spec.validation.senseChecks[0].report", PROBLEM_DOUBLED_PREFIX)],
         )
-        self.assertEqual(
-            violations[0].suggestion, "projects/demo/outputs/reports/r.json"
-        )
+        self.assertEqual(violations[0].suggestion, "outputs/reports/r.json")
         # validate reports it, which also proves the rule fixture is schema-valid.
         self.assertIn("spec.validation.senseChecks[0].report", "\n".join(report.errors))
 
@@ -314,14 +341,14 @@ class SenseCheckReportTest(unittest.TestCase):
         self.assertEqual(violations[0].suggestion, "outputs/reports/r.json")
 
     def test_a_correct_repo_based_rule_passes(self) -> None:
-        """Repo-relative is right for a rule report under pathBase: repo."""
+        """Project-relative is right for a rule report, whatever pathBase says."""
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
-                required="projects/demo/outputs/reports/r.json",
+                required="outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
-                sense_checks=[_rule("projects/demo/outputs/reports/r.json")],
+                sense_checks=[_rule("outputs/reports/r.json")],
             )
             self.assertEqual(_violations_for(manifest), [])
 
@@ -332,15 +359,15 @@ class ScenarioContractTest(unittest.TestCase):
     def test_repo_based_study_writing_scenarios_repo_relative_is_doubled(self) -> None:
         """The case no real study had exercised: following the file's own convention.
 
-        requiredReports and the workflow output are repo-relative and CORRECT
-        here; the scenario paths use the same prefix and are WRONG, because the
-        catalog resolves them against the project directory.
+        The workflow output is repo-relative and CORRECT here; the scenario paths
+        use the same prefix and are WRONG, because the catalog resolves them
+        against the project directory, as it does every path in project.yaml.
         """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
-                required="projects/demo/outputs/reports/r.json",
+                required="outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
                 scenarios=_column_scenarios("projects/demo/"),
             )
@@ -365,7 +392,7 @@ class ScenarioContractTest(unittest.TestCase):
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
-                required="projects/demo/outputs/reports/r.json",
+                required="outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
                 scenarios=_column_scenarios(""),
             )

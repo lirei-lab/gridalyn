@@ -109,14 +109,16 @@ def _validate_workflow_stages(workflow_data: dict, report: ValidationReport) -> 
 
 def _check_required_artifacts(
     project_data: dict,
-    base_dir: Path,
+    root: Path,
     report: ValidationReport,
 ) -> None:
     """Check every declared required report and figure exists and is non-empty.
 
     Args:
         project_data: The parsed ``project.yaml`` document.
-        base_dir: The project base directory artifact paths resolve against.
+        root: The project directory. Declared reports and figures resolve
+            against it whatever ``spec.pathBase`` says; ``pathBase`` governs
+            only where stage commands run (bd 6ns.2).
         report: The validation report to record checks and errors into.
     """
     validation = project_data["spec"].get("validation", {})
@@ -125,7 +127,7 @@ def _check_required_artifacts(
         ("requiredFigures", "figure"),
     ):
         for relative in validation.get(key, []):
-            artifact = (base_dir / relative).resolve()
+            artifact = (root / relative).resolve()
             report.checked_files.append(str(artifact))
             if not artifact.exists():
                 report.add_error(f"missing required {label}: {artifact}")
@@ -209,7 +211,7 @@ def validate_project_file(
         return report
 
     if check_artifacts:
-        _check_required_artifacts(project_data, base_dir, report)
+        _check_required_artifacts(project_data, project_path.parent, report)
 
     return report
 

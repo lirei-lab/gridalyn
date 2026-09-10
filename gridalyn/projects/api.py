@@ -257,7 +257,7 @@ def _project_report_summary(project: StudyProject) -> dict:
     )
     records = []
     for relative in required:
-        path = (project.base_dir / relative).resolve()
+        path = (project.root / relative).resolve()
         errors: list[str] = []
         if path.exists() and path.is_file():
             try:

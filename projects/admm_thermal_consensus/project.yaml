@@ -102,9 +102,9 @@ spec:
       - outputs/reports/admm_report.json
       - outputs/reports/powerflow_report.json
     requiredReports:
-      - projects/admm_thermal_consensus/outputs/reports/agents_report.json
-      - projects/admm_thermal_consensus/outputs/reports/network_report.json
-      - projects/admm_thermal_consensus/outputs/reports/forecast_report.json
-      - projects/admm_thermal_consensus/outputs/reports/admm_report.json
-      - projects/admm_thermal_consensus/outputs/reports/powerflow_report.json
-      - projects/admm_thermal_consensus/outputs/reports/study_report.json
+      - outputs/reports/agents_report.json
+      - outputs/reports/network_report.json
+      - outputs/reports/forecast_report.json
+      - outputs/reports/admm_report.json
+      - outputs/reports/powerflow_report.json
+      - outputs/reports/study_report.json

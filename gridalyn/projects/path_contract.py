@@ -10,9 +10,9 @@ directory. The consumers split them like this:
 ======================================================  ============  ============
 Declaration                                             Resolved by   Base
 ======================================================  ============  ============
-``project.yaml`` spec.validation.requiredReports        sense_checks  ``base_dir``
-``project.yaml`` spec.validation.requiredFigures        sense_checks  ``base_dir``
-``project.yaml`` spec.validation.senseChecks[].report   sense_checks  ``base_dir``
+``project.yaml`` spec.validation.requiredReports        sense_checks  ``root``
+``project.yaml`` spec.validation.requiredFigures        sense_checks  ``root``
+``project.yaml`` spec.validation.senseChecks[].report   sense_checks  ``root``
 ``project.yaml`` spec.validation.objectiveArtifacts     catalog       ``root``
 ``project.yaml`` spec.scenarios.index                   catalog       ``root``
 ``project.yaml`` spec.scenarios.artifacts.<kind>.path   catalog       ``root``
@@ -21,20 +21,27 @@ Declaration                                             Resolved by   Base
 ======================================================  ============  ============
 
 Both bases are legitimate, and every in-repo study declares against its own
-correctly -- measured 2026-09-10: 452 declared paths, 0 violations. What was
-missing is anything that says so. A path written in the other study's
-convention resolved somewhere real-looking, and the failure surfaced much later
-as ``missing required report``, which names a symptom and sends the reader
-looking for a file that was never the problem. The same shape, in the catalog,
-was the ``base_path: '/.'`` defect fixed in 3c7c47b1.
+correctly -- measured 2026-09-10: 452 declared paths, 0 violations, and
+re-measured after bd 6ns.2 part 2a moved 39 of them onto ``root``: still 452,
+still 0. What was missing is anything that says so. A path written in the other
+study's convention resolved somewhere real-looking, and the failure surfaced
+much later as ``missing required report``, which names a symptom and sends the
+reader looking for a file that was never the problem. The same shape, in the
+catalog, was the ``base_path: '/.'`` defect fixed in 3c7c47b1.
 
-**Scenarios are the trap in a repo-based study.** In one ``pathBase: repo``
-``project.yaml``, ``requiredReports`` and every workflow path are written
-repo-relative, but ``spec.scenarios`` is resolved against ``root`` and must be
-written project-relative. An author following the rest of their own file would
-prefix it with ``projects/<study>/`` and double the directory. No repo-based
-study declares scenarios or declarative sense checks today, so neither case had
-been exercised.
+**Two files, two bases, in a repo-based study.** Since bd 6ns.2 part 2a every
+path in ``project.yaml`` resolves against ``root`` and is written
+project-relative, whatever ``spec.pathBase`` says. ``workflow.yaml`` is the
+exception that remains: under ``pathBase: repo`` its stage ``inputs`` and
+``outputs`` still resolve against ``base_dir`` and are written repo-relative,
+until the rest of 6ns.2 unifies them. An author copying a stage output's
+``projects/<study>/`` prefix into ``project.yaml`` doubles the directory, and
+this gate names the corrected declaration.
+
+Before part 2a, ``requiredReports``, ``requiredFigures`` and sense-check
+``report`` paths followed ``pathBase`` too. A repo-based study written that way
+now reports each of them as a doubled prefix -- the breaking change recorded
+in ``docs/reference/workflow-yaml.md``.
 
 **Declared paths this gate deliberately does not check**, so its scope is not
 read as wider than it is:
@@ -45,7 +52,7 @@ read as wider than it is:
 - ``spec.artifacts.project`` -- nothing reads it. ``ProjectScript`` hardcodes
   the output directories and the runner fingerprints a fixed tuple, so gating
   it would lend authority to a declaration that already disagrees with both.
-  It is being retired as dead configuration.
+  Retired in 4099d023: no longer required, and removed from every study.
 - ``spec.experiments[].artifacts`` -- parsed into ``ExperimentSpec`` and read by
   nothing.
 
@@ -69,8 +76,16 @@ from gridalyn.projects.scenario_catalog import (
 PROBLEM_OUTSIDE_PROJECT = "outside_project"
 PROBLEM_DOUBLED_PREFIX = "doubled_prefix"
 
-_BASE_DIR_FIELDS: tuple[str, ...] = ("requiredReports", "requiredFigures")
-_ROOT_FIELDS: tuple[str, ...] = ("objectiveArtifacts",)
+_ROOT_FIELDS: tuple[str, ...] = (
+    "requiredReports",
+    "requiredFigures",
+    "objectiveArtifacts",
+)
+#: The base every ``project.yaml`` declaration resolves against, named so a
+#: message never attributes one field's rule to another (bd 6ns.2).
+_ROOT_LABEL = (
+    "the project directory (every path in project.yaml is, whatever pathBase says)"
+)
 _STAGE_FIELDS: tuple[str, ...] = ("inputs", "outputs")
 
 # Substituted for a by-file template's scenario token before resolving, so the
@@ -163,22 +178,11 @@ def find_path_contract_violations(
     spec = project_data.get("spec")
     spec = spec if isinstance(spec, Mapping) else {}
     validation = spec.get("validation") or {}
-    for key in _BASE_DIR_FIELDS:
-        violations.extend(
-            _check_list(
-                validation.get(key),
-                source="project.yaml",
-                location=f"spec.validation.{key}",
-                base=base_dir,
-                base_label=base_label,
-                root=root,
-            )
-        )
     violations.extend(
         _check_sense_check_reports(
             validation.get("senseChecks"),
-            base=base_dir,
-            base_label=base_label,
+            base=root,
+            base_label=_ROOT_LABEL,
             root=root,
         )
     )
@@ -189,7 +193,7 @@ def find_path_contract_violations(
                 source="project.yaml",
                 location=f"spec.validation.{key}",
                 base=root,
-                base_label="the project directory (objectiveArtifacts always are)",
+                base_label=_ROOT_LABEL,
                 root=root,
             )
         )
@@ -219,14 +223,14 @@ def _check_sense_check_reports(
 ) -> list[PathContractViolation]:
     """Check the ``report`` each declarative sense-check rule reads.
 
-    ``sense_checks`` opens ``project.base_dir / rule["report"]``, so unlike the
+    ``sense_checks`` opens ``project.root / rule["report"]``, so unlike the
     plain path lists this field sits one level down, inside each rule.
 
     Args:
         rules: The declared ``spec.validation.senseChecks`` value; anything
             that is not a list of mappings is skipped, because the schema
             validator owns type errors.
-        base: ``base_dir``, the directory the rule reports resolve against.
+        base: ``root``, the directory the rule reports resolve against.
         base_label: Human name for ``base``.
         root: The project directory the reports must land inside.
 

@@ -1598,11 +1598,11 @@
       "family": "platform",
       "file": "docs/guides/author-a-workflow.md",
       "language": "yaml",
-      "line": 118,
+      "line": 120,
       "ordinal": 9,
       "rationale": "fence language yaml is not executable as written",
       "sequence": null,
-      "sha1": "d84645a65baca11eb3bf0b325a7644d2928a6a32",
+      "sha1": "2aa0076ed743b11c7da84d15b966f61b56591e2e",
       "verdict": "DOCUMENTED"
     },
     "docs/guides/author-a-workflow.md#10": {
@@ -3158,11 +3158,11 @@
       "family": "getting-started",
       "file": "docs/reference/workflow-yaml.md",
       "language": "yaml",
-      "line": 196,
+      "line": 199,
       "ordinal": 3,
       "rationale": "fence language yaml is not executable as written",
       "sequence": null,
-      "sha1": "d531872e38da6a5bbf5678c838507ee3f0157fc0",
+      "sha1": "3f51e91e07f06dc641b8212b846b6dbc5e9be734",
       "verdict": "DOCUMENTED"
     },
     "docs/reference/workflow-yaml.md#4": {

@@ -113,13 +113,15 @@ write_report(
 )
 ```
 
-Then declare required reports in `project.yaml`:
+Then declare required reports in `project.yaml`. The path is relative to the
+project directory, whatever `spec.pathBase` says — see
+[Path Rules](../reference/workflow-yaml.md#path-rules):
 
 ```yaml
 spec:
   validation:
     requiredReports:
-      - projects/my_case/outputs/reports/sample_report.json
+      - outputs/reports/sample_report.json
 ```
 
 ## 6. Verify

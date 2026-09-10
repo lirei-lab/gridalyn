@@ -25,8 +25,9 @@ from typing import Any, Callable, Mapping
 import pandas as pd
 
 from gridalyn.foundation.platform.reports import ReportMetadata, write_report
-from gridalyn.projects.loader import load_project
+from gridalyn.projects.loader import load_project, read_yaml
 from gridalyn.projects.models import StudyProject
+from gridalyn.projects.path_contract import find_path_contract_violations
 
 CheckList = list[dict[str, Any]]
 
@@ -47,6 +48,7 @@ def project_sense_check(path: Path | str, write: bool = True) -> dict[str, Any]:
 
     project = load_project(_project_file(path))
     checks: CheckList = []
+    _path_contract_checks(project, checks)
     _common_artifact_checks(project, checks)
     declared_checks = _declarative_sense_checks(project, checks)
     checker = _load_project_checker(project)
@@ -275,6 +277,43 @@ def _between(value: float | int | None, low: float, high: float) -> bool:
     return value is not None and low <= float(value) <= high
 
 
+def _path_contract_checks(project: StudyProject, checks: CheckList) -> None:
+    """Record every declared path that does not name a file inside the project.
+
+    Sense checks read ``requiredReports``, ``requiredFigures`` and each rule's
+    ``report`` off disk. A declaration written against the wrong base resolves
+    somewhere real-looking, and without this the failure surfaces only as
+    ``required_report_N_exists`` -- "missing required report", a symptom that
+    sends the reader hunting for a file that was never the problem. That is the
+    one entry point that read those paths without the path contract; ``gridalyn
+    project validate`` already runs it. Recorded BEFORE the artifact checks, so
+    the cause is listed ahead of the symptom (bd 6ns.2).
+
+    Args:
+        project: The loaded study.
+        checks: The check list to append to, one error per violation.
+    """
+    workflow_path = project.workflow.path
+    workflow_data = read_yaml(workflow_path) if workflow_path.exists() else None
+    violations = find_path_contract_violations(
+        root=project.root,
+        base_dir=project.base_dir,
+        path_base=project.path_base,
+        project_data=project.raw,
+        workflow_data=workflow_data,
+    )
+    for index, violation in enumerate(violations, start=1):
+        _record(
+            checks,
+            f"path_contract_{index}",
+            False,
+            "error",
+            {"location": violation.location, "declared": violation.declared},
+            violation.suggestion or "a path inside the project",
+            violation.message,
+        )
+
+
 def _common_artifact_checks(project: StudyProject, checks: CheckList) -> None:
     _check(
         checks,
@@ -288,12 +327,12 @@ def _common_artifact_checks(project: StudyProject, checks: CheckList) -> None:
         _check(
             checks,
             f"required_report_{index}_exists",
-            (project.base_dir / relative).exists(),
+            (project.root / relative).exists(),
             relative,
             "existing report",
         )
     for index, relative in enumerate(required.get("requiredFigures", []), start=1):
-        figure = project.base_dir / relative
+        figure = project.root / relative
         _check(
             checks,
             f"required_figure_{index}_exists",
@@ -345,7 +384,7 @@ def _run_declarative_sense_check(
 
     try:
         payload = json.loads(
-            (project.base_dir / str(report_path)).read_text(encoding="utf-8")
+            (project.root / str(report_path)).read_text(encoding="utf-8")
         )
         observed = _resolve_field(payload, str(field))
     except Exception as exc:
