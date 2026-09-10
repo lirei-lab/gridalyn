@@ -113,6 +113,37 @@ longer existed, and every number in it was internally consistent.
 If you cannot afford step 1's six hours, run `admm_thermal_consensus` only and
 say so. A partial run recorded honestly is worth more than a full run claimed.
 
+### What that gate actually covers, measured rather than inferred
+
+`tools/check_calibration_claims.py` reads ONE table — `ev_hosting_flex`'s
+"Current headline figures" — so it gates the pins that table cites and no
+others. Measured 2026-09-10 (`bd qgr.6`): **33 of the flagship's 94 pins**. The
+other 61 were checked only by the reproduce-and-pin tests, which `skipif` on the
+study's gitignored outputs and therefore do not run in CI at all.
+
+Proved by mutation in the clean-checkout condition, with the study's outputs
+moved out of the tree:
+
+| a pin moved 10% | outputs present | **outputs absent (what CI sees)** |
+|---|---|---|
+| cited by the headline table | 3 failed | **1 failed** — caught |
+| not cited | 2 failed | **338 passed** — not caught |
+
+The seven other studies, 42 pins between them, had nothing: none of them carries
+a `CALIBRATION.md` to state a rationale in.
+
+`tests/test_baseline_rebase_declared.py` closes that. Every study records the
+sha256 of its own `results_baseline.json` in `baselines/REBASE_LOG.md`, newest
+entry last, and the test recomputes it. **A re-base now costs one extra step** —
+append a dated entry saying what moved and why, with the new digest — and that
+step is the whole point: the rule forbids *silence*, not change.
+
+Be clear about the limit. The ledger does not verify the new numbers; that needs
+the outputs CI does not have. An author can also update the digest without
+thinking, and no file-content check can stop that. What it removes is the case
+where a pin moves and nobody notices at all — which `bd 59r` traced to one
+under-measured re-base that drifted 31 pins.
+
 ## 4. How To Read The Result
 
 **A skip is not a pass.** It is verification that did not happen. This is the
