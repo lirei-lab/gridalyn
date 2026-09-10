@@ -5,25 +5,49 @@ loader resolves ``base_dir`` from ``spec.pathBase``: the project directory under
 ``pathBase: project``, the repository root under ``pathBase: repo``. The heavy
 studies need the second because their stages run as ``python -m
 projects.<study>...`` from the repo root. ``root`` is always the project
-directory. Today the consumers split them like this:
+directory. The consumers split them like this:
 
-=========================================  ============  ======================
-Declaration                                Resolved by   Base
-=========================================  ============  ======================
-``project.yaml`` validation.requiredReports  sense_checks  ``base_dir``
-``project.yaml`` validation.requiredFigures  sense_checks  ``base_dir``
-``project.yaml`` validation.objectiveArtifacts  catalog    ``root``
-``workflow.yaml`` stages[].outputs           runner        ``base_dir``
-``workflow.yaml`` stages[].inputs            (declared)    ``base_dir``
-=========================================  ============  ======================
+======================================================  ============  ============
+Declaration                                             Resolved by   Base
+======================================================  ============  ============
+``project.yaml`` spec.validation.requiredReports        sense_checks  ``base_dir``
+``project.yaml`` spec.validation.requiredFigures        sense_checks  ``base_dir``
+``project.yaml`` spec.validation.senseChecks[].report   sense_checks  ``base_dir``
+``project.yaml`` spec.validation.objectiveArtifacts     catalog       ``root``
+``project.yaml`` spec.scenarios.index                   catalog       ``root``
+``project.yaml`` spec.scenarios.artifacts.<kind>.path   catalog       ``root``
+``workflow.yaml`` stages[].outputs                      runner        ``base_dir``
+``workflow.yaml`` stages[].inputs                       (declared)    ``base_dir``
+======================================================  ============  ============
 
 Both bases are legitimate, and every in-repo study declares against its own
-correctly -- measured 2026-09-10: 446 declared paths, 0 violations. What was
+correctly -- measured 2026-09-10: 452 declared paths, 0 violations. What was
 missing is anything that says so. A path written in the other study's
 convention resolved somewhere real-looking, and the failure surfaced much later
 as ``missing required report``, which names a symptom and sends the reader
 looking for a file that was never the problem. The same shape, in the catalog,
 was the ``base_path: '/.'`` defect fixed in 3c7c47b1.
+
+**Scenarios are the trap in a repo-based study.** In one ``pathBase: repo``
+``project.yaml``, ``requiredReports`` and every workflow path are written
+repo-relative, but ``spec.scenarios`` is resolved against ``root`` and must be
+written project-relative. An author following the rest of their own file would
+prefix it with ``projects/<study>/`` and double the directory. No repo-based
+study declares scenarios or declarative sense checks today, so neither case had
+been exercised.
+
+**Declared paths this gate deliberately does not check**, so its scope is not
+read as wider than it is:
+
+- ``spec.workflow.file`` -- resolved against ``base_dir``, but the loader fails
+  with a located error when the file is missing, so it is already protected by
+  existence.
+- ``spec.artifacts.project`` -- nothing reads it. ``ProjectScript`` hardcodes
+  the output directories and the runner fingerprints a fixed tuple, so gating
+  it would lend authority to a declaration that already disagrees with both.
+  It is being retired as dead configuration.
+- ``spec.experiments[].artifacts`` -- parsed into ``ExperimentSpec`` and read by
+  nothing.
 
 This module checks the SHAPE, so it needs no outputs on disk and runs the same
 in CI as on an operator machine. The invariant: resolved against the base its
@@ -37,12 +61,21 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
+from gridalyn.projects.scenario_catalog import (
+    ScenarioContractError,
+    read_scenario_contract,
+)
+
 PROBLEM_OUTSIDE_PROJECT = "outside_project"
 PROBLEM_DOUBLED_PREFIX = "doubled_prefix"
 
 _BASE_DIR_FIELDS: tuple[str, ...] = ("requiredReports", "requiredFigures")
 _ROOT_FIELDS: tuple[str, ...] = ("objectiveArtifacts",)
 _STAGE_FIELDS: tuple[str, ...] = ("inputs", "outputs")
+
+# Substituted for a by-file template's scenario token before resolving, so the
+# path is checked as a path. The message keeps the template as written.
+_PLACEHOLDER_SCENARIO_ID = "scenario"
 
 
 @dataclass(frozen=True)
@@ -52,7 +85,8 @@ class PathContractViolation:
     Attributes:
         source: ``"project.yaml"`` or ``"workflow.yaml"``.
         location: The contract path of the declaration, e.g.
-            ``spec.validation.requiredReports[0]`` or
+            ``spec.validation.requiredReports[0]``,
+            ``spec.scenarios.artifacts.results.path`` or
             ``stages[analyze_x].outputs[2]``.
         declared: The string exactly as written.
         resolved: Where the consumer will actually look.
@@ -107,7 +141,7 @@ def find_path_contract_violations(
     project_data: Mapping[str, Any],
     workflow_data: Mapping[str, Any] | None,
 ) -> list[PathContractViolation]:
-    """Check every declared path against the base its consumer resolves it by.
+    """Check every checked declaration against the base its consumer uses.
 
     Args:
         root: The project directory, i.e. the parent of ``project.yaml``.
@@ -126,7 +160,9 @@ def find_path_contract_violations(
     base_label = _base_label(path_base)
     violations: list[PathContractViolation] = []
 
-    validation = (project_data.get("spec") or {}).get("validation") or {}
+    spec = project_data.get("spec")
+    spec = spec if isinstance(spec, Mapping) else {}
+    validation = spec.get("validation") or {}
     for key in _BASE_DIR_FIELDS:
         violations.extend(
             _check_list(
@@ -138,6 +174,14 @@ def find_path_contract_violations(
                 root=root,
             )
         )
+    violations.extend(
+        _check_sense_check_reports(
+            validation.get("senseChecks"),
+            base=base_dir,
+            base_label=base_label,
+            root=root,
+        )
+    )
     for key in _ROOT_FIELDS:
         violations.extend(
             _check_list(
@@ -149,6 +193,7 @@ def find_path_contract_violations(
                 root=root,
             )
         )
+    violations.extend(_check_scenarios(spec, root=root))
 
     stages = ((workflow_data or {}).get("spec") or {}).get("stages") or []
     for stage in stages:
@@ -167,6 +212,98 @@ def find_path_contract_violations(
                 )
             )
     return violations
+
+
+def _check_sense_check_reports(
+    rules: Any, *, base: Path, base_label: str, root: Path
+) -> list[PathContractViolation]:
+    """Check the ``report`` each declarative sense-check rule reads.
+
+    ``sense_checks`` opens ``project.base_dir / rule["report"]``, so unlike the
+    plain path lists this field sits one level down, inside each rule.
+
+    Args:
+        rules: The declared ``spec.validation.senseChecks`` value; anything
+            that is not a list of mappings is skipped, because the schema
+            validator owns type errors.
+        base: ``base_dir``, the directory the rule reports resolve against.
+        base_label: Human name for ``base``.
+        root: The project directory the reports must land inside.
+
+    Returns:
+        Violations in the declared rule reports.
+    """
+    if not isinstance(rules, (list, tuple)):
+        return []
+    found: list[PathContractViolation] = []
+    for index, rule in enumerate(rules):
+        if not isinstance(rule, Mapping):
+            continue
+        report = rule.get("report")
+        if not isinstance(report, str):
+            continue
+        violation = _check_path(
+            report,
+            source="project.yaml",
+            location=f"spec.validation.senseChecks[{index}].report",
+            base=base,
+            base_label=base_label,
+            root=root,
+        )
+        if violation is not None:
+            found.append(violation)
+    return found
+
+
+def _check_scenarios(
+    spec: Mapping[str, Any], *, root: Path
+) -> list[PathContractViolation]:
+    """Check a study's scenario contract, which is always project-relative.
+
+    Args:
+        spec: The ``spec`` block of ``project.yaml``.
+        root: The project directory the catalog resolves these paths against.
+
+    Returns:
+        Violations in the declared index and artifact templates. Empty when the
+        study declares no scenarios, or when the block does not parse: a
+        malformed contract is :func:`read_scenario_contract`'s to report, with
+        its own located message, and checking the paths of a block that does
+        not parse would report the wrong defect first.
+    """
+    try:
+        contract = read_scenario_contract(spec, path=root / "project.yaml")
+    except ScenarioContractError:
+        return []
+    if contract is None:
+        return []
+    label = (
+        "the project directory (spec.scenarios paths always are, whatever "
+        "pathBase says)"
+    )
+    candidates = [("spec.scenarios.index", contract.index, contract.index)]
+    for artifact in contract.artifacts:
+        candidates.append(
+            (
+                f"spec.scenarios.artifacts.{artifact.kind}.path",
+                artifact.template,
+                artifact.resolve(_PLACEHOLDER_SCENARIO_ID),
+            )
+        )
+    found: list[PathContractViolation] = []
+    for location, declared, resolvable in candidates:
+        violation = _check_path(
+            declared,
+            source="project.yaml",
+            location=location,
+            base=root,
+            base_label=label,
+            root=root,
+            resolvable=resolvable,
+        )
+        if violation is not None:
+            found.append(violation)
+    return found
 
 
 def _check_list(
@@ -196,24 +333,63 @@ def _check_list(
         return []
     found: list[PathContractViolation] = []
     for index, declared in enumerate(items):
-        if not isinstance(declared, str) or Path(declared).is_absolute():
+        if not isinstance(declared, str):
             continue
-        resolved = (base / declared).resolve()
-        problem = _problem(resolved, root)
-        if problem is None:
-            continue
-        found.append(
-            PathContractViolation(
-                source=source,
-                location=f"{location}[{index}]",
-                declared=declared,
-                resolved=resolved,
-                problem=problem,
-                base_label=base_label,
-                suggestion=_suggest(declared, base=base, root=root),
-            )
+        violation = _check_path(
+            declared,
+            source=source,
+            location=f"{location}[{index}]",
+            base=base,
+            base_label=base_label,
+            root=root,
         )
+        if violation is not None:
+            found.append(violation)
     return found
+
+
+def _check_path(
+    declared: str,
+    *,
+    source: str,
+    location: str,
+    base: Path,
+    base_label: str,
+    root: Path,
+    resolvable: str | None = None,
+) -> PathContractViolation | None:
+    """Check one declared path.
+
+    Args:
+        declared: The path exactly as written, kept for the message.
+        source: File it was declared in.
+        location: Contract path of the declaration.
+        base: Directory the consumer resolves it against.
+        base_label: Human name for ``base``.
+        root: The project directory it must land inside.
+        resolvable: What to resolve instead of ``declared``, when the written
+            form carries a placeholder. Defaults to ``declared``.
+
+    Returns:
+        The violation, or ``None`` when the path is well-formed for its base.
+        Absolute paths are skipped: they name no base to be wrong about.
+    """
+    target = declared if resolvable is None else resolvable
+    if Path(target).is_absolute():
+        return None
+    resolved = (base / target).resolve()
+    problem = _problem(resolved, root)
+    if problem is None:
+        return None
+    return PathContractViolation(
+        source=source,
+        location=location,
+        declared=declared,
+        resolved=resolved,
+        problem=problem,
+        base_label=base_label,
+        suggestion=_suggest(declared, base=base, root=root),
+    )
 
 
 def _problem(resolved: Path, root: Path) -> str | None:
@@ -240,7 +416,7 @@ def _suggest(declared: str, *, base: Path, root: Path) -> str | None:
     """Derive the declaration that names the intended file, if unambiguous.
 
     Args:
-        declared: The path as written.
+        declared: The path as written, placeholders included.
         base: The base it is resolved against.
         root: The project directory.
 
