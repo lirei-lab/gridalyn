@@ -297,7 +297,9 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertIn(
             ("building:0", "PARTICIPATES_IN", "contract:S4:building:0:soft_cls"), rels
         )
-        self.assertIn(("ev:S4:0", "ENABLES", "contract:S4:ev:S4:0:hard_cls"), rels)
+        self.assertIn(
+            ("ev:S4:0", "ENABLES_CONTRACT", "contract:S4:ev:S4:0:hard_cls"), rels
+        )
         self.assertIn(
             ("aggregator:S4:soft_cls", "MANAGES_PORTFOLIO", "portfolio:S4:soft_cls"),
             rels,

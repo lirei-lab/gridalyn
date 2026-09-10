@@ -11,7 +11,11 @@ import pandas as pd
 
 from gridalyn.foundation import find_workspace_root, layout_from_environment
 from gridalyn.twin.network import NetworkModelRepository
-from gridalyn.twin.semantic.mappings import build_semantic_graph, write_profile
+from gridalyn.twin.semantic.mappings import (
+    build_semantic_graph,
+    resolve_declared_capabilities,
+    write_profile,
+)
 
 # Current-directory default, matching ArtifactLayout's own root default. Never
 # derive the root from __file__: in an installed wheel that resolves to
@@ -67,10 +71,10 @@ def generate_semantic_graph(
         raise ValueError(
             "Only the north_america semantic profile is currently supported"
         )
-    # ``None`` preserves the pre-Phase-21 graph (flexibility assumed) so
-    # existing study invocations stay value-identical (R7); an explicit set is
-    # the model-first declared-capability contract.
-    capabilities = {"flexibility"} if capabilities is None else set(capabilities)
+    # ``None`` keeps the legacy flexibility default for existing invocations;
+    # an explicit set is the model-first declared-capability contract, and an
+    # unregistered capability name raises when the graph is built.
+    capabilities = resolve_declared_capabilities(capabilities)
     base_dir = base_dir.resolve()
     scenario_dir = scenario_dir.resolve()
     flexibility_dir = flexibility_dir.resolve()
@@ -85,7 +89,15 @@ def generate_semantic_graph(
             + "; ".join(validation.errors[:5])
         )
     network_model = network_repository.load_model()
-    asset_registry = pd.read_parquet(scenario_dir / "asset_registry.parquet")
+    # A model-first twin built without the ev-hosting layer has no scenario
+    # asset registry: an absent registry is an empty one, exactly as the
+    # provider registry below already was.
+    asset_registry_path = scenario_dir / "asset_registry.parquet"
+    asset_registry = (
+        pd.read_parquet(asset_registry_path)
+        if asset_registry_path.exists()
+        else pd.DataFrame()
+    )
     provider_registry_path = flexibility_dir / "provider_registry.parquet"
     provider_registry = (
         pd.read_parquet(provider_registry_path)

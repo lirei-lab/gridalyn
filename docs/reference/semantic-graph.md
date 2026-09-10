@@ -15,9 +15,17 @@ instances/default/digital_twin/semantic/profile_north_america.json
 
 The profile is North America-first and **model-first**: the core profile
 carries the generic grid model, and the flexibility/market ontology is an
-**on-demand capability** a project declares through its semantic profile
-(`build_semantic_graph(capabilities=...)` / `--semantic-capabilities` — see
-`docs/components/twin.md`).
+**on-demand capability** a project declares
+(`build_semantic_graph(capabilities=...)` / `--semantic-capabilities`, or
+`gridalyn twin build --capabilities`, which passes its semantic subset on).
+
+A capability is a declaration registered by explicit ID in
+`gridalyn/twin/semantic/registry.py` — its namespaces, semantic types,
+relationships with their axioms, and scenario count rules — not a branch in the
+orchestrator. Declaring a capability that is not registered raises, naming the
+registered set; until 2026-09-10 such a name was ignored in silence. A host
+registers its own with `register_semantic_capability_extension`. Every graph
+manifest records the capabilities it was built with.
 
 Core (always emitted):
 
@@ -39,9 +47,16 @@ Flexibility capability (`capabilities={"flexibility"}`, on-demand):
   portfolios, providers, offers, clearing/dispatch extensions, and constraint
   zones.
 
+The identifiers these standards actually publish — namespaces, versions, term
+spellings — are verified, with sources, in
+[Standards Alignment](standards-alignment.md), including the profile
+namespaces found to be wrong.
+
 SAREF is not a primary ontology in this profile. It can be added later as a
-crosswalk if an integration requires it. With the capability ON the emitted
-profile is byte-identical to the model-first core plus its declared extensions.
+crosswalk if an integration requires it. The emitted profile is the model-first
+core composed with the declared capabilities; composition refuses a namespace
+prefix bound to two IRIs, a relationship declared with two predicates, and a
+relationship that names a type no active declaration lists.
 
 ## Generated Artifacts
 
@@ -112,31 +127,60 @@ twin Parquet tables.
 
 ## Main Relationships
 
-The minimum relationship vocabulary is:
+Every relationship type maps to **one predicate**, and declares the semantic
+types its edges may start and end at. The builder refuses an edge whose
+predicate is not its relationship's declared one; the validator checks domain,
+range and per-source cardinality on the materialized graph. The declarations
+live in code — `CORE_RELATIONSHIPS` in `gridalyn/twin/semantic/profile.py` and
+`FLEXIBILITY_CAPABILITY` in `gridalyn/twin/semantic/capabilities/flexibility.py`
+— and are rendered into the profile JSON under `relationships`. This table is
+checked against them by `tests/test_semantic_axioms.py`.
 
-- `(:Building)-[:HAS_LOAD]->(:EnergyConsumer)`;
-- `(:EnergyConsumer)-[:CONNECTED_TO]->(:ConnectivityNode)`;
-- `(:PowerTransformer)-[:FEEDS]->(:ConnectivityNode)`;
-- `(:ACLineSegment)-[:CONNECTS]->(:ConnectivityNode)`;
-- `(:Building)-[:HAS_EVSE]->(:EVSE)`;
-- `(:Building)-[:PARTICIPATES_IN]->(:SoftCLSContract)`;
-- `(:Building)-[:HAS_FLEXIBILITY_RESOURCE]->(:ThermallyActivatedBuildingSystem)`;
-- `(:ThermallyActivatedBuildingSystem)-[:ALLOWS]->(:FlexibleOperation)`;
-- `(:FlexibleOperation)-[:ENABLES]->(:EnergyFlexibility)`;
-- `(:EnergyFlexibilityKPI)-[:QUANTIFIES]->(:EnergyFlexibility)`;
-- `(:SoftCLSContract)-[:DESCRIBES_FLEXIBILITY]->(:EnergyFlexibility)`;
-- `(:EVSE)-[:ENABLES]->(:HardCLSContract)`;
-- `(:FlexibilityAggregator)-[:MANAGES_PORTFOLIO]->(:FlexibilityPortfolio)`;
-- `(:FlexibilityAggregator)-[:AGGREGATES]->(:FlexibilityProvider)`;
-- `(:FlexibilityPortfolio)-[:INCLUDES_PROVIDER]->(:FlexibilityProvider)`;
-- `(:FlexibilityProvider)-[:IMPLEMENTS_CONTRACT]->(:SoftCLSContract | :HardCLSContract)`;
-- `(:FlexibilityProvider)-[:OFFERS]->(:FlexibilityOffer)`;
-- `(:FlexibilityProvider)-[:LOCATED_IN_CONSTRAINT_ZONE]->(:ConstraintZone)`;
-- `(:FlexibilityOffer)-[:TARGETS_CONSTRAINT]->(:ConstraintZone)`;
-- `(:ConstraintZone)-[:CONSTRAINT_ZONE_FOR]->(:PowerTransformer)`;
-- `(:Scenario)-[:INCLUDES_ASSET]->(:Building | :EVSE | :SoftCLSContract | :HardCLSContract)`;
-- `(:TimeSeriesDataset)-[:OBSERVES]->(:Asset)`;
-- `(:SimulationRun)-[:PRODUCED]->(:TimeSeriesDataset)`.
+| Relationship | Predicate | Domain → range | Per source | Declared by |
+| --- | --- | --- | --- | --- |
+| `CONNECTED_TO` | `dt:connectedTo` | `EnergyConsumer` → `ConnectivityNode` | exactly 1 | core |
+| `CONNECTS` | `dt:connects` | `ACLineSegment` → `ConnectivityNode` | exactly 2 | core |
+| `FEEDS` | `dt:feeds` | `PowerTransformer` → `ConnectivityNode` | exactly 2 | core |
+| `HAS_LOAD` | `dt:hasLoad` | `Building` → `EnergyConsumer` | exactly 1 | core |
+| `INCLUDES_ASSET` | `dt:includesAsset` | `Scenario` → `Building` (core); `EVSE` / `SoftCLSContract` / `HardCLSContract` / `FlexibilityAggregator` / `FlexibilityProvider` (flexibility) | — | core, flexibility |
+| `OBSERVES` | `dt:observes` | `TimeSeriesDataset` → `Scenario` | — | core |
+| `PRODUCED` | `dt:produced` | `SimulationRun` → `TimeSeriesDataset` | — | core |
+| `AGGREGATES` | `cls:aggregates` | `FlexibilityAggregator` → `FlexibilityProvider` | — | flexibility |
+| `ALLOWS` | `efont:allows` | `ThermallyActivatedBuildingSystem` → `FlexibleOperation` | — | flexibility |
+| `CONSTRAINT_ZONE_FOR` | `cls:constraintZoneFor` | `ConstraintZone` → `PowerTransformer` / `ACLineSegment` / `ConnectivityNode` | — | flexibility |
+| `DESCRIBES_FLEXIBILITY` | `cls:describesFlexibility` | `SoftCLSContract` → `EnergyFlexibility` | — | flexibility |
+| `ENABLES` | `efont:enables` | `FlexibleOperation` → `EnergyFlexibility` | — | flexibility |
+| `ENABLES_CONTRACT` | `cls:enablesContract` | `EVSE` → `HardCLSContract` | — | flexibility |
+| `HAS_EVSE` | `dt:hasEVSE` | `Building` → `EVSE` | — | flexibility |
+| `HAS_FLEXIBILITY_RESOURCE` | `dt:hasFlexibilityResource` | `Building` / `FlexibilityProvider` → `ThermallyActivatedBuildingSystem` / `ScenarioDevice` | — | flexibility |
+| `IMPLEMENTS_CONTRACT` | `cls:implementsContract` | `FlexibilityProvider` → `SoftCLSContract` / `HardCLSContract` | exactly 1 | flexibility |
+| `INCLUDES_PROVIDER` | `cls:includesProvider` | `FlexibilityPortfolio` → `FlexibilityProvider` | — | flexibility |
+| `LOCATED_IN_CONSTRAINT_ZONE` | `cls:locatedInConstraintZone` | `FlexibilityProvider` → `ConstraintZone` | — | flexibility |
+| `MANAGES_PORTFOLIO` | `cls:managesPortfolio` | `FlexibilityAggregator` → `FlexibilityPortfolio` | exactly 1 | flexibility |
+| `OFFERS` | `cls:offers` | `FlexibilityProvider` → `FlexibilityOffer` | exactly 1 | flexibility |
+| `PARTICIPATES_IN` | `cls:participatesIn` | `Building` → `SoftCLSContract` | — | flexibility |
+| `QUANTIFIES` | `efont:Quantifies` | `EnergyFlexibilityKPI` → `EnergyFlexibility` | — | flexibility |
+| `TARGETS_CONSTRAINT` | `cls:targetsConstraint` | `FlexibilityOffer` → `ConstraintZone` | — | flexibility |
+
+**Re-based 2026-09-10.** Measured on the shipped graph before this change,
+`ENABLES` and `HAS_FLEXIBILITY_RESOURCE` each carried two predicate IRIs, and the
+10 357 `CONNECTS` / `CONNECTED_TO` / `FEEDS` edges used the class IRI
+`cim:ConnectivityNode` as their predicate. Rebuilt on the same inputs, exactly
+these edges changed and no node did:
+
+- `CONNECTS`, `CONNECTED_TO` and `FEEDS` carry `dt:connects`, `dt:connectedTo`
+  and `dt:feeds` — local shortcuts for CIM's path through a `Terminal`
+  (`Terminal.ConductingEquipment`, `Terminal.ConnectivityNode`), which this
+  graph collapses;
+- the EVSE-to-Hard-CLS edge is `ENABLES_CONTRACT` (`cls:enablesContract`; 3 235
+  edges): it shared the label `ENABLES` with EFOnt's operation-to-flexibility
+  property while meaning something else;
+- provider-to-device `HAS_FLEXIBILITY_RESOURCE` edges carry
+  `dt:hasFlexibilityResource` (12 935 edges), the predicate the
+  building-to-resource edges of the same relationship already carried.
+
+The namespace IRIs themselves (`cls:`, `dt:`, `efont:`, `ieee2030_5:`) are
+unchanged by this re-base.
 
 ## Market Management Layer
 
@@ -203,15 +247,22 @@ uv run gridalyn semantic validate \
   --semantic-dir instances/default/digital_twin/semantic
 ```
 
-The validator checks:
+The validator checks the graph against the profile it was **built** with —
+the capabilities `graph_manifest.json` records. A manifest that predates that
+record is validated against the legacy `flexibility` default, and the report
+says so. It checks that:
 
-- all edge endpoints exist;
-- every building has exactly one load;
-- every load connects to a bus;
-- scenario EV and CLS counts match the scenario registry;
-- semantic types resolve to known namespaces;
-- EFOnt crosswalk nodes resolve through the `efont` namespace when present;
-- power units are explicit.
+- all edge endpoints exist, and node and edge IDs are unique;
+- every semantic type and relationship is declared by the profile, in a bound
+  namespace;
+- every edge carries its relationship's declared predicate IRI;
+- every edge starts inside its relationship's domain and ends inside its range;
+- declared per-source cardinalities hold (every building has exactly one load,
+  every load connects to exactly one bus, every line and transformer to two);
+- scenario counts match the scenario registry through the count rules the
+  active capabilities declare — a count the profile has no rule for is
+  reported, never silently skipped;
+- power, voltage and current properties carry an explicit unit.
 
 ## FalkorDB Readiness
 

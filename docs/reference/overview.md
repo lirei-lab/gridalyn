@@ -14,6 +14,7 @@ artifact rule, or validation behavior.
 | [Workflow YAML](workflow-yaml.md) | `workflow.yaml` stage and dependency conventions. `project.yaml`'s own contract is documented narratively in [Projects](../components/projects.md) and [Project Template](../guides/project-template.md), since its fields vary by study. |
 | [Report Schemas](report-schema.md) | Canonical JSON report structure and metadata. |
 | [Semantic Model And Graph](semantic-graph.md) | Node/edge schema, ontology profile, query API, and graph artifacts. |
+| [Standards Alignment](standards-alignment.md) | Verified identifiers, versions and term spellings of the standards the semantic profile names, and where the profile disagrees. |
 | [FalkorDB Path](falkordb.md) | What exists today (a Cypher-export helper) versus what a live FalkorDB connection would require (not implemented). |
 | [Artifact Policy](artifact-policy.md) | What can be committed, generated, ignored, or published. |
 | [Glossary](glossary.md) | One-line definitions of the terms the rest of the site uses without redefining. |

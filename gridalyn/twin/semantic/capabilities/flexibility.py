@@ -17,6 +17,17 @@ it is now on an **on-demand layer** rather than in the model-first default.
 
 The capability is declared configuration (a profile), never an upward import:
 ``operations`` still never imports this module.
+
+**Declared as data (2026-09-10).** :data:`FLEXIBILITY_CAPABILITY`
+states the namespaces, types, relationships (one predicate, a domain, a
+range, optionally a cardinality) and scenario count rules this layer adds;
+the default semantic capability registry resolves it by ID. Two relationships
+changed in that re-base: the EVSE-to-Hard-CLS edge is ``ENABLES_CONTRACT``
+(``cls:enablesContract``), because it shared the label ``ENABLES`` with EFOnt's
+operation-to-flexibility property while meaning something else; and
+provider-to-device ``HAS_FLEXIBILITY_RESOURCE`` edges now carry
+``dt:hasFlexibilityResource``, the predicate the building-to-resource edges of
+the same relationship already carried.
 """
 
 from __future__ import annotations
@@ -33,6 +44,12 @@ from gridalyn.twin.semantic.records import (
     _split_semicolon_values,
 )
 from gridalyn.twin.semantic.repository import _loads_json
+from gridalyn.twin.semantic.vocabulary import (
+    CapabilityInputs,
+    RelationshipSpec,
+    ScenarioCountRule,
+    SemanticCapability,
+)
 
 # ---------------------------------------------------------------------------
 # Emitters (moved verbatim from gridalyn/twin/semantic/emitters.py, Phase 21)
@@ -315,9 +332,9 @@ def emit_flexibility_asset_nodes(
             for edge in (
                 _edge(
                     ev_id,
-                    "ENABLES",
+                    "ENABLES_CONTRACT",
                     contract_id,
-                    "cls:enables",
+                    "cls:enablesContract",
                     "Gridalyn_CLS",
                     "asset_registry",
                     contract_id,
@@ -647,8 +664,8 @@ def _emit_provider_offers(
                     provider_id,
                     "HAS_FLEXIBILITY_RESOURCE",
                     scenario_device_id,
-                    "cls:hasFlexibilityResource",
-                    "Gridalyn_CLS",
+                    "dt:hasFlexibilityResource",
+                    "Gridalyn_DT",
                     "provider_registry",
                     scenario_device_id,
                     scenario_id=scenario_id,
@@ -731,65 +748,209 @@ def extend_graph_with_flexibility(
 
 
 # ---------------------------------------------------------------------------
-# Profile extensions (the flexibility slice of the former default profile)
+# Declaration: vocabulary, axioms and extender, plus its plain-data view
 # ---------------------------------------------------------------------------
 
 
-def flexibility_profile_extensions() -> dict[str, Any]:
-    """Return the flexibility slice of the semantic profile.
+_FLEXIBILITY_NAMESPACES: dict[str, str] = {
+    "openadr": "https://openadr.org/ns#",
+    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
+    "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    "cls": "https://gridalyn.local/ontology/cls#",
+}
 
-    This is the part of the pre-Phase-21 ``north_america_profile()`` that
-    belonged to the flexibility/market domain. A project that declares the
-    ``flexibility`` capability merges it over the model-first core profile so
-    the emitted manifest namespaces/types stay complete (R7: value-identical
-    to the pre-change profile when the capability is on).
-    """
-    return {
-        "namespaces": {
-            "openadr": "https://openadr.org/ns#",
-            "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
-            "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
-            "cls": "https://gridalyn.local/ontology/cls#",
-        },
-        "primary_standards": {
-            "building_flexibility": ["EFOnt"],
-            "demand_response": ["OpenADR"],
-            "ev_der_control": ["IEEE 2030.5"],
-            "cls_market": ["gridalyn cls extension"],
-        },
-        "allowed_semantic_types": [
-            "cls:ConstraintZone",
+_FLEXIBILITY_TYPES: tuple[str, ...] = (
+    "cls:ConstraintZone",
+    "cls:FlexibilityAggregator",
+    "cls:FlexibilityOffer",
+    "cls:FlexibilityPortfolio",
+    "cls:FlexibilityProvider",
+    "cls:HardCLSContract",
+    "cls:SoftCLSContract",
+    "dt:ScenarioDevice",
+    "efont:EnergyFlexibility",
+    "efont:EnergyFlexibilityKPI",
+    "efont:FlexibleLoadCharacteristic",  # Aspirational — not currently emitted.
+    "efont:FlexibleOperation",
+    "efont:ThermallyActivatedBuildingSystem",
+    "ieee2030_5:EVSE",
+)
+
+_FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
+    RelationshipSpec(
+        "AGGREGATES",
+        "cls:aggregates",
+        ("cls:FlexibilityAggregator",),
+        ("cls:FlexibilityProvider",),
+    ),
+    RelationshipSpec(
+        "ALLOWS",
+        "efont:allows",
+        ("efont:ThermallyActivatedBuildingSystem",),
+        ("efont:FlexibleOperation",),
+    ),
+    RelationshipSpec(
+        "CONSTRAINT_ZONE_FOR",
+        "cls:constraintZoneFor",
+        ("cls:ConstraintZone",),
+        ("cim:ACLineSegment", "cim:ConnectivityNode", "cim:PowerTransformer"),
+    ),
+    RelationshipSpec(
+        "DESCRIBES_FLEXIBILITY",
+        "cls:describesFlexibility",
+        ("cls:SoftCLSContract",),
+        ("efont:EnergyFlexibility",),
+    ),
+    RelationshipSpec(
+        "ENABLES",
+        "efont:enables",
+        ("efont:FlexibleOperation",),
+        ("efont:EnergyFlexibility",),
+    ),
+    RelationshipSpec(
+        "ENABLES_CONTRACT",
+        "cls:enablesContract",
+        ("ieee2030_5:EVSE",),
+        ("cls:HardCLSContract",),
+        note=(
+            "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES "
+            "with EFOnt's operation-to-flexibility property while meaning "
+            "something else, and carried cls:enables."
+        ),
+    ),
+    RelationshipSpec(
+        "HAS_EVSE",
+        "dt:hasEVSE",
+        ("brick:Building",),
+        ("ieee2030_5:EVSE",),
+    ),
+    RelationshipSpec(
+        "HAS_FLEXIBILITY_RESOURCE",
+        "dt:hasFlexibilityResource",
+        ("brick:Building", "cls:FlexibilityProvider"),
+        ("dt:ScenarioDevice", "efont:ThermallyActivatedBuildingSystem"),
+        note=(
+            "One predicate for building-to-EFOnt-resource and provider-to-device "
+            "edges; until 2026-09-10 the provider-to-device edges carried "
+            "cls:hasFlexibilityResource."
+        ),
+    ),
+    RelationshipSpec(
+        "IMPLEMENTS_CONTRACT",
+        "cls:implementsContract",
+        ("cls:FlexibilityProvider",),
+        ("cls:HardCLSContract", "cls:SoftCLSContract"),
+        source_cardinality=(1, 1),
+    ),
+    RelationshipSpec(
+        "INCLUDES_ASSET",
+        "dt:includesAsset",
+        ("dt:Scenario",),
+        (
             "cls:FlexibilityAggregator",
-            "cls:FlexibilityOffer",
-            "cls:FlexibilityPortfolio",
             "cls:FlexibilityProvider",
             "cls:HardCLSContract",
             "cls:SoftCLSContract",
-            "dt:ScenarioDevice",
-            "efont:EnergyFlexibility",
-            "efont:EnergyFlexibilityKPI",
-            "efont:FlexibleLoadCharacteristic",  # Aspirational — not currently emitted.
-            "efont:FlexibleOperation",
-            "efont:ThermallyActivatedBuildingSystem",
             "ieee2030_5:EVSE",
-        ],
-        "relationship_types": [
-            "AGGREGATES",
-            "ALLOWS",
-            "CONSTRAINT_ZONE_FOR",
-            "DESCRIBES_FLEXIBILITY",
-            "ENABLES",
-            "HAS_EVSE",
-            "HAS_FLEXIBILITY_RESOURCE",
-            "IMPLEMENTS_CONTRACT",
-            "INCLUDES_PROVIDER",
-            "LOCATED_IN_CONSTRAINT_ZONE",
-            "MANAGES_PORTFOLIO",
-            "OFFERS",
-            "PARTICIPATES_IN",
-            "QUANTIFIES",
-            "TARGETS_CONSTRAINT",
-        ],
+        ),
+    ),
+    RelationshipSpec(
+        "INCLUDES_PROVIDER",
+        "cls:includesProvider",
+        ("cls:FlexibilityPortfolio",),
+        ("cls:FlexibilityProvider",),
+    ),
+    RelationshipSpec(
+        "LOCATED_IN_CONSTRAINT_ZONE",
+        "cls:locatedInConstraintZone",
+        ("cls:FlexibilityProvider",),
+        ("cls:ConstraintZone",),
+    ),
+    RelationshipSpec(
+        "MANAGES_PORTFOLIO",
+        "cls:managesPortfolio",
+        ("cls:FlexibilityAggregator",),
+        ("cls:FlexibilityPortfolio",),
+        source_cardinality=(1, 1),
+    ),
+    RelationshipSpec(
+        "OFFERS",
+        "cls:offers",
+        ("cls:FlexibilityProvider",),
+        ("cls:FlexibilityOffer",),
+        source_cardinality=(1, 1),
+    ),
+    RelationshipSpec(
+        "PARTICIPATES_IN",
+        "cls:participatesIn",
+        ("brick:Building",),
+        ("cls:SoftCLSContract",),
+    ),
+    RelationshipSpec(
+        "QUANTIFIES",
+        "efont:Quantifies",
+        ("efont:EnergyFlexibilityKPI",),
+        ("efont:EnergyFlexibility",),
+    ),
+    RelationshipSpec(
+        "TARGETS_CONSTRAINT",
+        "cls:targetsConstraint",
+        ("cls:FlexibilityOffer",),
+        ("cls:ConstraintZone",),
+    ),
+)
+
+_FLEXIBILITY_SCENARIO_COUNTS: tuple[ScenarioCountRule, ...] = (
+    ScenarioCountRule("n_ev", "ieee2030_5:EVSE"),
+    ScenarioCountRule(
+        "n_hard_preferred", "cls:HardCLSContract", property_true="hard_preferred"
+    ),
+    ScenarioCountRule("n_soft_participants", "cls:SoftCLSContract"),
+)
+
+
+def _extend_from_inputs(
+    builder: SemanticGraphBuilder, inputs: CapabilityInputs
+) -> None:
+    """Adapt the declared extender signature to :func:`extend_graph_with_flexibility`."""
+    extend_graph_with_flexibility(
+        builder, inputs.asset_registry, inputs.provider_registry
+    )
+
+
+FLEXIBILITY_CAPABILITY = SemanticCapability(
+    capability_id="flexibility",
+    namespaces=_FLEXIBILITY_NAMESPACES,
+    primary_standards={
+        "building_flexibility": ("EFOnt",),
+        "demand_response": ("OpenADR",),
+        "ev_der_control": ("IEEE 2030.5",),
+        "cls_market": ("gridalyn cls extension",),
+    },
+    semantic_types=_FLEXIBILITY_TYPES,
+    relationships=_FLEXIBILITY_RELATIONSHIPS,
+    scenario_counts=_FLEXIBILITY_SCENARIO_COUNTS,
+    extend=_extend_from_inputs,
+)
+
+
+def flexibility_profile_extensions() -> dict[str, Any]:
+    """Return the flexibility slice of the semantic profile as plain data.
+
+    Derived from :data:`FLEXIBILITY_CAPABILITY`, so this view and the
+    declaration cannot drift. The profile a graph is built and validated
+    against is composed by
+    :func:`~gridalyn.twin.semantic.profile.profile_with_capabilities`.
+    """
+    capability = FLEXIBILITY_CAPABILITY
+    return {
+        "namespaces": dict(capability.namespaces),
+        "primary_standards": {
+            concern: list(standards)
+            for concern, standards in capability.primary_standards.items()
+        },
+        "allowed_semantic_types": list(capability.semantic_types),
+        "relationship_types": sorted(spec.name for spec in capability.relationships),
     }
 
 
@@ -920,4 +1081,8 @@ def _provider_record(repository: Any, provider_id: str) -> dict[str, Any]:
     return record
 
 
-__all__ = ["extend_graph_with_flexibility", "flexibility_profile_extensions"]
+__all__ = [
+    "FLEXIBILITY_CAPABILITY",
+    "extend_graph_with_flexibility",
+    "flexibility_profile_extensions",
+]
