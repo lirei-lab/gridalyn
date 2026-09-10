@@ -23,10 +23,10 @@
     "efont:ThermallyActivatedBuildingSystem",
     "ieee2030_5:EVSE"
   ],
-  "created_at": "2026-08-07T14:27:11.500080+00:00",
-  "crosswalk_only_namespaces": [
-    "saref"
+  "capabilities": [
+    "flexibility"
   ],
+  "created_at": "2026-09-10T20:27:16.903926+00:00",
   "namespaces": {
     "brick": "https://brickschema.org/schema/Brick#",
     "cim": "https://cim.ucaiug.io/ns#",
@@ -69,12 +69,12 @@
   "relationship_types": [
     "AGGREGATES",
     "ALLOWS",
-    "CHARACTERIZES",
-    "CONNECTS",
     "CONNECTED_TO",
+    "CONNECTS",
     "CONSTRAINT_ZONE_FOR",
     "DESCRIBES_FLEXIBILITY",
     "ENABLES",
+    "ENABLES_CONTRACT",
     "FEEDS",
     "HAS_EVSE",
     "HAS_FLEXIBILITY_RESOURCE",
@@ -91,6 +91,399 @@
     "QUANTIFIES",
     "TARGETS_CONSTRAINT"
   ],
+  "relationships": {
+    "AGGREGATES": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityAggregator"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#aggregates",
+      "note": null,
+      "predicate": "cls:aggregates",
+      "range": [
+        "cls:FlexibilityProvider"
+      ],
+      "source_cardinality": null
+    },
+    "ALLOWS": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "efont:ThermallyActivatedBuildingSystem"
+      ],
+      "iri": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#allows",
+      "note": null,
+      "predicate": "efont:allows",
+      "range": [
+        "efont:FlexibleOperation"
+      ],
+      "source_cardinality": null
+    },
+    "CONNECTED_TO": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "cim:EnergyConsumer"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#connectedTo",
+      "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
+      "predicate": "dt:connectedTo",
+      "range": [
+        "cim:ConnectivityNode"
+      ],
+      "source_cardinality": [
+        1,
+        1
+      ]
+    },
+    "CONNECTS": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "cim:ACLineSegment"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#connects",
+      "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
+      "predicate": "dt:connects",
+      "range": [
+        "cim:ConnectivityNode"
+      ],
+      "source_cardinality": [
+        2,
+        2
+      ]
+    },
+    "CONSTRAINT_ZONE_FOR": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:ConstraintZone"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#constraintZoneFor",
+      "note": null,
+      "predicate": "cls:constraintZoneFor",
+      "range": [
+        "cim:ACLineSegment",
+        "cim:ConnectivityNode",
+        "cim:PowerTransformer"
+      ],
+      "source_cardinality": null
+    },
+    "DESCRIBES_FLEXIBILITY": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:SoftCLSContract"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#describesFlexibility",
+      "note": null,
+      "predicate": "cls:describesFlexibility",
+      "range": [
+        "efont:EnergyFlexibility"
+      ],
+      "source_cardinality": null
+    },
+    "ENABLES": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "efont:FlexibleOperation"
+      ],
+      "iri": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#enables",
+      "note": null,
+      "predicate": "efont:enables",
+      "range": [
+        "efont:EnergyFlexibility"
+      ],
+      "source_cardinality": null
+    },
+    "ENABLES_CONTRACT": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "ieee2030_5:EVSE"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#enablesContract",
+      "note": "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES with EFOnt's operation-to-flexibility property while meaning something else, and carried cls:enables.",
+      "predicate": "cls:enablesContract",
+      "range": [
+        "cls:HardCLSContract"
+      ],
+      "source_cardinality": null
+    },
+    "FEEDS": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "cim:PowerTransformer"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#feeds",
+      "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
+      "predicate": "dt:feeds",
+      "range": [
+        "cim:ConnectivityNode"
+      ],
+      "source_cardinality": [
+        2,
+        2
+      ]
+    },
+    "HAS_EVSE": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "brick:Building"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#hasEVSE",
+      "note": null,
+      "predicate": "dt:hasEVSE",
+      "range": [
+        "ieee2030_5:EVSE"
+      ],
+      "source_cardinality": null
+    },
+    "HAS_FLEXIBILITY_RESOURCE": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "brick:Building",
+        "cls:FlexibilityProvider"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#hasFlexibilityResource",
+      "note": "One predicate for building-to-EFOnt-resource and provider-to-device edges; until 2026-09-10 the provider-to-device edges carried cls:hasFlexibilityResource.",
+      "predicate": "dt:hasFlexibilityResource",
+      "range": [
+        "dt:ScenarioDevice",
+        "efont:ThermallyActivatedBuildingSystem"
+      ],
+      "source_cardinality": null
+    },
+    "HAS_LOAD": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "brick:Building"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#hasLoad",
+      "note": null,
+      "predicate": "dt:hasLoad",
+      "range": [
+        "cim:EnergyConsumer"
+      ],
+      "source_cardinality": [
+        1,
+        1
+      ]
+    },
+    "IMPLEMENTS_CONTRACT": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityProvider"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#implementsContract",
+      "note": null,
+      "predicate": "cls:implementsContract",
+      "range": [
+        "cls:HardCLSContract",
+        "cls:SoftCLSContract"
+      ],
+      "source_cardinality": [
+        1,
+        1
+      ]
+    },
+    "INCLUDES_ASSET": {
+      "declared_by": [
+        "core",
+        "flexibility"
+      ],
+      "domain": [
+        "dt:Scenario"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#includesAsset",
+      "note": null,
+      "predicate": "dt:includesAsset",
+      "range": [
+        "brick:Building",
+        "cls:FlexibilityAggregator",
+        "cls:FlexibilityProvider",
+        "cls:HardCLSContract",
+        "cls:SoftCLSContract",
+        "ieee2030_5:EVSE"
+      ],
+      "source_cardinality": null
+    },
+    "INCLUDES_PROVIDER": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityPortfolio"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#includesProvider",
+      "note": null,
+      "predicate": "cls:includesProvider",
+      "range": [
+        "cls:FlexibilityProvider"
+      ],
+      "source_cardinality": null
+    },
+    "LOCATED_IN_CONSTRAINT_ZONE": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityProvider"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#locatedInConstraintZone",
+      "note": null,
+      "predicate": "cls:locatedInConstraintZone",
+      "range": [
+        "cls:ConstraintZone"
+      ],
+      "source_cardinality": null
+    },
+    "MANAGES_PORTFOLIO": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityAggregator"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#managesPortfolio",
+      "note": null,
+      "predicate": "cls:managesPortfolio",
+      "range": [
+        "cls:FlexibilityPortfolio"
+      ],
+      "source_cardinality": [
+        1,
+        1
+      ]
+    },
+    "OBSERVES": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "dt:TimeSeriesDataset"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#observes",
+      "note": null,
+      "predicate": "dt:observes",
+      "range": [
+        "dt:Scenario"
+      ],
+      "source_cardinality": null
+    },
+    "OFFERS": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityProvider"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#offers",
+      "note": null,
+      "predicate": "cls:offers",
+      "range": [
+        "cls:FlexibilityOffer"
+      ],
+      "source_cardinality": [
+        1,
+        1
+      ]
+    },
+    "PARTICIPATES_IN": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "brick:Building"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#participatesIn",
+      "note": null,
+      "predicate": "cls:participatesIn",
+      "range": [
+        "cls:SoftCLSContract"
+      ],
+      "source_cardinality": null
+    },
+    "PRODUCED": {
+      "declared_by": [
+        "core"
+      ],
+      "domain": [
+        "dt:SimulationRun"
+      ],
+      "iri": "https://gridalyn.local/ontology/digital-twin#produced",
+      "note": null,
+      "predicate": "dt:produced",
+      "range": [
+        "dt:TimeSeriesDataset"
+      ],
+      "source_cardinality": null
+    },
+    "QUANTIFIES": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "efont:EnergyFlexibilityKPI"
+      ],
+      "iri": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#Quantifies",
+      "note": null,
+      "predicate": "efont:Quantifies",
+      "range": [
+        "efont:EnergyFlexibility"
+      ],
+      "source_cardinality": null
+    },
+    "TARGETS_CONSTRAINT": {
+      "declared_by": [
+        "flexibility"
+      ],
+      "domain": [
+        "cls:FlexibilityOffer"
+      ],
+      "iri": "https://gridalyn.local/ontology/cls#targetsConstraint",
+      "note": null,
+      "predicate": "cls:targetsConstraint",
+      "range": [
+        "cls:ConstraintZone"
+      ],
+      "source_cardinality": null
+    }
+  },
+  "scenario_counts": {
+    "n_ev": {
+      "property_true": null,
+      "semantic_type": "ieee2030_5:EVSE"
+    },
+    "n_hard_preferred": {
+      "property_true": "hard_preferred",
+      "semantic_type": "cls:HardCLSContract"
+    },
+    "n_soft_participants": {
+      "property_true": null,
+      "semantic_type": "cls:SoftCLSContract"
+    }
+  },
   "semantic_profile": "north_america",
   "unit_conventions": {
     "active_power": "kW or MW, explicit in property name",

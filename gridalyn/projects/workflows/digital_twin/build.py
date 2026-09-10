@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.twin.semantic.registry import default_semantic_capability_registry
 
 
 def _step(name: str, command: list[str], *, heavy: bool = False) -> dict[str, Any]:
@@ -19,6 +20,33 @@ def _step(name: str, command: list[str], *, heavy: bool = False) -> dict[str, An
         "command": command,
         "heavy": heavy,
     }
+
+
+#: Twin build layers that add pipeline steps but no semantic vocabulary.
+_BUILD_ONLY_CAPABILITIES = frozenset({"ev-hosting"})
+
+
+def _require_known_capabilities(
+    capabilities: set[str], semantic_ids: tuple[str, ...]
+) -> None:
+    """Refuse a declared capability the build cannot honour, naming the known set.
+
+    Args:
+        capabilities: Capabilities the build was asked for.
+        semantic_ids: Capabilities the semantic registry knows.
+
+    Raises:
+        ValueError: A declared capability is neither a build layer nor a
+            registered semantic capability -- until 2026-09-10 such a name was
+            ignored in silence.
+    """
+    known = sorted(_BUILD_ONLY_CAPABILITIES | set(semantic_ids))
+    unknown = sorted(capabilities - set(known))
+    if unknown:
+        raise ValueError(
+            f"unknown digital-twin capabilities: {', '.join(unknown)} "
+            f"(known: {', '.join(known)})"
+        )
 
 
 def build_digital_twin_steps(
@@ -41,6 +69,9 @@ def build_digital_twin_steps(
     capabilities = (
         {"ev-hosting", "flexibility"} if capabilities is None else set(capabilities)
     )
+    semantic_ids = default_semantic_capability_registry().list_ids()
+    _require_known_capabilities(capabilities, semantic_ids)
+    semantic_capabilities = sorted(capabilities & set(semantic_ids))
     steps = [
         _step("export_base", ["-m", "gridalyn.interfaces.cli.digital_twin", "base"]),
         _step(
@@ -92,7 +123,16 @@ def build_digital_twin_steps(
         [
             _step(
                 "generate_semantic_graph",
-                ["-m", "gridalyn.interfaces.cli.semantic", "build"],
+                [
+                    "-m",
+                    "gridalyn.interfaces.cli.semantic",
+                    "build",
+                    # Always explicit, even when empty: without it the semantic
+                    # build fell back to its legacy flexibility default whatever
+                    # capabilities the twin build declared (until 2026-09-10).
+                    "--semantic-capabilities",
+                    *semantic_capabilities,
+                ],
             ),
             _step(
                 "validate_semantics",

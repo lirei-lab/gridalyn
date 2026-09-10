@@ -4,6 +4,12 @@ Split out of ``mappings.py`` so the emitters and the orchestrator can share
 them without importing each other. Pure construction: no accumulation, no
 identity -- identity belongs to
 :class:`~gridalyn.twin.semantic.builder.SemanticGraphBuilder`.
+
+A record's ``semantic_uri`` is a *spelling*: resolved against the
+vocabulary-wide namespace map when its prefix is known there, left as the qname
+otherwise (a host capability registered in a registry of its own). The builder
+re-resolves it against the profile the graph is built with, which is the
+resolution that reaches the artifact.
 """
 
 from __future__ import annotations
@@ -29,6 +35,14 @@ def _json_properties(values: dict[str, Any]) -> str:
     return json.dumps(clean, sort_keys=True)
 
 
+def _spelling(qname: str) -> str:
+    """Return the vocabulary-wide IRI for ``qname``, or ``qname`` if unbound."""
+    try:
+        return semantic_uri(qname)
+    except KeyError:
+        return qname
+
+
 def _node(
     node_id: str,
     labels: list[str],
@@ -44,7 +58,7 @@ def _node(
         "node_id": node_id,
         "labels": ";".join(labels),
         "semantic_type": semantic_type,
-        "semantic_uri": semantic_uri(semantic_type),
+        "semantic_uri": _spelling(semantic_type),
         "source_standard": source_standard,
         "source_table": source_table,
         "source_id": source_id,
@@ -73,7 +87,7 @@ def _edge(
         "source_id": source_id,
         "target_id": target_id,
         "relationship_type": relationship_type,
-        "semantic_uri": semantic_uri(semantic_type),
+        "semantic_uri": _spelling(semantic_type),
         "source_standard": source_standard,
         "source_table": source_table,
         "scenario_id": scenario_id,

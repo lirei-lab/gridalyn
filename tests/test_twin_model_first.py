@@ -164,6 +164,7 @@ class TwinModelFirstTest(unittest.TestCase):
                     "CONSTRAINT_ZONE_FOR",
                     "DESCRIBES_FLEXIBILITY",
                     "ENABLES",
+                    "ENABLES_CONTRACT",
                     "HAS_EVSE",
                     "HAS_FLEXIBILITY_RESOURCE",
                     "IMPLEMENTS_CONTRACT",

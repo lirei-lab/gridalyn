@@ -7,8 +7,12 @@ three different ways. The record constructors now live in
 :mod:`gridalyn.twin.semantic.builder`, and one emitter per source table in
 :mod:`gridalyn.twin.semantic.emitters`.
 
-The emitted graph is unchanged -- verified byte-for-byte against the shipped
-twin (74 286 nodes, 147 065 edges) before and after the split.
+**Capabilities resolve by ID (2026-09-10).** Declared capabilities are resolved
+through the semantic capability registry -- an unregistered name raises instead
+of being ignored -- composed into the profile, and the profile is handed to the
+builder, which refuses a node type or a relationship predicate the profile does
+not declare. Each active capability
+then extends the graph through its own declared extender.
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ from gridalyn.twin.semantic.builder import SemanticGraphBuilder
 from gridalyn.twin.semantic.profile import (  # noqa: F401  (re-exported for workflow scripts)
     north_america_profile,
     profile_with_capabilities,
+    resolve_declared_capabilities,
     semantic_uri,
     write_profile,
 )
@@ -34,6 +39,11 @@ from gridalyn.twin.semantic.records import (  # noqa: F401  (re-exported: legacy
     _safe_str,
     _split_semicolon_values,
 )
+from gridalyn.twin.semantic.registry import (
+    SemanticCapabilityRegistry,
+    default_semantic_capability_registry,
+)
+from gridalyn.twin.semantic.vocabulary import CapabilityInputs
 
 
 def build_semantic_graph(
@@ -47,6 +57,7 @@ def build_semantic_graph(
     provider_registry: pd.DataFrame | None = None,
     timeseries_manifests: dict[str, Any] | None = None,
     capabilities: set[str] | None = None,
+    registry: SemanticCapabilityRegistry | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     """Build the semantic node/edge graph from the canonical twin tables.
 
@@ -59,27 +70,35 @@ def build_semantic_graph(
         asset_registry: Scenario asset registry; empty when absent.
         provider_registry: Flexibility provider registry; empty when absent.
         timeseries_manifests: Run manifests keyed by name.
-        capabilities: Declared semantic capabilities (Phase 21 re-layering).
-            ``None`` preserves the pre-re-layering graph (the ``flexibility``
-            capability is assumed, so existing callers stay value-identical);
-            an explicit set builds the model-first core plus the declared
-            capabilities (e.g. ``set()`` for a pure model-first graph, or
-            ``{"flexibility"}`` for the full graph).
+        capabilities: Declared semantic capability IDs. ``None`` applies the
+            legacy default (``flexibility``); an explicit set builds the
+            model-first core plus exactly those capabilities (``set()`` for a
+            pure model-first graph).
+        registry: Capability registry to resolve against; defaults to the
+            shared default registry.
 
     Returns:
         ``(nodes, edges, manifest)``. The frames are sorted by ID, so the order
-        the emitters run in does not reach the artifact.
+        the emitters run in does not reach the artifact. The manifest records
+        the capabilities the graph was built with, which is what
+        ``gridalyn semantic validate`` validates it against.
+
+    Raises:
+        UnknownSemanticCapabilityError: A declared capability is not registered.
+        ValueError: The composed profile is inconsistent, or an emitter produced
+            a type or a predicate the profile does not declare.
     """
     asset_registry = asset_registry if asset_registry is not None else pd.DataFrame()
     provider_registry = (
         provider_registry if provider_registry is not None else pd.DataFrame()
     )
     timeseries_manifests = timeseries_manifests or {}
-    # ``None`` preserves the pre-Phase-21 graph for existing callers; an
-    # explicit set is the declared-capability (model-first) contract.
-    capabilities = {"flexibility"} if capabilities is None else set(capabilities)
+    declared = resolve_declared_capabilities(capabilities)
+    registry = registry or default_semantic_capability_registry()
+    profile = profile_with_capabilities(declared, registry=registry)
+    active = registry.resolve(declared)
 
-    builder = SemanticGraphBuilder()
+    builder = SemanticGraphBuilder(profile)
     emitters.emit_buses(builder, buses)
     emitters.emit_lines(builder, lines)
     emitters.emit_transformers(builder, transformers)
@@ -89,21 +108,28 @@ def build_semantic_graph(
     )
     emitters.emit_scenarios(builder, scenario_ids)
     emitters.emit_asset_registry(builder, asset_registry)
-    if "flexibility" in capabilities:
-        from gridalyn.twin.semantic.capabilities.flexibility import (
-            extend_graph_with_flexibility,
-        )
-
-        extend_graph_with_flexibility(builder, asset_registry, provider_registry)
+    inputs = CapabilityInputs(
+        buses=buses,
+        lines=lines,
+        transformers=transformers,
+        buildings=buildings,
+        connectivity=connectivity,
+        asset_registry=asset_registry,
+        provider_registry=provider_registry,
+        timeseries_manifests=timeseries_manifests,
+    )
+    for capability in active:
+        if capability.extend is not None:
+            capability.extend(builder, inputs)
     emitters.emit_timeseries_runs(builder, timeseries_manifests)
 
     node_count = builder.node_count
     edge_count = builder.edge_count
     nodes_df, edges_df = builder.to_frames()
-    profile = profile_with_capabilities(capabilities)
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "semantic_profile": profile["semantic_profile"],
+        "capabilities": profile["capabilities"],
         "namespaces": profile["namespaces"],
         "node_count": node_count,
         "edge_count": edge_count,
