@@ -11,6 +11,7 @@ from gridalyn.foundation.platform.validation import register_workspace_validator
 from gridalyn.foundation.platform.workspace import GridalynWorkspace
 from gridalyn.projects.loader import project_base_dir, read_yaml
 from gridalyn.projects.models import ValidationReport
+from gridalyn.projects.path_contract import find_path_contract_violations
 
 SCHEMA_DIR = Path(__file__).parent / "schemas"
 
@@ -132,6 +133,40 @@ def _check_required_artifacts(
                 report.add_error(f"empty required {label}: {artifact}")
 
 
+def _check_path_contract(
+    *,
+    project_path: Path,
+    base_dir: Path,
+    path_base: str,
+    project_data: dict,
+    workflow_data: dict,
+    report: ValidationReport,
+) -> None:
+    """Record every declared path that does not name a file in its project.
+
+    Shape, not existence: this needs no outputs on disk and runs without
+    ``--check-artifacts``, so a path written in the other base's convention is
+    reported as exactly that, instead of surfacing later as a misleading
+    "missing required report".
+
+    Args:
+        project_path: The resolved ``project.yaml``.
+        base_dir: The directory ``spec.pathBase`` resolves to.
+        path_base: The ``spec.pathBase`` value.
+        project_data: The parsed ``project.yaml``.
+        workflow_data: The parsed ``workflow.yaml``.
+        report: The validation report to record errors into.
+    """
+    for violation in find_path_contract_violations(
+        root=project_path.parent,
+        base_dir=base_dir,
+        path_base=path_base,
+        project_data=project_data,
+        workflow_data=workflow_data,
+    ):
+        report.add_error(violation.message)
+
+
 def validate_project_file(
     path: Path | str,
     check_artifacts: bool = False,
@@ -152,7 +187,7 @@ def validate_project_file(
         return report
 
     try:
-        base_dir, _ = project_base_dir(project_path, project_data)
+        base_dir, path_base = project_base_dir(project_path, project_data)
     except Exception as exc:
         report.add_error(f"{project_path}: {exc}")
         return report
@@ -161,6 +196,17 @@ def validate_project_file(
     if workflow_data is None:
         return report
     _validate_workflow_stages(workflow_data, report)
+
+    _check_path_contract(
+        project_path=project_path,
+        base_dir=base_dir,
+        path_base=path_base,
+        project_data=project_data,
+        workflow_data=workflow_data,
+        report=report,
+    )
+    if not report.valid:
+        return report
 
     if check_artifacts:
         _check_required_artifacts(project_data, base_dir, report)
