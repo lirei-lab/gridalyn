@@ -53,7 +53,7 @@ def run_stage() -> dict[str, Any]:
             "model_id": result.identity.id,
             "model_profile": result.identity.profile,
             "counts": result.counts,
-            "out_dir": str(out_dir),
+            "out_dir": script.relative(out_dir),
         },
         validation={"valid": True, "errors": [], "warnings": []},
     )
