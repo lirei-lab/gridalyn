@@ -109,7 +109,8 @@ which, with which FIPA communicative act and payload fields. See
 
 A required field distinguishing how a value was produced — `"simulated"` vs
 `"measured"` on `NetworkObservation`, or the recorded `powerflow_backend` /
-`macro_model` choice on a run. See [Twin](../components/twin.md) and
+`macro_model` choice on a run, and the `channel_model` (with its parameters and
+seed) of a run whose study declares one. See [Twin](../components/twin.md) and
 [Simulation](../components/simulation.md).
 
 ### report

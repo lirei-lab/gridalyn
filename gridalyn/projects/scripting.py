@@ -382,6 +382,52 @@ class ProjectScript:
 
         return resolve_surrogate(self.surrogate_id(), **settings)
 
+    def channel_model_id(self) -> str:
+        """Return the channel model ID this study declares in ``spec.simulation``."""
+        return model_inputs.load_channel_model_id(self.project)
+
+    def channel_model(self, **runtime: Any) -> Any:
+        """Resolve the channel model this study declares, with its declared seed.
+
+        A stage whose agents exchange messages calls this rather than building a
+        channel directly, so the channel that carried them is the one
+        ``provenance.channel_model`` records.
+
+        Args:
+            **runtime: Parameters known only when the stage runs -- the
+                ``endpoints`` a ``fixed_outage`` channel silences -- merged over
+                the declared ones. The seed is not among them: it comes from
+                ``spec.simulation.seeds``.
+
+        Returns:
+            A ``ChannelModel`` ready to transmit.
+
+        Raises:
+            ValueError: ``seed`` is passed at run time, or the model cannot be
+                built from the declared and runtime parameters.
+        """
+        from gridalyn.simulation.channels.registry import resolve_channel_model
+
+        if "seed" in runtime:
+            raise ValueError(
+                f"{self.project.path}: the channel model's seed comes from "
+                "spec.simulation.seeds through channelModel.seedStream; do not pass "
+                "seed= at run time"
+            )
+        channel_model_id = self.channel_model_id()
+        parameters = {
+            **model_inputs.load_channel_model_parameters(self.project),
+            **runtime,
+        }
+        try:
+            return resolve_channel_model(channel_model_id, **parameters)
+        except TypeError as exc:
+            raise ValueError(
+                f"{self.project.path}: channel model {channel_model_id!r} cannot be "
+                f"built from parameters {', '.join(sorted(parameters)) or 'none'}: "
+                f"{exc}"
+            ) from exc
+
 
 def project_script(
     root: Path | str | None = None,

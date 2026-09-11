@@ -199,9 +199,10 @@ populated whenever an extension is registered (host) or loaded (entry point)
 into the runner's process before the manifest is written. Role-level provenance
 records which extension served a role: `provenance.powerflow_backend` carries
 `extension_id`/`extension_source`/`extension_version` when the resolved backend
-is an external extension (`source != "core"`); the other five roles will reach
-the manifest the same way in a future release. A plugin may be discoverable, but
-it is never silent.
+is an external extension (`source != "core"`), and `provenance.channel_model`
+carries the same three keys when a study declares a channel model served by an
+extension. The remaining roles will reach the manifest the same way in a future
+release. A plugin may be discoverable, but it is never silent.
 
 ## Compatibility
 

@@ -413,6 +413,78 @@ def _declares_surrogate(project: StudyProject) -> bool:
     return isinstance(simulation, dict) and "surrogate" in simulation
 
 
+def _declared_channel_model(project: StudyProject) -> Any:
+    """Return the raw ``spec.simulation.channelModel`` value, or ``None``.
+
+    Args:
+        project: The loaded study.
+
+    Returns:
+        Whatever the study declares under the key; the loaders validate it.
+    """
+    spec = project.raw.get("spec", {}) if isinstance(project.raw, dict) else {}
+    simulation = spec.get("simulation", {}) if isinstance(spec, dict) else {}
+    return simulation.get("channelModel") if isinstance(simulation, dict) else None
+
+
+def _channel_model_provenance(project: StudyProject) -> dict[str, Any] | None:
+    """Which channel model carried this run's agent messages, if it declares one.
+
+    A channel decides whether and when a message between simulated agents
+    arrives, so two runs that differ only in their channel are
+    indistinguishable in every governed artifact unless the manifest says which
+    one ran -- the gap ``_powerflow_backend_provenance`` closes for solvers.
+
+    Unlike the backend and the surrogate, most studies simulate no
+    communication at all. A study that declares no channel model therefore
+    records nothing, rather than the ideal default: the key is additive, and
+    every manifest of such a study keeps its bytes.
+
+    The record carries the descriptor, the declared parameters **with the seed
+    resolved from its named stream**, that stream's name, and -- only when the
+    model is served by an extension -- its ``extension_id``,
+    ``extension_source`` and ``extension_version``, as the backend role does.
+
+    Side-effect-free: it reads descriptors and the declaration, and never
+    constructs a channel or draws from any RNG.
+
+    Args:
+        project: The loaded study.
+
+    Returns:
+        The record, or ``None`` when the study declares no channel model.
+
+    Raises:
+        ValueError: The declaration is malformed, naming what is supported.
+    """
+    from gridalyn.projects.model_inputs import (
+        load_channel_model_id,
+        load_channel_model_parameters,
+    )
+    from gridalyn.simulation.channels.registry import default_channel_model_registry
+
+    declared = _declared_channel_model(project)
+    if declared is None:
+        return None
+    channel_model_id = load_channel_model_id(project)
+    registry = default_channel_model_registry()
+    provenance = registry.get_descriptor(channel_model_id).as_dict()
+    provenance["parameters"] = load_channel_model_parameters(project)
+    provenance["seed_stream"] = declared.get("seedStream")
+    provenance["declared_source"] = "spec.simulation.channelModel"
+    registration_source = registry.registration_source(channel_model_id)
+    if registration_source != "core":
+        provenance["extension_id"] = channel_model_id
+        provenance["extension_source"] = registration_source
+        extension_version = registry.registration_version(channel_model_id)
+        if extension_version is not None:
+            provenance["extension_version"] = extension_version
+    provenance["registered"] = sorted(
+        descriptor.channel_model_id for descriptor in registry.list_descriptors()
+    )
+    return provenance
+
+
 def _build_provenance(
     project: StudyProject, planned: list[WorkflowStage]
 ) -> dict[str, Any]:
@@ -421,7 +493,7 @@ def _build_provenance(
     Side-effect-free and move-only: no RNG draw, no sort, no numeric path is
     touched, so the regression baseline cannot move.
     """
-    return {
+    provenance = {
         "python_version": sys.version.split()[0],
         "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
         "clearing_engine": _clearing_engine_provenance(project),
@@ -432,6 +504,12 @@ def _build_provenance(
         "input_hashes": _input_hashes(project),
         "extensions": _extensions_provenance(),
     }
+    channel_model = _channel_model_provenance(project)
+    if channel_model is not None:
+        # Only a study that declares a channel model records one, so a study
+        # that simulates no communication keeps a byte-identical manifest.
+        provenance["channel_model"] = channel_model
+    return provenance
 
 
 def _extensions_provenance() -> list[dict[str, Any]]:
