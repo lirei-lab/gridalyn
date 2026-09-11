@@ -67,6 +67,8 @@ def build_synthetic_network_from_geojson(
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
     check_line_sizing: bool = False,
+    lv_assignment: str = "kmeans",
+    block_penalty_km2: float = 0.0,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from building footprints.
 
@@ -89,6 +91,13 @@ def build_synthetic_network_from_geojson(
             on a deep copy after the build and emit a runtime warning on
             over-100% loading or a ~0 downstream-load/conductor correlation.
             Adds no report bytes. Defaults to ``False`` (zero behavior change).
+        lv_assignment: ``"kmeans"`` (the default, unchanged) or
+            ``"capacitated"``, which caps every MV/LV transformer at the
+            building count it was sized for and adds an ``lv_assignment`` block
+            to the report. See
+            :func:`gridalyn.twin.adapters.pandapower_builder.build_power_grid_and_network`.
+        block_penalty_km2: With ``"capacitated"``, keep clusters from
+            straddling streets. Needs the ``geo`` extra and a street fetch.
     """
 
     config_file = Path(config_path)
@@ -103,6 +112,8 @@ def build_synthetic_network_from_geojson(
         run_powerflow=run_powerflow,
         building_peak_loads_kw=building_peak_loads_kw,
         check_line_sizing=check_line_sizing,
+        lv_assignment=lv_assignment,
+        block_penalty_km2=block_penalty_km2,
     )
 
 
@@ -117,6 +128,8 @@ def build_synthetic_network_from_config(
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
     check_line_sizing: bool = False,
+    lv_assignment: str = "kmeans",
+    block_penalty_km2: float = 0.0,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from an explicit config mapping.
 
@@ -134,6 +147,13 @@ def build_synthetic_network_from_config(
             on a deep copy after the build and warn on over-100% loading or a
             ~0 downstream-load/conductor correlation. Adds no report bytes.
             Defaults to ``False`` (zero behavior change).
+        lv_assignment: ``"kmeans"`` (the default, unchanged) or
+            ``"capacitated"``, which caps every MV/LV transformer at the
+            building count it was sized for and adds an ``lv_assignment`` block
+            to the report. See
+            :func:`gridalyn.twin.adapters.pandapower_builder.build_power_grid_and_network`.
+        block_penalty_km2: With ``"capacitated"``, keep clusters from
+            straddling streets. Needs the ``geo`` extra and a street fetch.
 
     Returns:
         A :class:`SyntheticNetworkBuildResult`.
@@ -146,6 +166,8 @@ def build_synthetic_network_from_config(
         footprints_path=footprints,
         config=config,
         clustering_crs=clustering_crs,
+        lv_assignment=lv_assignment,
+        block_penalty_km2=block_penalty_km2,
     )
     line_sizing = _apply_load_aware_sizing_if_configured(net, config)
     if building_peak_loads_kw is not None:
@@ -166,6 +188,7 @@ def build_synthetic_network_from_config(
             "generated" if building_peak_loads_kw is not None else "config_envelope"
         ),
         line_sizing=line_sizing,
+        lv_assignment=_summarize_lv_assignment(power_grid, config),
     )
 
     if check_line_sizing:
@@ -367,6 +390,7 @@ def _validation_report(
     powerflow: dict[str, Any],
     loads_source: str = "config_envelope",
     line_sizing: dict[str, Any] | None = None,
+    lv_assignment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     valid = topology["isolated_nodes_total"] == 0
     if powerflow["attempted"]:
@@ -434,7 +458,74 @@ def _validation_report(
             )
             report.setdefault("warnings", []).append(warning)
 
+    # Gated like line_sizing: under the default K-means partition the block is
+    # absent, so existing reports stay byte-identical.
+    if lv_assignment is not None:
+        report["lv_assignment"] = lv_assignment
+        over = int(lv_assignment["transformers_over_rated_kva_at_envelope"])
+        if over > 0:
+            report.setdefault("warnings", []).append(
+                f"lv_assignment: {over} MV/LV transformer(s) above their rated "
+                f"{lv_assignment['rated_transformer_kva']} kVA at the declared "
+                "envelope even under the capacity limit; the limit is the building "
+                "count the transformer number was sized for, so the envelope and "
+                "the rating disagree"
+            )
+        if not lv_assignment["converged"]:
+            report.setdefault("warnings", []).append(
+                f"lv_assignment: the capacitated partition stopped after "
+                f"{lv_assignment['iterations']} iterations without settling; the "
+                "limit still holds, but the clusters may not be the most compact"
+            )
+
     return report
+
+
+def _summarize_lv_assignment(
+    power_grid: PowerGridGraph, config: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Summarise a capacity-constrained LV partition for the validation report.
+
+    The kVA figures are the nominal sum of each cluster's building loads at the
+    declared envelope, not a power-flow loading: losses and depressed voltage
+    raise the current a solve reports.
+
+    Args:
+        power_grid: The built graph.
+        config: The grid configuration the build used.
+
+    Returns:
+        The report block, or ``None`` when the partition was plain K-means.
+    """
+    result = power_grid.lv_assignment
+    if result is None or power_grid.graph_buildings is None:
+        return None
+    transformers = len(result.centers)
+    sizes = np.bincount(result.labels, minlength=transformers)
+    p_mw = np.zeros(transformers)
+    q_mvar = np.zeros(transformers)
+    for _node, data in power_grid.graph_buildings.nodes(data=True):
+        if data.get("type") == "building" and data.get("cluster") is not None:
+            p_mw[int(data["cluster"])] += float(data.get("p_mw", 0.0))
+            q_mvar[int(data["cluster"])] += float(data.get("q_mvar", 0.0))
+    kva = np.hypot(p_mw, q_mvar) * 1000.0
+    rated_kva = float(config["transformers"]["lv_mv"]["capacity_kva"])
+    return {
+        "method": "capacitated",
+        "capacity_customers": result.capacity,
+        "block_penalty_km2": result.block_penalty_km2,
+        "iterations": result.iterations,
+        "converged": result.converged,
+        "transformers": int(transformers),
+        "customers_per_transformer": {
+            "min": int(sizes.min()),
+            "median": float(np.median(sizes)),
+            "max": int(sizes.max()),
+        },
+        "rated_transformer_kva": rated_kva,
+        "max_transformer_kva_at_envelope": round(float(kva.max()), 3),
+        "transformers_over_rated_kva_at_envelope": int((kva > rated_kva + 1e-9).sum()),
+    }
 
 
 def _graph_node_count(graph: Any) -> int:

@@ -39,6 +39,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandapower as pp
 import pandas as pd
 from networkx import Graph
@@ -650,6 +651,8 @@ def build_power_grid_and_network(
     config: Dict[str, Any],
     clustering_crs: str | int | None = "auto",
     snap_transformers_to_streets: bool = False,
+    lv_assignment: str = "kmeans",
+    block_penalty_km2: float = 0.0,
 ) -> Tuple[PowerGridGraph, pp.pandapowerNet]:
     """Build a `PowerGridGraph` and `pandapower` network from building footprints.
 
@@ -675,24 +678,103 @@ def build_power_grid_and_network(
             nodes coincide. Siting on the street turns that stub into roughly
             20 m of conductor and moves the power flow, so enabling this is a
             deliberate re-base, not a display change.
+        lv_assignment: How buildings are shared among MV/LV transformers, one of
+            :data:`LV_ASSIGNMENT_METHODS`. ``"kmeans"`` (the default) partitions
+            by geometry alone, which on the shipped footprints leaves 43 of 193
+            transformers above 100% at the declared envelope. ``"capacitated"``
+            caps every transformer at the building count it was sized for.
+            **Defaults to kmeans, and the default is load-bearing**: changing
+            the partition changes which buildings share a transformer, so
+            enabling it is a deliberate re-base.
+        block_penalty_km2: With ``"capacitated"``, the penalty in km^2 of
+            squared distance for serving a building from a cluster centred on
+            another street block. Capacity alone pushes edge buildings across
+            the street; ``0.005`` was measured to recover that while keeping
+            every transformer within its limit. Requires the ``geo`` extra and
+            a street-network fetch. Defaults to ``0.0``, no penalty.
 
     Returns:
         `(power_grid, net)`. `power_grid.building_data` carries the extracted
         building count and coordinates for a caller that needs them.
     """
+    capacitated = _check_lv_assignment(lv_assignment, block_penalty_km2)
     power_grid = PowerGridGraph()
     power_grid.extract_building_centers_and_areas(
         str(Path(footprints_path)), clustering_crs=clustering_crs
     )
     if snap_transformers_to_streets:
         power_grid.street_snapper = _street_snapper_for(power_grid, footprints_path)
-    _build_graph_hierarchy(power_grid, config)
+    block_ids = None
+    if block_penalty_km2 > 0:
+        block_ids = _street_block_ids_for(power_grid, footprints_path)
+    _build_graph_hierarchy(
+        power_grid,
+        config,
+        capacitated=capacitated,
+        block_ids=block_ids,
+        block_penalty_km2=block_penalty_km2,
+    )
     net = _build_uniform_pandapower_network(power_grid, config)
     return power_grid, net
 
 
-def _street_snapper_for(
+LV_ASSIGNMENT_METHODS = ("kmeans", "capacitated")
+"""Accepted values of ``build_power_grid_and_network(lv_assignment=...)``."""
+
+
+def _check_lv_assignment(lv_assignment: str, block_penalty_km2: float) -> bool:
+    """Validate the LV partition options before any file is read.
+
+    Args:
+        lv_assignment: The requested partition method.
+        block_penalty_km2: The requested block penalty.
+
+    Returns:
+        Whether the partition is capacity-constrained.
+
+    Raises:
+        ValueError: If the method is unknown, or a block penalty is requested
+            for plain K-means, which has no assignment step to add it to.
+    """
+    if lv_assignment not in LV_ASSIGNMENT_METHODS:
+        raise ValueError(
+            f"unknown lv_assignment {lv_assignment!r} "
+            f"(known: {', '.join(LV_ASSIGNMENT_METHODS)})"
+        )
+    if block_penalty_km2 and lv_assignment != "capacitated":
+        raise ValueError(
+            "block_penalty_km2 only applies to lv_assignment='capacitated'; "
+            "plain K-means has no assignment step to add the penalty to"
+        )
+    return lv_assignment == "capacitated"
+
+
+def _street_block_ids_for(
     power_grid: PowerGridGraph, footprints_path: str | Path
+) -> np.ndarray:
+    """Return the street block of every extracted building.
+
+    Args:
+        power_grid: The graph whose buildings have already been extracted.
+        footprints_path: The GeoJSON the buildings came from.
+
+    Returns:
+        ``(n,)`` block ids, ``-1`` for a building outside every block.
+    """
+    from gridalyn.twin.geoprocess.streets import BLOCK_BBOX_PADDING_DEG
+
+    snapper = _street_snapper_for(
+        power_grid, footprints_path, padding_deg=BLOCK_BBOX_PADDING_DEG
+    )
+    assert power_grid.building_centroids is not None  # extracted by the caller
+    return snapper.block_ids(power_grid.building_centroids)
+
+
+def _street_snapper_for(
+    power_grid: PowerGridGraph,
+    footprints_path: str | Path,
+    *,
+    padding_deg: Optional[float] = None,
 ) -> "StreetSnapper":
     """Build a street snapper covering the footprint layer's extent.
 
@@ -701,6 +783,7 @@ def _street_snapper_for(
             its resolved `clustering_crs` can be reused.
         footprints_path: The GeoJSON the buildings came from, read again only
             for its extent.
+        padding_deg: Fetch padding; ``None`` keeps the siting default.
 
     Returns:
         A `StreetSnapper` measuring in the same metric CRS the clustering used,
@@ -708,14 +791,28 @@ def _street_snapper_for(
     """
     import geopandas as gpd
 
-    from gridalyn.twin.geoprocess.streets import load_street_snapper
+    from gridalyn.twin.geoprocess.streets import (
+        DEFAULT_BBOX_PADDING_DEG,
+        load_street_snapper,
+    )
 
     footprints = gpd.read_file(str(Path(footprints_path)))
     metric_crs = power_grid.clustering_crs or str(footprints.estimate_utm_crs())
-    return load_street_snapper(footprints.total_bounds, metric_crs=metric_crs)
+    return load_street_snapper(
+        footprints.total_bounds,
+        metric_crs=metric_crs,
+        padding_deg=DEFAULT_BBOX_PADDING_DEG if padding_deg is None else padding_deg,
+    )
 
 
-def _build_graph_hierarchy(power_grid: PowerGridGraph, config: Dict[str, Any]) -> None:
+def _build_graph_hierarchy(
+    power_grid: PowerGridGraph,
+    config: Dict[str, Any],
+    *,
+    capacitated: bool = False,
+    block_ids: Optional[np.ndarray] = None,
+    block_penalty_km2: float = 0.0,
+) -> None:
     """Build and merge the LV/MV/HV `PowerGridGraph` hierarchy in place."""
     loads = config["loads"]
     transformers = config["transformers"]
@@ -732,6 +829,9 @@ def _build_graph_hierarchy(power_grid: PowerGridGraph, config: Dict[str, Any]) -
         mv_lv_transformer_capacity=mv_lv_capacity,
         capacity_utilization_factor=utilization,
         diversity_factor_lv=diversity_factor_lv,
+        capacitated=capacitated,
+        block_ids=block_ids,
+        block_penalty_km2=block_penalty_km2,
     )
     power_grid.extend_graph_with_cim("graph_lv_buses")
     power_grid.create_building_graph(

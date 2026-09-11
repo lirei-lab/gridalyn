@@ -21,6 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
+import numpy as np
+
 from gridalyn.foundation.platform.capabilities import require_capabilities
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -40,6 +42,15 @@ DEFAULT_BBOX_PADDING_DEG = 0.002
 Roughly 200 m at the study latitude. Without it, a building on the edge of the
 extent has no street on its far side and snaps inward, which is an artifact of
 the fetch window rather than of the geography.
+"""
+
+BLOCK_BBOX_PADDING_DEG = 0.012
+"""Degrees of padding to fetch when street *blocks*, not nearest streets, are needed.
+
+Roughly 1.3 km at the study latitude. A block is a face the street network
+encloses, and a face at the edge of the footprint extent only closes if the
+streets beyond it were fetched too. The syntgrid-4os.7 and syntgrid-4os.11
+measurements used this padding and found 871 faces over the shipped footprints.
 """
 
 
@@ -99,6 +110,54 @@ class StreetSnapper:
         point = Point(*to_metric.transform(lon, lat))
         edge = self.edges.geometry.iloc[self._nearest_edge_index(point)]
         return float(point.distance(edge))
+
+    def block_ids(self, lon_lat: np.ndarray) -> np.ndarray:
+        """Return the street block each position falls in.
+
+        A block is a face of the street network: polygonizing the segments
+        yields the areas they enclose, so two positions share a block exactly
+        when no street runs between them. That is what lets a clustering tell a
+        neighbour across the street from a neighbour on the same side.
+
+        Args:
+            lon_lat: ``(n, 2)`` longitude/latitude positions.
+
+        Returns:
+            ``(n,)`` integer block ids, ``-1`` for a position outside every face
+            (beyond the outermost street, or in a face the fetch window left
+            open). Ids are comparable only within one call.
+
+        Raises:
+            ValueError: If ``lon_lat`` is not ``(n, 2)``, or the street layer is
+                empty.
+        """
+        import geopandas as gpd
+        from pyproj import Transformer
+        from shapely.ops import polygonize, unary_union
+
+        positions = np.asarray(lon_lat, dtype=float)
+        if positions.ndim != 2 or positions.shape[1] != 2:
+            raise ValueError(
+                f"lon_lat must be an (n, 2) array, got shape {positions.shape}"
+            )
+        if self.edges.empty:
+            raise ValueError(
+                "street layer is empty, so it encloses no blocks; "
+                "widen the fetch extent or check the network_type"
+            )
+        faces = list(polygonize(unary_union(list(self.edges.geometry))))
+        if not faces or len(positions) == 0:
+            return np.full(len(positions), -1, dtype=int)
+        to_metric = Transformer.from_crs("EPSG:4326", self.metric_crs, always_xy=True)
+        xs, ys = to_metric.transform(positions[:, 0], positions[:, 1])
+        points = gpd.GeoDataFrame(
+            geometry=gpd.points_from_xy(xs, ys), crs=self.metric_crs
+        )
+        blocks = gpd.GeoDataFrame(geometry=faces, crs=self.metric_crs)
+        joined = gpd.sjoin(points, blocks, how="left", predicate="within")
+        joined = joined[~joined.index.duplicated(keep="first")].sort_index()
+        ids = joined["index_right"].to_numpy(dtype=float)
+        return np.where(np.isnan(ids), -1, ids).astype(int)
 
     def _nearest_edge_index(self, point: "gpd.GeoSeries") -> int:
         """Return the positional index of the street segment nearest ``point``.
@@ -183,6 +242,7 @@ def load_street_snapper(
 
 
 __all__ = [
+    "BLOCK_BBOX_PADDING_DEG",
     "DEFAULT_BBOX_PADDING_DEG",
     "DEFAULT_NETWORK_TYPE",
     "StreetSnapper",
