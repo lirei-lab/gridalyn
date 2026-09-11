@@ -328,10 +328,10 @@ def project_base_dir(project_path: Path, raw: dict[str, Any]) -> tuple[Path, str
     """Resolve the directory stage commands run from.
 
     Under ``pathBase: repo`` that is the repository root, which a stage invoked
-    as ``python -m projects.<study>...`` needs. It is also, until the rest of
-    bd 6ns.2, the base workflow stage ``inputs``/``outputs`` resolve against.
-    It is not the base for validation paths, the scenario contract or
-    ``spec.workflow.file``, which resolve against the project directory.
+    as ``python -m projects.<study>...`` needs. That working directory is all it
+    is: since bd 6ns.2 no declared path resolves against it. Validation paths,
+    the scenario contract, ``spec.workflow.file`` and workflow stage
+    ``inputs``/``outputs`` all resolve against the project directory.
     ``spec.inputs`` entries have no base declared here at all: no SDK loader
     resolves them, and studies read them however they choose.
 

@@ -15,7 +15,12 @@ from typing import Any
 
 from gridalyn.foundation.platform.governance import build_study_run
 from gridalyn.foundation.platform.reports import file_reference
+from gridalyn.projects.loader import read_yaml
 from gridalyn.projects.models import StudyProject, WorkflowStage
+from gridalyn.projects.path_contract import (
+    PROBLEM_DOUBLED_PREFIX,
+    find_path_contract_violations,
+)
 
 # Modes a study may declare in ``spec.simulation.clearingEngine``, DERIVED from
 # the real submodules of ``gridalyn.operations.clearing`` rather than restated.
@@ -660,6 +665,47 @@ def _record_artifacts(project: StudyProject) -> dict[str, dict[str, Any]]:
     return records
 
 
+def _refuse_stale_stage_paths(project: StudyProject) -> None:
+    """Refuse to start a run whose stage paths repeat the project directory.
+
+    Stage ``inputs`` and ``outputs`` resolve against the project directory
+    (bd 6ns.2). A workflow written before that, as ``projects/<study>/...``,
+    would otherwise run each stage to completion and only then fail it for a
+    declared output it "did not produce": the wrong cause, reported after the
+    stage's whole runtime, hours into a flagship run. Every stage is checked,
+    not only a ``--stage`` selection, because the workflow is one contract and
+    a stale one is stale throughout.
+
+    Only the doubled prefix is refused here. A stage path outside the project
+    stays ``gridalyn project validate``'s to report (bd 6ns.5).
+
+    Args:
+        project: The loaded study.
+
+    Raises:
+        ValueError: Before any stage runs or any manifest is written, naming
+            every offending declaration and its correction.
+    """
+    stale = [
+        violation
+        for violation in find_path_contract_violations(
+            root=project.root,
+            project_data=project.raw,
+            workflow_data=read_yaml(project.workflow.path),
+        )
+        if violation.source == "workflow.yaml"
+        and violation.problem == PROBLEM_DOUBLED_PREFIX
+    ]
+    if stale:
+        listed = "\n  ".join(violation.message for violation in stale)
+        raise ValueError(
+            f"{project.workflow.path}: refusing to run: {len(stale)} stage "
+            f"path(s) repeat the project directory:\n  {listed}\n"
+            "Remediation: declare each as named above; stage inputs and outputs "
+            "are relative to the project directory, whatever spec.pathBase says."
+        )
+
+
 def _check_declared_outputs(stage: WorkflowStage, project: StudyProject) -> None:
     """Fail a stage that declared an output and did not produce it.
 
@@ -670,9 +716,13 @@ def _check_declared_outputs(stage: WorkflowStage, project: StudyProject) -> None
     ``stat`` per path. A stage that declares no outputs is not checked, so
     studies that never declared any are unaffected.
 
+    Declared outputs are relative to the project directory, whatever
+    ``spec.pathBase`` says (bd 6ns.2). ``pathBase: repo`` moves the stage's
+    working directory to the repository root; it does not move this base.
+
     Args:
         stage: The stage that just exited zero.
-        project: The study, for resolving the declared paths.
+        project: The study, whose directory the declared paths are relative to.
 
     Raises:
         FileNotFoundError: Naming the stage and every missing path, with the
@@ -682,7 +732,7 @@ def _check_declared_outputs(stage: WorkflowStage, project: StudyProject) -> None
     for declared in stage.outputs:
         path = Path(declared)
         if not path.is_absolute():
-            path = project.base_dir / path
+            path = project.root / path
         if not path.exists():
             missing.append(declared)
     if missing:
@@ -919,6 +969,7 @@ def run_project(
     echo: bool = False,
     stages: list[str] | None = None,
 ) -> list[str]:
+    _refuse_stale_stage_paths(project)
     started_at = _utc_now()
     git_commit = _git_commit(project.base_dir)
     manifest = {
