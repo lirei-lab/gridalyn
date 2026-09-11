@@ -1,6 +1,6 @@
 """MV/LV transformers that serve no more buildings than they were sized for.
 
-bd syntgrid-4os.7. Every test runs offline: the street layers are hand-built,
+bd 4os.7. Every test runs offline: the street layers are hand-built,
 as in ``test_street_siting.py``, because CI cannot fetch from OSM.
 """
 

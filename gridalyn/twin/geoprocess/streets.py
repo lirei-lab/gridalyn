@@ -49,8 +49,8 @@ BLOCK_BBOX_PADDING_DEG = 0.012
 
 Roughly 1.3 km at the study latitude. A block is a face the street network
 encloses, and a face at the edge of the footprint extent only closes if the
-streets beyond it were fetched too. The syntgrid-4os.7 and syntgrid-4os.11
-measurements used this padding and found 871 faces over the shipped footprints.
+streets beyond it were fetched too. The bd 4os.7 and 4os.11 measurements used
+this padding and found 871 faces over the shipped footprints.
 """
 
 

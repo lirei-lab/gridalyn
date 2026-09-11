@@ -540,7 +540,7 @@ class PowerGridGraph:
         cluster_centers = kmeans.cluster_centers_
         if capacity is not None:
             # K-means seeds the centres; the partition kept honours the limit
-            # (bd syntgrid-4os.7).
+            # (bd 4os.7).
             assignment = assign_capacitated(
                 points,
                 cluster_centers,
@@ -702,7 +702,7 @@ class PowerGridGraph:
 
         The limit is ``ceil(buildings / transformers)``, the count the
         transformer number was sized for. A nameplate-derived limit was measured
-        and rejected (bd syntgrid-4os.7): it piles clusters exactly at the limit,
+        and rejected (bd 4os.7): it piles clusters exactly at the limit,
         and at depressed voltage more transformers then load above 100% than
         under plain K-means.
 

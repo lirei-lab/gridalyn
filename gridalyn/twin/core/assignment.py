@@ -3,7 +3,7 @@
 ``PowerGridGraph.create_lv_graph`` works out HOW MANY transformers a footprint
 layer needs from its coincident load, then hands that count to K-means, which
 partitions by geometry alone. The count is capacity-aware; the allocation is
-not. Measured on the shipped 3235 footprints (bd syntgrid-4os.7): 7 to 26
+not. Measured on the shipped 3235 footprints (bd 4os.7): 7 to 26
 customers per 210 kVA unit with 43 of 193 units above 100% at the declared
 envelope, and under the 75 kVA flagship config 1 to 12 homes per unit with 209
 of 540 above 100%.
