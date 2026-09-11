@@ -42,6 +42,37 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.operations.domain",
         "build_settlement_records",
     ),
+    # --- Agent interaction (canonical home: gridalyn.operations.interaction) ---
+    "AgentRef": ("gridalyn.operations.interaction", "AgentRef"),
+    "ConversationBook": ("gridalyn.operations.interaction", "ConversationBook"),
+    "DR_PROGRAM_PROTOCOL": ("gridalyn.operations.interaction", "DR_PROGRAM_PROTOCOL"),
+    "FLEX_TRADING_PROTOCOL": (
+        "gridalyn.operations.interaction",
+        "FLEX_TRADING_PROTOCOL",
+    ),
+    "Message": ("gridalyn.operations.interaction", "Message"),
+    "MessageBus": ("gridalyn.operations.interaction", "MessageBus"),
+    "MessageLog": ("gridalyn.operations.interaction", "MessageLog"),
+    "ProtocolSpec": ("gridalyn.operations.interaction", "ProtocolSpec"),
+    "build_conversation_book": (
+        "gridalyn.operations.interaction",
+        "build_conversation_book",
+    ),
+    "build_flex_trading_messages": (
+        "gridalyn.operations.interaction",
+        "build_flex_trading_messages",
+    ),
+    "build_message": ("gridalyn.operations.interaction", "build_message"),
+    "load_message_log": ("gridalyn.operations.interaction", "load_message_log"),
+    "run_message_transcript": (
+        "gridalyn.operations.interaction",
+        "run_message_transcript",
+    ),
+    "write_interaction_report": (
+        "gridalyn.operations.interaction",
+        "write_interaction_report",
+    ),
+    "write_message_log": ("gridalyn.operations.interaction", "write_message_log"),
     # --- Operation contracts (canonical home: gridalyn.operations.contracts) ---
     "FlexibilityOperationContext": (
         "gridalyn.operations.contracts",

@@ -41,6 +41,21 @@ market, rather than glue code duplicated per study.
   were free strings, and an unknown provider type was dispatched a
   `soft_cls_limit` in silence. Widening a set is a deliberate edit to that
   module, made together with the producer that writes the new value.
+- **Agent interaction** (`operations/interaction/`) has three parts.
+  - **Roles, kept apart from parties.** `AgentRef` names an agent, its party
+    and its role, and `ROLE_ALIGNMENT` aligns each role to USEF 2021 and
+    OpenADR 3.1.0.
+  - **Messages.** A `Message` is content-addressed and carries a FIPA
+    communicative act.
+  - **Two protocols, declared as state machines:**
+    - `flex_trading`: UFTP 3.1.0's `FlexRequest` → `FlexOffer` → `FlexOrder` →
+      `FlexSettlement`, between a distribution operator and an aggregator.
+    - `dr_program`: one OpenADR 3.1.0 `event` and its `report`s. Its states
+      are `notified`, `active`, `completed`, `cancelled` and `opted_out`.
+
+  Three things OpenADR 3.1.0 lacks are `flexint:` extensions, labelled as such:
+  cancellation, opt-out, and the event window in simulated time. See
+  [Standards alignment](../reference/standards-alignment.md).
 
 ## The contract
 
@@ -58,6 +73,31 @@ Settlement closes the loop: `build_settlement_records` (in
 `build_operational_kpi_report` (`operations/settlement.py`) scores a run —
 KPIs and settlement are the same governed step for every study, not
 per-study arithmetic.
+
+**Conversations enforce their protocol.** A `Conversation` accepts a message
+only when its protocol has a transition for it. Otherwise it raises a
+`ValueError` that names:
+
+- the conversation;
+- its state and time;
+- the message;
+- every message that state would accept.
+
+**Messages travel in simulated time.** `MessageBus` sends messages through a
+registered channel model on the simulation `EventScheduler`, so latency and
+loss are recorded properties of a run rather than accidents of it.
+
+**The log is replayable.** `write_message_log` writes every message sent, with
+its outcome, as parquet, and `build_conversation_book` replays that file into
+the same conversations. `write_interaction_report` emits the governed report
+only after replaying the log it references. If that log differs from the run,
+the report's `validation.valid` is false.
+
+**A cleared round can be written as messages.**
+`build_flex_trading_messages(events=, offers=, dispatch=, settlement=,
+operator=)` turns an already-cleared round into messages, and
+`run_message_transcript` delivers them. Clearing is identical with and without
+this step, because it only reads those frames.
 
 ## Using it
 

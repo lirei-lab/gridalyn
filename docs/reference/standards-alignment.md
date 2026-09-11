@@ -79,6 +79,10 @@ The profile in question is declared in `gridalyn/twin/semantic/profile.py` and
   [grid-coordination/openadr3-specification](https://github.com/grid-coordination/openadr3-specification).
   Distribution and terms: [openadr.org/specification](https://www.openadr.org/specification).
 - Object types: `PROGRAM`, `EVENT`, `REPORT`, `SUBSCRIPTION`, `VEN`, `RESOURCE`.
+- Parties, from the OAuth2 scopes in the 3.1.0 `openadr3.yaml`: the VTN is the
+  server, and its clients are the business logic, `BL` ("Only BL can write to
+  programs", "Only BL can write to events"), and the `VEN`s ("VENs and BL can
+  write to subscriptions").
 - `program` (3.1.0): `programName` (required), `intervalPeriod`,
   `programDescriptions`, `payloadDescriptors`, `attributes`, `targets`. The 3.0.1
   direct fields (`programLongName`, `retailerName`, `programType`,
@@ -151,6 +155,48 @@ defines 22 acts: `accept-proposal`, `agree`, `cancel`, `cfp`, `confirm`,
 The `fipa.org` domain no longer hosts FIPA; cite the
 [archived specification](https://web.archive.org/web/20060924061057/http://www.fipa.org/specs/fipa00037/SC00037J.pdf)
 and never link the live domain.
+
+## How the interaction protocols use these
+
+`gridalyn.operations.interaction` keeps roles apart from parties. Each role is
+aligned to the standards above, with a dash where a standard has no such role:
+
+| gridalyn role | USEF 2021 | OpenADR 3.1.0 |
+| --- | --- | --- |
+| `distribution_operator` | DSO | — |
+| `aggregator` | AGR | VEN |
+| `program_administrator` | — | BL |
+| `active_customer` | Active Customer | VEN |
+
+`flex_trading` uses UFTP 3.1.0 message names; its payloads are gridalyn's own
+offer, dispatch and settlement records, not UFTP attributes. The acts follow
+FIPA's contract-net shape. UFTP has no message that rejects an offer, so an
+offer that is not ordered stays `offered`.
+
+| Message | Act | From → to |
+| --- | --- | --- |
+| `FlexRequest` | `cfp` | DSO → AGR |
+| `FlexOffer` | `propose` | AGR → DSO |
+| `FlexOfferRevocation` | `cancel` | AGR → DSO |
+| `FlexOrder` | `accept-proposal` | DSO → AGR |
+| `FlexSettlement` | `inform` | DSO → AGR |
+
+`dr_program` follows one OpenADR 3.1.0 `event` between the business logic and
+one VEN. The payload fields are 3.1.0's, verbatim. What 3.1.0 lacks is an
+extension with the `flexint:` prefix, and the protocol refuses to label it
+otherwise:
+
+| Message | Act | From → to | Origin |
+| --- | --- | --- | --- |
+| `event` | `inform` | BL → VEN | OpenADR 3.1.0 |
+| `report` | `inform` | VEN → BL | OpenADR 3.1.0 |
+| `flexint:EventCancellation` | `cancel` | BL → VEN | extension |
+| `flexint:OptOut` | `refuse` | VEN → BL | extension |
+
+The event payload's `flexint:activeFrom` and `flexint:activeUntil` carry the
+event window in simulated time. The conversation becomes `active` and then
+`completed` as its clock passes them, and the notice the event gave is
+`flexint:activeFrom` minus the time the event was sent.
 
 ## Persistent IRIs for gridalyn's own namespaces
 
