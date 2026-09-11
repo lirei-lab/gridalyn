@@ -43,6 +43,12 @@ from gridalyn.operations.domain import (
     build_settlement_records,
 )
 from gridalyn.operations.settlement import build_operational_kpi_report
+from gridalyn.operations.vocabulary import (
+    ClearingMethod,
+    ProviderType,
+    parse_clearing_method,
+    parse_provider_type,
+)
 
 SOFT_BASE_COST_PER_KW_H = 3.0
 HARD_BASE_COST_PER_KW_H = 10.0
@@ -87,8 +93,12 @@ def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> Non
         raise ValueError(f"{label} is missing required columns: {', '.join(missing)}")
 
 
-def _provider_priority(provider_type: str) -> int:
-    return 0 if provider_type == "soft_cls_building" else 1
+#: Soft building flexibility is selected before hard EV interruption.
+_PROVIDER_PRIORITY: dict[ProviderType, int] = {"soft_cls_building": 0, "hard_cls_ev": 1}
+
+
+def _provider_priority(provider_type: object) -> int:
+    return _PROVIDER_PRIORITY[parse_provider_type(provider_type)]
 
 
 def _json_default(value: Any) -> Any:
@@ -268,7 +278,7 @@ def _prepare_candidates(
     providers: pd.DataFrame,
     impact: pd.DataFrame,
     scenario_id: str,
-    clearing_method: str,
+    clearing_method: ClearingMethod,
 ) -> pd.DataFrame:
     _require_columns(
         providers,
@@ -285,6 +295,11 @@ def _prepare_candidates(
     scenario_providers = providers.loc[
         providers["scenario_id"].astype(str) == scenario_id
     ].copy()
+    # Refuse an unknown provider type before it can be selected. Until
+    # 2026-09-11 such a provider cleared normally and its kilowatts were
+    # counted as neither soft nor hard.
+    for provider_type in scenario_providers["provider_type"].unique():
+        parse_provider_type(provider_type)
 
     if clearing_method == "surrogate":
         _require_columns(
@@ -309,7 +324,7 @@ def _prepare_candidates(
             "predicted_relief_kw"
         ].astype(float)
         impact_frame["rank_score"] = impact_frame["selection_score"].astype(float)
-    elif clearing_method == "topology":
+    else:  # "topology": the vocabulary has no third method
         _require_columns(
             impact,
             [
@@ -335,8 +350,6 @@ def _prepare_candidates(
         # the expected relief. Final selection order is re-derived downstream
         # from the merged providers via effective_cost_per_relief_kw_h.
         impact_frame["rank_score"] = impact_frame["expected_capacity_relief_kw"]
-    else:
-        raise ValueError("clearing_method must be 'surrogate' or 'topology'")
 
     impact_source_columns = [
         "provider_id",
@@ -380,6 +393,7 @@ def build_locational_clearing(
     max_selected_providers_per_event: int = 1000,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     """Clear transformer-level requirements with locational provider offers."""
+    method = parse_clearing_method(clearing_method)
     _require_columns(
         requirements,
         ["timestep", "constraint_id", "required_kw"],
@@ -389,7 +403,7 @@ def build_locational_clearing(
         providers=providers,
         impact=impact,
         scenario_id=scenario_id,
-        clearing_method=clearing_method,
+        clearing_method=method,
     )
     active_requirements = (
         requirements.loc[requirements["required_kw"].astype(float) > 0.0]
@@ -439,7 +453,7 @@ def build_locational_clearing(
             if selected_kw <= 0.0 or expected_relief_kw <= 0.0:
                 continue
 
-            provider_type = str(provider["provider_type"])
+            provider_type = parse_provider_type(provider["provider_type"])
             if provider_type == "soft_cls_building":
                 selected_soft_kw += selected_kw
             elif provider_type == "hard_cls_ev":
@@ -485,7 +499,7 @@ def build_locational_clearing(
                 "selected_provider_count": int(selected_count),
                 "estimated_cost": float(estimated_cost),
                 "overload_pctpt": float(requirement.get("overload_pctpt", 0.0) or 0.0),
-                "clearing_method": clearing_method,
+                "clearing_method": method,
             }
         )
 
@@ -495,7 +509,7 @@ def build_locational_clearing(
         events=events,
         selections=selections,
         scenario_id=scenario_id,
-        clearing_method=clearing_method,
+        clearing_method=method,
         dt_h=dt_h,
     )
     return events, selections, report
@@ -665,7 +679,7 @@ def _connectivity_lookup(connectivity: pd.DataFrame) -> pd.DataFrame:
 def _provider_row(
     *,
     scenario_id: str,
-    provider_type: str,
+    provider_type: ProviderType,
     provider_id: str,
     building_id: str,
     load_id: str,

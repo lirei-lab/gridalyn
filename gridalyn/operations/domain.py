@@ -10,6 +10,13 @@ from typing import Any
 import pandas as pd
 
 from gridalyn.operations.contracts import FlexibilityOperationContext
+from gridalyn.operations.vocabulary import (
+    DISPATCH_ACTION_BY_PROVIDER_TYPE,
+    DispatchAction,
+    ProviderType,
+    parse_dispatch_action,
+    parse_provider_type,
+)
 
 
 @dataclass(frozen=True)
@@ -50,11 +57,19 @@ class FlexibilityOffer:
     provider_id: str
     aggregator_id: str
     scenario_id: str
-    provider_type: str
+    provider_type: ProviderType
     quantity_kw: float
     price_per_kw_h: float
     constraint_zone_id: str | None
     source_standard: str = "GridalynFlexibilityOperation"
+
+    def __post_init__(self) -> None:
+        """Refuse a provider type outside the vocabulary.
+
+        Raises:
+            ValueError: Naming the value found and the accepted set.
+        """
+        parse_provider_type(self.provider_type)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,13 +97,28 @@ class DispatchInstruction:
     constraint_id: str
     provider_id: str
     aggregator_id: str | None
-    provider_type: str
-    dispatch_action: str
+    provider_type: ProviderType
+    dispatch_action: DispatchAction
     selected_kw: float
     expected_relief_kw: float
     estimated_cost_usd: float
     model_version_id: str | None = None
     study_run_id: str | None = None
+
+    def __post_init__(self) -> None:
+        """Refuse an unknown provider type or action, or an action that does not fit.
+
+        Raises:
+            ValueError: Naming the offending value and what was expected.
+        """
+        provider_type = parse_provider_type(self.provider_type)
+        dispatch_action = parse_dispatch_action(self.dispatch_action)
+        expected = DISPATCH_ACTION_BY_PROVIDER_TYPE[provider_type]
+        if dispatch_action != expected:
+            raise ValueError(
+                f"dispatch_action {dispatch_action!r} does not apply to "
+                f"provider_type {provider_type!r} (expected {expected!r})"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,7 +185,7 @@ def build_aggregator_portfolios(
 
     rows: list[dict[str, Any]] = []
     for aggregator_id, group in frame.groupby("aggregator_id", sort=True):
-        provider_types = group["provider_type"].astype(str)
+        provider_types = group["provider_type"].map(parse_provider_type)
         portfolio = AggregatorPortfolio(
             aggregator_id=str(aggregator_id),
             scenario_id=str(scenario_id),
@@ -193,7 +223,7 @@ def build_provider_offers(
                 row.get("aggregator_id") or f"aggregator:{scenario_id}:unassigned"
             ),
             scenario_id=str(scenario_id),
-            provider_type=str(row["provider_type"]),
+            provider_type=parse_provider_type(row["provider_type"]),
             quantity_kw=float(row["available_capacity_kw"]),
             price_per_kw_h=float(row["base_cost_per_kw_h"]),
             constraint_zone_id=(
@@ -230,6 +260,7 @@ def build_dispatch_instructions(
 
     rows: list[dict[str, Any]] = []
     for row in merged.to_dict("records"):
+        provider_type = parse_provider_type(row["provider_type"])
         instruction = DispatchInstruction(
             instruction_id=_stable_id(
                 "dispatch",
@@ -248,8 +279,8 @@ def build_dispatch_instructions(
                 if pd.notna(row.get("aggregator_id"))
                 else None
             ),
-            provider_type=str(row["provider_type"]),
-            dispatch_action=_dispatch_action(str(row["provider_type"])),
+            provider_type=provider_type,
+            dispatch_action=DISPATCH_ACTION_BY_PROVIDER_TYPE[provider_type],
             selected_kw=float(row["selected_kw"]),
             expected_relief_kw=float(row["expected_relief_kw"]),
             estimated_cost_usd=float(row.get("estimated_cost", 0.0) or 0.0),
@@ -298,12 +329,6 @@ def _scenario_providers(providers: pd.DataFrame, scenario_id: str) -> pd.DataFra
     return providers.loc[
         providers["scenario_id"].astype(str) == str(scenario_id)
     ].copy()
-
-
-def _dispatch_action(provider_type: str) -> str:
-    if provider_type == "hard_cls_ev":
-        return "hard_cls_interrupt"
-    return "soft_cls_limit"
 
 
 def _stable_id(prefix: str, *parts: Any) -> str:

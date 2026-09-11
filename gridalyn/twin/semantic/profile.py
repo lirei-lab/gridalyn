@@ -29,7 +29,7 @@ import json
 from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, get_args
 
 from gridalyn.twin.semantic.registry import (
     SemanticCapabilityRegistry,
@@ -40,6 +40,11 @@ from gridalyn.twin.semantic.vocabulary import (
     ScenarioCountRule,
     SemanticCapability,
 )
+
+#: Semantic profiles gridalyn defines. A consumer that records which profile it
+#: speaks -- an operation context, for one -- validates against this set.
+SemanticProfileId = Literal["north_america"]
+SEMANTIC_PROFILE_IDS: tuple[SemanticProfileId, ...] = get_args(SemanticProfileId)
 
 NAMESPACES = {
     "cim": "https://cim.ucaiug.io/ns#",
@@ -492,7 +497,9 @@ __all__ = [
     "LEGACY_DEFAULT_CAPABILITIES",
     "NAMESPACES",
     "RELATIONSHIP_TYPES",
+    "SEMANTIC_PROFILE_IDS",
     "SEMANTIC_TYPE",
+    "SemanticProfileId",
     "north_america_profile",
     "profile_with_capabilities",
     "resolve_declared_capabilities",

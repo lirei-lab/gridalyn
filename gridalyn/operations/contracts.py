@@ -10,6 +10,14 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.operations.vocabulary import (
+    ClearingMethod,
+    MarketRole,
+    parse_clearing_method,
+    parse_market_role,
+)
+from gridalyn.twin.semantic.profile import SEMANTIC_PROFILE_IDS, SemanticProfileId
+
 OPERATION_SCHEMA_VERSION = "1.0"
 PROVIDER_COLUMNS = [
     "provider_id",
@@ -43,17 +51,32 @@ class FlexibilityOperationContext:
 
     operation_id: str
     scenario_id: str
-    clearing_method: str
+    clearing_method: ClearingMethod
     dt_h: float
     model_version_id: str | None = None
     study_run_id: str | None = None
     schema_version: str = OPERATION_SCHEMA_VERSION
     source_domain: str = "operations.flexibility"
-    market_role: str = "dso_flexibility_clearing"
-    ontology_profile: str = "north_america"
+    market_role: MarketRole = "dso_flexibility_clearing"
+    ontology_profile: SemanticProfileId = "north_america"
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+    def __post_init__(self) -> None:
+        """Refuse a clearing method, market role or profile outside its set.
+
+        Raises:
+            ValueError: Naming the field, the value found and the accepted set.
+        """
+        parse_clearing_method(self.clearing_method)
+        parse_market_role(self.market_role)
+        if self.ontology_profile not in SEMANTIC_PROFILE_IDS:
+            raise ValueError(
+                "ontology_profile must be one of "
+                f"{', '.join(repr(p) for p in SEMANTIC_PROFILE_IDS)}; "
+                f"found {self.ontology_profile!r}"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,7 +122,7 @@ def build_operation_context(
     study_run_id: str | None = None,
 ) -> FlexibilityOperationContext:
     """Build a deterministic operation context from the operation scope."""
-    method = _normalize_method(clearing_method)
+    method = parse_clearing_method(str(clearing_method).strip().lower())
     payload = {
         "schema_version": OPERATION_SCHEMA_VERSION,
         "scenario_id": str(scenario_id),
@@ -198,13 +221,6 @@ def _missing_columns(frame: pd.DataFrame, columns: list[str], label: str) -> lis
     if not missing:
         return []
     return [f"{label} is missing required columns: {', '.join(missing)}"]
-
-
-def _normalize_method(method: str) -> str:
-    normalized = str(method).strip().lower()
-    if normalized not in {"surrogate", "topology"}:
-        raise ValueError("clearing_method must be 'surrogate' or 'topology'")
-    return normalized
 
 
 def _unique_values(frame: pd.DataFrame, column: str) -> list[str]:
