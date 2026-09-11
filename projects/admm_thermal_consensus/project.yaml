@@ -92,7 +92,7 @@ spec:
       comparisonRepRho: 0.5
       comparisonMcDraws: 100
   workflow:
-    file: projects/admm_thermal_consensus/workflow.yaml
+    file: workflow.yaml
   validation:
     senseChecker: scripts/sense_checks.py:check
     objectiveArtifacts:

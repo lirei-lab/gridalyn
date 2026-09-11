@@ -46,9 +46,9 @@ in ``docs/reference/workflow-yaml.md``.
 **Declared paths this gate deliberately does not check**, so its scope is not
 read as wider than it is:
 
-- ``spec.workflow.file`` -- resolved against ``base_dir``, but the loader fails
-  with a located error when the file is missing, so it is already protected by
-  existence.
+- ``spec.workflow.file`` -- resolved against ``root`` since bd 6ns.2 part 2b,
+  and the loader fails with a located error when the file is missing, so it is
+  already protected by existence.
 - ``spec.artifacts.project`` -- nothing reads it. ``ProjectScript`` hardcodes
   the output directories and the runner fingerprints a fixed tuple, so gating
   it would lend authority to a declaration that already disagrees with both.

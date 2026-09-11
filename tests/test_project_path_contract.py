@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from gridalyn.projects.loader import project_base_dir, read_yaml
+from gridalyn.projects.loader import load_project, read_yaml
 from gridalyn.projects.path_contract import (
     PROBLEM_DOUBLED_PREFIX,
     PROBLEM_OUTSIDE_PROJECT,
@@ -27,7 +27,15 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _violations_for(project_yaml: Path) -> list:
-    """Run the contract check on a project exactly as validation does.
+    """Run the contract check on a project, with the workflow the loader resolves.
+
+    The workflow comes from :func:`load_project` rather than being re-resolved
+    here. A helper that re-implements ``spec.workflow.file`` resolution can
+    disagree with production, and did: a fallback that tried two bases masked
+    one case, and without it a missing workflow became ``None``, which silently
+    skips every stage-field check so an ``== []`` assertion passed on nothing.
+    Through the loader, a ``workflow.file`` that does not resolve raises a
+    located ``FileNotFoundError`` instead (bd 6ns.2).
 
     Args:
         project_yaml: Path to a ``project.yaml``.
@@ -35,19 +43,13 @@ def _violations_for(project_yaml: Path) -> list:
     Returns:
         The violations found.
     """
-    project_data = read_yaml(project_yaml)
-    base_dir, path_base = project_base_dir(project_yaml, project_data)
-    workflow_rel = project_data["spec"]["workflow"]["file"]
-    workflow_path = base_dir / workflow_rel
-    if not workflow_path.exists():
-        workflow_path = project_yaml.parent / workflow_rel
-    workflow_data = read_yaml(workflow_path) if workflow_path.exists() else None
+    project = load_project(project_yaml)
     return find_path_contract_violations(
-        root=project_yaml.parent,
-        base_dir=base_dir,
-        path_base=path_base,
-        project_data=project_data,
-        workflow_data=workflow_data,
+        root=project.root,
+        base_dir=project.base_dir,
+        path_base=project.path_base,
+        project_data=project.raw,
+        workflow_data=read_yaml(project.workflow.path),
     )
 
 
@@ -81,9 +83,9 @@ def _write_project(
     # pathBase: repo silently falls back to the project directory, and every
     # repo-convention test below would exercise the project convention.
     (tmp / "gridalyn").mkdir()
-    workflow_file = (
-        "workflow.yaml" if path_base == "project" else "projects/demo/workflow.yaml"
-    )
+    # Project-relative for every pathBase: since bd 6ns.2 part 2b the loader
+    # resolves spec.workflow.file against the project directory.
+    workflow_file = "workflow.yaml"
     validation: dict[str, Any] = {"requiredReports": [required]}
     if sense_checks is not None:
         validation["senseChecks"] = sense_checks

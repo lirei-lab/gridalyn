@@ -252,7 +252,7 @@ def _write_repo_based_study(workspace: Path, *, required: str) -> Path:
                         "scenarios": [{"id": "baseline", "role": "test_baseline"}],
                     },
                     "inputs": {},
-                    "workflow": {"file": "projects/demo/workflow.yaml"},
+                    "workflow": {"file": "workflow.yaml"},
                     "validation": {"requiredReports": [required]},
                 },
             }

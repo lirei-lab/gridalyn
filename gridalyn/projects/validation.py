@@ -56,21 +56,22 @@ def _validate_schema(
 
 def _read_workflow_data(
     project_data: dict,
-    base_dir: Path,
+    root: Path,
     report: ValidationReport,
 ) -> dict | None:
     """Load and schema-validate the workflow file a project declares.
 
     Args:
         project_data: The parsed ``project.yaml`` document.
-        base_dir: The project base directory the workflow path resolves against.
+        root: The project directory. ``spec.workflow.file`` resolves against it
+            whatever ``spec.pathBase`` says (bd 6ns.2).
         report: The validation report to record checks and errors into.
 
     Returns:
         The parsed workflow document, or ``None`` when the file is missing or
         fails schema validation (the error is already on ``report``).
     """
-    workflow_path = (base_dir / project_data["spec"]["workflow"]["file"]).resolve()
+    workflow_path = (root / project_data["spec"]["workflow"]["file"]).resolve()
     report.checked_files.append(str(workflow_path))
     if not workflow_path.exists():
         report.add_error(f"workflow file does not exist: {workflow_path}")
@@ -194,7 +195,7 @@ def validate_project_file(
         report.add_error(f"{project_path}: {exc}")
         return report
 
-    workflow_data = _read_workflow_data(project_data, base_dir, report)
+    workflow_data = _read_workflow_data(project_data, project_path.parent, report)
     if workflow_data is None:
         return report
     _validate_workflow_stages(workflow_data, report)
