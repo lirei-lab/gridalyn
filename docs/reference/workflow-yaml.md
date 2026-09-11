@@ -49,12 +49,12 @@ and validates.
 | `kind` | yes | Must be `StudyProject`. |
 | `metadata.name` | yes | Stable project identifier. |
 | `metadata.version` | required | Project contract version. |
-| `spec.pathBase` | recommended | `repo` resolves paths from repository root; default behavior may resolve from the project folder. |
+| `spec.pathBase` | recommended | `project` (the default) or `repo`. Sets the directory stage commands run from, and the base `spec.workflow.file` and stage `inputs`/`outputs` resolve against. It does **not** govern `spec.validation.*` paths, which are always relative to the project directory — see [Path Rules](#path-rules). |
 | `spec.inputs` | yes | Raw geography, grid configuration, external datasets, and assumptions. |
 | `spec.artifacts` | no | Accepted and **not read**. Output directories are fixed by `ProjectScript` (`outputs/data`, `figures`, `reports`, `manifests`, `operations`, `cache`), not by this block; declaring them here governs nothing. |
 | `spec.workflow.file` | yes | Workflow resource path. |
-| `spec.validation.requiredReports` | recommended | Report JSON files that must exist and satisfy the report contract. |
-| `spec.validation.requiredFigures` | recommended | Figures that must exist and be non-empty. |
+| `spec.validation.requiredReports` | recommended | Report JSON files that must exist and satisfy the report contract. Relative to the project directory. |
+| `spec.validation.requiredFigures` | recommended | Figures that must exist and be non-empty. Relative to the project directory. |
 
 ## Workflow Resource
 
@@ -191,17 +191,42 @@ never touched. Treat the fallback as support for contracts already written, and
 
 ## Path Rules
 
-Prefer `spec.pathBase: repo` for published workflows. It makes paths stable and
-readable:
+**Validation paths are relative to the project directory, whatever `spec.pathBase`
+says.** That covers `spec.validation.requiredReports`, `requiredFigures`,
+`objectiveArtifacts` and each declarative sense check's `report`. Write them as the
+project sees them:
 
 ```yaml
-projects/minimal_grid_project/outputs/reports/minimal_grid_report.json
-instances/default/digital_twin/base/buildings.parquet
-configs/geography/tr01.json
+spec:
+  pathBase: repo
+  validation:
+    requiredReports:
+      - outputs/reports/minimal_grid_report.json   # not projects/<study>/outputs/...
 ```
 
-Avoid nested relative paths such as `../../instances/default/digital_twin/...` in published
-project manifests.
+A path that repeats the project directory, such as `projects/<study>/outputs/...`,
+is reported as a doubled prefix, naming the corrected declaration, by both
+`gridalyn project validate` and `gridalyn project sense-check` — the latter lists
+it ahead of the `missing required report` it would otherwise surface as.
+
+!!! warning "Breaking change, 2026-09-10"
+    Until this date, `requiredReports`, `requiredFigures` and sense-check `report`
+    paths resolved against `spec.pathBase`, so a `pathBase: repo` study wrote
+    them repository-relative. They now resolve against the project directory
+    (`bd 6ns.2`). Drop the leading `projects/<study>/` from those entries.
+
+`spec.pathBase` still matters. `repo` makes stage commands run from the repository
+root, which a stage invoked as `{python} -m projects.<study>.scripts...` needs.
+It is also the base `spec.workflow.file` and stage `inputs`/`outputs` resolve
+against — for now: unifying those onto the project directory is the rest of
+`bd 6ns.2`.
+
+`spec.inputs` entries may point outside the project, to shared data such as
+`instances/default/digital_twin/base/buildings.parquet` or
+`configs/geography/tr01.json`. That does **not** extend to a stage's `inputs` in
+`workflow.yaml`: those must land inside the project, and `gridalyn project
+validate` rejects one that does not. Avoid nested relative paths such as
+`../../instances/default/digital_twin/...` in published project manifests.
 
 ## Report Validation
 

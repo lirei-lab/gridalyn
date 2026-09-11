@@ -434,12 +434,12 @@ spec:
       - outputs/reports/annual_congestion_report.json
       - outputs/reports/curtailment_contracts_report.json
     requiredReports:
-      - projects/ev_hosting_flex/outputs/reports/topology_cache_report.json
-      - projects/ev_hosting_flex/outputs/reports/annual_mc_report.json
-      - projects/ev_hosting_flex/outputs/reports/fleet_triage_report.json
-      - projects/ev_hosting_flex/outputs/reports/annual_congestion_report.json
-      - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
-      - projects/ev_hosting_flex/outputs/reports/curtailment_economics_report.json
-      - projects/ev_hosting_flex/outputs/reports/cold_coupling_report.json
-      - projects/ev_hosting_flex/outputs/reports/network_characterization_report.json
-      - projects/ev_hosting_flex/outputs/reports/powerflow_validation_report.json
+      - outputs/reports/topology_cache_report.json
+      - outputs/reports/annual_mc_report.json
+      - outputs/reports/fleet_triage_report.json
+      - outputs/reports/annual_congestion_report.json
+      - outputs/reports/curtailment_contracts_report.json
+      - outputs/reports/curtailment_economics_report.json
+      - outputs/reports/cold_coupling_report.json
+      - outputs/reports/network_characterization_report.json
+      - outputs/reports/powerflow_validation_report.json

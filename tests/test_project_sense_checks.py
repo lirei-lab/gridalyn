@@ -204,3 +204,94 @@ def test_project_sense_check_runs_declarative_rules(tmp_path) -> None:
     check_ids = {check["id"] for check in report["checks"]}
     assert "declared_voltage_floor" in check_ids
     assert "declared_converged" in check_ids
+
+
+def _write_repo_based_study(workspace: Path, *, required: str) -> Path:
+    """Write a ``pathBase: repo`` study under ``workspace/projects/demo``.
+
+    ``pyproject.toml`` AND ``gridalyn/`` mark ``workspace`` as the repository
+    root. Without both, ``pathBase: repo`` silently falls back to the project
+    directory and the repo convention would never be exercised.
+
+    Args:
+        workspace: Temporary repository root.
+        required: The single ``requiredReports`` entry, as written.
+
+    Returns:
+        The project directory.
+    """
+    (workspace / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    (workspace / "gridalyn").mkdir()
+    project_root = workspace / "projects" / "demo"
+    (project_root / "outputs" / "reports").mkdir(parents=True)
+    (project_root / "workflow.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "gridalyn.io/v1alpha1",
+                "kind": "Workflow",
+                "metadata": {"name": "demo"},
+                "spec": {"stages": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_root / "project.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "gridalyn.io/v1alpha1",
+                "kind": "StudyProject",
+                "metadata": {"name": "demo", "version": "0.1.0"},
+                "spec": {
+                    "pathBase": "repo",
+                    "problem": {
+                        "type": "test_problem",
+                        "dataset": "test_dataset",
+                        "environment": "test_environment",
+                        "objective": "Exercise the path contract inside sense checks.",
+                        "model": {"type": "workflow_model", "name": "demo"},
+                        "scenarios": [{"id": "baseline", "role": "test_baseline"}],
+                    },
+                    "inputs": {},
+                    "workflow": {"file": "projects/demo/workflow.yaml"},
+                    "validation": {"requiredReports": [required]},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return project_root
+
+
+def test_sense_check_names_a_stale_repo_relative_declaration_before_the_symptom(
+    tmp_path,
+) -> None:
+    """The breaking change of bd 6ns.2, as sense-check reports it.
+
+    A pathBase: repo study that still writes requiredReports repo-relative must get
+    the located path-contract error, listed ahead of 'missing required report',
+    which alone would send the reader looking for a file that exists.
+    """
+    project_root = _write_repo_based_study(
+        tmp_path, required="projects/demo/outputs/reports/r.json"
+    )
+    report = project_sense_check(project_root, write=False)
+
+    ids = [check["id"] for check in report["checks"]]
+    assert "path_contract_1" in ids, ids
+    contract = report["checks"][ids.index("path_contract_1")]
+    assert contract["passed"] is False
+    assert contract["observed"]["location"] == "spec.validation.requiredReports[0]"
+    assert contract["expected"] == "outputs/reports/r.json"
+    assert ids.index("path_contract_1") < ids.index("required_report_1_exists")
+    assert not report["valid"]
+
+
+def test_sense_check_adds_no_path_contract_check_for_a_correct_declaration(
+    tmp_path,
+) -> None:
+    """The pair that keeps the test above from passing on a gate that flags everything."""
+    project_root = _write_repo_based_study(tmp_path, required="outputs/reports/r.json")
+    report = project_sense_check(project_root, write=False)
+
+    ids = [check["id"] for check in report["checks"]]
+    assert not [i for i in ids if i.startswith("path_contract_")], ids
