@@ -1,4 +1,4 @@
-"""Gate: the three component registries expose the same contract.
+"""Gate: the component registries expose the same contract.
 
 Why this exists
 ---------------
@@ -25,6 +25,9 @@ files kept half the developer API declared-but-unwired.
 A divergence of this kind accumulates silently: each registry reads fine on its
 own, and only a side-by-side comparison shows the gap. This module is that
 comparison, run on every push.
+
+``channels`` joined on 2026-09-11 as the fourth registry, with
+``registration_source`` and ``registration_version`` from its first commit.
 """
 
 from __future__ import annotations
@@ -36,6 +39,10 @@ from gridalyn.simulation.backends.registry import (
     PowerFlowBackendRegistry,
     default_powerflow_backend_registry,
 )
+from gridalyn.simulation.channels.registry import (
+    ChannelModelRegistry,
+    default_channel_model_registry,
+)
 from gridalyn.simulation.policies.registry import (
     PolicyRegistry,
     default_policy_registry,
@@ -45,7 +52,7 @@ from gridalyn.simulation.surrogates.registry import (
     default_surrogate_registry,
 )
 
-#: The three registries, with the id-attribute their descriptors carry.
+#: The four registries, with the id-attribute their descriptors carry.
 _REGISTRIES = (
     (
         "backends",
@@ -55,6 +62,12 @@ _REGISTRIES = (
     ),
     ("surrogates", SurrogateRegistry, default_surrogate_registry, "surrogate_id"),
     ("policies", PolicyRegistry, default_policy_registry, "policy_id"),
+    (
+        "channels",
+        ChannelModelRegistry,
+        default_channel_model_registry,
+        "channel_model_id",
+    ),
 )
 
 #: Methods every registry must expose. Named rather than derived from one of
@@ -107,8 +120,8 @@ class RegistryParityTests(unittest.TestCase):
                 self.assertEqual(
                     [],
                     missing,
-                    f"{name} registry is missing {missing}; the three registries "
-                    "are one mechanism applied to three roles and must not "
+                    f"{name} registry is missing {missing}; the four registries "
+                    "are one mechanism applied to four roles and must not "
                     "diverge",
                 )
 

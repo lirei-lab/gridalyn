@@ -18,6 +18,8 @@ from pathlib import Path
 from gridalyn.foundation.platform.extensions import UnsupportedContractVersionError
 from gridalyn.simulation.backends.contract import PowerFlowBackendDescriptor
 from gridalyn.simulation.backends.registry import PowerFlowBackendRegistry
+from gridalyn.simulation.channels.contract import ChannelModelDescriptor
+from gridalyn.simulation.channels.registry import ChannelModelRegistry
 from gridalyn.simulation.policies.contract import PolicyDescriptor
 from gridalyn.simulation.policies.registry import PolicyRegistry
 from gridalyn.simulation.surrogates.contract import ErrorBound, SurrogateDescriptor
@@ -80,6 +82,33 @@ class PowerFlowBackendContractVersionTest(unittest.TestCase):
             ),
         )
         self.assertEqual(registry.get_descriptor("v1-backend").contract_version, "1")
+
+
+class ChannelModelContractVersionTest(unittest.TestCase):
+    def test_unsupported_contract_version_is_rejected_with_located_error(
+        self,
+    ) -> None:
+        registry = ChannelModelRegistry()
+        with self.assertRaises(UnsupportedContractVersionError) as ctx:
+            registry.register(
+                lambda: None,
+                descriptor=ChannelModelDescriptor(
+                    channel_model_id="future-channel",
+                    name="future",
+                    contract_version="2",
+                ),
+            )
+        _assert_located_rejection(self, str(ctx.exception))
+
+    def test_supported_contract_version_is_accepted(self) -> None:
+        registry = ChannelModelRegistry()
+        registry.register(
+            lambda: None,
+            descriptor=ChannelModelDescriptor(
+                channel_model_id="v1-channel", name="v1", contract_version="1"
+            ),
+        )
+        self.assertEqual(registry.get_descriptor("v1-channel").contract_version, "1")
 
 
 class SurrogateContractVersionTest(unittest.TestCase):
@@ -232,6 +261,23 @@ class HostRegistrationSurfaceTest(unittest.TestCase):
             registry.get_descriptor("host-backend").backend_id, "host-backend"
         )
 
+    def test_channel_model_host_registration_is_recorded_as_host(self) -> None:
+        from gridalyn.simulation.channels.registry import (
+            register_channel_model_extension,
+        )
+
+        registry = ChannelModelRegistry()
+        register_channel_model_extension(
+            lambda: None,
+            descriptor=ChannelModelDescriptor(
+                channel_model_id="host-channel", name="host", contract_version="1"
+            ),
+            version="0.3.0",
+            registry=registry,
+        )
+        self.assertEqual(registry.registration_source("host-channel"), "host")
+        self.assertEqual(registry.registration_version("host-channel"), "0.3.0")
+
     def test_observation_producer_host_registration_resolves(self) -> None:
         from gridalyn.twin.observation.registry import (
             register_observation_producer_extension,
@@ -318,6 +364,7 @@ class HostRegistrationSurfaceTest(unittest.TestCase):
         )
         self.assertTrue(callable(gridalyn.simulation.register_surrogate_extension))
         self.assertTrue(callable(gridalyn.simulation.register_policy_extension))
+        self.assertTrue(callable(gridalyn.simulation.register_channel_model_extension))
         self.assertTrue(callable(gridalyn.twin.register_network_adapter_extension))
         self.assertTrue(callable(gridalyn.twin.register_observation_producer_extension))
 

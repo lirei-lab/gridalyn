@@ -6,14 +6,15 @@
 as data. `simulation` is where that data becomes a solvable power-flow
 network and gets checked physically: does every bus hold voltage, does every
 line stay under its thermal rating. It also owns the machinery for standing
-in for a full solve when one is too slow — surrogates — and for deciding what
-action a controller takes — policies.
+in for a full solve when one is too slow — surrogates — for deciding what
+action a controller takes — policies — and for deciding whether, and when, a
+message between simulated agents arrives — channel models.
 
 ## The vocabulary
 
 - **`PandapowerGridBuilder`** — converts a feeder spec or a twin snapshot into
   a solvable pandapower network.
-- **Three registries, four roles, resolved by explicit ID (never
+- **Four registries, five roles, resolved by explicit ID (never
   `entry_points`)**:
 
   | Registry | Role | Resolves | Recorded in provenance as |
@@ -21,20 +22,22 @@ action a controller takes — policies.
   | `PowerFlowBackendRegistry` | which solver runs | `lightsim2grid` (capability `sim`) or `pandapower_native` | `provenance.powerflow_backend` |
   | `SurrogateRegistry` | which surrogate stands in for a solve | e.g. `network_impact_physics_lookup_v1`, `network_impact_tabular_v1`, each with a stated error bound | — |
   | `PolicyRegistry` | which control policy decides an action | project-registered control policies | — |
+  | `ChannelModelRegistry` | whether, and when, a message between agents arrives | `ideal` (default), `fixed_latency`, `bernoulli_loss`, `fixed_outage` | — (the descriptor records parameters and seed; run provenance is follow-up work) |
 
-  A **fourth** role — observation, "what does the network currently show" —
+  A **fifth** role — observation, "what does the network currently show" —
   is deliberately **not** a registry. It is a single-builder contract
   (`observe_network`) that lives in [Twin](twin.md), because current network
-  state is a property of the twin, not of the solver. Three registries, four
-  roles: never write "four registries."
+  state is a property of the twin, not of the solver. Four registries, five
+  roles: never write "five registries."
 
 ```mermaid
 flowchart LR
-    subgraph REG["three registries · gridalyn/simulation"]
+    subgraph REG["four registries · gridalyn/simulation"]
         direction TB
         B["PowerFlowBackendRegistry"]
         S["SurrogateRegistry"]
         P["PolicyRegistry"]
+        C["ChannelModelRegistry"]
     end
     subgraph TW["not a registry · gridalyn/twin"]
         direction TB
@@ -44,21 +47,33 @@ flowchart LR
     B --> RB["which solver runs"]
     S --> RS["what stands in for a solve"]
     P --> RP["which policy decides an action"]
+    C --> RC["whether and when a message arrives"]
     O --> RO["what the network currently shows"]
 
     classDef reg fill:#e0f2f1,stroke:#00897b,color:#004d40
     classDef notreg fill:#fff3e0,stroke:#ef6c00,color:#e65100,stroke-width:2px
     classDef role fill:#e8eaf6,stroke:#3f51b5,color:#1a237e
-    class B,S,P reg
+    class B,S,P,C reg
     class O notreg
-    class RB,RS,RP,RO role
+    class RB,RS,RP,RC,RO role
 ```
 
-Four roles, three registries. The registries resolve by explicit ID and never
+Five roles, four registries. The registries resolve by explicit ID and never
 by `entry_points`; observation sits one layer down instead, because current
 network state is a property of the twin rather than of whichever solver
 happened to produce it.
 
+- **`EventScheduler`** (`gridalyn/simulation/scheduler.py`) — a deterministic
+  discrete-event queue in simulated time, ordered by `(time, priority, key,
+  sequence)`. Agent interaction is asynchronous in *simulated* time and never
+  in wall-clock time: no `asyncio`, no threads. A channel model decides when
+  a message is delivered; the scheduler decides the order everything happens
+  in. With the `ideal` channel, a scheduled policy loop reproduces
+  `run_policy_episode` exactly. Stochastic channels draw from the seed and
+  the message's identity only, so the same seed gives a byte-identical event
+  trace whatever order handlers run in; `fixed_outage` silences an exact,
+  nested, seeded subset of endpoints, the shape of a communication-failure
+  sweep.
 - **`lightsim2grid` is genuinely optional**, gated through
   `require_capabilities("sim", ...)`; `pandapower` itself is a base
   dependency and always available, so the `pandapower_native` backend never
