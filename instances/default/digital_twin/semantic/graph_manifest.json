@@ -35,17 +35,15 @@
       "ok": true
     }
   },
-  "created_at": "2026-09-10T20:27:16.478548+00:00",
+  "created_at": "2026-09-11T15:55:58.802716+00:00",
   "edge_count": 147065,
   "namespaces": {
     "brick": "https://brickschema.org/schema/Brick#",
-    "cim": "https://cim.ucaiug.io/ns#",
-    "cls": "https://gridalyn.local/ontology/cls#",
-    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "cim": "http://iec.ch/TC57/CIM100#",
+    "dt": "https://w3id.org/gridalyn/ontology/digital-twin#",
     "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    "flexint": "https://w3id.org/gridalyn/ontology/flexint#",
     "gb": "https://www.greenbuttondata.org/ns#",
-    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
-    "openadr": "https://openadr.org/ns#",
     "s223": "http://data.ashrae.org/standard223#"
   },
   "node_count": 74286,

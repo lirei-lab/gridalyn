@@ -38,14 +38,17 @@ Flexibility capability (`capabilities={"flexibility"}`, on-demand):
 
 - LBNL Energy Flexibility Ontology (EFOnt) for building flexibility resources,
   flexible operations, load characteristics, and flexibility KPIs;
-- OpenADR reserved for future demand-response and CLS event messaging (no
-  `openadr:`-prefixed node or edge is emitted today);
-- IEEE 2030.5 for DER and EV control interoperability, emitted as
-  `ieee2030_5:EVSE` nodes;
-- `cls:` as the local namespace for Soft CLS and Hard CLS contracts;
-- `cls:` also owns the local market-management vocabulary for aggregators,
-  portfolios, providers, offers, clearing/dispatch extensions, and constraint
-  zones.
+- Brick's `Electric_Vehicle_Charging_Station` for EV charging equipment. IEEE
+  2030.5 defines no EVSE type and publishes no RDF namespace, so it is a
+  crosswalk (an `EndDevice` with `PEVInfo`), not a prefix;
+- `flexint:` (`https://w3id.org/gridalyn/ontology/flexint#`), gridalyn's
+  persistent vocabulary, for curtailment contracts — one
+  `flexint:CurtailmentContract` class whose `contract_mode` property is `soft` or
+  `hard` — and for the market-management vocabulary of aggregators, portfolios,
+  providers, offers and constraint zones. Its terms are documented in
+  [Ontology: flexint](./ontology/flexint.md);
+- OpenADR 3.1.0 terms arrive with agent interaction, under a gridalyn-owned
+  namespace: the Alliance publishes no RDF, so no `openadr:` IRI is emitted.
 
 The identifiers these standards actually publish — namespaces, versions, term
 spellings — are verified, with sources, in
@@ -142,25 +145,25 @@ checked against them by `tests/test_semantic_axioms.py`.
 | `CONNECTS` | `dt:connects` | `ACLineSegment` → `ConnectivityNode` | exactly 2 | core |
 | `FEEDS` | `dt:feeds` | `PowerTransformer` → `ConnectivityNode` | exactly 2 | core |
 | `HAS_LOAD` | `dt:hasLoad` | `Building` → `EnergyConsumer` | exactly 1 | core |
-| `INCLUDES_ASSET` | `dt:includesAsset` | `Scenario` → `Building` (core); `EVSE` / `SoftCLSContract` / `HardCLSContract` / `FlexibilityAggregator` / `FlexibilityProvider` (flexibility) | — | core, flexibility |
+| `INCLUDES_ASSET` | `dt:includesAsset` | `Scenario` → `Building` (core); `Electric_Vehicle_Charging_Station` / `CurtailmentContract` / `FlexibilityAggregator` / `FlexibilityProvider` (flexibility) | — | core, flexibility |
 | `OBSERVES` | `dt:observes` | `TimeSeriesDataset` → `Scenario` | — | core |
 | `PRODUCED` | `dt:produced` | `SimulationRun` → `TimeSeriesDataset` | — | core |
-| `AGGREGATES` | `cls:aggregates` | `FlexibilityAggregator` → `FlexibilityProvider` | — | flexibility |
+| `AGGREGATES` | `flexint:aggregates` | `FlexibilityAggregator` → `FlexibilityProvider` | — | flexibility |
 | `ALLOWS` | `efont:allows` | `ThermallyActivatedBuildingSystem` → `FlexibleOperation` | — | flexibility |
-| `CONSTRAINT_ZONE_FOR` | `cls:constraintZoneFor` | `ConstraintZone` → `PowerTransformer` / `ACLineSegment` / `ConnectivityNode` | — | flexibility |
-| `DESCRIBES_FLEXIBILITY` | `cls:describesFlexibility` | `SoftCLSContract` → `EnergyFlexibility` | — | flexibility |
+| `CONSTRAINT_ZONE_FOR` | `flexint:constraintZoneFor` | `ConstraintZone` → `PowerTransformer` / `ACLineSegment` / `ConnectivityNode` | — | flexibility |
+| `DESCRIBES_FLEXIBILITY` | `flexint:describesFlexibility` | `CurtailmentContract` → `EnergyFlexibility` | — | flexibility |
 | `ENABLES` | `efont:enables` | `FlexibleOperation` → `EnergyFlexibility` | — | flexibility |
-| `ENABLES_CONTRACT` | `cls:enablesContract` | `EVSE` → `HardCLSContract` | — | flexibility |
-| `HAS_EVSE` | `dt:hasEVSE` | `Building` → `EVSE` | — | flexibility |
+| `ENABLES_CONTRACT` | `flexint:enablesContract` | `Electric_Vehicle_Charging_Station` → `CurtailmentContract` | — | flexibility |
+| `HAS_EVSE` | `dt:hasEVSE` | `Building` → `Electric_Vehicle_Charging_Station` | — | flexibility |
 | `HAS_FLEXIBILITY_RESOURCE` | `dt:hasFlexibilityResource` | `Building` / `FlexibilityProvider` → `ThermallyActivatedBuildingSystem` / `ScenarioDevice` | — | flexibility |
-| `IMPLEMENTS_CONTRACT` | `cls:implementsContract` | `FlexibilityProvider` → `SoftCLSContract` / `HardCLSContract` | exactly 1 | flexibility |
-| `INCLUDES_PROVIDER` | `cls:includesProvider` | `FlexibilityPortfolio` → `FlexibilityProvider` | — | flexibility |
-| `LOCATED_IN_CONSTRAINT_ZONE` | `cls:locatedInConstraintZone` | `FlexibilityProvider` → `ConstraintZone` | — | flexibility |
-| `MANAGES_PORTFOLIO` | `cls:managesPortfolio` | `FlexibilityAggregator` → `FlexibilityPortfolio` | exactly 1 | flexibility |
-| `OFFERS` | `cls:offers` | `FlexibilityProvider` → `FlexibilityOffer` | exactly 1 | flexibility |
-| `PARTICIPATES_IN` | `cls:participatesIn` | `Building` → `SoftCLSContract` | — | flexibility |
+| `IMPLEMENTS_CONTRACT` | `flexint:implementsContract` | `FlexibilityProvider` → `CurtailmentContract` | exactly 1 | flexibility |
+| `INCLUDES_PROVIDER` | `flexint:includesProvider` | `FlexibilityPortfolio` → `FlexibilityProvider` | — | flexibility |
+| `LOCATED_IN_CONSTRAINT_ZONE` | `flexint:locatedInConstraintZone` | `FlexibilityProvider` → `ConstraintZone` | — | flexibility |
+| `MANAGES_PORTFOLIO` | `flexint:managesPortfolio` | `FlexibilityAggregator` → `FlexibilityPortfolio` | exactly 1 | flexibility |
+| `OFFERS` | `flexint:offers` | `FlexibilityProvider` → `FlexibilityOffer` | exactly 1 | flexibility |
+| `PARTICIPATES_IN` | `flexint:participatesIn` | `Building` → `CurtailmentContract` | — | flexibility |
 | `QUANTIFIES` | `efont:Quantifies` | `EnergyFlexibilityKPI` → `EnergyFlexibility` | — | flexibility |
-| `TARGETS_CONSTRAINT` | `cls:targetsConstraint` | `FlexibilityOffer` → `ConstraintZone` | — | flexibility |
+| `TARGETS_CONSTRAINT` | `flexint:targetsConstraint` | `FlexibilityOffer` → `ConstraintZone` | — | flexibility |
 
 **Re-based 2026-09-10.** Measured on the shipped graph before this change,
 `ENABLES` and `HAS_FLEXIBILITY_RESOURCE` each carried two predicate IRIs, and the
@@ -182,6 +185,34 @@ these edges changed and no node did:
 The namespace IRIs themselves (`cls:`, `dt:`, `efont:`, `ieee2030_5:`) are
 unchanged by this re-base.
 
+**Re-based 2026-09-11 (persistent IRIs).** Until this change `dt:` and `cls:`
+sat on `gridalyn.local`, a host nothing resolves; `ieee2030_5:` named a
+namespace IEEE never published, and `cim:` pointed at the CIM18 draft. Rebuilt
+on the same inputs, every node and edge id, edge endpoint, relationship type and
+edge property is unchanged; what moved is names:
+
+- `dt:` is `https://w3id.org/gridalyn/ontology/digital-twin#` (12 975 node and
+  70 251 edge IRIs), documented in
+  [Digital-Twin Vocabulary](./ontology/digital-twin.md);
+- the `cls:` terms moved to `flexint:`
+  (`https://w3id.org/gridalyn/ontology/flexint#`; 25 083 node and 62 264 edge
+  IRIs), documented in [Flexint Vocabulary](./ontology/flexint.md). The two
+  contract classes became one: 3 235 `cls:HardCLSContract` and 4 850
+  `cls:SoftCLSContract` nodes are 8 085 `flexint:CurtailmentContract` nodes whose
+  new `contract_mode` property keeps the distinction;
+- 3 235 `ieee2030_5:EVSE` nodes are `brick:Electric_Vehicle_Charging_Station`;
+- 10 358 `cim:` node IRIs moved from `https://cim.ucaiug.io/ns#` to the CIM100
+  namespace `http://iec.ch/TC57/CIM100#`. The CIM18 spellings are still read at
+  ingest, for the four classes this graph maps (`resolve_ingest_iri`), and
+  refused for any other;
+- on the 4 850 soft contracts' EFOnt nodes, `cls_contract_type` is renamed
+  `contract_type` and `mapped_from` names `flexint:CurtailmentContract`.
+
+Validation is unchanged: valid, 0 errors, every scenario count check met. The
+former names stay readable for one release: `resolve_deprecated_term` maps each
+retired type and predicate to its replacement, and a repository query by a
+retired type warns and filters by the property its name used to encode.
+
 ## Market Management Layer
 
 The semantic graph now includes the operational flexibility-management layer
@@ -191,29 +222,28 @@ Current generated counts:
 
 | Semantic type | Count |
 | --- | ---: |
-| `cls:FlexibilityAggregator` | 9 |
-| `cls:FlexibilityPortfolio` | 9 |
-| `cls:FlexibilityProvider` | 8085 |
-| `cls:FlexibilityOffer` | 8085 |
-| `cls:ConstraintZone` | 810 |
+| `flexint:FlexibilityAggregator` | 9 |
+| `flexint:FlexibilityPortfolio` | 9 |
+| `flexint:FlexibilityProvider` | 8085 |
+| `flexint:FlexibilityOffer` | 8085 |
+| `flexint:ConstraintZone` | 810 |
 
-This layer is intentionally local to `cls:` because standards such as OpenADR
-and IEEE 2030.5 describe messages and device interoperability, while the
+This layer is gridalyn's own `flexint:` vocabulary because standards such as
+OpenADR and IEEE 2030.5 describe messages and device interoperability, while the
 locational market entity model is specific to this digital twin. The graph still
-cross-links to standards-backed assets: providers implement CLS contracts,
-offers target constraint zones, and each constraint zone resolves to a CIM
-`PowerTransformer`.
+cross-links to standards-backed assets: providers implement curtailment
+contracts, offers target constraint zones, and each constraint zone resolves to
+a CIM `PowerTransformer`.
 
 ## EFOnt Crosswalk
 
 EFOnt is integrated as a building-flexibility crosswalk, not as the primary
-network or market ontology. CIM still owns grid topology, OpenADR remains the
-future demand-response event messaging profile, IEEE 2030.5 is emitted today
-as `ieee2030_5:EVSE` nodes for the EV/DER control profile, and `cls:` continues
-to model Soft/Hard CLS contracts, clearing, settlement, and network
-constraints.
+network or market ontology. CIM owns grid topology, Brick owns buildings and EV
+charging stations, and `flexint:` models curtailment contracts, clearing,
+settlement and network constraints. OpenADR 3.1.0 is the demand-response
+messaging profile of the `dr_program` interaction protocol.
 
-For every Soft CLS contract, the graph creates:
+For every soft curtailment contract (`contract_mode: soft`), the graph creates:
 
 - an `efont:ThermallyActivatedBuildingSystem` resource;
 - an `efont:FlexibleOperation` representing the dynamic operating envelope or
@@ -224,7 +254,7 @@ For every Soft CLS contract, the graph creates:
 
 This gives dashboard, reports, and future FalkorDB consumers a standard language
 for building flexibility characteristics without forcing EFOnt to model network
-deliverability or CLS market clearing.
+deliverability or market clearing.
 
 ## Build And Validate
 
@@ -308,11 +338,11 @@ from gridalyn.twin import SemanticGraphRepository
 repo = SemanticGraphRepository.from_parquet("instances/default/digital_twin/semantic")
 node = repo.get_node("aggregator:S0:soft_cls")
 print(node["semantic_type"], node["scenario_id"])
-assets = repo.assets_in_scenario("S0", semantic_type="cls:FlexibilityAggregator")
+assets = repo.assets_in_scenario("S0", semantic_type="flexint:FlexibilityAggregator")
 print(len(assets), "aggregators in scenario S0")
 ```
 ```text
-cls:FlexibilityAggregator S0
+flexint:FlexibilityAggregator S0
 1 aggregators in scenario S0
 ```
 

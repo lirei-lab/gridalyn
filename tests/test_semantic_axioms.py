@@ -282,16 +282,24 @@ class ProfileCompositionTest(unittest.TestCase):
                 _node(
                     "offer:S4:x",
                     ["FlexibilityOffer"],
-                    "cls:FlexibilityOffer",
-                    "Gridalyn_CLS",
+                    "flexint:FlexibilityOffer",
+                    "Gridalyn_Flexint",
                     "test",
                     "offer:S4:x",
                 )
             )
-        self.assertIn("cls:FlexibilityOffer", str(ctx.exception))
+        self.assertIn("flexint:FlexibilityOffer", str(ctx.exception))
         with self.assertRaises(ValueError) as ctx:
             builder.add_edge(
-                _edge("building:0", "OFFERS", "x", "cls:offers", "CLS", "test", "x")
+                _edge(
+                    "building:0",
+                    "OFFERS",
+                    "x",
+                    "flexint:offers",
+                    "Flexint",
+                    "test",
+                    "x",
+                )
             )
         self.assertIn("'OFFERS'", str(ctx.exception))
         with self.assertRaises(ValueError) as ctx:
@@ -475,7 +483,9 @@ class ValidateScriptTest(unittest.TestCase):
     def test_the_recorded_capabilities_decide_the_profile(self) -> None:
         report = self._validate([])
         self.assertFalse(report["valid"])
-        self.assertTrue(any("cls:" in e for e in report["errors"]), report["errors"])
+        self.assertTrue(
+            any("flexint:" in e for e in report["errors"]), report["errors"]
+        )
 
     def test_a_manifest_without_capabilities_uses_the_legacy_default_and_says_so(
         self,

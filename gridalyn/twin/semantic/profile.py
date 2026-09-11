@@ -18,6 +18,15 @@ built and validated against states, for every relationship, the one predicate
 its edges carry. The byte-identity of the pre-Phase-21 profile (R7) was given
 up deliberately in the same re-base: the profile gained the axioms it lacked.
 
+**Persistent IRIs (2026-09-11).** gridalyn's own vocabularies moved off the
+unresolvable ``gridalyn.local`` host to :data:`GRIDALYN_ONTOLOGY_BASE` on
+w3id.org: ``dt:`` for the digital-twin core, and ``flexint:`` for flexibility
+markets, contracts and agent interaction, which replaces ``cls:``. ``cim:`` is
+now ``http://iec.ch/TC57/CIM100#``, the namespace North American distribution
+tooling emits; the CIM18 spellings are ingest aliases, never emitted. Every
+term that changed is a declared :class:`TermAlias`, resolvable for one release
+through :func:`resolve_deprecated_term`.
+
 ``SEMANTIC_TYPE`` stays the **shared canonical vocabulary** for every generator
 (the semantic graph and the network-impact surrogate) -- a spelling registry,
 not an emission bias.
@@ -39,6 +48,7 @@ from gridalyn.twin.semantic.vocabulary import (
     RelationshipSpec,
     ScenarioCountRule,
     SemanticCapability,
+    TermAlias,
 )
 
 #: Semantic profiles gridalyn defines. A consumer that records which profile it
@@ -47,15 +57,40 @@ SemanticProfileId = Literal["north_america"]
 SEMANTIC_PROFILE_IDS: tuple[SemanticProfileId, ...] = get_args(SemanticProfileId)
 
 NAMESPACES = {
-    "cim": "https://cim.ucaiug.io/ns#",
+    "cim": "http://iec.ch/TC57/CIM100#",
     "brick": "https://brickschema.org/schema/Brick#",
     # Aspirational — declared for future/imported use; not currently emitted.
     "s223": "http://data.ashrae.org/standard223#",
     # Aspirational — not currently emitted (Green Button appears only as the
     # source_standard string on dt:TimeSeriesDataset).
     "gb": "https://www.greenbuttondata.org/ns#",
-    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "dt": "https://w3id.org/gridalyn/ontology/digital-twin#",
 }
+
+#: Base of every vocabulary gridalyn defines itself. Registered at w3id.org,
+#: which redirects each vocabulary to its documentation page and Turtle file.
+GRIDALYN_ONTOLOGY_BASE = "https://w3id.org/gridalyn/ontology/"
+
+#: Namespaces a graph written before 2026-09-11 may carry, by prefix. Kept to
+#: read old artifacts; never bound in a profile, never emitted.
+DEPRECATED_NAMESPACES: dict[str, str] = {
+    "cls": "https://gridalyn.local/ontology/cls#",
+    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
+}
+
+#: CIM namespaces other tools write, accepted on ingest and mapped to ``cim:``
+#: term by term: CIM18 renamed and restructured classes, so only the terms in
+#: :data:`CIM_INGEST_TERMS` -- the classes the model-first core emits -- map by
+#: local name, and any other term is refused rather than guessed.
+CIM_INGEST_NAMESPACES: tuple[str, ...] = (
+    "http://cim.ucaiug.io/ns#",
+    "https://cim.ucaiug.io/ns#",
+    "http://cim.ucaiug.io/CIM101/draft#",
+)
+CIM_INGEST_TERMS: frozenset[str] = frozenset(
+    {"ACLineSegment", "ConnectivityNode", "EnergyConsumer", "PowerTransformer"}
+)
 
 PRIMARY_STANDARDS: dict[str, tuple[str, ...]] = {
     "grid_topology": ("IEC CIM", "IEC 61970", "IEC 61968", "CIM100"),
@@ -164,11 +199,13 @@ SEMANTIC_TYPE: dict[str, str] = {
     "connectivity_node": "cim:ConnectivityNode",
     "energy_consumer": "cim:EnergyConsumer",
     "power_transformer": "cim:PowerTransformer",
-    "flexibility_provider": "cls:FlexibilityProvider",
+    "flexibility_provider": "flexint:FlexibilityProvider",
     "scenario": "dt:Scenario",
-    "evse": "ieee2030_5:EVSE",
-    # Surrogate-specific edge relationship (no semantic-graph counterpart).
-    "network_impact": "efont:hasNetworkImpact",
+    "evse": "brick:Electric_Vehicle_Charging_Station",
+    # Surrogate-specific edge predicates (no semantic-graph counterpart),
+    # declared by the flexibility capability. EFOnt defines neither.
+    "network_impact": "flexint:hasNetworkImpact",
+    "provides_flexibility": "flexint:providesFlexibility",
 }
 
 
@@ -254,6 +291,60 @@ def semantic_uri(qname: str, namespaces: Mapping[str, str] | None = None) -> str
             f"(bound: {', '.join(sorted(resolved))})"
         )
     return f"{resolved[prefix]}{local_name}"
+
+
+def resolve_ingest_iri(iri: str) -> str:
+    """Return the ``cim:`` qname for a CIM IRI another tool wrote.
+
+    Args:
+        iri: A full IRI in the primary CIM namespace or an ingest alias.
+
+    Returns:
+        The ``cim:<LocalName>`` qname gridalyn emits for it.
+
+    Raises:
+        ValueError: The IRI is in no CIM namespace gridalyn reads, or it is in
+            an ingest alias but names a term not mapped from it.
+    """
+    primary = NAMESPACES["cim"]
+    if iri.startswith(primary):
+        return f"cim:{iri[len(primary):]}"
+    for namespace in CIM_INGEST_NAMESPACES:
+        if iri.startswith(namespace):
+            local_name = iri[len(namespace) :]
+            if local_name in CIM_INGEST_TERMS:
+                return f"cim:{local_name}"
+            raise ValueError(
+                f"{iri} is in the CIM ingest namespace {namespace}, but "
+                f"{local_name!r} is not mapped from it (mapped: "
+                f"{', '.join(sorted(CIM_INGEST_TERMS))}); CIM18 renamed classes, "
+                "so map the term explicitly rather than by name"
+            )
+    raise ValueError(
+        f"{iri} is in no CIM namespace gridalyn reads (primary: {primary}; "
+        f"ingest: {', '.join(CIM_INGEST_NAMESPACES)})"
+    )
+
+
+def resolve_deprecated_term(qname: str) -> TermAlias | None:
+    """Return the alias a deprecated qname resolves through, or ``None``.
+
+    Searches every registered capability, not only the ones a graph declares:
+    a query against an old graph must resolve whichever capability wrote it.
+
+    Args:
+        qname: A type or predicate qname, e.g. ``cls:SoftCLSContract``.
+
+    Returns:
+        The declared :class:`TermAlias`, or ``None`` when ``qname`` is current
+        or unknown.
+    """
+    registry = default_semantic_capability_registry()
+    for capability in registry.resolve(registry.list_ids()):
+        for alias in capability.deprecated_aliases:
+            if alias.deprecated == qname:
+                return alias
+    return None
 
 
 def _merge_namespaces(
@@ -359,15 +450,32 @@ def _compose_scenario_counts(
     return rules
 
 
+def _compose_aliases(
+    active: tuple[SemanticCapability, ...],
+) -> dict[str, tuple[TermAlias, str]]:
+    """Collect the active capabilities' deprecated aliases with their declarers."""
+    aliases: dict[str, tuple[TermAlias, str]] = {}
+    for capability in active:
+        for alias in capability.deprecated_aliases:
+            if alias.deprecated in aliases:
+                raise ValueError(
+                    f"deprecated term {alias.deprecated} is aliased twice (again by "
+                    f"{capability.capability_id!r})"
+                )
+            aliases[alias.deprecated] = (alias, capability.capability_id)
+    return aliases
+
+
 def _check_vocabulary(
     types: set[str],
     relationships: Mapping[str, RelationshipSpec],
     rules: Mapping[str, ScenarioCountRule],
     namespaces: Mapping[str, str],
+    predicates: set[str],
 ) -> None:
     """Refuse a composed profile whose declarations reference undeclared names."""
     bound = ", ".join(sorted(namespaces))
-    for qname in sorted(types | {spec.predicate for spec in relationships.values()}):
+    for qname in sorted(types | predicates):
         if qname.partition(":")[0] not in namespaces:
             raise ValueError(
                 f"{qname} uses a namespace no active declaration binds (bound: {bound})"
@@ -385,6 +493,26 @@ def _check_vocabulary(
             raise ValueError(
                 f"scenario count {rule.key!r} counts {rule.semantic_type}, which "
                 "no active declaration lists as a semantic type"
+            )
+
+
+def _check_aliases(
+    aliases: Mapping[str, tuple[TermAlias, str]],
+    types: set[str],
+    predicates: set[str],
+) -> None:
+    """Refuse an alias to an undeclared term, or an alias of a term still live."""
+    live = types | predicates
+    for deprecated, (alias, _declarer) in sorted(aliases.items()):
+        if alias.replacement not in live:
+            raise ValueError(
+                f"deprecated term {deprecated} is aliased to {alias.replacement}, "
+                "which no active declaration lists as a semantic type or predicate"
+            )
+        if deprecated in live:
+            raise ValueError(
+                f"deprecated term {deprecated} is still declared as a live term; a "
+                "term is either current or an alias, not both"
             )
 
 
@@ -436,15 +564,20 @@ def profile_with_capabilities(
     namespaces = dict(NAMESPACES)
     standards = {concern: list(names) for concern, names in PRIMARY_STANDARDS.items()}
     types = set(CORE_SEMANTIC_TYPES)
+    extra_predicates: set[str] = set()
     for capability in active:
         _merge_namespaces(namespaces, capability.namespaces, capability.capability_id)
         _merge_standards(
             standards, capability.primary_standards, capability.capability_id
         )
         types.update(capability.semantic_types)
+        extra_predicates.update(capability.predicates)
     relationships, declared_by = _compose_relationships(active)
     rules = _compose_scenario_counts(active)
-    _check_vocabulary(types, relationships, rules, namespaces)
+    aliases = _compose_aliases(active)
+    predicates = extra_predicates | {spec.predicate for spec in relationships.values()}
+    _check_vocabulary(types, relationships, rules, namespaces, predicates)
+    _check_aliases(aliases, types, predicates)
     return {
         "semantic_profile": "north_america",
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -459,13 +592,25 @@ def profile_with_capabilities(
             )
             for name in sorted(relationships)
         },
+        "predicates": sorted(extra_predicates),
         "scenario_counts": {
             key: {
                 "semantic_type": rules[key].semantic_type,
                 "property_true": rules[key].property_true,
+                "property_equals": dict(rules[key].property_equals),
             }
             for key in sorted(rules)
         },
+        "deprecated_aliases": {
+            name: {
+                "replacement": alias.replacement,
+                "properties": dict(alias.properties),
+                "note": alias.note or None,
+                "declared_by": declarer,
+            }
+            for name, (alias, declarer) in sorted(aliases.items())
+        },
+        "ingest_namespaces": {"cim": list(CIM_INGEST_NAMESPACES)},
         "unit_conventions": dict(UNIT_CONVENTIONS),
     }
 
@@ -492,8 +637,12 @@ def write_profile(
 
 
 __all__ = [
+    "CIM_INGEST_NAMESPACES",
+    "CIM_INGEST_TERMS",
     "CORE_RELATIONSHIPS",
     "CORE_SEMANTIC_TYPES",
+    "DEPRECATED_NAMESPACES",
+    "GRIDALYN_ONTOLOGY_BASE",
     "LEGACY_DEFAULT_CAPABILITIES",
     "NAMESPACES",
     "RELATIONSHIP_TYPES",
@@ -503,6 +652,8 @@ __all__ = [
     "north_america_profile",
     "profile_with_capabilities",
     "resolve_declared_capabilities",
+    "resolve_deprecated_term",
+    "resolve_ingest_iri",
     "semantic_uri",
     "write_profile",
 ]

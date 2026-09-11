@@ -63,11 +63,36 @@ class ScenarioCountRule:
         semantic_type: Nodes of this type within the scenario are counted.
         property_true: When set, only nodes whose JSON ``properties`` hold a
             truthy value under this key are counted.
+        property_equals: ``(key, value)`` pairs; only nodes whose JSON
+            ``properties`` hold exactly ``value`` under every ``key`` are
+            counted. This is how a generic class is counted by mode, e.g.
+            ``(("contract_mode", "hard"),)``.
     """
 
     key: str
     semantic_type: str
     property_true: str | None = None
+    property_equals: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class TermAlias:
+    """A deprecated term and the term that replaces it.
+
+    Attributes:
+        deprecated: The CURIE a graph, a query or a document used to carry,
+            e.g. ``cls:SoftCLSContract``.
+        replacement: The CURIE to use instead.
+        properties: ``(key, value)`` node properties the replacement carries to
+            state what the deprecated term's *name* used to encode, e.g. a
+            contract mode.
+        note: Why the term changed.
+    """
+
+    deprecated: str
+    replacement: str
+    properties: tuple[tuple[str, str], ...] = ()
+    note: str = ""
 
 
 @dataclass(frozen=True)
@@ -117,6 +142,11 @@ class SemanticCapability:
         scenario_counts: Per-scenario count rules the validator can apply.
         extend: Emits the capability's records into a graph, or ``None`` for
             a vocabulary-only capability.
+        predicates: Predicates the capability defines for graphs other than
+            the semantic graph -- the network-impact surrogate's edges -- so
+            that they are declared terms with an IRI, not free strings.
+        deprecated_aliases: Terms this capability used to emit, each with the
+            term that replaces it, kept resolvable for one release.
     """
 
     capability_id: str
@@ -126,6 +156,8 @@ class SemanticCapability:
     relationships: tuple[RelationshipSpec, ...]
     scenario_counts: tuple[ScenarioCountRule, ...] = ()
     extend: GraphExtender | None = None
+    predicates: tuple[str, ...] = ()
+    deprecated_aliases: tuple[TermAlias, ...] = ()
 
 
 __all__ = [
@@ -134,4 +166,5 @@ __all__ = [
     "RelationshipSpec",
     "ScenarioCountRule",
     "SemanticCapability",
+    "TermAlias",
 ]

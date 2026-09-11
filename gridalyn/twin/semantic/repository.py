@@ -20,6 +20,7 @@ not an open question: no internal consumer is planned, and its absence from
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,36 @@ def _loads_json(value: str | dict[str, Any] | None) -> dict[str, Any]:
     if not value:
         return {}
     return json.loads(value)
+
+
+def _canonical_type(semantic_type: Any) -> Any:
+    """Return the current spelling of a semantic type, mapping a deprecated one.
+
+    Imported lazily: the profile resolves capabilities, and the flexibility
+    capability imports this module.
+    """
+    from gridalyn.twin.semantic.profile import resolve_deprecated_term
+
+    alias = resolve_deprecated_term(str(semantic_type))
+    return semantic_type if alias is None else alias.replacement
+
+
+def _query_type(semantic_type: str) -> tuple[str, dict[str, str]]:
+    """Resolve a queried type, warning when a caller still uses a deprecated one."""
+    from gridalyn.twin.semantic.profile import resolve_deprecated_term
+
+    alias = resolve_deprecated_term(semantic_type)
+    if alias is None:
+        return semantic_type, {}
+    warnings.warn(
+        f"semantic type {semantic_type} is deprecated: querying "
+        f"{alias.replacement}"
+        + (f" with {dict(alias.properties)}" if alias.properties else "")
+        + " instead; the alias resolves for one release",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    return alias.replacement, dict(alias.properties)
 
 
 @dataclass(frozen=True)
@@ -93,12 +124,27 @@ class SemanticGraphRepository:
         scenario_id: str,
         semantic_type: str | None = None,
     ) -> tuple[dict[str, Any], ...]:
-        """Return scenario-scoped assets, optionally filtered by semantic type."""
+        """Return scenario-scoped assets, optionally filtered by semantic type.
+
+        A deprecated type (``cls:SoftCLSContract``) is resolved to its
+        replacement and the properties that now carry what its name encoded,
+        with a :class:`DeprecationWarning`.
+        """
         rows = self.nodes.loc[
             self.nodes["scenario_id"].fillna("").astype(str) == str(scenario_id)
         ]
         if semantic_type is not None:
-            rows = rows.loc[rows["semantic_type"] == semantic_type]
+            wanted, required = _query_type(semantic_type)
+            rows = rows.loc[rows["semantic_type"] == wanted]
+            if required:
+                keep = [
+                    all(
+                        str(_loads_json(raw).get(key)) == value
+                        for key, value in required.items()
+                    )
+                    for raw in rows["properties"]
+                ]
+                rows = rows.loc[keep]
         return tuple(
             self._node_record(row) for _, row in rows.sort_values("node_id").iterrows()
         )
@@ -129,7 +175,9 @@ class SemanticGraphRepository:
             (self.nodes["semantic_type"] == "dt:TimeSeriesDataset")
             & (self.nodes["scenario_id"].fillna("").astype(str).isin(scenario_ids))
         ]
-        if node is not None and node.get("semantic_type") == "ieee2030_5:EVSE":
+        if node is not None and _canonical_type(node.get("semantic_type")) == (
+            "brick:Electric_Vehicle_Charging_Station"
+        ):
             rows = rows.loc[rows["source_table"] == "ev_load_summary"]
         return tuple(
             self._node_record(row) for _, row in rows.sort_values("node_id").iterrows()

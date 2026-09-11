@@ -1,0 +1,94 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix schema: <https://schema.org/> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix cim: <http://iec.ch/TC57/CIM100#> .
+@prefix dt: <https://w3id.org/gridalyn/ontology/digital-twin#> .
+@prefix efont: <http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#> .
+@prefix flexint: <https://w3id.org/gridalyn/ontology/flexint#> .
+
+<https://w3id.org/gridalyn/ontology/digital-twin> a owl:Ontology ;
+    rdfs:label "gridalyn digital-twin vocabulary" ;
+    rdfs:comment "Scenarios, simulation runs, time-series datasets, scenario devices and the local topology shortcuts of gridalyn's model-first semantic graph." ;
+    rdfs:seeAlso <https://lirei.ca/gridalyn/reference/ontology/digital-twin/>, <https://github.com/lirei-lab/gridalyn> .
+
+dt:Scenario a owl:Class ;
+    rdfs:label "Scenario" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> .
+
+dt:ScenarioDevice a owl:Class ;
+    rdfs:label "ScenarioDevice" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> .
+
+dt:SimulationRun a owl:Class ;
+    rdfs:label "SimulationRun" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> .
+
+dt:TimeSeriesDataset a owl:Class ;
+    rdfs:label "TimeSeriesDataset" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> .
+
+dt:connectedTo a owl:ObjectProperty ;
+    rdfs:label "connectedTo" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes cim:EnergyConsumer ;
+    schema:rangeIncludes cim:ConnectivityNode ;
+    rdfs:comment "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate." .
+
+dt:connects a owl:ObjectProperty ;
+    rdfs:label "connects" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes cim:ACLineSegment ;
+    schema:rangeIncludes cim:ConnectivityNode ;
+    rdfs:comment "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate." .
+
+dt:feeds a owl:ObjectProperty ;
+    rdfs:label "feeds" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes cim:PowerTransformer ;
+    schema:rangeIncludes cim:ConnectivityNode ;
+    rdfs:comment "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate." .
+
+dt:hasEVSE a owl:ObjectProperty ;
+    rdfs:label "hasEVSE" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes brick:Building ;
+    schema:rangeIncludes brick:Electric_Vehicle_Charging_Station .
+
+dt:hasFlexibilityResource a owl:ObjectProperty ;
+    rdfs:label "hasFlexibilityResource" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes brick:Building ;
+    schema:domainIncludes flexint:FlexibilityProvider ;
+    schema:rangeIncludes dt:ScenarioDevice ;
+    schema:rangeIncludes efont:ThermallyActivatedBuildingSystem ;
+    rdfs:comment "One predicate for building-to-EFOnt-resource and provider-to-device edges; until 2026-09-10 the provider-to-device edges carried cls:hasFlexibilityResource." .
+
+dt:hasLoad a owl:ObjectProperty ;
+    rdfs:label "hasLoad" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes brick:Building ;
+    schema:rangeIncludes cim:EnergyConsumer .
+
+dt:includesAsset a owl:ObjectProperty ;
+    rdfs:label "includesAsset" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes dt:Scenario ;
+    schema:rangeIncludes brick:Building ;
+    schema:rangeIncludes brick:Electric_Vehicle_Charging_Station ;
+    schema:rangeIncludes flexint:CurtailmentContract ;
+    schema:rangeIncludes flexint:FlexibilityAggregator ;
+    schema:rangeIncludes flexint:FlexibilityProvider .
+
+dt:observes a owl:ObjectProperty ;
+    rdfs:label "observes" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes dt:TimeSeriesDataset ;
+    schema:rangeIncludes dt:Scenario .
+
+dt:produced a owl:ObjectProperty ;
+    rdfs:label "produced" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/digital-twin> ;
+    schema:domainIncludes dt:SimulationRun ;
+    schema:rangeIncludes dt:TimeSeriesDataset .

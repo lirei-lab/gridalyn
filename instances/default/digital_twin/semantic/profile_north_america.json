@@ -1,17 +1,11 @@
 {
   "allowed_semantic_types": [
     "brick:Building",
+    "brick:Electric_Vehicle_Charging_Station",
     "cim:ACLineSegment",
     "cim:ConnectivityNode",
     "cim:EnergyConsumer",
     "cim:PowerTransformer",
-    "cls:ConstraintZone",
-    "cls:FlexibilityAggregator",
-    "cls:FlexibilityOffer",
-    "cls:FlexibilityPortfolio",
-    "cls:FlexibilityProvider",
-    "cls:HardCLSContract",
-    "cls:SoftCLSContract",
     "dt:Scenario",
     "dt:ScenarioDevice",
     "dt:SimulationRun",
@@ -21,23 +15,169 @@
     "efont:FlexibleLoadCharacteristic",
     "efont:FlexibleOperation",
     "efont:ThermallyActivatedBuildingSystem",
-    "ieee2030_5:EVSE"
+    "flexint:ConstraintZone",
+    "flexint:CurtailmentContract",
+    "flexint:FlexibilityAggregator",
+    "flexint:FlexibilityOffer",
+    "flexint:FlexibilityPortfolio",
+    "flexint:FlexibilityProvider"
   ],
   "capabilities": [
     "flexibility"
   ],
-  "created_at": "2026-09-10T20:27:16.903926+00:00",
+  "created_at": "2026-09-11T15:55:59.240773+00:00",
+  "deprecated_aliases": {
+    "cls:ConstraintZone": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:ConstraintZone"
+    },
+    "cls:FlexibilityAggregator": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:FlexibilityAggregator"
+    },
+    "cls:FlexibilityOffer": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:FlexibilityOffer"
+    },
+    "cls:FlexibilityPortfolio": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:FlexibilityPortfolio"
+    },
+    "cls:FlexibilityProvider": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:FlexibilityProvider"
+    },
+    "cls:HardCLSContract": {
+      "declared_by": "flexibility",
+      "note": "the Soft/Hard distinction is the contract_mode property, not a class; the acronym the class name encoded was defined nowhere",
+      "properties": {
+        "contract_mode": "hard"
+      },
+      "replacement": "flexint:CurtailmentContract"
+    },
+    "cls:SoftCLSContract": {
+      "declared_by": "flexibility",
+      "note": "the Soft/Hard distinction is the contract_mode property, not a class; the acronym the class name encoded was defined nowhere",
+      "properties": {
+        "contract_mode": "soft"
+      },
+      "replacement": "flexint:CurtailmentContract"
+    },
+    "cls:aggregates": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:aggregates"
+    },
+    "cls:constraintZoneFor": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:constraintZoneFor"
+    },
+    "cls:describesFlexibility": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:describesFlexibility"
+    },
+    "cls:enablesContract": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:enablesContract"
+    },
+    "cls:implementsContract": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:implementsContract"
+    },
+    "cls:includesProvider": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:includesProvider"
+    },
+    "cls:locatedInConstraintZone": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:locatedInConstraintZone"
+    },
+    "cls:managesPortfolio": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:managesPortfolio"
+    },
+    "cls:offers": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:offers"
+    },
+    "cls:participatesIn": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:participatesIn"
+    },
+    "cls:targetsConstraint": {
+      "declared_by": "flexibility",
+      "note": "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise",
+      "properties": {},
+      "replacement": "flexint:targetsConstraint"
+    },
+    "efont:hasNetworkImpact": {
+      "declared_by": "flexibility",
+      "note": "EFOnt defines no hasNetworkImpact property",
+      "properties": {},
+      "replacement": "flexint:hasNetworkImpact"
+    },
+    "efont:providesFlexibility": {
+      "declared_by": "flexibility",
+      "note": "EFOnt defines no providesFlexibility property",
+      "properties": {},
+      "replacement": "flexint:providesFlexibility"
+    },
+    "ieee2030_5:EVSE": {
+      "declared_by": "flexibility",
+      "note": "IEEE 2030.5 defines no EVSE type and publishes no RDF namespace; Brick defines the class",
+      "properties": {},
+      "replacement": "brick:Electric_Vehicle_Charging_Station"
+    }
+  },
+  "ingest_namespaces": {
+    "cim": [
+      "http://cim.ucaiug.io/ns#",
+      "https://cim.ucaiug.io/ns#",
+      "http://cim.ucaiug.io/CIM101/draft#"
+    ]
+  },
   "namespaces": {
     "brick": "https://brickschema.org/schema/Brick#",
-    "cim": "https://cim.ucaiug.io/ns#",
-    "cls": "https://gridalyn.local/ontology/cls#",
-    "dt": "https://gridalyn.local/ontology/digital-twin#",
+    "cim": "http://iec.ch/TC57/CIM100#",
+    "dt": "https://w3id.org/gridalyn/ontology/digital-twin#",
     "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+    "flexint": "https://w3id.org/gridalyn/ontology/flexint#",
     "gb": "https://www.greenbuttondata.org/ns#",
-    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
-    "openadr": "https://openadr.org/ns#",
     "s223": "http://data.ashrae.org/standard223#"
   },
+  "predicates": [
+    "flexint:hasNetworkImpact",
+    "flexint:providesFlexibility"
+  ],
   "primary_standards": {
     "building_flexibility": [
       "EFOnt"
@@ -46,14 +186,11 @@
       "ASHRAE 223",
       "Brick Schema"
     ],
-    "cls_market": [
-      "gridalyn cls extension"
+    "ev_charging": [
+      "Brick Schema"
     ],
-    "demand_response": [
-      "OpenADR"
-    ],
-    "ev_der_control": [
-      "IEEE 2030.5"
+    "flexibility_market": [
+      "gridalyn flexint"
     ],
     "grid_topology": [
       "IEC CIM",
@@ -97,13 +234,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityAggregator"
+        "flexint:FlexibilityAggregator"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#aggregates",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#aggregates",
       "note": null,
-      "predicate": "cls:aggregates",
+      "predicate": "flexint:aggregates",
       "range": [
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
       "source_cardinality": null
     },
@@ -129,7 +266,7 @@
       "domain": [
         "cim:EnergyConsumer"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#connectedTo",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#connectedTo",
       "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
       "predicate": "dt:connectedTo",
       "range": [
@@ -147,7 +284,7 @@
       "domain": [
         "cim:ACLineSegment"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#connects",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#connects",
       "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
       "predicate": "dt:connects",
       "range": [
@@ -163,11 +300,11 @@
         "flexibility"
       ],
       "domain": [
-        "cls:ConstraintZone"
+        "flexint:ConstraintZone"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#constraintZoneFor",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#constraintZoneFor",
       "note": null,
-      "predicate": "cls:constraintZoneFor",
+      "predicate": "flexint:constraintZoneFor",
       "range": [
         "cim:ACLineSegment",
         "cim:ConnectivityNode",
@@ -180,11 +317,11 @@
         "flexibility"
       ],
       "domain": [
-        "cls:SoftCLSContract"
+        "flexint:CurtailmentContract"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#describesFlexibility",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#describesFlexibility",
       "note": null,
-      "predicate": "cls:describesFlexibility",
+      "predicate": "flexint:describesFlexibility",
       "range": [
         "efont:EnergyFlexibility"
       ],
@@ -210,13 +347,13 @@
         "flexibility"
       ],
       "domain": [
-        "ieee2030_5:EVSE"
+        "brick:Electric_Vehicle_Charging_Station"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#enablesContract",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#enablesContract",
       "note": "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES with EFOnt's operation-to-flexibility property while meaning something else, and carried cls:enables.",
-      "predicate": "cls:enablesContract",
+      "predicate": "flexint:enablesContract",
       "range": [
-        "cls:HardCLSContract"
+        "flexint:CurtailmentContract"
       ],
       "source_cardinality": null
     },
@@ -227,7 +364,7 @@
       "domain": [
         "cim:PowerTransformer"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#feeds",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#feeds",
       "note": "Local shortcut: CIM reaches a ConnectivityNode from equipment through a Terminal (Terminal.ConductingEquipment, Terminal.ConnectivityNode), and this graph collapses the Terminal. Until 2026-09-10 these edges carried the class IRI cim:ConnectivityNode as their predicate.",
       "predicate": "dt:feeds",
       "range": [
@@ -245,11 +382,11 @@
       "domain": [
         "brick:Building"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#hasEVSE",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#hasEVSE",
       "note": null,
       "predicate": "dt:hasEVSE",
       "range": [
-        "ieee2030_5:EVSE"
+        "brick:Electric_Vehicle_Charging_Station"
       ],
       "source_cardinality": null
     },
@@ -259,9 +396,9 @@
       ],
       "domain": [
         "brick:Building",
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#hasFlexibilityResource",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#hasFlexibilityResource",
       "note": "One predicate for building-to-EFOnt-resource and provider-to-device edges; until 2026-09-10 the provider-to-device edges carried cls:hasFlexibilityResource.",
       "predicate": "dt:hasFlexibilityResource",
       "range": [
@@ -277,7 +414,7 @@
       "domain": [
         "brick:Building"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#hasLoad",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#hasLoad",
       "note": null,
       "predicate": "dt:hasLoad",
       "range": [
@@ -293,14 +430,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#implementsContract",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#implementsContract",
       "note": null,
-      "predicate": "cls:implementsContract",
+      "predicate": "flexint:implementsContract",
       "range": [
-        "cls:HardCLSContract",
-        "cls:SoftCLSContract"
+        "flexint:CurtailmentContract"
       ],
       "source_cardinality": [
         1,
@@ -315,16 +451,15 @@
       "domain": [
         "dt:Scenario"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#includesAsset",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#includesAsset",
       "note": null,
       "predicate": "dt:includesAsset",
       "range": [
         "brick:Building",
-        "cls:FlexibilityAggregator",
-        "cls:FlexibilityProvider",
-        "cls:HardCLSContract",
-        "cls:SoftCLSContract",
-        "ieee2030_5:EVSE"
+        "brick:Electric_Vehicle_Charging_Station",
+        "flexint:CurtailmentContract",
+        "flexint:FlexibilityAggregator",
+        "flexint:FlexibilityProvider"
       ],
       "source_cardinality": null
     },
@@ -333,13 +468,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityPortfolio"
+        "flexint:FlexibilityPortfolio"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#includesProvider",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#includesProvider",
       "note": null,
-      "predicate": "cls:includesProvider",
+      "predicate": "flexint:includesProvider",
       "range": [
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
       "source_cardinality": null
     },
@@ -348,13 +483,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#locatedInConstraintZone",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#locatedInConstraintZone",
       "note": null,
-      "predicate": "cls:locatedInConstraintZone",
+      "predicate": "flexint:locatedInConstraintZone",
       "range": [
-        "cls:ConstraintZone"
+        "flexint:ConstraintZone"
       ],
       "source_cardinality": null
     },
@@ -363,13 +498,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityAggregator"
+        "flexint:FlexibilityAggregator"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#managesPortfolio",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#managesPortfolio",
       "note": null,
-      "predicate": "cls:managesPortfolio",
+      "predicate": "flexint:managesPortfolio",
       "range": [
-        "cls:FlexibilityPortfolio"
+        "flexint:FlexibilityPortfolio"
       ],
       "source_cardinality": [
         1,
@@ -383,7 +518,7 @@
       "domain": [
         "dt:TimeSeriesDataset"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#observes",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#observes",
       "note": null,
       "predicate": "dt:observes",
       "range": [
@@ -396,13 +531,13 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityProvider"
+        "flexint:FlexibilityProvider"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#offers",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#offers",
       "note": null,
-      "predicate": "cls:offers",
+      "predicate": "flexint:offers",
       "range": [
-        "cls:FlexibilityOffer"
+        "flexint:FlexibilityOffer"
       ],
       "source_cardinality": [
         1,
@@ -416,11 +551,11 @@
       "domain": [
         "brick:Building"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#participatesIn",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#participatesIn",
       "note": null,
-      "predicate": "cls:participatesIn",
+      "predicate": "flexint:participatesIn",
       "range": [
-        "cls:SoftCLSContract"
+        "flexint:CurtailmentContract"
       ],
       "source_cardinality": null
     },
@@ -431,7 +566,7 @@
       "domain": [
         "dt:SimulationRun"
       ],
-      "iri": "https://gridalyn.local/ontology/digital-twin#produced",
+      "iri": "https://w3id.org/gridalyn/ontology/digital-twin#produced",
       "note": null,
       "predicate": "dt:produced",
       "range": [
@@ -459,29 +594,36 @@
         "flexibility"
       ],
       "domain": [
-        "cls:FlexibilityOffer"
+        "flexint:FlexibilityOffer"
       ],
-      "iri": "https://gridalyn.local/ontology/cls#targetsConstraint",
+      "iri": "https://w3id.org/gridalyn/ontology/flexint#targetsConstraint",
       "note": null,
-      "predicate": "cls:targetsConstraint",
+      "predicate": "flexint:targetsConstraint",
       "range": [
-        "cls:ConstraintZone"
+        "flexint:ConstraintZone"
       ],
       "source_cardinality": null
     }
   },
   "scenario_counts": {
     "n_ev": {
+      "property_equals": {},
       "property_true": null,
-      "semantic_type": "ieee2030_5:EVSE"
+      "semantic_type": "brick:Electric_Vehicle_Charging_Station"
     },
     "n_hard_preferred": {
+      "property_equals": {
+        "contract_mode": "hard"
+      },
       "property_true": "hard_preferred",
-      "semantic_type": "cls:HardCLSContract"
+      "semantic_type": "flexint:CurtailmentContract"
     },
     "n_soft_participants": {
+      "property_equals": {
+        "contract_mode": "soft"
+      },
       "property_true": null,
-      "semantic_type": "cls:SoftCLSContract"
+      "semantic_type": "flexint:CurtailmentContract"
     }
   },
   "semantic_profile": "north_america",

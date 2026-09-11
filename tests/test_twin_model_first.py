@@ -29,7 +29,9 @@ from gridalyn.twin.semantic.mappings import (
     profile_with_capabilities,
 )
 
-_FLEX_PREFIXES = ("cls:", "efont:", "ieee2030_5:")
+# Brick also names core types (brick:Building), so the charging-station class
+# is matched whole rather than by the brick: prefix.
+_FLEX_PREFIXES = ("flexint:", "efont:", "brick:Electric_Vehicle_Charging_Station")
 
 
 def _fixtures() -> dict[str, pd.DataFrame]:
@@ -199,11 +201,10 @@ class TwinModelFirstTest(unittest.TestCase):
         nodes, _edges = self._build({"flexibility"})
         flex_nodes = nodes.loc[nodes["semantic_type"].str.startswith(_FLEX_PREFIXES)]
         semantic_types = set(flex_nodes["semantic_type"].unique())
-        self.assertIn("cls:FlexibilityProvider", semantic_types)
-        self.assertIn("cls:SoftCLSContract", semantic_types)
-        self.assertIn("cls:HardCLSContract", semantic_types)
-        self.assertIn("cls:FlexibilityAggregator", semantic_types)
-        self.assertIn("ieee2030_5:EVSE", semantic_types)
+        self.assertIn("flexint:FlexibilityProvider", semantic_types)
+        self.assertIn("flexint:CurtailmentContract", semantic_types)
+        self.assertIn("flexint:FlexibilityAggregator", semantic_types)
+        self.assertIn("brick:Electric_Vehicle_Charging_Station", semantic_types)
         self.assertTrue(
             any(t.startswith("efont:") for t in semantic_types),
             semantic_types,
@@ -220,8 +221,8 @@ class TwinModelFirstTest(unittest.TestCase):
     def test_profile_core_vs_combined(self) -> None:
         core = north_america_profile()
         combined = profile_with_capabilities({"flexibility"})
-        self.assertNotIn("cls:FlexibilityProvider", core["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityProvider", combined["allowed_semantic_types"])
+        self.assertNotIn("flexint:FlexibilityProvider", core["allowed_semantic_types"])
+        self.assertIn("flexint:FlexibilityProvider", combined["allowed_semantic_types"])
         self.assertIn("cim:ConnectivityNode", core["allowed_semantic_types"])
         self.assertIn("cim:ConnectivityNode", combined["allowed_semantic_types"])
         # The combined profile is a superset of the core.

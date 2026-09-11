@@ -1,0 +1,190 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix schema: <https://schema.org/> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix cim: <http://iec.ch/TC57/CIM100#> .
+@prefix efont: <http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#> .
+@prefix flexint: <https://w3id.org/gridalyn/ontology/flexint#> .
+
+<https://w3id.org/gridalyn/ontology/flexint> a owl:Ontology ;
+    rdfs:label "gridalyn flexibility and interaction vocabulary" ;
+    rdfs:comment "Curtailment contracts, flexibility aggregators, portfolios, providers, offers and constraint zones, and the predicates of the network-impact surrogate graph." ;
+    rdfs:seeAlso <https://lirei.ca/gridalyn/reference/ontology/flexint/>, <https://github.com/lirei-lab/gridalyn> .
+
+flexint:ConstraintZone a owl:Class ;
+    rdfs:label "ConstraintZone" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:CurtailmentContract a owl:Class ;
+    rdfs:label "CurtailmentContract" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:FlexibilityAggregator a owl:Class ;
+    rdfs:label "FlexibilityAggregator" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:FlexibilityOffer a owl:Class ;
+    rdfs:label "FlexibilityOffer" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:FlexibilityPortfolio a owl:Class ;
+    rdfs:label "FlexibilityPortfolio" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:FlexibilityProvider a owl:Class ;
+    rdfs:label "FlexibilityProvider" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:aggregates a owl:ObjectProperty ;
+    rdfs:label "aggregates" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityAggregator ;
+    schema:rangeIncludes flexint:FlexibilityProvider .
+
+flexint:constraintZoneFor a owl:ObjectProperty ;
+    rdfs:label "constraintZoneFor" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:ConstraintZone ;
+    schema:rangeIncludes cim:ACLineSegment ;
+    schema:rangeIncludes cim:ConnectivityNode ;
+    schema:rangeIncludes cim:PowerTransformer .
+
+flexint:describesFlexibility a owl:ObjectProperty ;
+    rdfs:label "describesFlexibility" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:CurtailmentContract ;
+    schema:rangeIncludes efont:EnergyFlexibility .
+
+flexint:enablesContract a owl:ObjectProperty ;
+    rdfs:label "enablesContract" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes brick:Electric_Vehicle_Charging_Station ;
+    schema:rangeIncludes flexint:CurtailmentContract ;
+    rdfs:comment "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES with EFOnt's operation-to-flexibility property while meaning something else, and carried cls:enables." .
+
+flexint:hasNetworkImpact a owl:ObjectProperty ;
+    rdfs:label "hasNetworkImpact" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    rdfs:comment "Declared for a graph other than the semantic graph: the network-impact surrogate's edges." .
+
+flexint:implementsContract a owl:ObjectProperty ;
+    rdfs:label "implementsContract" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityProvider ;
+    schema:rangeIncludes flexint:CurtailmentContract .
+
+flexint:includesProvider a owl:ObjectProperty ;
+    rdfs:label "includesProvider" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityPortfolio ;
+    schema:rangeIncludes flexint:FlexibilityProvider .
+
+flexint:locatedInConstraintZone a owl:ObjectProperty ;
+    rdfs:label "locatedInConstraintZone" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityProvider ;
+    schema:rangeIncludes flexint:ConstraintZone .
+
+flexint:managesPortfolio a owl:ObjectProperty ;
+    rdfs:label "managesPortfolio" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityAggregator ;
+    schema:rangeIncludes flexint:FlexibilityPortfolio .
+
+flexint:offers a owl:ObjectProperty ;
+    rdfs:label "offers" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityProvider ;
+    schema:rangeIncludes flexint:FlexibilityOffer .
+
+flexint:participatesIn a owl:ObjectProperty ;
+    rdfs:label "participatesIn" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes brick:Building ;
+    schema:rangeIncludes flexint:CurtailmentContract .
+
+flexint:providesFlexibility a owl:ObjectProperty ;
+    rdfs:label "providesFlexibility" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    rdfs:comment "Declared for a graph other than the semantic graph: the network-impact surrogate's edges." .
+
+flexint:targetsConstraint a owl:ObjectProperty ;
+    rdfs:label "targetsConstraint" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:FlexibilityOffer ;
+    schema:rangeIncludes flexint:ConstraintZone .
+
+<https://gridalyn.local/ontology/cls#ConstraintZone> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:ConstraintZone ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#FlexibilityAggregator> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:FlexibilityAggregator ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#FlexibilityOffer> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:FlexibilityOffer ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#FlexibilityPortfolio> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:FlexibilityPortfolio ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#FlexibilityProvider> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:FlexibilityProvider ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#HardCLSContract> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:CurtailmentContract ;
+    rdfs:comment "The replacement carries contract_mode = hard." ;
+    rdfs:comment "the Soft/Hard distinction is the contract_mode property, not a class; the acronym the class name encoded was defined nowhere" .
+
+<https://gridalyn.local/ontology/cls#SoftCLSContract> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:CurtailmentContract ;
+    rdfs:comment "The replacement carries contract_mode = soft." ;
+    rdfs:comment "the Soft/Hard distinction is the contract_mode property, not a class; the acronym the class name encoded was defined nowhere" .
+
+<https://gridalyn.local/ontology/cls#aggregates> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:aggregates ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#constraintZoneFor> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:constraintZoneFor ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#describesFlexibility> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:describesFlexibility ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#enablesContract> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:enablesContract ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#implementsContract> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:implementsContract ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#includesProvider> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:includesProvider ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#locatedInConstraintZone> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:locatedInConstraintZone ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#managesPortfolio> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:managesPortfolio ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#offers> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:offers ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#participatesIn> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:participatesIn ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
+
+<https://gridalyn.local/ontology/cls#targetsConstraint> owl:deprecated true ;
+    dcterms:isReplacedBy flexint:targetsConstraint ;
+    rdfs:comment "moved from the unresolvable gridalyn.local cls: namespace to the persistent flexint: namespace, unchanged otherwise" .
