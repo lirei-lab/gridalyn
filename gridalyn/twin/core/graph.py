@@ -16,6 +16,7 @@ formats.
 
 import json
 import logging
+import math
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import geopandas as gpd
@@ -27,6 +28,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
 
+from gridalyn.twin.core.assignment import CapacitatedAssignment, assign_capacitated
 from gridalyn.twin.core.ontology import create_node_payload
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -144,6 +146,9 @@ class PowerGridGraph:
         # the building they serve. See _site_cluster_center for why this cannot
         # be the default.
         self.street_snapper: Optional["StreetSnapper"] = None
+        # Opt-in: the capacity-constrained LV partition, when create_lv_graph was
+        # asked for one. None under the default K-means partition.
+        self.lv_assignment: Optional[CapacitatedAssignment] = None
 
     def extract_building_centers_and_areas(
         self,
@@ -469,6 +474,9 @@ class PowerGridGraph:
         cluster_prefix: str = "cluster",
         childs: Optional[List[int]] = None,
         node_coordinates: Optional[np.ndarray] = None,
+        capacity: Optional[int] = None,
+        block_ids: Optional[np.ndarray] = None,
+        block_penalty_km2: float = 0.0,
     ) -> Tuple[nx.Graph, np.ndarray]:
         """Creates a graph with clusters and a minimum spanning tree (MST).
 
@@ -485,6 +493,17 @@ class PowerGridGraph:
                 (e.g., 'lv_transformer').
             childs (List[int], optional): A list of child node IDs for each
                 node. Defaults to node indices.
+            node_coordinates: Optional coordinates stored on the nodes instead
+                of ``points``, e.g. longitude/latitude when clustering in UTM.
+            capacity: Optional maximum points per cluster. When set, K-means
+                only seeds the centres and the kept partition honours the limit;
+                the result is also stored on ``lv_assignment``. See
+                :func:`gridalyn.twin.core.assignment.assign_capacitated`.
+            block_ids: Optional street block of each point, used with
+                ``block_penalty_km2``.
+            block_penalty_km2: Penalty for assigning a point to a cluster whose
+                dominant block is not its own. Needs ``capacity`` and
+                ``block_ids``.
 
         Returns:
             Tuple[nx.Graph, np.ndarray]: A tuple containing the resulting
@@ -519,6 +538,18 @@ class PowerGridGraph:
         kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init=1)
         labels = kmeans.fit_predict(points)
         cluster_centers = kmeans.cluster_centers_
+        if capacity is not None:
+            # K-means seeds the centres; the partition kept honours the limit
+            # (bd 4os.7).
+            assignment = assign_capacitated(
+                points,
+                cluster_centers,
+                capacity,
+                block_ids=block_ids,
+                block_penalty_km2=block_penalty_km2,
+            )
+            labels, cluster_centers = assignment.labels, assignment.centers
+            self.lv_assignment = assignment
 
         # Initialize graph
         graph = nx.Graph()
@@ -567,6 +598,9 @@ class PowerGridGraph:
         diversity_factor_lv: float = 5.0,
         *,
         avg_load_per_building: float | None = None,
+        capacitated: bool = False,
+        block_ids: Optional[np.ndarray] = None,
+        block_penalty_km2: float = 0.0,
     ) -> nx.Graph:
         """Creates the low-voltage (LV) graph from building centroids.
 
@@ -585,12 +619,25 @@ class PowerGridGraph:
             diversity_factor_lv (float): Factor representing peak coincidence at LV level.
             avg_load_per_building (float): Legacy alias for
                 `max_load_per_building`.
+            capacitated: When true, no transformer serves more than
+                ``ceil(buildings / transformers)`` buildings, the count the
+                transformer number was sized for. Defaults to false: plain
+                K-means, unchanged. Enabling it changes which buildings share a
+                transformer, so it is a deliberate re-base.
+            block_ids: Street block of each building (``-1`` outside every
+                block), from :meth:`StreetSnapper.block_ids`. Needs
+                ``capacitated``.
+            block_penalty_km2: Penalty, in km^2 of squared distance, for
+                assigning a building to a transformer whose cluster's dominant
+                block is not its own. Needs ``capacitated``, ``block_ids`` and a
+                metric ``clustering_crs``.
 
         Returns:
             nx.Graph: A NetworkX graph representing the LV network.
 
         Raises:
-            ValueError: If `building_centroids` has not been initialized.
+            ValueError: If `building_centroids` has not been initialized, or the
+                partition options contradict each other.
 
         Example:
             >>> grid = PowerGridGraph(building_data)
@@ -623,14 +670,69 @@ class PowerGridGraph:
             )
         )
 
+        self.lv_assignment = None
+        capacity = self._lv_capacity(
+            num_buildings,
+            num_lv_transformers,
+            capacitated,
+            block_ids,
+            block_penalty_km2,
+        )
         self.graph_lv_buses, self.labels_lv = self.create_cluster_graph(
             self._points_for_clustering(self.building_centroids),
             num_lv_transformers,
             node_prefix="lv_bus",
             cluster_prefix="lv_feeder",
             node_coordinates=self.building_centroids,
+            capacity=capacity,
+            block_ids=block_ids,
+            block_penalty_km2=block_penalty_km2,
         )
         return self.graph_lv_buses
+
+    def _lv_capacity(
+        self,
+        num_buildings: int,
+        num_transformers: int,
+        capacitated: bool,
+        block_ids: Optional[np.ndarray],
+        block_penalty_km2: float,
+    ) -> Optional[int]:
+        """Return the per-transformer building limit, or None for plain K-means.
+
+        The limit is ``ceil(buildings / transformers)``, the count the
+        transformer number was sized for. A nameplate-derived limit was measured
+        and rejected (bd 4os.7): it piles clusters exactly at the limit,
+        and at depressed voltage more transformers then load above 100% than
+        under plain K-means.
+
+        Args:
+            num_buildings: Buildings to partition.
+            num_transformers: Transformers the load sizing asked for.
+            capacitated: Whether the partition is capacity-constrained.
+            block_ids: Optional street block of each building.
+            block_penalty_km2: Penalty for leaving the dominant block.
+
+        Returns:
+            The limit, or ``None`` when ``capacitated`` is false.
+
+        Raises:
+            ValueError: If block options are given without ``capacitated``, or a
+                penalty is given while clustering in longitude/latitude.
+        """
+        if not capacitated:
+            if block_ids is not None or block_penalty_km2:
+                raise ValueError(
+                    "block_ids and block_penalty_km2 only apply to a capacitated "
+                    "LV partition; pass capacitated=True"
+                )
+            return None
+        if block_penalty_km2 > 0 and not self.clustering_crs:
+            raise ValueError(
+                "block_penalty_km2 is measured in km^2 and needs clustering in a "
+                "metric CRS; extract the buildings with clustering_crs='auto'"
+            )
+        return math.ceil(num_buildings / min(num_transformers, num_buildings))
 
     def create_mv_graph(
         self,

@@ -68,6 +68,26 @@ Use `clustering_crs="auto"` for normal GeoJSON inputs. It estimates a local
 metric CRS for K-Means and MST distances while preserving longitude/latitude on
 graph nodes for maps and digital-twin geodata.
 
+### Capacity-constrained LV assignment (opt-in)
+
+By default the builder works out how many MV/LV transformers the footprints
+need, then lets K-Means decide which buildings each one serves. K-Means
+partitions by geometry alone, so some transformers serve far more buildings than
+they were sized for: on the shipped Trois-Rivieres footprints, 43 of 193 sit
+above 100% at the declared envelope.
+
+Pass `lv_assignment="capacitated"` to cap every transformer at
+`ceil(buildings / transformers)` buildings, the count the transformer number was
+sized for. The validation report then gains an `lv_assignment` block with the
+limit, the buildings-per-transformer distribution, and any transformer still
+above its rated kVA. Adding `block_penalty_km2=0.005` also keeps clusters from
+straddling streets; it needs the `geo` extra and a street-network fetch, because
+it works from the blocks the streets enclose.
+
+Both options default off. They change which buildings share a transformer, so
+turning them on for an existing study is a deliberate re-base, not a display
+change.
+
 ## Offline Smoke Test
 
 Run the synthetic generator example:
