@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 OPERATION_RUN_SCHEMA_VERSION = "1.0"
 
 
@@ -102,7 +101,9 @@ def build_operation_run(
         study_run_id=str(study_run_id) if study_run_id else None,
         clearing_method=str(clearing_method) if clearing_method else None,
         status=str(status),
-        input_artifacts={str(key): str(value) for key, value in input_artifacts.items()},
+        input_artifacts={
+            str(key): str(value) for key, value in input_artifacts.items()
+        },
         output_artifacts={
             str(key): str(value) for key, value in output_artifacts.items()
         },
@@ -113,7 +114,9 @@ def build_operation_run(
     )
 
 
-def validate_operation_run(run: OperationRun | dict[str, Any]) -> OperationRunValidation:
+def validate_operation_run(
+    run: OperationRun | dict[str, Any]
+) -> OperationRunValidation:
     """Validate the minimal lineage required for an operation run."""
     payload = run.to_dict() if isinstance(run, OperationRun) else dict(run)
     errors: list[str] = []

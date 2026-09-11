@@ -44,7 +44,6 @@ from gridalyn.operations.domain import (
 )
 from gridalyn.operations.settlement import build_operational_kpi_report
 
-
 SOFT_BASE_COST_PER_KW_H = 3.0
 HARD_BASE_COST_PER_KW_H = 10.0
 
@@ -173,9 +172,9 @@ def run_flexibility_clearing_operation(
         "portfolio_count": int(len(portfolios)),
         "dispatch_instruction_count": int(len(dispatch)),
         "settlement_record_count": int(len(settlement)),
-        "settlement_usd": float(settlement["payment_usd"].sum())
-        if not settlement.empty
-        else 0.0,
+        "settlement_usd": (
+            float(settlement["payment_usd"].sum()) if not settlement.empty else 0.0
+        ),
     }
     report["operational_kpis"] = build_operational_kpi_report(
         events=events,
@@ -207,9 +206,11 @@ def _input_summary(
         "requirement_count": int(len(requirements)),
         "provider_count": int(len(scenario_providers)),
         "impact_row_count": int(len(impact)),
-        "constraint_count": int(requirements["constraint_id"].nunique())
-        if "constraint_id" in requirements
-        else 0,
+        "constraint_count": (
+            int(requirements["constraint_id"].nunique())
+            if "constraint_id" in requirements
+            else 0
+        ),
         "aggregator_count": aggregator_count,
     }
 
@@ -241,9 +242,7 @@ def build_constraint_requirements(
     frame = frame.sort_values(["timestamp", "constraint_id"]).reset_index(drop=True)
     timestep_by_timestamp = {
         timestamp: index
-        for index, timestamp in enumerate(
-            frame["timestamp"].drop_duplicates().tolist()
-        )
+        for index, timestamp in enumerate(frame["timestamp"].drop_duplicates().tolist())
     }
     for row in frame.to_dict("records"):
         loading = float(row["loading_percent"])
@@ -335,9 +334,7 @@ def _prepare_candidates(
         # lives on the providers frame, merged later), so rank_score is purely
         # the expected relief. Final selection order is re-derived downstream
         # from the merged providers via effective_cost_per_relief_kw_h.
-        impact_frame["rank_score"] = impact_frame[
-            "expected_capacity_relief_kw"
-        ]
+        impact_frame["rank_score"] = impact_frame["expected_capacity_relief_kw"]
     else:
         raise ValueError("clearing_method must be 'surrogate' or 'topology'")
 
@@ -366,10 +363,9 @@ def _prepare_candidates(
     candidates["provider_priority"] = candidates["provider_type"].map(
         _provider_priority
     )
-    candidates["effective_cost_per_relief_kw_h"] = (
-        candidates["base_cost_per_kw_h"].astype(float)
-        / candidates["deliverability_factor"].astype(float).clip(lower=1e-9)
-    )
+    candidates["effective_cost_per_relief_kw_h"] = candidates[
+        "base_cost_per_kw_h"
+    ].astype(float) / candidates["deliverability_factor"].astype(float).clip(lower=1e-9)
     return candidates
 
 
@@ -532,9 +528,9 @@ def _constraint_summary(
                 "required_mwh": _mwh(group, "required_kw", dt_h),
                 "selected_relief_mwh": _mwh(group, "selected_relief_kw", dt_h),
                 "shortfall_mwh": _mwh(group, "shortfall_kw", dt_h),
-                "unique_provider_count": int(selected["provider_id"].nunique())
-                if not selected.empty
-                else 0,
+                "unique_provider_count": (
+                    int(selected["provider_id"].nunique()) if not selected.empty else 0
+                ),
             }
         )
     return rows
@@ -586,26 +582,28 @@ def _build_report(
         "dt_h": float(dt_h),
         "summary": {
             "constraint_event_count": int(len(events)),
-            "constraint_count": int(events["constraint_id"].nunique())
-            if not events.empty
-            else 0,
+            "constraint_count": (
+                int(events["constraint_id"].nunique()) if not events.empty else 0
+            ),
             "required_mwh": required_mwh,
             "selected_relief_mwh": selected_mwh,
             "shortfall_mwh": shortfall_mwh,
-            "delivery_ratio": float(selected_mwh / required_mwh)
-            if required_mwh > 1e-12
-            else None,
+            "delivery_ratio": (
+                float(selected_mwh / required_mwh) if required_mwh > 1e-12 else None
+            ),
             "soft_selected_mwh": soft_selected_mwh,
             "hard_selected_mwh": hard_selected_mwh,
-            "estimated_cost": float(events["estimated_cost"].sum())
-            if not events.empty
-            else 0.0,
-            "unique_provider_count": int(selections["provider_id"].nunique())
-            if not selections.empty
-            else 0,
-            "avg_selected_provider_count": float(selected_provider_counts.mean())
-            if not selected_provider_counts.empty
-            else 0.0,
+            "estimated_cost": (
+                float(events["estimated_cost"].sum()) if not events.empty else 0.0
+            ),
+            "unique_provider_count": (
+                int(selections["provider_id"].nunique()) if not selections.empty else 0
+            ),
+            "avg_selected_provider_count": (
+                float(selected_provider_counts.mean())
+                if not selected_provider_counts.empty
+                else 0.0
+            ),
             "provider_concentration_top10_pct": _provider_concentration_top10_pct(
                 selections
             ),
