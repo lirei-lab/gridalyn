@@ -104,7 +104,10 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: 40 -> 41 on 2026-09-11, when ``gridalyn.simulation.channels`` was added:
 #: the channel-model registry for simulated agent communication. It imports
 #: only ``numpy``, but it is a real package, so the sweep must prove it clean.
-_EXPECTED_SUBPACKAGE_COUNT = 41
+#: 41 -> 42 on 2026-09-11, when ``gridalyn.operations.interaction`` was added:
+#: roles, messages and protocols for agent interaction. It imports eagerly and
+#: reaches ``gridalyn.simulation.channels``, so the sweep must prove it clean.
+_EXPECTED_SUBPACKAGE_COUNT = 42
 
 _PROBE = """\
 import json

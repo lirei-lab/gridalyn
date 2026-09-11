@@ -49,6 +49,13 @@ Deciding which flexibility providers relieve a network constraint, at what
 price — `build_locational_clearing` in `operations/clearing/selection.py`.
 See [Operations](../components/operations.md).
 
+### conversation
+
+One run of an interaction protocol between concrete agents — a `Conversation`,
+which accepts a message only when its protocol has a transition for it and
+otherwise raises an error naming its state and what that state would accept.
+See [Operations](../components/operations.md).
+
 ### DER
 
 Distributed energy resource — a battery, PV installation, or other
@@ -91,6 +98,13 @@ See [Simulation](../components/simulation.md).
 A `StudyProject` — the `project.yaml` + `workflow.yaml` pair that fully
 describes one reproducible study. See [Projects](../components/projects.md).
 
+### protocol
+
+A declared state machine of messages between roles — `flex_trading` (UFTP
+3.1.0) or `dr_program` (OpenADR 3.1.0) — stating which message may follow
+which, with which FIPA communicative act and payload fields. See
+[Standards alignment](standards-alignment.md).
+
 ### provenance
 
 A required field distinguishing how a value was produced — `"simulated"` vs
@@ -104,6 +118,14 @@ The governed JSON envelope every artifact-producing run emits: eight required
 fields (`report_id`, `schema_version`, `created_at`, `source_domain`, `inputs`,
 `artifacts`, `summary`, `validation`) under `SCHEMA_VERSION = "1.0"`, built by
 `build_report` and written by `write_report`. See [Foundation](../components/foundation.md).
+
+### role
+
+What an agent does in a protocol — `distribution_operator`, `aggregator`,
+`program_administrator` or `active_customer` — kept apart from the party that
+plays it, so one utility can request flexibility in one conversation and
+publish a demand-response event in another. See
+[Operations](../components/operations.md).
 
 ### scenario
 
