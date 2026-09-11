@@ -49,10 +49,10 @@ and validates.
 | `kind` | yes | Must be `StudyProject`. |
 | `metadata.name` | yes | Stable project identifier. |
 | `metadata.version` | required | Project contract version. |
-| `spec.pathBase` | recommended | `project` (the default) or `repo`. Sets the directory stage commands run from, and the base `spec.workflow.file` and stage `inputs`/`outputs` resolve against. It does **not** govern `spec.validation.*` paths, which are always relative to the project directory — see [Path Rules](#path-rules). |
+| `spec.pathBase` | recommended | `project` (the default) or `repo`. Sets the directory stage commands run from, and the base stage `inputs`/`outputs` resolve against. It does **not** govern `spec.workflow.file` or `spec.validation.*` paths, which are always relative to the project directory — see [Path Rules](#path-rules). |
 | `spec.inputs` | yes | Raw geography, grid configuration, external datasets, and assumptions. |
 | `spec.artifacts` | no | Accepted and **not read**. Output directories are fixed by `ProjectScript` (`outputs/data`, `figures`, `reports`, `manifests`, `operations`, `cache`), not by this block; declaring them here governs nothing. |
-| `spec.workflow.file` | yes | Workflow resource path. |
+| `spec.workflow.file` | yes | Workflow resource path. Relative to the project directory. |
 | `spec.validation.requiredReports` | recommended | Report JSON files that must exist and satisfy the report contract. Relative to the project directory. |
 | `spec.validation.requiredFigures` | recommended | Figures that must exist and be non-empty. Relative to the project directory. |
 
@@ -215,11 +215,18 @@ it ahead of the `missing required report` it would otherwise surface as.
     them repository-relative. They now resolve against the project directory
     (`bd 6ns.2`). Drop the leading `projects/<study>/` from those entries.
 
+!!! warning "Breaking change, 2026-09-11"
+    Until this date, `spec.workflow.file` resolved against `spec.pathBase`, so a
+    `pathBase: repo` study wrote `file: projects/<study>/workflow.yaml`. It now
+    resolves against the project directory (`bd 6ns.2`): write `file:
+    workflow.yaml`. A stale entry stops the project from loading, with an error
+    naming the path it tried and the expected form.
+
 `spec.pathBase` still matters. `repo` makes stage commands run from the repository
 root, which a stage invoked as `{python} -m projects.<study>.scripts...` needs.
-It is also the base `spec.workflow.file` and stage `inputs`/`outputs` resolve
-against — for now: unifying those onto the project directory is the rest of
-`bd 6ns.2`.
+It is also the base stage `inputs`/`outputs` resolve against — for now: unifying
+those onto the project directory is the rest of `bd 6ns.2`. `spec.workflow.file`
+no longer follows `pathBase`; it is relative to the project directory.
 
 `spec.inputs` entries may point outside the project, to shared data such as
 `instances/default/digital_twin/base/buildings.parquet` or

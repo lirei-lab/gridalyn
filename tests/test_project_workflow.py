@@ -416,7 +416,7 @@ spec:
   inputs: {}
   artifacts: {}
   workflow:
-    file: projects/archive_case/workflow.yaml
+    file: workflow.yaml
   validation:
     requiredReports: []
     requiredFigures: []

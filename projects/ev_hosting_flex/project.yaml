@@ -423,7 +423,7 @@ spec:
     grid:
       config: projects/ev_hosting_flex/inputs/synthetic_network_config.json
   workflow:
-    file: projects/ev_hosting_flex/workflow.yaml
+    file: workflow.yaml
   validation:
     senseChecker: scripts/sense_checks.py:check
     objectiveArtifacts:

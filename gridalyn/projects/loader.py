@@ -36,8 +36,8 @@ PROJECT_REQUIRED_FIELDS: dict[str, str] = {
     "spec": "a mapping holding 'workflow', 'problem' and optionally 'experiments'",
     "spec.workflow": "a mapping with a 'file' key, e.g. workflow: {file: workflow.yaml}",
     "spec.workflow.file": (
-        "a path to the Workflow YAML, resolved against the project base dir, "
-        "e.g. file: workflow.yaml"
+        "a path to the Workflow YAML, relative to the project directory "
+        "whatever spec.pathBase says, e.g. file: workflow.yaml"
     ),
     "spec.problem": (
         "a mapping with 'type', 'dataset', 'environment', 'objective', 'model' "
@@ -325,7 +325,15 @@ def find_repo_root(start: Path) -> Path:
 
 
 def project_base_dir(project_path: Path, raw: dict[str, Any]) -> tuple[Path, str]:
-    """Resolve the directory a project's relative paths are taken against.
+    """Resolve the directory stage commands run from.
+
+    Under ``pathBase: repo`` that is the repository root, which a stage invoked
+    as ``python -m projects.<study>...`` needs. It is also, until the rest of
+    bd 6ns.2, the base workflow stage ``inputs``/``outputs`` resolve against.
+    It is not the base for validation paths, the scenario contract or
+    ``spec.workflow.file``, which resolve against the project directory.
+    ``spec.inputs`` entries have no base declared here at all: no SDK loader
+    resolves them, and studies read them however they choose.
 
     Args:
         project_path: The project YAML file.
@@ -541,7 +549,7 @@ def load_project(path: Path | str) -> StudyProject:
         location="spec.workflow.file",
         expected=hint("spec.workflow.file"),
     )
-    workflow_path = (base_dir / workflow_file).resolve()
+    workflow_path = (root / workflow_file).resolve()
     if not workflow_path.is_file():
         # FileNotFoundError, not ValueError: the contract is well-formed, the
         # file it names is absent. Still located, per the error convention.
