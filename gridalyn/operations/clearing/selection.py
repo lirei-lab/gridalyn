@@ -43,7 +43,12 @@ from gridalyn.operations.domain import (
     build_settlement_records,
 )
 from gridalyn.operations.settlement import build_operational_kpi_report
-
+from gridalyn.operations.vocabulary import (
+    ClearingMethod,
+    ProviderType,
+    parse_clearing_method,
+    parse_provider_type,
+)
 
 SOFT_BASE_COST_PER_KW_H = 3.0
 HARD_BASE_COST_PER_KW_H = 10.0
@@ -88,8 +93,12 @@ def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> Non
         raise ValueError(f"{label} is missing required columns: {', '.join(missing)}")
 
 
-def _provider_priority(provider_type: str) -> int:
-    return 0 if provider_type == "soft_cls_building" else 1
+#: Soft building flexibility is selected before hard EV interruption.
+_PROVIDER_PRIORITY: dict[ProviderType, int] = {"soft_cls_building": 0, "hard_cls_ev": 1}
+
+
+def _provider_priority(provider_type: object) -> int:
+    return _PROVIDER_PRIORITY[parse_provider_type(provider_type)]
 
 
 def _json_default(value: Any) -> Any:
@@ -173,9 +182,9 @@ def run_flexibility_clearing_operation(
         "portfolio_count": int(len(portfolios)),
         "dispatch_instruction_count": int(len(dispatch)),
         "settlement_record_count": int(len(settlement)),
-        "settlement_usd": float(settlement["payment_usd"].sum())
-        if not settlement.empty
-        else 0.0,
+        "settlement_usd": (
+            float(settlement["payment_usd"].sum()) if not settlement.empty else 0.0
+        ),
     }
     report["operational_kpis"] = build_operational_kpi_report(
         events=events,
@@ -207,9 +216,11 @@ def _input_summary(
         "requirement_count": int(len(requirements)),
         "provider_count": int(len(scenario_providers)),
         "impact_row_count": int(len(impact)),
-        "constraint_count": int(requirements["constraint_id"].nunique())
-        if "constraint_id" in requirements
-        else 0,
+        "constraint_count": (
+            int(requirements["constraint_id"].nunique())
+            if "constraint_id" in requirements
+            else 0
+        ),
         "aggregator_count": aggregator_count,
     }
 
@@ -241,9 +252,7 @@ def build_constraint_requirements(
     frame = frame.sort_values(["timestamp", "constraint_id"]).reset_index(drop=True)
     timestep_by_timestamp = {
         timestamp: index
-        for index, timestamp in enumerate(
-            frame["timestamp"].drop_duplicates().tolist()
-        )
+        for index, timestamp in enumerate(frame["timestamp"].drop_duplicates().tolist())
     }
     for row in frame.to_dict("records"):
         loading = float(row["loading_percent"])
@@ -269,7 +278,7 @@ def _prepare_candidates(
     providers: pd.DataFrame,
     impact: pd.DataFrame,
     scenario_id: str,
-    clearing_method: str,
+    clearing_method: ClearingMethod,
 ) -> pd.DataFrame:
     _require_columns(
         providers,
@@ -286,6 +295,11 @@ def _prepare_candidates(
     scenario_providers = providers.loc[
         providers["scenario_id"].astype(str) == scenario_id
     ].copy()
+    # Refuse an unknown provider type before it can be selected. Until
+    # 2026-09-11 such a provider cleared normally and its kilowatts were
+    # counted as neither soft nor hard.
+    for provider_type in scenario_providers["provider_type"].unique():
+        parse_provider_type(provider_type)
 
     if clearing_method == "surrogate":
         _require_columns(
@@ -310,7 +324,7 @@ def _prepare_candidates(
             "predicted_relief_kw"
         ].astype(float)
         impact_frame["rank_score"] = impact_frame["selection_score"].astype(float)
-    elif clearing_method == "topology":
+    else:  # "topology": the vocabulary has no third method
         _require_columns(
             impact,
             [
@@ -335,11 +349,7 @@ def _prepare_candidates(
         # lives on the providers frame, merged later), so rank_score is purely
         # the expected relief. Final selection order is re-derived downstream
         # from the merged providers via effective_cost_per_relief_kw_h.
-        impact_frame["rank_score"] = impact_frame[
-            "expected_capacity_relief_kw"
-        ]
-    else:
-        raise ValueError("clearing_method must be 'surrogate' or 'topology'")
+        impact_frame["rank_score"] = impact_frame["expected_capacity_relief_kw"]
 
     impact_source_columns = [
         "provider_id",
@@ -366,10 +376,9 @@ def _prepare_candidates(
     candidates["provider_priority"] = candidates["provider_type"].map(
         _provider_priority
     )
-    candidates["effective_cost_per_relief_kw_h"] = (
-        candidates["base_cost_per_kw_h"].astype(float)
-        / candidates["deliverability_factor"].astype(float).clip(lower=1e-9)
-    )
+    candidates["effective_cost_per_relief_kw_h"] = candidates[
+        "base_cost_per_kw_h"
+    ].astype(float) / candidates["deliverability_factor"].astype(float).clip(lower=1e-9)
     return candidates
 
 
@@ -384,6 +393,7 @@ def build_locational_clearing(
     max_selected_providers_per_event: int = 1000,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     """Clear transformer-level requirements with locational provider offers."""
+    method = parse_clearing_method(clearing_method)
     _require_columns(
         requirements,
         ["timestep", "constraint_id", "required_kw"],
@@ -393,7 +403,7 @@ def build_locational_clearing(
         providers=providers,
         impact=impact,
         scenario_id=scenario_id,
-        clearing_method=clearing_method,
+        clearing_method=method,
     )
     active_requirements = (
         requirements.loc[requirements["required_kw"].astype(float) > 0.0]
@@ -443,7 +453,7 @@ def build_locational_clearing(
             if selected_kw <= 0.0 or expected_relief_kw <= 0.0:
                 continue
 
-            provider_type = str(provider["provider_type"])
+            provider_type = parse_provider_type(provider["provider_type"])
             if provider_type == "soft_cls_building":
                 selected_soft_kw += selected_kw
             elif provider_type == "hard_cls_ev":
@@ -489,7 +499,7 @@ def build_locational_clearing(
                 "selected_provider_count": int(selected_count),
                 "estimated_cost": float(estimated_cost),
                 "overload_pctpt": float(requirement.get("overload_pctpt", 0.0) or 0.0),
-                "clearing_method": clearing_method,
+                "clearing_method": method,
             }
         )
 
@@ -499,7 +509,7 @@ def build_locational_clearing(
         events=events,
         selections=selections,
         scenario_id=scenario_id,
-        clearing_method=clearing_method,
+        clearing_method=method,
         dt_h=dt_h,
     )
     return events, selections, report
@@ -532,9 +542,9 @@ def _constraint_summary(
                 "required_mwh": _mwh(group, "required_kw", dt_h),
                 "selected_relief_mwh": _mwh(group, "selected_relief_kw", dt_h),
                 "shortfall_mwh": _mwh(group, "shortfall_kw", dt_h),
-                "unique_provider_count": int(selected["provider_id"].nunique())
-                if not selected.empty
-                else 0,
+                "unique_provider_count": (
+                    int(selected["provider_id"].nunique()) if not selected.empty else 0
+                ),
             }
         )
     return rows
@@ -586,26 +596,28 @@ def _build_report(
         "dt_h": float(dt_h),
         "summary": {
             "constraint_event_count": int(len(events)),
-            "constraint_count": int(events["constraint_id"].nunique())
-            if not events.empty
-            else 0,
+            "constraint_count": (
+                int(events["constraint_id"].nunique()) if not events.empty else 0
+            ),
             "required_mwh": required_mwh,
             "selected_relief_mwh": selected_mwh,
             "shortfall_mwh": shortfall_mwh,
-            "delivery_ratio": float(selected_mwh / required_mwh)
-            if required_mwh > 1e-12
-            else None,
+            "delivery_ratio": (
+                float(selected_mwh / required_mwh) if required_mwh > 1e-12 else None
+            ),
             "soft_selected_mwh": soft_selected_mwh,
             "hard_selected_mwh": hard_selected_mwh,
-            "estimated_cost": float(events["estimated_cost"].sum())
-            if not events.empty
-            else 0.0,
-            "unique_provider_count": int(selections["provider_id"].nunique())
-            if not selections.empty
-            else 0,
-            "avg_selected_provider_count": float(selected_provider_counts.mean())
-            if not selected_provider_counts.empty
-            else 0.0,
+            "estimated_cost": (
+                float(events["estimated_cost"].sum()) if not events.empty else 0.0
+            ),
+            "unique_provider_count": (
+                int(selections["provider_id"].nunique()) if not selections.empty else 0
+            ),
+            "avg_selected_provider_count": (
+                float(selected_provider_counts.mean())
+                if not selected_provider_counts.empty
+                else 0.0
+            ),
             "provider_concentration_top10_pct": _provider_concentration_top10_pct(
                 selections
             ),
@@ -667,7 +679,7 @@ def _connectivity_lookup(connectivity: pd.DataFrame) -> pd.DataFrame:
 def _provider_row(
     *,
     scenario_id: str,
-    provider_type: str,
+    provider_type: ProviderType,
     provider_id: str,
     building_id: str,
     load_id: str,

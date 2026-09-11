@@ -8,6 +8,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from gridalyn.operations.vocabulary import (
+    CLEARING_METHODS,
+    OPERATION_STATUSES,
+    OPERATION_TYPES,
+    ClearingMethod,
+    OperationStatus,
+    OperationType,
+    parse_clearing_method,
+    parse_operation_status,
+    parse_operation_type,
+)
 
 OPERATION_RUN_SCHEMA_VERSION = "1.0"
 
@@ -33,15 +44,15 @@ class OperationRun:
     """Traceable execution record for a utility operation."""
 
     operation_id: str
-    operation_type: str
+    operation_type: OperationType
     scenario_id: str
     network_model_version_id: str
     study_run_id: str | None
     input_artifacts: dict[str, str]
     output_artifacts: dict[str, str]
     kpi_report: str
-    clearing_method: str | None = None
-    status: str = "completed"
+    clearing_method: ClearingMethod | None = None
+    status: OperationStatus = "completed"
     validation: dict[str, Any] = field(
         default_factory=lambda: {"valid": True, "errors": [], "warnings": []}
     )
@@ -52,6 +63,17 @@ class OperationRun:
     )
     schema_version: str = OPERATION_RUN_SCHEMA_VERSION
     report_id: str = "operation_run"
+
+    def __post_init__(self) -> None:
+        """Refuse an operation type, status or clearing method outside its set.
+
+        Raises:
+            ValueError: Naming the field, the value found and the accepted set.
+        """
+        parse_operation_type(self.operation_type)
+        parse_operation_status(self.status)
+        if self.clearing_method is not None:
+            parse_clearing_method(self.clearing_method)
 
     def to_dict(self) -> dict[str, Any]:
         governance = {
@@ -96,13 +118,17 @@ def build_operation_run(
     """Build an operation run record from operation lineage and outputs."""
     return OperationRun(
         operation_id=str(operation_id),
-        operation_type=str(operation_type),
+        operation_type=parse_operation_type(operation_type),
         scenario_id=str(scenario_id),
         network_model_version_id=str(network_model_version_id),
         study_run_id=str(study_run_id) if study_run_id else None,
-        clearing_method=str(clearing_method) if clearing_method else None,
-        status=str(status),
-        input_artifacts={str(key): str(value) for key, value in input_artifacts.items()},
+        clearing_method=(
+            parse_clearing_method(clearing_method) if clearing_method else None
+        ),
+        status=parse_operation_status(status),
+        input_artifacts={
+            str(key): str(value) for key, value in input_artifacts.items()
+        },
         output_artifacts={
             str(key): str(value) for key, value in output_artifacts.items()
         },
@@ -113,7 +139,23 @@ def build_operation_run(
     )
 
 
-def validate_operation_run(run: OperationRun | dict[str, Any]) -> OperationRunValidation:
+def _vocabulary_errors(payload: dict[str, Any]) -> list[str]:
+    """Name every present vocabulary field whose value is outside its set."""
+    checks: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("operation_type", OPERATION_TYPES),
+        ("status", OPERATION_STATUSES),
+        ("clearing_method", CLEARING_METHODS),
+    )
+    return [
+        f"{name} {payload[name]!r} is not one of {', '.join(allowed)}"
+        for name, allowed in checks
+        if payload.get(name) and payload[name] not in allowed
+    ]
+
+
+def validate_operation_run(
+    run: OperationRun | dict[str, Any]
+) -> OperationRunValidation:
     """Validate the minimal lineage required for an operation run."""
     payload = run.to_dict() if isinstance(run, OperationRun) else dict(run)
     errors: list[str] = []
@@ -122,6 +164,7 @@ def validate_operation_run(run: OperationRun | dict[str, Any]) -> OperationRunVa
     for field_name in ("operation_id", "operation_type", "scenario_id", "status"):
         if not payload.get(field_name):
             errors.append(f"{field_name} is required")
+    errors.extend(_vocabulary_errors(payload))
 
     governance = payload.get("governance") or {}
     if not governance.get("network_model_version_id"):

@@ -32,6 +32,15 @@ market, rather than glue code duplicated per study.
   voltage-constrained DER dispatch (`operations/der_voltage.py`).
 - **`OperationRun`** — the governed record of one operation execution
   (`operations/runs.py`).
+- **Closed vocabularies** (`operations/vocabulary.py`) — `provider_type`,
+  `dispatch_action`, `clearing_method`, `market_role`, `operation_type` and an
+  operation run's `status` are `Literal` types with `parse_*` runtime guards.
+  The frozen dataclasses refuse any other value on construction, clearing
+  refuses a provider of an unknown type before it can be selected, and every
+  provider type maps to exactly one dispatch action. Until 2026-09-11 these
+  were free strings, and an unknown provider type was dispatched a
+  `soft_cls_limit` in silence. Widening a set is a deliberate edit to that
+  module, made together with the producer that writes the new value.
 
 ## The contract
 
@@ -39,8 +48,8 @@ market, rather than glue code duplicated per study.
 dt_h, clearing_method="surrogate", max_selected_providers_per_event=1000)`
 takes three DataFrames — what the network needs relieved, who can offer it,
 and the impact model connecting an offer to relief — and returns a tuple of
-`(selections, events, summary)`: which providers were selected, what
-constraint events resulted, and a scenario-level summary dict. Nothing about
+`(events, selections, report)`: the constraint events, which providers were
+selected to relieve them, and a scenario-level report dict. Nothing about
 this call depends on which study invoked it; a study supplies the three
 DataFrames and reads the same three-part result every other study reads.
 

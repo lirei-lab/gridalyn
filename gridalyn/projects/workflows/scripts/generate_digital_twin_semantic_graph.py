@@ -16,6 +16,7 @@ from gridalyn.twin.semantic.mappings import (
     resolve_declared_capabilities,
     write_profile,
 )
+from gridalyn.twin.semantic.profile import SEMANTIC_PROFILE_IDS
 
 # Current-directory default, matching ArtifactLayout's own root default. Never
 # derive the root from __file__: in an installed wheel that resolves to
@@ -67,9 +68,10 @@ def generate_semantic_graph(
     root: Path | None = None,
     capabilities: set[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
-    if profile != "north_america":
+    if profile not in SEMANTIC_PROFILE_IDS:
         raise ValueError(
-            "Only the north_america semantic profile is currently supported"
+            f"unknown semantic profile {profile!r} "
+            f"(known: {', '.join(SEMANTIC_PROFILE_IDS)})"
         )
     # ``None`` keeps the legacy flexibility default for existing invocations;
     # an explicit set is the model-first declared-capability contract, and an
