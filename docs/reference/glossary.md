@@ -35,6 +35,14 @@ An optional dependency (`lightsim2grid`, `cvxpy`, `osmnx`) gated by
 `require_capabilities(...)` rather than assumed importable. See
 [Foundation](../components/foundation.md).
 
+### channel model
+
+Whether, and at what simulated time, a message between two simulated agents
+arrives — `ideal`, `fixed_latency`, `bernoulli_loss` or `fixed_outage` —
+resolved by explicit ID through `ChannelModelRegistry`. Stochastic models draw
+from their seed and the message's identity only, so the same seed reproduces
+the same deliveries. See [Simulation](../components/simulation.md).
+
 ### clearing
 
 Deciding which flexibility providers relieve a network constraint, at what

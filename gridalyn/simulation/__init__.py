@@ -87,6 +87,70 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "gridalyn.simulation.policies",
         "register_policy_extension",
     ),
+    "BernoulliLossChannel": (
+        "gridalyn.simulation.channels",
+        "BernoulliLossChannel",
+    ),
+    "ChannelModel": (
+        "gridalyn.simulation.channels",
+        "ChannelModel",
+    ),
+    "ChannelModelDescriptor": (
+        "gridalyn.simulation.channels",
+        "ChannelModelDescriptor",
+    ),
+    "ChannelModelRegistry": (
+        "gridalyn.simulation.channels",
+        "ChannelModelRegistry",
+    ),
+    "DEFAULT_CHANNEL_MODEL_ID": (
+        "gridalyn.simulation.channels",
+        "DEFAULT_CHANNEL_MODEL_ID",
+    ),
+    "Delivery": (
+        "gridalyn.simulation.channels",
+        "Delivery",
+    ),
+    "EventScheduler": (
+        "gridalyn.simulation.scheduler",
+        "EventScheduler",
+    ),
+    "FixedLatencyChannel": (
+        "gridalyn.simulation.channels",
+        "FixedLatencyChannel",
+    ),
+    "FixedOutageChannel": (
+        "gridalyn.simulation.channels",
+        "FixedOutageChannel",
+    ),
+    "IdealChannel": (
+        "gridalyn.simulation.channels",
+        "IdealChannel",
+    ),
+    "ScheduledEvent": (
+        "gridalyn.simulation.scheduler",
+        "ScheduledEvent",
+    ),
+    "UnknownChannelModelError": (
+        "gridalyn.simulation.channels",
+        "UnknownChannelModelError",
+    ),
+    "default_channel_model_registry": (
+        "gridalyn.simulation.channels",
+        "default_channel_model_registry",
+    ),
+    "describe_channel_model": (
+        "gridalyn.simulation.channels",
+        "describe_channel_model",
+    ),
+    "register_channel_model_extension": (
+        "gridalyn.simulation.channels",
+        "register_channel_model_extension",
+    ),
+    "resolve_channel_model": (
+        "gridalyn.simulation.channels",
+        "resolve_channel_model",
+    ),
     "measure_relief_error_bound": (
         "gridalyn.simulation.surrogates",
         "measure_relief_error_bound",

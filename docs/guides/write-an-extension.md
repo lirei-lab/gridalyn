@@ -82,15 +82,16 @@ never silent.
 | Power-flow backend | `PowerFlowBackendRegistry` | `PowerFlowBackendDescriptor` | `register_powerflow_backend_extension` | `"1"` |
 | Surrogate | `SurrogateRegistry` | `SurrogateDescriptor` | `register_surrogate_extension` | `"1"` |
 | Voltage-control policy | `PolicyRegistry` | `PolicyDescriptor` | `register_policy_extension` | `"1"` |
+| Channel model | `ChannelModelRegistry` | `ChannelModelDescriptor` | `register_channel_model_extension` | `"1"` |
 | Observation producer | `ObservationProducerRegistry` | `ObservationProducerDescriptor` | `register_observation_producer_extension` | `"1"` |
 | Network adapter | `NetworkAdapterRegistry` | `NetworkAdapterDescriptor` | `register_network_adapter_extension` | `"1"` |
 
 The observation-producer convenience takes the producer callable itself rather
 than a factory — producers are functions with nothing to instantiate. Each
 convenience accepts an optional `registry=` argument to target a specific
-registry instance (defaults to the role's shared default registry); all five
+registry instance (defaults to the role's shared default registry); all six
 conveniences are exported from the layer facades (`gridalyn.simulation` for
-backend/surrogate/policy, `gridalyn.twin` for producer/adapter).
+backend/surrogate/policy/channel model, `gridalyn.twin` for producer/adapter).
 
 The role descriptors that embed in run manifests expose `as_dict()` with a
 JSON-native shape that includes `contract_version`; the twin descriptors
@@ -198,7 +199,7 @@ populated whenever an extension is registered (host) or loaded (entry point)
 into the runner's process before the manifest is written. Role-level provenance
 records which extension served a role: `provenance.powerflow_backend` carries
 `extension_id`/`extension_source`/`extension_version` when the resolved backend
-is an external extension (`source != "core"`); the other four roles will reach
+is an external extension (`source != "core"`); the other five roles will reach
 the manifest the same way in a future release. A plugin may be discoverable, but
 it is never silent.
 

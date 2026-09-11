@@ -101,7 +101,10 @@ _IMPORT_TIMEOUT_SECONDS = 120
 #: was deleted (Phase 26): it had no in-repo consumer and its deprecation
 #: carried no pinned removal version, so rather than fix the version the
 #: user chose to remove it outright.
-_EXPECTED_SUBPACKAGE_COUNT = 40
+#: 40 -> 41 on 2026-09-11, when ``gridalyn.simulation.channels`` was added:
+#: the channel-model registry for simulated agent communication. It imports
+#: only ``numpy``, but it is a real package, so the sweep must prove it clean.
+_EXPECTED_SUBPACKAGE_COUNT = 41
 
 _PROBE = """\
 import json
