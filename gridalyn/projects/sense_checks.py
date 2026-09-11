@@ -281,7 +281,7 @@ def _path_contract_checks(project: StudyProject, checks: CheckList) -> None:
     """Record every declared path that does not name a file inside the project.
 
     Sense checks read ``requiredReports``, ``requiredFigures`` and each rule's
-    ``report`` off disk. A declaration written against the wrong base resolves
+    ``report`` off disk. A declaration written repository-relative resolves
     somewhere real-looking, and without this the failure surfaces only as
     ``required_report_N_exists`` -- "missing required report", a symptom that
     sends the reader hunting for a file that was never the problem. That is the
@@ -297,8 +297,6 @@ def _path_contract_checks(project: StudyProject, checks: CheckList) -> None:
     workflow_data = read_yaml(workflow_path) if workflow_path.exists() else None
     violations = find_path_contract_violations(
         root=project.root,
-        base_dir=project.base_dir,
-        path_base=project.path_base,
         project_data=project.raw,
         workflow_data=workflow_data,
     )

@@ -11,103 +11,103 @@ spec:
     - id: prepare_workspace
       command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace projects/admm_thermal_consensus"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data
-        - projects/admm_thermal_consensus/outputs/json
-        - projects/admm_thermal_consensus/outputs/reports
-        - projects/admm_thermal_consensus/outputs/cache
-        - projects/admm_thermal_consensus/outputs/figures
+        - outputs/data
+        - outputs/json
+        - outputs/reports
+        - outputs/cache
+        - outputs/figures
     - id: generate_agents
       needs: [prepare_workspace]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.generate_agents"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/agents_heating.parquet
-        - projects/admm_thermal_consensus/outputs/data/agents_background.parquet
-        - projects/admm_thermal_consensus/outputs/json/agent_params.json
-        - projects/admm_thermal_consensus/outputs/reports/agents_report.json
+        - outputs/data/agents_heating.parquet
+        - outputs/data/agents_background.parquet
+        - outputs/json/agent_params.json
+        - outputs/reports/agents_report.json
     - id: build_network
       needs: [generate_agents]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.build_network"
       outputs:
-        - projects/admm_thermal_consensus/outputs/json/bus_weights.json
-        - projects/admm_thermal_consensus/outputs/json/network_scale.json
-        - projects/admm_thermal_consensus/outputs/reports/network_report.json
+        - outputs/json/bus_weights.json
+        - outputs/json/network_scale.json
+        - outputs/reports/network_report.json
     - id: export_twin_network_model
       needs: [prepare_workspace]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.export_twin_network_model"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model_config.json
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_buses.parquet
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_lines.parquet
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/grid_transformers.parquet
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/buildings.parquet
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/building_grid_connectivity.parquet
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/metadata.json
-        - projects/admm_thermal_consensus/outputs/data/twin_network_model/network_adapter_validation_report.json
-        - projects/admm_thermal_consensus/outputs/reports/twin_network_model_report.json
+        - outputs/data/twin_network_model_config.json
+        - outputs/data/twin_network_model/grid_buses.parquet
+        - outputs/data/twin_network_model/grid_lines.parquet
+        - outputs/data/twin_network_model/grid_transformers.parquet
+        - outputs/data/twin_network_model/buildings.parquet
+        - outputs/data/twin_network_model/building_grid_connectivity.parquet
+        - outputs/data/twin_network_model/metadata.json
+        - outputs/data/twin_network_model/network_adapter_validation_report.json
+        - outputs/reports/twin_network_model_report.json
     - id: train_forecaster
       needs: [generate_agents]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.train_forecaster"
       outputs:
-        - projects/admm_thermal_consensus/outputs/cache/imputer.pkl
-        - projects/admm_thermal_consensus/outputs/json/forecast_cv.json
-        - projects/admm_thermal_consensus/outputs/reports/forecast_report.json
+        - outputs/cache/imputer.pkl
+        - outputs/json/forecast_cv.json
+        - outputs/reports/forecast_report.json
     - id: run_admm
       needs: [build_network, train_forecaster]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.run_admm"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/aggregate_profiles.parquet
-        - projects/admm_thermal_consensus/outputs/json/admm_convergence.json
-        - projects/admm_thermal_consensus/outputs/json/aggregate_kpis.json
-        - projects/admm_thermal_consensus/outputs/reports/admm_report.json
+        - outputs/data/aggregate_profiles.parquet
+        - outputs/json/admm_convergence.json
+        - outputs/json/aggregate_kpis.json
+        - outputs/reports/admm_report.json
     - id: validate_powerflow
       needs: [run_admm]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.validate_powerflow"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/network_feasibility.parquet
-        - projects/admm_thermal_consensus/outputs/reports/powerflow_report.json
+        - outputs/data/network_feasibility.parquet
+        - outputs/reports/powerflow_report.json
     - id: build_reports
       needs: [validate_powerflow]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.build_study_report"
       outputs:
-        - projects/admm_thermal_consensus/outputs/json/study_results.json
-        - projects/admm_thermal_consensus/outputs/reports/study_report.json
+        - outputs/json/study_results.json
+        - outputs/reports/study_report.json
     - id: make_figures
       needs: [build_reports]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.make_figures"
       outputs:
-        - projects/admm_thermal_consensus/outputs/figures
+        - outputs/figures
     - id: uncertainty_sweep
       needs: [run_admm, build_network]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.uncertainty_sweep"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/uncertainty_summary.parquet
-        - projects/admm_thermal_consensus/outputs/data/uncertainty_draws.parquet
-        - projects/admm_thermal_consensus/outputs/json/uncertainty_results.json
-        - projects/admm_thermal_consensus/outputs/reports/uncertainty_report.json
+        - outputs/data/uncertainty_summary.parquet
+        - outputs/data/uncertainty_draws.parquet
+        - outputs/json/uncertainty_results.json
+        - outputs/reports/uncertainty_report.json
     - id: make_uncertainty_figure
       needs: [uncertainty_sweep]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.make_uncertainty_figure"
       outputs:
-        - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.pdf
-        - projects/admm_thermal_consensus/outputs/figures/fig_uncertainty_loading.png
+        - outputs/figures/fig_uncertainty_loading.pdf
+        - outputs/figures/fig_uncertainty_loading.png
     - id: imputer_comparison
       needs: [run_admm, build_network]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.imputer_comparison"
       outputs:
-        - projects/admm_thermal_consensus/outputs/data/imputer_comparison_curves.parquet
-        - projects/admm_thermal_consensus/outputs/json/imputer_comparison.json
-        - projects/admm_thermal_consensus/outputs/reports/imputer_comparison_report.json
+        - outputs/data/imputer_comparison_curves.parquet
+        - outputs/json/imputer_comparison.json
+        - outputs/reports/imputer_comparison_report.json
     - id: make_comparison_figure
       needs: [imputer_comparison]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.make_comparison_figure"
       outputs:
-        - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.pdf
-        - projects/admm_thermal_consensus/outputs/figures/fig_imputer_comparison.png
+        - outputs/figures/fig_imputer_comparison.pdf
+        - outputs/figures/fig_imputer_comparison.png
     - id: comfort_validation
       needs: [generate_agents]
       command: "{python} -m projects.admm_thermal_consensus.scripts.pipeline.comfort_validation"
       outputs:
-        - projects/admm_thermal_consensus/outputs/json/comfort_validation.json
-        - projects/admm_thermal_consensus/outputs/reports/comfort_report.json
-        - projects/admm_thermal_consensus/outputs/figures/fig_comfort.pdf
-        - projects/admm_thermal_consensus/outputs/figures/fig_comfort.png
+        - outputs/json/comfort_validation.json
+        - outputs/reports/comfort_report.json
+        - outputs/figures/fig_comfort.pdf
+        - outputs/figures/fig_comfort.png
