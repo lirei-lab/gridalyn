@@ -195,6 +195,13 @@ class TestShippedStudiesDeclareSeeds(unittest.TestCase):
                 ("loadGeneration", "footprints"),
                 "scripts/generate_building_footprints.py",
             ),
+            # The channel stream is read through ProjectScript.channel_model(),
+            # via spec.simulation.channelModel.seedStream; the agents stream
+            # drives homes, EV sessions and appliance background.
+            "dr_agent_interaction": (
+                ("channel", "agents"),
+                "scripts/run_dr_program.py",
+            ),
         }
         for study, (streams, consumer) in wired.items():
             project_file = repo_root / "projects" / study / "project.yaml"

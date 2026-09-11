@@ -177,8 +177,8 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
     migration from quietly reverting.
     """
 
-    def test_eight_workflows_are_discovered(self) -> None:
-        self.assertEqual(8, len(_WORKFLOWS), [str(p) for p in _WORKFLOWS])
+    def test_nine_workflows_are_discovered(self) -> None:
+        self.assertEqual(9, len(_WORKFLOWS), [str(p) for p in _WORKFLOWS])
 
     def test_no_shipped_command_has_a_bare_leading_python_token(self) -> None:
         offenders: list[str] = []
@@ -234,8 +234,10 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # (bd h85) + 1 build_study_reports stage, the canonical study report
         # that replaces the ten-week-old `echo "STUB ..."` (bd eei.9) + 1
         # build_base_mc_cache stage, the sole writer of the shared base-MC set
-        # (bd c7f.2.1).
-        self.assertEqual(66, declared)
+        # (bd c7f.2.1) + 3 stages of dr_agent_interaction, the seventh light
+        # governed study: prepare_workspace, run_dr_program_day and
+        # validate_project_outputs (syntgrid-4ky.9).
+        self.assertEqual(69, declared)
 
 
 if __name__ == "__main__":

@@ -322,7 +322,8 @@ jobs:
             ieee_33_bus_demo \
             der_voltage_optimization \
             prosumer_battery_market \
-            rl_voltage_control_lightsim
+            rl_voltage_control_lightsim \
+            dr_agent_interaction
           do
             echo "::group::${project}"
             python -m gridalyn.interfaces.cli.project run "projects/${project}"

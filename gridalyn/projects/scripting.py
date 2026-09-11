@@ -321,6 +321,10 @@ class ProjectScript:
     ) -> np.ndarray:
         return model_inputs.load_generated_load_multipliers(self.project, input_key)
 
+    def load_demand_response_program(self, input_key: str = "drProgram") -> Any:
+        """Return the demand-response program declared in ``spec.inputs``."""
+        return model_inputs.load_demand_response_program(self.project, input_key)
+
     def simulation_seed(self, stream: str) -> int:
         """Return one named RNG seed this study declares in ``spec.simulation``.
 

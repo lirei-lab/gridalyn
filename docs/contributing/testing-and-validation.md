@@ -65,6 +65,7 @@ Use it after regenerating project outputs. Examples of objective-level checks:
 | `prosumer_battery_market` | rolling horizon is consistent, peak import does not increase, voltage remains safe. |
 | `der_voltage_optimization` | solver is optimal, PV accounting balances, verified voltage limit is met. |
 | `rl_voltage_control_lightsim` | LightSim2Grid backend, reward improves, control reduces voltage deviation. |
+| `dr_agent_interaction` | one conversation per home and event, the declared channel actually loses messages, the program curtails and lowers the event peak, both reports agree on the message count. |
 
 ## Agent-Friendly Project Verification
 

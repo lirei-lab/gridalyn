@@ -52,6 +52,15 @@ from gridalyn.operations.interaction.log import (
     write_message_log,
 )
 from gridalyn.operations.interaction.messages import Message, build_message
+from gridalyn.operations.interaction.program import (
+    DemandResponseEvent,
+    DemandResponseProgram,
+    build_cancellation_payload,
+    build_event_payload,
+    build_opt_out_payload,
+    build_report_payload,
+    measure_reported_kwh,
+)
 from gridalyn.operations.interaction.protocols import (
     Conversation,
     ConversationStep,
@@ -91,6 +100,8 @@ __all__ = [
     "ConversationStep",
     "DeadlineTransition",
     "DeliveryHandler",
+    "DemandResponseEvent",
+    "DemandResponseProgram",
     "LogEntry",
     "Message",
     "MessageBus",
@@ -102,10 +113,15 @@ __all__ = [
     "ProtocolSpec",
     "RoleAlignment",
     "RoleId",
+    "build_cancellation_payload",
     "build_conversation_book",
+    "build_event_payload",
     "build_flex_trading_messages",
     "build_message",
+    "build_opt_out_payload",
+    "build_report_payload",
     "load_message_log",
+    "measure_reported_kwh",
     "resolve_protocol",
     "run_message_transcript",
     "summarize_interaction",
