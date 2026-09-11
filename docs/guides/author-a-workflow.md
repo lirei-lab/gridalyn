@@ -79,6 +79,9 @@ reimplementing metric comparison.
 ## 4. Declare the Workflow
 
 Each stage should list the command, important inputs, and important outputs.
+The command runs from the directory `spec.pathBase` selects, the repository root
+here. `inputs` and `outputs` are relative to the project directory, whatever
+`spec.pathBase` says — see [Path Rules](../reference/workflow-yaml.md#path-rules):
 
 ```yaml
 spec:
@@ -86,15 +89,15 @@ spec:
     - id: build_inputs
       command: uv run python projects/my_case/scripts/build_inputs.py
       outputs:
-        - projects/my_case/outputs/json/input_summary.json
+        - outputs/json/input_summary.json
 
     - id: run_simulation
       needs: [build_inputs]
       command: uv run python projects/my_case/scripts/run_simulation.py
       inputs:
-        - projects/my_case/outputs/json/input_summary.json
+        - outputs/json/input_summary.json
       outputs:
-        - projects/my_case/outputs/data/simulation_results.parquet
+        - outputs/data/simulation_results.parquet
 ```
 
 ## 5. Add Reports

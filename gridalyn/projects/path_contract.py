@@ -1,47 +1,42 @@
 """Every path a project declares must name a file inside that project.
 
-A study declares paths in two files and resolves them against two bases. The
-loader resolves ``base_dir`` from ``spec.pathBase``: the project directory under
-``pathBase: project``, the repository root under ``pathBase: repo``. The heavy
-studies need the second because their stages run as ``python -m
-projects.<study>...`` from the repo root. ``root`` is always the project
-directory. The consumers split them like this:
+A study declares paths in two files, and since bd 6ns.2 all of them resolve
+against one base: ``root``, the project directory. ``spec.pathBase`` takes no
+part. It selects only the directory stage commands run from, the repository
+root under ``pathBase: repo``, which the heavy studies need because their
+stages run as ``python -m projects.<study>...``. The consumers:
 
-======================================================  ============  ============
+======================================================  ============  ========
 Declaration                                             Resolved by   Base
-======================================================  ============  ============
+======================================================  ============  ========
 ``project.yaml`` spec.validation.requiredReports        sense_checks  ``root``
 ``project.yaml`` spec.validation.requiredFigures        sense_checks  ``root``
 ``project.yaml`` spec.validation.senseChecks[].report   sense_checks  ``root``
 ``project.yaml`` spec.validation.objectiveArtifacts     catalog       ``root``
 ``project.yaml`` spec.scenarios.index                   catalog       ``root``
 ``project.yaml`` spec.scenarios.artifacts.<kind>.path   catalog       ``root``
-``workflow.yaml`` stages[].outputs                      runner        ``base_dir``
-``workflow.yaml`` stages[].inputs                       (declared)    ``base_dir``
-======================================================  ============  ============
+``workflow.yaml`` stages[].outputs                      runner        ``root``
+``workflow.yaml`` stages[].inputs                       (declared)    ``root``
+======================================================  ============  ========
 
-Both bases are legitimate, and every in-repo study declares against its own
-correctly -- measured 2026-09-10: 452 declared paths, 0 violations, and
-re-measured after bd 6ns.2 part 2a moved 39 of them onto ``root``: still 452,
-still 0. What was missing is anything that says so. A path written in the other
-study's convention resolved somewhere real-looking, and the failure surfaced
-much later as ``missing required report``, which names a symptom and sends the
-reader looking for a file that was never the problem. The same shape, in the
-catalog, was the ``base_path: '/.'`` defect fixed in 3c7c47b1.
+Every in-repo study declares against it correctly -- measured 2026-09-10: 452
+declared paths, 0 violations; re-measured 2026-09-11, after part 2c moved the
+last 230 stage paths onto ``root`` and a ninth study landed: 471 declared paths
+across 9 studies, still 0. What was missing is anything that says so. A path
+written in the other base's convention resolved somewhere real-looking, and the
+failure surfaced much later as ``missing required report``, which names a
+symptom and sends the reader looking for a file that was never the problem. The
+same shape, in the catalog, was the ``base_path: '/.'`` defect fixed in
+3c7c47b1.
 
-**Two files, two bases, in a repo-based study.** Since bd 6ns.2 part 2a every
-path in ``project.yaml`` resolves against ``root`` and is written
-project-relative, whatever ``spec.pathBase`` says. ``workflow.yaml`` is the
-exception that remains: under ``pathBase: repo`` its stage ``inputs`` and
-``outputs`` still resolve against ``base_dir`` and are written repo-relative,
-until the rest of 6ns.2 unifies them. An author copying a stage output's
-``projects/<study>/`` prefix into ``project.yaml`` doubles the directory, and
-this gate names the corrected declaration.
-
-Before part 2a, ``requiredReports``, ``requiredFigures`` and sense-check
-``report`` paths followed ``pathBase`` too. A repo-based study written that way
-now reports each of them as a doubled prefix -- the breaking change recorded
-in ``docs/reference/workflow-yaml.md``.
+**The migration this leaves behind.** Before bd 6ns.2 a ``pathBase: repo`` study
+wrote its validation paths (until part 2a) and its stage ``inputs`` and
+``outputs`` (until part 2c) repository-relative, as ``projects/<study>/...``.
+Resolved against ``root``, each of those repeats the project directory and is
+reported as a doubled prefix naming the corrected declaration -- the breaking
+changes recorded in ``docs/reference/workflow-yaml.md``. The runner refuses to
+start on a doubled prefix in a stage field, because otherwise it would surface
+only after the stage ran, as a declared output it "did not produce".
 
 **Declared paths this gate deliberately does not check**, so its scope is not
 read as wider than it is:
@@ -57,9 +52,9 @@ read as wider than it is:
   nothing.
 
 This module checks the SHAPE, so it needs no outputs on disk and runs the same
-in CI as on an operator machine. The invariant: resolved against the base its
-consumer uses, a declared path lands inside ``root``, and not under a second
-``projects/`` segment.
+in CI as on an operator machine. The invariant: resolved against ``root``, a
+declared path lands inside ``root``, and not under a second ``projects/``
+segment.
 """
 
 from __future__ import annotations
@@ -81,11 +76,9 @@ _ROOT_FIELDS: tuple[str, ...] = (
     "requiredFigures",
     "objectiveArtifacts",
 )
-#: The base every ``project.yaml`` declaration resolves against, named so a
-#: message never attributes one field's rule to another (bd 6ns.2).
-_ROOT_LABEL = (
-    "the project directory (every path in project.yaml is, whatever pathBase says)"
-)
+#: The base every declaration resolves against, named so a message says the
+#: rule holds whatever ``pathBase`` says (bd 6ns.2).
+_ROOT_LABEL = "the project directory (every declared path is, whatever pathBase says)"
 _STAGE_FIELDS: tuple[str, ...] = ("inputs", "outputs")
 
 # Substituted for a by-file template's scenario token before resolving, so the
@@ -151,17 +144,13 @@ class PathContractViolation:
 def find_path_contract_violations(
     *,
     root: Path,
-    base_dir: Path,
-    path_base: str,
     project_data: Mapping[str, Any],
     workflow_data: Mapping[str, Any] | None,
 ) -> list[PathContractViolation]:
-    """Check every checked declaration against the base its consumer uses.
+    """Check every checked declaration against ``root``, the base they all use.
 
     Args:
         root: The project directory, i.e. the parent of ``project.yaml``.
-        base_dir: The resolved ``spec.pathBase`` directory.
-        path_base: The ``spec.pathBase`` value, used only to phrase messages.
         project_data: The parsed ``project.yaml``.
         workflow_data: The parsed ``workflow.yaml``, or ``None`` when it could
             not be read (its own error is reported elsewhere).
@@ -171,8 +160,6 @@ def find_path_contract_violations(
         declarations are all consistent with their bases.
     """
     root = root.resolve()
-    base_dir = base_dir.resolve()
-    base_label = _base_label(path_base)
     violations: list[PathContractViolation] = []
 
     spec = project_data.get("spec")
@@ -210,8 +197,8 @@ def find_path_contract_violations(
                     stage.get(key),
                     source="workflow.yaml",
                     location=f"stages[{stage_id}].{key}",
-                    base=base_dir,
-                    base_label=base_label,
+                    base=root,
+                    base_label=_ROOT_LABEL,
                     root=root,
                 )
             )
@@ -392,7 +379,7 @@ def _check_path(
         resolved=resolved,
         problem=problem,
         base_label=base_label,
-        suggestion=_suggest(declared, base=base, root=root),
+        suggestion=_suggest(declared, root=root),
     )
 
 
@@ -416,12 +403,15 @@ def _problem(resolved: Path, root: Path) -> str | None:
     return None
 
 
-def _suggest(declared: str, *, base: Path, root: Path) -> str | None:
+def _suggest(declared: str, *, root: Path) -> str | None:
     """Derive the declaration that names the intended file, if unambiguous.
+
+    Every declaration resolves against ``root``, so the one correction the
+    string alone supports is dropping a repeated ``projects/<study>/`` -- the
+    repository-relative form a ``pathBase: repo`` study wrote before bd 6ns.2.
 
     Args:
         declared: The path as written, placeholders included.
-        base: The base it is resolved against.
         root: The project directory.
 
     Returns:
@@ -429,32 +419,9 @@ def _suggest(declared: str, *, base: Path, root: Path) -> str | None:
         inferred from the string alone.
     """
     parts = PurePosixPath(declared).parts
-    project_tail = ("projects", root.name)
-    # Written repo-relative, resolved against the project directory.
-    if parts[:2] == project_tail and base == root:
-        return str(PurePosixPath(*parts[2:])) if len(parts) > 2 else None
-    # Written project-relative, resolved against the repo root.
-    if parts[:1] != ("projects",) and base != root:
-        try:
-            prefix = root.relative_to(base)
-        except ValueError:
-            return None
-        return str(PurePosixPath(*prefix.parts, *parts))
+    if parts[:2] == ("projects", root.name) and len(parts) > 2:
+        return str(PurePosixPath(*parts[2:]))
     return None
-
-
-def _base_label(path_base: str) -> str:
-    """Name the ``base_dir`` a ``pathBase`` value selects.
-
-    Args:
-        path_base: ``"project"`` or ``"repo"``.
-
-    Returns:
-        A phrase for messages.
-    """
-    if path_base == "repo":
-        return "the repository root (pathBase: repo)"
-    return "the project directory (pathBase: project)"
 
 
 __all__ = [
