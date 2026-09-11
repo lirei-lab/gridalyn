@@ -791,7 +791,165 @@ def load_surrogate_id(project_or_path: ProjectRef) -> str:
     return surrogate_id
 
 
+_CHANNEL_MODEL_KEYS = ("id", "parameters", "seedStream")
+
+
+def _channel_model_declaration(project: StudyProject) -> Mapping[str, Any] | None:
+    declared = _simulation(project).get("channelModel")
+    if declared is None:
+        return None
+    context = f"{project.path}: spec.simulation.channelModel"
+    if not isinstance(declared, Mapping):
+        raise ValueError(
+            f"{context} must be a mapping with an 'id', found "
+            f"{type(declared).__name__}"
+        )
+    unsupported = sorted(str(key) for key in declared if key not in _CHANNEL_MODEL_KEYS)
+    if unsupported:
+        raise ValueError(
+            f"{context} has unsupported keys: {', '.join(unsupported)} "
+            f"(supported: {', '.join(_CHANNEL_MODEL_KEYS)})"
+        )
+    return declared
+
+
+def _snake_case(name: str) -> str:
+    return "".join(f"_{char.lower()}" if char.isupper() else char for char in name)
+
+
+def load_channel_model_id(project_or_path: ProjectRef) -> str:
+    """Load the channel model ID a study declares in ``spec.simulation``.
+
+    A channel model decides whether, and when, a message between simulated
+    agents arrives, so two runs that differ only in their channel produce
+    different results from the same inputs. This is the channel role's half of
+    the contract :func:`load_surrogate_id` gives the surrogate role: the study
+    declares the component, the library resolves it through the registry, and
+    ``provenance.channel_model`` records what carried the messages.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+
+    Returns:
+        The declared ID, or ``DEFAULT_CHANNEL_MODEL_ID`` (the ideal channel)
+        when the study declares none.
+
+    Raises:
+        ValueError: If ``spec.simulation.channelModel`` is not a mapping, has
+            unsupported keys, lacks a non-empty ``id``, or names a channel
+            model the repository does not register. The message lists the
+            registered IDs.
+    """
+    from gridalyn.simulation.channels.contract import DEFAULT_CHANNEL_MODEL_ID
+    from gridalyn.simulation.channels.registry import default_channel_model_registry
+
+    project = _project(project_or_path)
+    declared = _channel_model_declaration(project)
+    if declared is None:
+        return DEFAULT_CHANNEL_MODEL_ID
+    context = f"{project.path}: spec.simulation.channelModel.id"
+    channel_model_id = declared.get("id")
+    if not isinstance(channel_model_id, str) or not channel_model_id.strip():
+        raise ValueError(
+            f"{context} must be a non-empty string, found "
+            f"{type(channel_model_id).__name__}"
+        )
+    registered = [
+        descriptor.channel_model_id
+        for descriptor in default_channel_model_registry().list_descriptors()
+    ]
+    if channel_model_id.strip() not in registered:
+        raise ValueError(
+            f"{context} names an unregistered channel model "
+            f"{channel_model_id.strip()!r} (registered: {', '.join(sorted(registered))})"
+        )
+    return channel_model_id.strip()
+
+
+def _channel_model_seed(
+    project: StudyProject,
+    declared: Mapping[str, Any],
+    channel_model_id: str,
+    draws_randomness: bool,
+) -> int | None:
+    context = f"{project.path}: spec.simulation.channelModel"
+    stream = declared.get("seedStream")
+    if not draws_randomness:
+        if stream is not None:
+            raise ValueError(
+                f"{context}.seedStream is set, but {channel_model_id!r} draws no "
+                "randomness; remove it"
+            )
+        return None
+    if not isinstance(stream, str) or not stream:
+        raise ValueError(
+            f"{context}: {channel_model_id!r} draws randomness, so it needs "
+            "seedStream naming a stream in spec.simulation.seeds"
+        )
+    return load_simulation_seed(project, stream)
+
+
+def load_channel_model_parameters(project_or_path: ProjectRef) -> dict[str, Any]:
+    """Load the parameters of the channel model a study declares.
+
+    Keys are mapped from camelCase to the factory's snake_case names and must be
+    ones the model's descriptor declares. The seed of a model that draws
+    randomness is never declared inline: it comes from the named
+    ``spec.simulation.seeds`` stream in ``seedStream``, so the seed the
+    manifest records under ``provenance.seeds`` is the seed the channel draws
+    with.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+
+    Returns:
+        Keyword arguments for the channel-model factory, including ``seed``
+        when the model draws randomness; empty when the study declares no
+        channel model.
+
+    Raises:
+        ValueError: If ``parameters`` is not a mapping, declares a seed inline or
+            a key the model does not declare, or the seed stream is missing, not
+            declared in ``spec.simulation.seeds``, or set for a model that draws
+            no randomness. The message names what is supported.
+    """
+    from gridalyn.simulation.channels.registry import default_channel_model_registry
+
+    project = _project(project_or_path)
+    declared = _channel_model_declaration(project)
+    if declared is None:
+        return {}
+    channel_model_id = load_channel_model_id(project)
+    context = f"{project.path}: spec.simulation.channelModel.parameters"
+    raw = declared.get("parameters", {})
+    if not isinstance(raw, Mapping):
+        raise ValueError(f"{context} must be a mapping, found {type(raw).__name__}")
+    parameters = {_snake_case(str(key)): value for key, value in raw.items()}
+    if "seed" in parameters:
+        raise ValueError(
+            f"{context} declares a seed inline; declare it as a named stream in "
+            "spec.simulation.seeds and name that stream in "
+            "spec.simulation.channelModel.seedStream, so provenance records it"
+        )
+    accepted = set(
+        default_channel_model_registry().get_descriptor(channel_model_id).parameters
+    )
+    unsupported = sorted(set(parameters) - accepted)
+    if unsupported:
+        supported = ", ".join(sorted(accepted - {"seed"})) or "none"
+        raise ValueError(
+            f"{context} has unsupported keys: {', '.join(unsupported)} "
+            f"(supported by {channel_model_id!r}: {supported})"
+        )
+    seed = _channel_model_seed(project, declared, channel_model_id, "seed" in accepted)
+    if seed is not None:
+        parameters["seed"] = seed
+    return parameters
+
+
 __all__ = [
+    "load_channel_model_id",
+    "load_channel_model_parameters",
     "load_der_dispatch_assets",
     "load_generated_bus_loads_mw",
     "load_generated_load_multipliers",

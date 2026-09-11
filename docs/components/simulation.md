@@ -22,7 +22,7 @@ message between simulated agents arrives — channel models.
   | `PowerFlowBackendRegistry` | which solver runs | `lightsim2grid` (capability `sim`) or `pandapower_native` | `provenance.powerflow_backend` |
   | `SurrogateRegistry` | which surrogate stands in for a solve | e.g. `network_impact_physics_lookup_v1`, `network_impact_tabular_v1`, each with a stated error bound | — |
   | `PolicyRegistry` | which control policy decides an action | project-registered control policies | — |
-  | `ChannelModelRegistry` | whether, and when, a message between agents arrives | `ideal` (default), `fixed_latency`, `bernoulli_loss`, `fixed_outage` | — (the descriptor records parameters and seed; run provenance is follow-up work) |
+  | `ChannelModelRegistry` | whether, and when, a message between agents arrives | `ideal` (default), `fixed_latency`, `bernoulli_loss`, `fixed_outage` | `provenance.channel_model`, with its parameters and seed, only when a study declares `spec.simulation.channelModel` |
 
   A **fifth** role — observation, "what does the network currently show" —
   is deliberately **not** a registry. It is a single-builder contract

@@ -33,6 +33,13 @@ file another stage wrote, and its only output is a file on disk.
   declared follow-up surface: their registries do not yet expose the
   `registration_source` discriminator that tells a project-registered
   component from a core one.
+- **The channel model** (`spec.simulation.channelModel`), for a study whose
+  simulated agents exchange messages. It declares a registered `id` and its
+  `parameters`. A model that draws randomness also names a `seedStream` from
+  `spec.simulation.seeds`, and never a seed of its own.
+  `ProjectScript.channel_model()` resolves it, and the manifest records it as
+  `provenance.channel_model`. A study that declares none records nothing, so
+  its manifest bytes stay unchanged.
 - **Sense checks and regression** — `project_sense_check` runs objective
   plausibility checks; `run_project_regression` compares a run's outputs
   against `baselines/results_baseline.json`.
