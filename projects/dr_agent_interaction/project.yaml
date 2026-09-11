@@ -1,0 +1,78 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: dr_agent_interaction
+  version: 0.1.0
+  description: Twenty Québec all-electric homes answer a day of OpenADR 3.1.0 demand-response events over a lossy channel, through the dr_program protocol.
+spec:
+  simulation:
+    # Two independent RNG streams, both wired to the code that reads them.
+    seeds:
+      agents: 11    # home envelopes, EV sessions and appliance background, read in run_dr_program.py
+      channel: 29   # per-message loss draws, read through channelModel.seedStream
+    channelModel:
+      id: bernoulli_loss
+      parameters:
+        lossProbability: 0.15
+        latency: 1.0
+      seedStream: channel
+  pathBase: project
+  problem:
+    type: demand_response_program
+    dataset: synthetic_quebec_all_electric_cold_day
+    environment: dr_program_protocol_over_lossy_channel
+    objective: Measure how much of the curtailment a program orders is delivered when its events, opt-outs, cancellations and reports travel over a lossy channel.
+    model:
+      type: operations_model
+      name: dr_program
+    scenarios:
+      - id: winter_program_day
+        role: protocol_contract_case
+        description: Three events on the coldest synthetic winter day -- two that run, with comfort opt-outs, and one cancelled before it starts.
+  experiments:
+    - id: dr_program_day
+      scenario: winter_program_day
+      objective: Measure response rate, delivered versus ordered curtailment, and message loss.
+      metrics:
+        - response_rate
+        - delivery_ratio
+        - lost_message_count
+      model: dr_program
+      artifacts:
+        - outputs/reports/dr_program_report.json
+        - outputs/reports/dr_interaction_report.json
+  inputs:
+    drProgram:
+      programId: winter-peak-program
+      participants: 20
+      optOutBelowIndoorC: 19.0
+      events:
+        - id: evt-morning-peak
+          notifyAt: "00:00"
+          start: "06:00"
+          end: "09:00"
+          capacityLimitKw: 4.0
+        - id: evt-midday-cancelled
+          notifyAt: "10:00"
+          start: "13:00"
+          end: "15:00"
+          capacityLimitKw: 4.0
+          cancelAt: "12:00"
+        - id: evt-evening-peak
+          notifyAt: "14:00"
+          start: "17:00"
+          end: "20:00"
+          capacityLimitKw: 4.0
+  workflow:
+    file: workflow.yaml
+  validation:
+    senseChecker: scripts/sense_checks.py:check
+    objectiveArtifacts:
+      - outputs/reports/dr_program_report.json
+      - outputs/reports/dr_interaction_report.json
+      - outputs/operations/dr_message_log.parquet
+      - outputs/operations/dr_conversations.csv
+      - outputs/data/dr_program_timeseries.csv
+    requiredReports:
+      - outputs/reports/dr_program_report.json
+      - outputs/reports/dr_interaction_report.json

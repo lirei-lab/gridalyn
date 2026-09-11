@@ -17,7 +17,7 @@ pull request. What they cover is **not** your job to repeat.
 | Job | What it proves |
 | --- | --- |
 | `test` | The whole `pytest` suite on Python 3.12 with the `dev` extra installed. |
-| `projects` (Governed project contracts) | Six fixture studies run end to end — `minimal_grid_project`, `synthetic_geojson_feeder`, `ieee_33_bus_demo`, `der_voltage_optimization`, `prosumer_battery_market`, `rl_voltage_control_lightsim` — each followed by a regression comparison against its committed baseline. This is what actually gates the StudyProject → Workflow → report → baseline contract. |
+| `projects` (Governed project contracts) | Seven fixture studies run end to end — `minimal_grid_project`, `synthetic_geojson_feeder`, `ieee_33_bus_demo`, `der_voltage_optimization`, `prosumer_battery_market`, `rl_voltage_control_lightsim`, `dr_agent_interaction` — each followed by a regression comparison against its committed baseline. This is what actually gates the StudyProject → Workflow → report → baseline contract. |
 | `typecheck` (Type check ratchet) | `tools/mypy_ratchet.py`, run **three** times: `--target gridalyn` against `.mypy-baseline` (120 errors — a real, tracked backlog, never silently raised); `--target projects --baseline-file .mypy-baseline-projects` (851, added 2026-08-18 — a second, independent backlog; study scripts were never held to the SDK's bar); and `--target gridalyn/twin --baseline-file .mypy-baseline-twin` (12, added 2026-08-19, so a twin regression is visible on its own rather than folded into the SDK's count). All three report rather than block: a job fails only when its own count *rises*. `tests/test_mypy_ratchet.py` asserts that the set it checks matches the set this workflow runs, so a fourth target cannot be added to one and not the other. The `projects` target exists because a shared helper's signature changed and 9 of 10 `ev_hosting_flex` call sites kept the old type — invisible to CI, since the study's own tests `skipif` on its gitignored outputs, and invisible to mypy until `projects/` had a gate at all. |
 
 The `lint` job runs pre-commit on pull-request-changed files only. The full tree
@@ -86,7 +86,7 @@ done
 # --- 3. Fixture studies end to end (mirrors the CI `projects` job). --------
 for study in minimal_grid_project synthetic_geojson_feeder ieee_33_bus_demo \
              der_voltage_optimization prosumer_battery_market \
-             rl_voltage_control_lightsim; do
+             rl_voltage_control_lightsim dr_agent_interaction; do
   "$PY" -m gridalyn.interfaces.cli.project run        "projects/${study}"
   "$PY" -m gridalyn.interfaces.cli.project regression "projects/${study}"
 done

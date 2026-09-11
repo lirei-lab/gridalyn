@@ -1152,7 +1152,7 @@
       "ordinal": 1,
       "rationale": "the flagship study run is ~6 h",
       "sequence": null,
-      "sha1": "de9630442673e4b921d320925dfe26fd1fd06299",
+      "sha1": "dd9e03d496bacd6c1cf42bf04cb817ba97356b2d",
       "verdict": "DOCUMENTED"
     },
     "docs/contributing/verification.md#2": {

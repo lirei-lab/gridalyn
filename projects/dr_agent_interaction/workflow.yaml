@@ -1,0 +1,31 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: dr_agent_interaction_workflow
+spec:
+  stages:
+    - id: prepare_workspace
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
+      outputs:
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+        - outputs/cache
+    - id: run_dr_program_day
+      needs:
+        - prepare_workspace
+      command: "{python} scripts/run_dr_program.py"
+      outputs:
+        - outputs/operations/dr_message_log.parquet
+        - outputs/operations/dr_conversations.csv
+        - outputs/data/dr_program_timeseries.csv
+        - outputs/reports/dr_interaction_report.json
+        - outputs/reports/dr_program_report.json
+    - id: validate_project_outputs
+      needs:
+        - run_dr_program_day
+      command: "{python} -m gridalyn.interfaces.cli.project sense-check ."
+      outputs:
+        - outputs/reports/project_sense_check_report.json

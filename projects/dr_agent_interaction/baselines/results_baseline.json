@@ -1,0 +1,204 @@
+{
+  "metric_tolerance": {
+    "absolute": 0.0,
+    "note": "Protocol counts, and the rates computed from them, are pinned exactly: they are what this fixture exists to guard, and a mutated protocol transition moves them. Measured 2026-09-11: perturbing the outdoor temperature by 1e-9 C and by 1e-6 C left every count, rate and energy unchanged (the heating controller is quantized to ten levels), and the closest indoor sample to the 19 C opt-out limit was 8e-4 C away. Energies, powers and temperatures are pinned to about 1e-3 relative -- physical significance, not solver precision -- because the appliance background comes from a LightGBM model whose output can differ slightly across library versions. reported_kwh is a sum of values rounded to 0.1 kWh."
+  },
+  "metrics": [
+    {
+      "expected": 0.4,
+      "id": "summary.response_rate",
+      "json_path": [
+        "summary",
+        "response_rate"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 1e-09
+    },
+    {
+      "expected": 0.8833333333333333,
+      "id": "summary.event_notification_delivery_rate",
+      "json_path": [
+        "summary",
+        "event_notification_delivery_rate"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 1e-09
+    },
+    {
+      "expected": 119,
+      "id": "summary.message_count",
+      "json_path": [
+        "summary",
+        "message_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 106,
+      "id": "summary.delivered_message_count",
+      "json_path": [
+        "summary",
+        "delivered_message_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 13,
+      "id": "summary.lost_message_count",
+      "json_path": [
+        "summary",
+        "lost_message_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 21,
+      "id": "summary.opt_out_decision_count",
+      "json_path": [
+        "summary",
+        "opt_out_decision_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 20,
+      "id": "summary.opt_out_delivered_count",
+      "json_path": [
+        "summary",
+        "opt_out_delivered_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 3,
+      "id": "summary.curtailed_despite_cancellation_count",
+      "json_path": [
+        "summary",
+        "curtailed_despite_cancellation_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 16,
+      "id": "summary.report_count",
+      "json_path": [
+        "summary",
+        "report_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 3,
+      "id": "summary.homes_below_comfort_without_program_count",
+      "json_path": [
+        "summary",
+        "homes_below_comfort_without_program_count"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": {
+        "evt-evening-peak": {
+          "completed": 8,
+          "never_notified": 3,
+          "opted_out": 9
+        },
+        "evt-midday-cancelled": {
+          "cancelled": 17,
+          "completed": 3
+        },
+        "evt-morning-peak": {
+          "completed": 8,
+          "never_notified": 1,
+          "opted_out": 11
+        }
+      },
+      "id": "summary.conversation_states",
+      "json_path": [
+        "summary",
+        "conversation_states"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0
+    },
+    {
+      "expected": 260.0803359069019,
+      "id": "summary.ordered_kwh",
+      "json_path": [
+        "summary",
+        "ordered_kwh"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.26
+    },
+    {
+      "expected": 130.5122395563351,
+      "id": "summary.delivered_kwh",
+      "json_path": [
+        "summary",
+        "delivered_kwh"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.13
+    },
+    {
+      "expected": 0.5018150991740226,
+      "id": "summary.delivery_ratio",
+      "json_path": [
+        "summary",
+        "delivery_ratio"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.001
+    },
+    {
+      "expected": 59.9,
+      "id": "summary.reported_kwh",
+      "json_path": [
+        "summary",
+        "reported_kwh"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.05
+    },
+    {
+      "expected": 155.5151005941737,
+      "id": "summary.peak_baseline_kw",
+      "json_path": [
+        "summary",
+        "peak_baseline_kw"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.16
+    },
+    {
+      "expected": 152.19903521514274,
+      "id": "summary.peak_program_kw",
+      "json_path": [
+        "summary",
+        "peak_program_kw"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.16
+    },
+    {
+      "expected": 2.087096243857026,
+      "id": "summary.max_program_indoor_drop_c",
+      "json_path": [
+        "summary",
+        "max_program_indoor_drop_c"
+      ],
+      "source": "outputs/reports/dr_program_report.json",
+      "tolerance": 0.001
+    }
+  ],
+  "project": "dr_agent_interaction"
+}

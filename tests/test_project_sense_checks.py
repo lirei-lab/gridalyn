@@ -15,6 +15,7 @@ PROJECTS = [
     "prosumer_battery_market",
     "der_voltage_optimization",
     "rl_voltage_control_lightsim",
+    "dr_agent_interaction",
     "ev_hosting_flex",
     "admm_thermal_consensus",
 ]

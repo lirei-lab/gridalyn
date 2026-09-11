@@ -10,6 +10,10 @@ import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover - import-time only for annotations
     from gridalyn.foundation.platform.extensions import ExtensionDescriptor
+    from gridalyn.operations.interaction.program import (
+        DemandResponseEvent,
+        DemandResponseProgram,
+    )
 
 from gridalyn.assets.modeling.der_dispatch import DERDispatchAsset
 from gridalyn.assets.modeling.energy_assets import BatteryAsset, ProsumerAsset, PVAsset
@@ -947,9 +951,123 @@ def load_channel_model_parameters(project_or_path: ProjectRef) -> dict[str, Any]
     return parameters
 
 
+_DR_PROGRAM_KEYS = ("programId", "participants", "optOutBelowIndoorC", "events")
+_DR_EVENT_KEYS = ("id", "notifyAt", "start", "end", "capacityLimitKw", "cancelAt")
+
+
+def _refuse_unsupported_keys(
+    mapping: Mapping[str, Any], supported: tuple[str, ...], context: str
+) -> None:
+    unsupported = sorted(str(key) for key in mapping if key not in supported)
+    if unsupported:
+        raise ValueError(
+            f"{context} has unsupported keys: {', '.join(unsupported)} "
+            f"(supported: {', '.join(supported)})"
+        )
+
+
+def _minute_of_day(value: Any, context: str) -> float:
+    parts = value.split(":") if isinstance(value, str) else []
+    if len(parts) != 2 or not all(len(part) == 2 and part.isdigit() for part in parts):
+        raise ValueError(f"{context} must be a time of day 'HH:MM', found {value!r}")
+    hours, minutes = int(parts[0]), int(parts[1])
+    if minutes >= 60 or hours * 60 + minutes > 1440:
+        raise ValueError(
+            f"{context} must lie within one day, 00:00 to 24:00; found {value!r}"
+        )
+    return float(hours * 60 + minutes)
+
+
+def _demand_response_event(item: Any, context: str) -> DemandResponseEvent:
+    from gridalyn.operations.interaction.program import DemandResponseEvent
+
+    if not isinstance(item, Mapping):
+        raise ValueError(f"{context} must be a mapping, found {type(item).__name__}")
+    _refuse_unsupported_keys(item, _DR_EVENT_KEYS, context)
+    declared_cancel_at = item.get("cancelAt")
+    event_id = str(_required(item, "id", context))
+    notify_at = _minute_of_day(
+        _required(item, "notifyAt", context), f"{context}.notifyAt"
+    )
+    start = _minute_of_day(_required(item, "start", context), f"{context}.start")
+    end = _minute_of_day(_required(item, "end", context), f"{context}.end")
+    capacity_limit_kw = float(_required(item, "capacityLimitKw", context))
+    cancel_at = (
+        None
+        if declared_cancel_at is None
+        else _minute_of_day(declared_cancel_at, f"{context}.cancelAt")
+    )
+    try:
+        return DemandResponseEvent(
+            event_id=event_id,
+            notify_at=notify_at,
+            start=start,
+            end=end,
+            capacity_limit_kw=capacity_limit_kw,
+            cancel_at=cancel_at,
+        )
+    except ValueError as exc:
+        raise ValueError(f"{context}: {exc}") from exc
+
+
+def load_demand_response_program(
+    project_or_path: ProjectRef, input_key: str = "drProgram"
+) -> DemandResponseProgram:
+    """Load the demand-response program a study declares in ``spec.inputs``.
+
+    Event times are declared as times of day, ``"HH:MM"`` (``"24:00"`` is the
+    end of the day), and loaded as simulated minutes from the start of the day
+    -- the unit the ``dr_program`` protocol's deadlines use.
+
+    Args:
+        project_or_path: Loaded project, project directory, or ``project.yaml``.
+        input_key: The ``spec.inputs`` key holding the program.
+
+    Returns:
+        The program, validated: events notified before they start, windows that
+        do not overlap, cancellations between notification and end.
+
+    Raises:
+        ValueError: The input is missing or not a mapping, has unsupported keys,
+            lacks a required field, or describes an inconsistent program; the
+            message names the offending path.
+    """
+    from gridalyn.operations.interaction.program import DemandResponseProgram
+
+    project = _project(project_or_path)
+    inputs = _inputs(project)
+    context = f"{project.path}: spec.inputs.{input_key}"
+    raw = inputs.get(input_key)
+    if not isinstance(raw, Mapping):
+        if input_key not in inputs:
+            raise ValueError(
+                f"{context} not found (declared inputs: {_available_keys(inputs)})"
+            )
+        raise ValueError(f"{context} must be a mapping, found {type(raw).__name__}")
+    _refuse_unsupported_keys(raw, _DR_PROGRAM_KEYS, context)
+    declared_events = _required(raw, "events", context)
+    if not isinstance(declared_events, list) or not declared_events:
+        raise ValueError(f"{context}.events must be a non-empty list of events")
+    events = tuple(
+        _demand_response_event(item, f"{context}.events[{index}]")
+        for index, item in enumerate(declared_events)
+    )
+    limit = raw.get("optOutBelowIndoorC")
+    try:
+        return DemandResponseProgram(
+            program_id=str(_required(raw, "programId", context)),
+            participant_count=int(_required(raw, "participants", context)),
+            events=events,
+            opt_out_below_indoor_c=None if limit is None else float(limit),
+        )
+    except ValueError as exc:
+        raise ValueError(f"{context}: {exc}") from exc
+
+
 __all__ = [
     "load_channel_model_id",
     "load_channel_model_parameters",
+    "load_demand_response_program",
     "load_der_dispatch_assets",
     "load_generated_bus_loads_mw",
     "load_generated_load_multipliers",

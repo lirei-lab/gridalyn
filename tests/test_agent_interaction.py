@@ -437,7 +437,7 @@ def test_an_event_update_moves_its_window():
     assert conversation.deadlines[ACTIVE_FROM_FIELD] == 6.0
 
 
-def test_opt_out_and_cancellation_end_the_event_and_late_cancellation_is_refused():
+def test_opt_out_and_cancellation_end_the_event():
     opted = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
     opted.accept(_event(0.0, 2.0, 4.0))
     assert opted.accept(_opt_out(1.0)) == "opted_out"
@@ -447,10 +447,41 @@ def test_opt_out_and_cancellation_end_the_event_and_late_cancellation_is_refused
     cancelled = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
     cancelled.accept(_event(0.0, 2.0, 4.0))
     assert cancelled.accept(_cancellation(2.5)) == "cancelled"
+
+
+def test_version_2_absorbs_the_races_of_a_lossy_channel():
+    # Found by projects/dr_agent_interaction: over a lossy channel a sender acts
+    # on what it knows, so these messages arrive in states version 1 refused.
+    assert DR_PROGRAM_PROTOCOL.version == "2"
+    never_notified = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    assert never_notified.accept(_cancellation(1.0)) == "cancelled"
+    opt_out_first = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    opt_out_first.accept(_event(0.0, 2.0, 4.0))
+    assert opt_out_first.accept(_opt_out(3.0)) == "opted_out"
+    assert opt_out_first.accept(_cancellation(3.0)) == "opted_out"
+    cancellation_first = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    cancellation_first.accept(_event(0.0, 2.0, 4.0))
+    assert cancellation_first.accept(_cancellation(3.0)) == "cancelled"
+    assert cancellation_first.accept(_opt_out(3.5)) == "cancelled"
     late = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
     late.accept(_event(0.0, 2.0, 4.0))
-    with pytest.raises(ValueError, match="in state 'completed' at time 4.5"):
-        late.accept(_cancellation(4.5))
+    assert late.accept(_cancellation(4.5)) == "completed"
+    assert late.accept(_opt_out(5.0)) == "completed"
+
+
+def test_version_2_still_refuses_what_no_race_explains():
+    unaware = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    with pytest.raises(ValueError, match="is in state 'idle'"):
+        unaware.accept(_opt_out(1.0))
+    cancelled = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    cancelled.accept(_event(0.0, 2.0, 4.0))
+    cancelled.accept(_cancellation(1.0))
+    with pytest.raises(ValueError, match="is in state 'cancelled'"):
+        cancelled.accept(_event(1.5, 2.0, 4.0))
+    notified = Conversation(DR_PROGRAM_PROTOCOL, DR_ID)
+    notified.accept(_event(0.0, 2.0, 4.0))
+    with pytest.raises(ValueError, match="is in state 'notified'"):
+        notified.accept(_report(1.0))
 
 
 def test_a_deadline_must_be_a_number():

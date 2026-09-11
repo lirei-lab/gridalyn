@@ -19,6 +19,7 @@ larger flexibility workflow only when you want an end-to-end operations example.
 | `projects/prosumer_battery_market` | Demonstrates prosumer assets, forecasts, and market clearing. |
 | `projects/der_voltage_optimization` | Demonstrates CVXPY plus pandapower verification. |
 | `projects/rl_voltage_control_lightsim` | Demonstrates a Gridalyn voltage-control environment backed by LightSim2Grid. |
+| `projects/dr_agent_interaction` | Runs a day of OpenADR 3.1.0 demand-response events through the `dr_program` protocol over a lossy channel, in seconds. |
 | `projects/ev_hosting_flex` | EV hosting capacity and flexibility on a Québec all-electric feeder. |
 | `projects/admm_thermal_consensus` | Distributed ADMM coordination of cold-climate electric heating, on a 500 kVA LV feeder. |
 
