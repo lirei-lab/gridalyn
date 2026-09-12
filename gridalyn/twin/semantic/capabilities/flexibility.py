@@ -3,7 +3,7 @@
 The default semantic graph is model-first: it emits only generic CIM/Brick
 topology, premises, scenarios and run provenance (see
 :mod:`gridalyn.twin.semantic.emitters`). Everything in this module is the
-**flexibility layer** — the CLS/EFOnt/market ontology, the IEEE 2030.5 EVSE/DER
+**flexibility layer** — the flexint/EFOnt/market ontology, the EV charging-station
 nodes, the 14-column provider-schema re-declaration, and the
 flexibility-specific repository queries — and is applied only when a project
 declares the ``flexibility`` semantic capability.
@@ -23,11 +23,20 @@ states the namespaces, types, relationships (one predicate, a domain, a
 range, optionally a cardinality) and scenario count rules this layer adds;
 the default semantic capability registry resolves it by ID. Two relationships
 changed in that re-base: the EVSE-to-Hard-CLS edge is ``ENABLES_CONTRACT``
-(``cls:enablesContract``), because it shared the label ``ENABLES`` with EFOnt's
+(``flexint:enablesContract``), because it shared the label ``ENABLES`` with EFOnt's
 operation-to-flexibility property while meaning something else; and
 provider-to-device ``HAS_FLEXIBILITY_RESOURCE`` edges now carry
 ``dt:hasFlexibilityResource``, the predicate the building-to-resource edges of
 the same relationship already carried.
+
+**Persistent IRIs (2026-09-11).** ``cls:`` on the unresolvable
+``gridalyn.local`` host became ``flexint:`` on w3id.org. The Soft and Hard
+contract classes became one ``flexint:CurtailmentContract`` whose
+``contract_mode`` property says which, because the acronym their names encoded
+was defined nowhere. The EVSE type, which IEEE 2030.5 does not define, became
+Brick's ``Electric_Vehicle_Charging_Station``. Operation strings
+(``soft_cls_building``, ``hard_cls_ev``) and node ids are unchanged. Every
+former term is a declared :class:`TermAlias` in :data:`FLEXIBILITY_CAPABILITY`.
 """
 
 from __future__ import annotations
@@ -49,6 +58,7 @@ from gridalyn.twin.semantic.vocabulary import (
     RelationshipSpec,
     ScenarioCountRule,
     SemanticCapability,
+    TermAlias,
 )
 
 # ---------------------------------------------------------------------------
@@ -83,14 +93,14 @@ def _append_efont_soft_cls_crosswalk(
             properties={
                 "building_id": building_id,
                 "contract_id": contract_id,
-                "mapped_from": "cls:SoftCLSContract",
+                "mapped_from": "flexint:CurtailmentContract",
                 "application_scope": "BuildingLevelApplication",
                 "flexibility_resource": "thermally_activated_building_system",
             },
         ),
         _node(
             operation_id,
-            ["FlexibleOperation", "SoftCLSOperation"],
+            ["FlexibleOperation", "CurtailmentOperation"],
             "efont:FlexibleOperation",
             "EFOnt",
             "asset_registry",
@@ -107,7 +117,7 @@ def _append_efont_soft_cls_crosswalk(
         ),
         _node(
             flexibility_id,
-            ["EnergyFlexibility", "SoftCLSFlexibility"],
+            ["EnergyFlexibility", "CurtailmentFlexibility"],
             "efont:EnergyFlexibility",
             "EFOnt",
             "asset_registry",
@@ -118,7 +128,7 @@ def _append_efont_soft_cls_crosswalk(
                 "building_id": building_id,
                 "contract_id": contract_id,
                 "max_reduced_demand_kw": max_soft_kw,
-                "cls_contract_type": row.get("contract_type"),
+                "contract_type": row.get("contract_type"),
                 "performance_goal": "reducePeakDemand",
             },
         ),
@@ -187,8 +197,8 @@ def _append_efont_soft_cls_crosswalk(
             contract_id,
             "DESCRIBES_FLEXIBILITY",
             flexibility_id,
-            "cls:describesFlexibility",
-            "Gridalyn_CLS",
+            "flexint:describesFlexibility",
+            "Gridalyn_Flexint",
             "asset_registry",
             contract_id,
             scenario_id=scenario_id,
@@ -203,7 +213,8 @@ def emit_flexibility_asset_nodes(
 ) -> None:
     """Emit the flexibility part of the scenario asset registry.
 
-    The EVSE/DER nodes, the SoftCLS/HardCLS contracts and the EFOnt crosswalk
+    The EV charging-station nodes, the soft and hard curtailment contracts and
+    the EFOnt crosswalk
     from the scenario asset registry. The generic scenario-includes-building
     edges live in the model-first ``emitters.emit_asset_registry``.
     """
@@ -221,8 +232,8 @@ def emit_flexibility_asset_nodes(
                 _node(
                     ev_id,
                     ["EVSE", "DERAsset"],
-                    "ieee2030_5:EVSE",
-                    "IEEE_2030_5",
+                    "brick:Electric_Vehicle_Charging_Station",
+                    "Brick",
                     "asset_registry",
                     f"{scenario_id}:{ev_id}",
                     name=ev_id,
@@ -263,15 +274,16 @@ def emit_flexibility_asset_nodes(
             builder.add_node(
                 _node(
                     contract_id,
-                    ["SoftCLSContract", "FlexibilityContract"],
-                    "cls:SoftCLSContract",
-                    "Gridalyn_CLS",
+                    ["CurtailmentContract", "FlexibilityContract"],
+                    "flexint:CurtailmentContract",
+                    "Gridalyn_Flexint",
                     "asset_registry",
                     contract_id,
                     name=contract_id,
                     scenario_id=scenario_id,
                     properties={
                         "building_id": building_id,
+                        "contract_mode": "soft",
                         "max_soft_kw": row.get("max_soft_kw"),
                         "contract_type": row.get("contract_type"),
                     },
@@ -282,8 +294,8 @@ def emit_flexibility_asset_nodes(
                     building_id,
                     "PARTICIPATES_IN",
                     contract_id,
-                    "cls:participatesIn",
-                    "Gridalyn_CLS",
+                    "flexint:participatesIn",
+                    "Gridalyn_Flexint",
                     "asset_registry",
                     contract_id,
                     scenario_id=scenario_id,
@@ -314,9 +326,9 @@ def emit_flexibility_asset_nodes(
             builder.add_node(
                 _node(
                     contract_id,
-                    ["HardCLSContract", "FlexibilityContract"],
-                    "cls:HardCLSContract",
-                    "Gridalyn_CLS",
+                    ["CurtailmentContract", "FlexibilityContract"],
+                    "flexint:CurtailmentContract",
+                    "Gridalyn_Flexint",
                     "asset_registry",
                     contract_id,
                     name=contract_id,
@@ -325,6 +337,7 @@ def emit_flexibility_asset_nodes(
                         "ev_id": ev_id,
                         "building_id": building_id,
                         "max_hard_kw": row.get("max_hard_kw"),
+                        "contract_mode": "hard",
                         "hard_preferred": hard_preferred,
                     },
                 )
@@ -334,8 +347,8 @@ def emit_flexibility_asset_nodes(
                     ev_id,
                     "ENABLES_CONTRACT",
                     contract_id,
-                    "cls:enablesContract",
-                    "Gridalyn_CLS",
+                    "flexint:enablesContract",
+                    "Gridalyn_Flexint",
                     "asset_registry",
                     contract_id,
                     scenario_id=scenario_id,
@@ -419,8 +432,8 @@ def _emit_provider_aggregates(
                 _node(
                     aggregator_id,
                     ["FlexibilityAggregator", "MarketParticipant"],
-                    "cls:FlexibilityAggregator",
-                    "Gridalyn_CLS",
+                    "flexint:FlexibilityAggregator",
+                    "Gridalyn_Flexint",
                     "provider_registry",
                     aggregator_id,
                     name=aggregator_id,
@@ -438,8 +451,8 @@ def _emit_provider_aggregates(
                 _node(
                     portfolio_id,
                     ["FlexibilityPortfolio"],
-                    "cls:FlexibilityPortfolio",
-                    "Gridalyn_CLS",
+                    "flexint:FlexibilityPortfolio",
+                    "Gridalyn_Flexint",
                     "provider_registry",
                     portfolio_id,
                     name=portfolio_id,
@@ -467,8 +480,8 @@ def _emit_provider_aggregates(
                     aggregator_id,
                     "MANAGES_PORTFOLIO",
                     portfolio_id,
-                    "cls:managesPortfolio",
-                    "Gridalyn_CLS",
+                    "flexint:managesPortfolio",
+                    "Gridalyn_Flexint",
                     "provider_registry",
                     portfolio_id,
                     scenario_id=scenario_id,
@@ -512,8 +525,8 @@ def _emit_provider_offers(
             _node(
                 provider_id,
                 ["FlexibilityProvider", "MarketResource"],
-                "cls:FlexibilityProvider",
-                "Gridalyn_CLS_EFOnt_CIM",
+                "flexint:FlexibilityProvider",
+                "Gridalyn_Flexint_EFOnt_CIM",
                 "provider_registry",
                 provider_id,
                 name=provider_id,
@@ -549,7 +562,7 @@ def _emit_provider_offers(
                     scenario_device_id,
                     ["ScenarioDevice", "FlexibilityResource"],
                     "dt:ScenarioDevice",
-                    "Gridalyn_DT_CLS",
+                    "Gridalyn_DT_Flexint",
                     "provider_registry",
                     scenario_device_id,
                     name=scenario_device_id,
@@ -570,8 +583,8 @@ def _emit_provider_offers(
             _node(
                 offer_id,
                 ["FlexibilityOffer"],
-                "cls:FlexibilityOffer",
-                "Gridalyn_CLS",
+                "flexint:FlexibilityOffer",
+                "Gridalyn_Flexint",
                 "provider_registry",
                 offer_id,
                 name=offer_id,
@@ -590,8 +603,8 @@ def _emit_provider_offers(
                 _node(
                     constraint_zone_id,
                     ["ConstraintZone", "LocationalMarketZone"],
-                    "cls:ConstraintZone",
-                    "Gridalyn_CLS_CIM",
+                    "flexint:ConstraintZone",
+                    "Gridalyn_Flexint_CIM",
                     "provider_registry",
                     constraint_zone_id,
                     name=constraint_zone_id,
@@ -619,8 +632,8 @@ def _emit_provider_offers(
                 aggregator_id,
                 "AGGREGATES",
                 provider_id,
-                "cls:aggregates",
-                "Gridalyn_CLS",
+                "flexint:aggregates",
+                "Gridalyn_Flexint",
                 "provider_registry",
                 provider_id,
                 scenario_id=scenario_id,
@@ -629,8 +642,8 @@ def _emit_provider_offers(
                 portfolio_id,
                 "INCLUDES_PROVIDER",
                 provider_id,
-                "cls:includesProvider",
-                "Gridalyn_CLS",
+                "flexint:includesProvider",
+                "Gridalyn_Flexint",
                 "provider_registry",
                 provider_id,
                 scenario_id=scenario_id,
@@ -639,8 +652,8 @@ def _emit_provider_offers(
                 provider_id,
                 "OFFERS",
                 offer_id,
-                "cls:offers",
-                "Gridalyn_CLS",
+                "flexint:offers",
+                "Gridalyn_Flexint",
                 "provider_registry",
                 offer_id,
                 scenario_id=scenario_id,
@@ -649,8 +662,8 @@ def _emit_provider_offers(
                 provider_id,
                 "IMPLEMENTS_CONTRACT",
                 contract_id,
-                "cls:implementsContract",
-                "Gridalyn_CLS",
+                "flexint:implementsContract",
+                "Gridalyn_Flexint",
                 "provider_registry",
                 contract_id,
                 scenario_id=scenario_id,
@@ -678,8 +691,8 @@ def _emit_provider_offers(
                     provider_id,
                     "LOCATED_IN_CONSTRAINT_ZONE",
                     constraint_zone_id,
-                    "cls:locatedInConstraintZone",
-                    "Gridalyn_CLS",
+                    "flexint:locatedInConstraintZone",
+                    "Gridalyn_Flexint",
                     "provider_registry",
                     constraint_zone_id,
                     scenario_id=scenario_id,
@@ -688,8 +701,8 @@ def _emit_provider_offers(
                     offer_id,
                     "TARGETS_CONSTRAINT",
                     constraint_zone_id,
-                    "cls:targetsConstraint",
-                    "Gridalyn_CLS",
+                    "flexint:targetsConstraint",
+                    "Gridalyn_Flexint",
                     "provider_registry",
                     constraint_zone_id,
                     scenario_id=scenario_id,
@@ -698,8 +711,8 @@ def _emit_provider_offers(
                     constraint_zone_id,
                     "CONSTRAINT_ZONE_FOR",
                     constraint_id,
-                    "cls:constraintZoneFor",
-                    "Gridalyn_CLS_CIM",
+                    "flexint:constraintZoneFor",
+                    "Gridalyn_Flexint_CIM",
                     "provider_registry",
                     constraint_id,
                     scenario_id=scenario_id,
@@ -732,7 +745,7 @@ def extend_graph_with_flexibility(
 ) -> None:
     """Apply the flexibility layer to a model-first semantic graph.
 
-    Emits the EVSE/CLS/EFOnt asset-registry nodes and the provider-registry
+    Emits the charging-station, contract and EFOnt nodes and the provider-registry
     ontology. Empty inputs are no-ops, so a project that declares the
     capability but has no flexibility data still builds a valid core graph.
 
@@ -752,36 +765,39 @@ def extend_graph_with_flexibility(
 # ---------------------------------------------------------------------------
 
 
+#: ``flexint:`` is gridalyn's persistent vocabulary for flexibility markets,
+#: contracts and agent interaction; ``efont:`` is EFOnt's own published
+#: namespace. ``openadr:`` and ``ieee2030_5:`` were removed on 2026-09-11: the
+#: first was an invented IRI (the OpenADR Alliance publishes no RDF), the second
+#: is not a namespace, and neither carried a term except an EVSE type IEEE
+#: 2030.5 does not define.
 _FLEXIBILITY_NAMESPACES: dict[str, str] = {
-    "openadr": "https://openadr.org/ns#",
-    "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
     "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
-    "cls": "https://gridalyn.local/ontology/cls#",
+    "flexint": "https://w3id.org/gridalyn/ontology/flexint#",
 }
 
 _FLEXIBILITY_TYPES: tuple[str, ...] = (
-    "cls:ConstraintZone",
-    "cls:FlexibilityAggregator",
-    "cls:FlexibilityOffer",
-    "cls:FlexibilityPortfolio",
-    "cls:FlexibilityProvider",
-    "cls:HardCLSContract",
-    "cls:SoftCLSContract",
+    "brick:Electric_Vehicle_Charging_Station",
     "dt:ScenarioDevice",
     "efont:EnergyFlexibility",
     "efont:EnergyFlexibilityKPI",
     "efont:FlexibleLoadCharacteristic",  # Aspirational — not currently emitted.
     "efont:FlexibleOperation",
     "efont:ThermallyActivatedBuildingSystem",
-    "ieee2030_5:EVSE",
+    "flexint:ConstraintZone",
+    "flexint:CurtailmentContract",
+    "flexint:FlexibilityAggregator",
+    "flexint:FlexibilityOffer",
+    "flexint:FlexibilityPortfolio",
+    "flexint:FlexibilityProvider",
 )
 
 _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     RelationshipSpec(
         "AGGREGATES",
-        "cls:aggregates",
-        ("cls:FlexibilityAggregator",),
-        ("cls:FlexibilityProvider",),
+        "flexint:aggregates",
+        ("flexint:FlexibilityAggregator",),
+        ("flexint:FlexibilityProvider",),
     ),
     RelationshipSpec(
         "ALLOWS",
@@ -791,14 +807,14 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     ),
     RelationshipSpec(
         "CONSTRAINT_ZONE_FOR",
-        "cls:constraintZoneFor",
-        ("cls:ConstraintZone",),
+        "flexint:constraintZoneFor",
+        ("flexint:ConstraintZone",),
         ("cim:ACLineSegment", "cim:ConnectivityNode", "cim:PowerTransformer"),
     ),
     RelationshipSpec(
         "DESCRIBES_FLEXIBILITY",
-        "cls:describesFlexibility",
-        ("cls:SoftCLSContract",),
+        "flexint:describesFlexibility",
+        ("flexint:CurtailmentContract",),
         ("efont:EnergyFlexibility",),
     ),
     RelationshipSpec(
@@ -809,9 +825,9 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     ),
     RelationshipSpec(
         "ENABLES_CONTRACT",
-        "cls:enablesContract",
-        ("ieee2030_5:EVSE",),
-        ("cls:HardCLSContract",),
+        "flexint:enablesContract",
+        ("brick:Electric_Vehicle_Charging_Station",),
+        ("flexint:CurtailmentContract",),
         note=(
             "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES "
             "with EFOnt's operation-to-flexibility property while meaning "
@@ -822,12 +838,12 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
         "HAS_EVSE",
         "dt:hasEVSE",
         ("brick:Building",),
-        ("ieee2030_5:EVSE",),
+        ("brick:Electric_Vehicle_Charging_Station",),
     ),
     RelationshipSpec(
         "HAS_FLEXIBILITY_RESOURCE",
         "dt:hasFlexibilityResource",
-        ("brick:Building", "cls:FlexibilityProvider"),
+        ("brick:Building", "flexint:FlexibilityProvider"),
         ("dt:ScenarioDevice", "efont:ThermallyActivatedBuildingSystem"),
         note=(
             "One predicate for building-to-EFOnt-resource and provider-to-device "
@@ -837,9 +853,9 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     ),
     RelationshipSpec(
         "IMPLEMENTS_CONTRACT",
-        "cls:implementsContract",
-        ("cls:FlexibilityProvider",),
-        ("cls:HardCLSContract", "cls:SoftCLSContract"),
+        "flexint:implementsContract",
+        ("flexint:FlexibilityProvider",),
+        ("flexint:CurtailmentContract",),
         source_cardinality=(1, 1),
     ),
     RelationshipSpec(
@@ -847,44 +863,43 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
         "dt:includesAsset",
         ("dt:Scenario",),
         (
-            "cls:FlexibilityAggregator",
-            "cls:FlexibilityProvider",
-            "cls:HardCLSContract",
-            "cls:SoftCLSContract",
-            "ieee2030_5:EVSE",
+            "brick:Electric_Vehicle_Charging_Station",
+            "flexint:CurtailmentContract",
+            "flexint:FlexibilityAggregator",
+            "flexint:FlexibilityProvider",
         ),
     ),
     RelationshipSpec(
         "INCLUDES_PROVIDER",
-        "cls:includesProvider",
-        ("cls:FlexibilityPortfolio",),
-        ("cls:FlexibilityProvider",),
+        "flexint:includesProvider",
+        ("flexint:FlexibilityPortfolio",),
+        ("flexint:FlexibilityProvider",),
     ),
     RelationshipSpec(
         "LOCATED_IN_CONSTRAINT_ZONE",
-        "cls:locatedInConstraintZone",
-        ("cls:FlexibilityProvider",),
-        ("cls:ConstraintZone",),
+        "flexint:locatedInConstraintZone",
+        ("flexint:FlexibilityProvider",),
+        ("flexint:ConstraintZone",),
     ),
     RelationshipSpec(
         "MANAGES_PORTFOLIO",
-        "cls:managesPortfolio",
-        ("cls:FlexibilityAggregator",),
-        ("cls:FlexibilityPortfolio",),
+        "flexint:managesPortfolio",
+        ("flexint:FlexibilityAggregator",),
+        ("flexint:FlexibilityPortfolio",),
         source_cardinality=(1, 1),
     ),
     RelationshipSpec(
         "OFFERS",
-        "cls:offers",
-        ("cls:FlexibilityProvider",),
-        ("cls:FlexibilityOffer",),
+        "flexint:offers",
+        ("flexint:FlexibilityProvider",),
+        ("flexint:FlexibilityOffer",),
         source_cardinality=(1, 1),
     ),
     RelationshipSpec(
         "PARTICIPATES_IN",
-        "cls:participatesIn",
+        "flexint:participatesIn",
         ("brick:Building",),
-        ("cls:SoftCLSContract",),
+        ("flexint:CurtailmentContract",),
     ),
     RelationshipSpec(
         "QUANTIFIES",
@@ -894,18 +909,99 @@ _FLEXIBILITY_RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     ),
     RelationshipSpec(
         "TARGETS_CONSTRAINT",
-        "cls:targetsConstraint",
-        ("cls:FlexibilityOffer",),
-        ("cls:ConstraintZone",),
+        "flexint:targetsConstraint",
+        ("flexint:FlexibilityOffer",),
+        ("flexint:ConstraintZone",),
     ),
 )
 
 _FLEXIBILITY_SCENARIO_COUNTS: tuple[ScenarioCountRule, ...] = (
-    ScenarioCountRule("n_ev", "ieee2030_5:EVSE"),
+    ScenarioCountRule("n_ev", "brick:Electric_Vehicle_Charging_Station"),
     ScenarioCountRule(
-        "n_hard_preferred", "cls:HardCLSContract", property_true="hard_preferred"
+        "n_hard_preferred",
+        "flexint:CurtailmentContract",
+        property_true="hard_preferred",
+        property_equals=(("contract_mode", "hard"),),
     ),
-    ScenarioCountRule("n_soft_participants", "cls:SoftCLSContract"),
+    ScenarioCountRule(
+        "n_soft_participants",
+        "flexint:CurtailmentContract",
+        property_equals=(("contract_mode", "soft"),),
+    ),
+)
+
+
+#: Predicates for the network-impact surrogate graph, which EFOnt does not
+#: define; declared so they are terms with an IRI rather than free strings.
+_FLEXIBILITY_PREDICATES: tuple[str, ...] = (
+    "flexint:hasNetworkImpact",
+    "flexint:providesFlexibility",
+)
+
+_MOVED_TO_FLEXINT = (
+    "moved from the unresolvable gridalyn.local cls: namespace to the persistent "
+    "flexint: namespace, unchanged otherwise"
+)
+_RENAMED_BY_PREFIX = (
+    "ConstraintZone",
+    "FlexibilityAggregator",
+    "FlexibilityOffer",
+    "FlexibilityPortfolio",
+    "FlexibilityProvider",
+    "aggregates",
+    "constraintZoneFor",
+    "describesFlexibility",
+    "enablesContract",
+    "implementsContract",
+    "includesProvider",
+    "locatedInConstraintZone",
+    "managesPortfolio",
+    "offers",
+    "participatesIn",
+    "targetsConstraint",
+)
+_ONE_CONTRACT_CLASS = (
+    "the Soft/Hard distinction is the contract_mode property, not a class; the "
+    "acronym the class name encoded was defined nowhere"
+)
+
+#: Every term this capability emitted before 2026-09-11 that it no longer
+#: emits, each resolvable to its replacement for one release.
+_FLEXIBILITY_ALIASES: tuple[TermAlias, ...] = (
+    *(
+        TermAlias(f"cls:{name}", f"flexint:{name}", note=_MOVED_TO_FLEXINT)
+        for name in _RENAMED_BY_PREFIX
+    ),
+    TermAlias(
+        "cls:SoftCLSContract",
+        "flexint:CurtailmentContract",
+        (("contract_mode", "soft"),),
+        note=_ONE_CONTRACT_CLASS,
+    ),
+    TermAlias(
+        "cls:HardCLSContract",
+        "flexint:CurtailmentContract",
+        (("contract_mode", "hard"),),
+        note=_ONE_CONTRACT_CLASS,
+    ),
+    TermAlias(
+        "ieee2030_5:EVSE",
+        "brick:Electric_Vehicle_Charging_Station",
+        note=(
+            "IEEE 2030.5 defines no EVSE type and publishes no RDF namespace; "
+            "Brick defines the class"
+        ),
+    ),
+    TermAlias(
+        "efont:hasNetworkImpact",
+        "flexint:hasNetworkImpact",
+        note="EFOnt defines no hasNetworkImpact property",
+    ),
+    TermAlias(
+        "efont:providesFlexibility",
+        "flexint:providesFlexibility",
+        note="EFOnt defines no providesFlexibility property",
+    ),
 )
 
 
@@ -923,14 +1019,15 @@ FLEXIBILITY_CAPABILITY = SemanticCapability(
     namespaces=_FLEXIBILITY_NAMESPACES,
     primary_standards={
         "building_flexibility": ("EFOnt",),
-        "demand_response": ("OpenADR",),
-        "ev_der_control": ("IEEE 2030.5",),
-        "cls_market": ("gridalyn cls extension",),
+        "ev_charging": ("Brick Schema",),
+        "flexibility_market": ("gridalyn flexint",),
     },
     semantic_types=_FLEXIBILITY_TYPES,
     relationships=_FLEXIBILITY_RELATIONSHIPS,
     scenario_counts=_FLEXIBILITY_SCENARIO_COUNTS,
     extend=_extend_from_inputs,
+    predicates=_FLEXIBILITY_PREDICATES,
+    deprecated_aliases=_FLEXIBILITY_ALIASES,
 )
 
 
@@ -1034,7 +1131,7 @@ def _constraint_zone_ids(
         )
     )
     zones = repository.nodes.loc[
-        repository.nodes["semantic_type"] == "cls:ConstraintZone"
+        repository.nodes["semantic_type"] == "flexint:ConstraintZone"
     ]
     if scenario_id is not None:
         zones = zones.loc[
@@ -1054,7 +1151,7 @@ def _providers_for_building(
     scenario_id: str | None,
 ) -> tuple[dict[str, Any], ...]:
     rows = repository.nodes.loc[
-        repository.nodes["semantic_type"] == "cls:FlexibilityProvider"
+        repository.nodes["semantic_type"] == "flexint:FlexibilityProvider"
     ]
     if scenario_id is not None:
         rows = rows.loc[rows["scenario_id"].fillna("").astype(str) == str(scenario_id)]

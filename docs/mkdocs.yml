@@ -56,6 +56,9 @@ nav:
       - Workflow YAML: reference/workflow-yaml.md
       - Report Schema: reference/report-schema.md
       - Semantic Graph: reference/semantic-graph.md
+      - Ontology:
+          - Digital-Twin Vocabulary: reference/ontology/digital-twin.md
+          - Flexint Vocabulary: reference/ontology/flexint.md
       - Standards Alignment: reference/standards-alignment.md
       - FalkorDB Path: reference/falkordb.md
       - Artifact Policy: reference/artifact-policy.md

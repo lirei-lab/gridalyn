@@ -26,12 +26,12 @@ The profile in question is declared in `gridalyn/twin/semantic/profile.py` and
 | `brick: https://brickschema.org/schema/Brick#` | Declared by the published Brick TTL (served file 1.4.1; latest release 1.4.4) | Correct |
 | `efont: http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#` | Exactly the namespace the published EFOnt TTL declares | Correct |
 | `efont:allows`, `efont:enables`, `efont:Quantifies` | Exist with these spellings; `Quantifies` and `Characterizes` are capitalized in EFOnt itself | Correct |
-| `efont:hasNetworkImpact` (network-impact surrogate) | No such term in EFOnt | **Wrong** — must be a local predicate |
-| `cim: https://cim.ucaiug.io/ns#` | Used by ENTSO-E's Network Code Profiles; CGMES 3.0 uses `http://iec.ch/TC57/CIM100#` | **Decision needed** — claim CGMES 3.0 or the newer profile line |
-| `ieee2030_5: https://standards.ieee.org/ieee/2030.5#` | Not a namespace (redirects to a site search); the XSD namespace is `urn:ieee:std:2030.5:ns` and IEEE publishes no RDF | **Wrong** |
-| `ieee2030_5:EVSE` | No `EVSE` type in the 2013, 2018 or 2023 schemas | **Wrong** — needs a local class crosswalked to 2030.5 names |
-| `openadr: https://openadr.org/ns#` | Returns 404; the OpenADR Alliance publishes no RDF vocabulary | **Wrong** — declared but never emitted |
-| `dt:`, `cls:` on `gridalyn.local` | Not dereferenceable | **Pending** — needs persistent IRIs |
+| `efont:hasNetworkImpact`, `efont:providesFlexibility` (network-impact surrogate) | No such terms in EFOnt | **Fixed 2026-09-11** — local predicates `flexint:hasNetworkImpact` and `flexint:providesFlexibility` |
+| `cim: http://iec.ch/TC57/CIM100#` | CGMES 3.0 and North American distribution tooling (GridAPPS-D, CIMHub) use it; ENTSO-E's Network Code Profiles use `https://cim.ucaiug.io/ns#` | **Decided 2026-09-11** — primary; the CIM18 spellings are ingest aliases mapped per term, never emitted |
+| `ieee2030_5: https://standards.ieee.org/ieee/2030.5#` | Not a namespace (redirects to a site search); the XSD namespace is `urn:ieee:std:2030.5:ns` and IEEE publishes no RDF | **Removed 2026-09-11** |
+| `ieee2030_5:EVSE` | No `EVSE` type in the 2013, 2018 or 2023 schemas | **Fixed 2026-09-11** — Brick's `Electric_Vehicle_Charging_Station`, crosswalked to a 2030.5 `EndDevice` with `PEVInfo` |
+| `openadr: https://openadr.org/ns#` | Returns 404; the OpenADR Alliance publishes no RDF vocabulary | **Removed 2026-09-11** — it was declared but never emitted |
+| `dt:`, `cls:` on `gridalyn.local` | Not dereferenceable | **Fixed 2026-09-11** — `dt:` and `flexint:` (which replaces `cls:`) under `https://w3id.org/gridalyn/ontology/`; `cls:` terms are deprecated aliases for one release |
 | Topology shortcut predicates `dt:connects`, `dt:connectedTo`, `dt:feeds` | CGMES serializes `Terminal.ConductingEquipment` and `Terminal.ConnectivityNode`; the graph collapses the `Terminal` | Correct as documented local shortcuts |
 
 ## IEC CIM
@@ -200,15 +200,30 @@ event window in simulated time. The conversation becomes `active` and then
 
 ## Persistent IRIs for gridalyn's own namespaces
 
-`dt:` and `cls:` sit on a `.local` host and cannot be dereferenced. The
-[w3id.org](https://github.com/perma-id/w3id.org) process is a pull request that
-adds a directory under the repository's ids directory with an `.htaccess`
+**Adopted 2026-09-11.** `dt:` and `cls:` sat on a `.local` host and could not
+be dereferenced. gridalyn's own vocabularies now live under
+`https://w3id.org/gridalyn/ontology/`: `dt:` at
+`https://w3id.org/gridalyn/ontology/digital-twin#`, and `flexint:`, which
+replaces `cls:`, at `https://w3id.org/gridalyn/ontology/flexint#`. Each is
+generated from its declarations by `tools/export_ontology.py` into a reference
+page — [Digital-Twin Vocabulary](./ontology/digital-twin.md),
+[Flexint Vocabulary](./ontology/flexint.md) — and a Turtle file under
+`docs/ontology/`; `tests/test_ontology_documents.py` fails when either is stale.
+The Turtle marks every retired `cls:` term `owl:deprecated`, with
+`dcterms:isReplacedBy` naming its replacement.
+
+The [w3id.org](https://github.com/perma-id/w3id.org) process is a pull request
+that adds a directory under the repository's ids directory with an `.htaccess`
 (redirect rules) and a
 `README.md` with contact information. Across its 59 most recently merged pull
 requests the median time to merge was 3.2 hours (measured 2026-09-10). Because
 the documentation site is served by GitHub Pages, which does no content
-negotiation, HTML and Turtle requests must be redirected to distinct files by
-the w3id `.htaccess` itself. [purl.archive.org](https://purl.archive.org/) is the
+negotiation, HTML and Turtle requests are redirected to distinct files by the
+w3id `.htaccess` itself: a 303 to the Turtle file when the `Accept` header asks
+for Turtle, and to the reference page otherwise. gridalyn's rules and README
+are kept in `tools/w3id/gridalyn/` and are submitted once the pages they point
+at are published; until that pull request is merged, the IRIs are stable names
+that do not yet resolve. [purl.archive.org](https://purl.archive.org/) is the
 fallback.
 
 ## Not confirmed from a primary source

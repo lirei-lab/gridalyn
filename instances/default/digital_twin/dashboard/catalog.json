@@ -2379,6 +2379,21 @@
       },
       {
         "artifact": "semantic_nodes",
+        "class": "brick:Electric_Vehicle_Charging_Station",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 3235,
+        "derived_from": [
+          "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
         "class": "cim:ACLineSegment",
         "column": "semantic_type",
         "coordinates": null,
@@ -2430,111 +2445,6 @@
         "count": 163,
         "derived_from": [
           "grid_transformers"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:ConstraintZone",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 810,
-        "derived_from": [
-          "provider_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:FlexibilityAggregator",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 9,
-        "derived_from": [
-          "provider_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:FlexibilityOffer",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 8085,
-        "derived_from": [
-          "provider_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:FlexibilityPortfolio",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 9,
-        "derived_from": [
-          "provider_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:FlexibilityProvider",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 8085,
-        "derived_from": [
-          "provider_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:HardCLSContract",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 3235,
-        "derived_from": [
-          "asset_registry"
-        ],
-        "identity": null,
-        "located": false,
-        "population": "semantic_graph",
-        "scenario_column": null,
-        "scenario_id": null
-      },
-      {
-        "artifact": "semantic_nodes",
-        "class": "cls:SoftCLSContract",
-        "column": "semantic_type",
-        "coordinates": null,
-        "count": 4850,
-        "derived_from": [
-          "asset_registry"
         ],
         "identity": null,
         "located": false,
@@ -2666,12 +2576,87 @@
       },
       {
         "artifact": "semantic_nodes",
-        "class": "ieee2030_5:EVSE",
+        "class": "flexint:ConstraintZone",
         "column": "semantic_type",
         "coordinates": null,
-        "count": 3235,
+        "count": 810,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "flexint:CurtailmentContract",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
         "derived_from": [
           "asset_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "flexint:FlexibilityAggregator",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "flexint:FlexibilityOffer",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "flexint:FlexibilityPortfolio",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 9,
+        "derived_from": [
+          "provider_registry"
+        ],
+        "identity": null,
+        "located": false,
+        "population": "semantic_graph",
+        "scenario_column": null,
+        "scenario_id": null
+      },
+      {
+        "artifact": "semantic_nodes",
+        "class": "flexint:FlexibilityProvider",
+        "column": "semantic_type",
+        "coordinates": null,
+        "count": 8085,
+        "derived_from": [
+          "provider_registry"
         ],
         "identity": null,
         "located": false,

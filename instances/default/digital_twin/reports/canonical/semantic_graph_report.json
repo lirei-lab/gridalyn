@@ -1,45 +1,45 @@
 {
   "artifacts": [
     {
-      "bytes": 1806,
+      "bytes": 1761,
       "name": "graph_manifest",
       "path": "instances/default/digital_twin/semantic/graph_manifest.json",
-      "sha256": "7300b5903c114ca822076a823e4e0160baf51873786aea56de8acacf24f5d61a"
+      "sha256": "7c6d70078b738621d9636c3707a58e824098b1397ff84c6393ea485dbf524925"
     },
     {
-      "bytes": 3679062,
+      "bytes": 3718045,
       "name": "nodes",
       "path": "instances/default/digital_twin/semantic/nodes.parquet",
-      "sha256": "35319c0b9f324a78f159f7d2c7950eda30cda10e70c7bc9a3234e4fca4260da2"
+      "sha256": "bbc087175393ef310bc4dd0cd0c806a5ad2c546546c6c0f48f2d1ed968bb56e3"
     },
     {
-      "bytes": 3986749,
+      "bytes": 4067749,
       "name": "edges",
       "path": "instances/default/digital_twin/semantic/edges.parquet",
-      "sha256": "dba5f842225d62c515a3f189dd2b673c836f18b7e9afea529ceb95af7925d156"
+      "sha256": "3eb634dbfa2f30791d3fa75e61a423406c5e542c04c665a41229cd5f3ef26355"
     },
     {
-      "bytes": 194,
+      "bytes": 237,
       "name": "validation_report",
       "path": "instances/default/digital_twin/semantic/validation_report.json",
-      "sha256": "e2573ab92e29007eb4e6c12b2080f4484d9d46a365d6d02e7f38b2740cd462f0"
+      "sha256": "938dd0a198c4d470b5c07a16cf0a80f8b0e8aea9dd2b31d87d3da09a8cf74c6c"
     }
   ],
-  "created_at": "2026-08-07T14:27:33.188721+00:00",
+  "created_at": "2026-09-11T16:01:34.044335+00:00",
   "governance": {
     "model_version_id": null,
     "study_run_id": null
   },
   "inputs": [
     {
-      "bytes": 1806,
+      "bytes": 1761,
       "path": "instances/default/digital_twin/semantic/graph_manifest.json",
-      "sha256": "7300b5903c114ca822076a823e4e0160baf51873786aea56de8acacf24f5d61a"
+      "sha256": "7c6d70078b738621d9636c3707a58e824098b1397ff84c6393ea485dbf524925"
     },
     {
-      "bytes": 194,
+      "bytes": 237,
       "path": "instances/default/digital_twin/semantic/validation_report.json",
-      "sha256": "e2573ab92e29007eb4e6c12b2080f4484d9d46a365d6d02e7f38b2740cd462f0"
+      "sha256": "938dd0a198c4d470b5c07a16cf0a80f8b0e8aea9dd2b31d87d3da09a8cf74c6c"
     }
   ],
   "project": {
@@ -81,13 +81,11 @@
     "edge_count": 147065,
     "namespaces": {
       "brick": "https://brickschema.org/schema/Brick#",
-      "cim": "https://cim.ucaiug.io/ns#",
-      "cls": "https://gridalyn.local/ontology/cls#",
-      "dt": "https://gridalyn.local/ontology/digital-twin#",
+      "cim": "http://iec.ch/TC57/CIM100#",
+      "dt": "https://w3id.org/gridalyn/ontology/digital-twin#",
       "efont": "http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core#",
+      "flexint": "https://w3id.org/gridalyn/ontology/flexint#",
       "gb": "https://www.greenbuttondata.org/ns#",
-      "ieee2030_5": "https://standards.ieee.org/ieee/2030.5#",
-      "openadr": "https://openadr.org/ns#",
       "s223": "http://data.ashrae.org/standard223#"
     },
     "node_count": 74286,

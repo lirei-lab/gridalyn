@@ -1,3 +1,4 @@
+import json
 import re
 import tempfile
 import unittest
@@ -235,31 +236,38 @@ class SemanticGraphTest(unittest.TestCase):
         self.assertEqual(node_types["transformer:0"], "cim:PowerTransformer")
         self.assertEqual(node_types["building:0"], "brick:Building")
         self.assertEqual(node_types["load:0"], "cim:EnergyConsumer")
-        self.assertEqual(node_types["ev:S4:0"], "ieee2030_5:EVSE")
         self.assertEqual(
-            node_types["contract:S4:building:0:soft_cls"], "cls:SoftCLSContract"
+            node_types["ev:S4:0"], "brick:Electric_Vehicle_Charging_Station"
+        )
+        # One contract class; the mode its former class name encoded is a property.
+        node_properties = dict(zip(nodes["node_id"], nodes["properties"], strict=True))
+        for contract_id, mode in (
+            ("contract:S4:building:0:soft_cls", "soft"),
+            ("contract:S4:ev:S4:0:hard_cls", "hard"),
+        ):
+            self.assertEqual(node_types[contract_id], "flexint:CurtailmentContract")
+            self.assertEqual(
+                json.loads(node_properties[contract_id])["contract_mode"], mode
+            )
+        self.assertEqual(
+            node_types["aggregator:S4:soft_cls"], "flexint:FlexibilityAggregator"
         )
         self.assertEqual(
-            node_types["contract:S4:ev:S4:0:hard_cls"], "cls:HardCLSContract"
+            node_types["portfolio:S4:soft_cls"], "flexint:FlexibilityPortfolio"
         )
         self.assertEqual(
-            node_types["aggregator:S4:soft_cls"], "cls:FlexibilityAggregator"
-        )
-        self.assertEqual(
-            node_types["portfolio:S4:soft_cls"], "cls:FlexibilityPortfolio"
-        )
-        self.assertEqual(
-            node_types["provider:S4:building:0:soft_cls"], "cls:FlexibilityProvider"
+            node_types["provider:S4:building:0:soft_cls"],
+            "flexint:FlexibilityProvider",
         )
         self.assertEqual(
             node_types["scenario_device:S4:device:building:0:hvac_heating"],
             "dt:ScenarioDevice",
         )
         self.assertEqual(
-            node_types["offer:S4:building:0:soft_cls"], "cls:FlexibilityOffer"
+            node_types["offer:S4:building:0:soft_cls"], "flexint:FlexibilityOffer"
         )
         self.assertEqual(
-            node_types["constraint-zone:S4:transformer:0"], "cls:ConstraintZone"
+            node_types["constraint-zone:S4:transformer:0"], "flexint:ConstraintZone"
         )
         self.assertEqual(
             node_types["efont:flexibility:S4:building:0:soft_cls"],
@@ -433,11 +441,13 @@ class SemanticGraphTest(unittest.TestCase):
         # the on-demand capability's profile extensions.
         profile = north_america_profile()
         self.assertNotIn("efont", profile["namespaces"])
-        self.assertNotIn("cls", profile["namespaces"])
+        self.assertNotIn("flexint", profile["namespaces"])
         self.assertNotIn("building_flexibility", profile["primary_standards"])
-        self.assertNotIn("cls_market", profile["primary_standards"])
+        self.assertNotIn("flexibility_market", profile["primary_standards"])
         self.assertNotIn("efont:EnergyFlexibility", profile["allowed_semantic_types"])
-        self.assertNotIn("cls:FlexibilityProvider", profile["allowed_semantic_types"])
+        self.assertNotIn(
+            "flexint:FlexibilityProvider", profile["allowed_semantic_types"]
+        )
         self.assertNotIn("dt:ScenarioDevice", profile["allowed_semantic_types"])
         self.assertNotIn("HAS_FLEXIBILITY_RESOURCE", profile["relationship_types"])
         # The core still declares the generic grid/observation types.
@@ -449,10 +459,12 @@ class SemanticGraphTest(unittest.TestCase):
         # The flexibility capability supplies the ontology it emits.
         extensions = flexibility_profile_extensions()
         self.assertIn("efont", extensions["namespaces"])
-        self.assertIn("cls", extensions["namespaces"])
+        self.assertIn("flexint", extensions["namespaces"])
         self.assertIn("EFOnt", extensions["primary_standards"]["building_flexibility"])
         self.assertIn("efont:EnergyFlexibility", extensions["allowed_semantic_types"])
-        self.assertIn("cls:FlexibilityProvider", extensions["allowed_semantic_types"])
+        self.assertIn(
+            "flexint:FlexibilityProvider", extensions["allowed_semantic_types"]
+        )
         self.assertIn("dt:ScenarioDevice", extensions["allowed_semantic_types"])
         for relationship in (
             "HAS_FLEXIBILITY_RESOURCE",

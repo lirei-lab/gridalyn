@@ -249,9 +249,20 @@ def _rule_count(nodes: pd.DataFrame, scenario_id: str, rule: Mapping[str, Any]) 
         & (nodes["semantic_type"] == rule["semantic_type"])
     ]
     flag = rule.get("property_true")
-    if not flag:
+    required = dict(rule.get("property_equals") or {})
+    if not flag and not required:
         return int(len(selected))
-    return int(sum(bool(_loads_json(raw).get(flag)) for raw in selected["properties"]))
+    count = 0
+    for raw in selected["properties"]:
+        properties = _loads_json(raw)
+        if flag and not properties.get(flag):
+            continue
+        if any(
+            str(properties.get(key)) != str(value) for key, value in required.items()
+        ):
+            continue
+        count += 1
+    return count
 
 
 def _scenario_count_errors(

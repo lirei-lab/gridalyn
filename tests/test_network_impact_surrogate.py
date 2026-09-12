@@ -131,7 +131,18 @@ class NetworkImpactSurrogateTest(unittest.TestCase):
         ].iloc[0]
         features = json.loads(provider_node["features_json"])
         self.assertEqual(features["available_capacity_kw"], 6.5)
-        self.assertEqual(provider_node["semantic_type"], "cls:FlexibilityProvider")
+        self.assertEqual(provider_node["semantic_type"], "flexint:FlexibilityProvider")
+
+        # Every edge carries a declared predicate -- never an upper-case
+        # relationship name or a class used as one -- and no edge IRI sits on
+        # the retired gridalyn.local host (2026-09-11).
+        from gridalyn.twin.semantic.profile import profile_with_capabilities
+
+        profile = profile_with_capabilities({"flexibility"})
+        declared = {spec["predicate"] for spec in profile["relationships"].values()}
+        declared |= set(profile["predicates"])
+        self.assertLessEqual(set(edges["semantic_type"]), declared)
+        self.assertFalse(edges["semantic_uri"].str.contains("gridalyn.local").any())
 
     def test_feature_tables_have_stable_indices_for_future_gnn_tensors(self):
         nodes, edges = build_graph_snapshot(

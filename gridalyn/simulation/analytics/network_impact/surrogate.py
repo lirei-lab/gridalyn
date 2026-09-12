@@ -48,10 +48,10 @@ def _json(data: dict[str, Any]) -> str:
 def _uri_for(qname: str) -> str:
     """Resolve a qname to its namespace URI when the prefix is registered.
 
-    Phase 21: the model-first core owns ``NAMESPACES``; the flexibility/DER
-    prefixes (``cls:``/``efont:``/``ieee2030_5:``) resolve through the
-    capability extensions via ``semantic_uri``. Fall back to the bare qname
-    only when the prefix is genuinely unregistered.
+    The model-first core owns ``NAMESPACES``; the flexibility prefixes
+    (``flexint:``/``efont:``) resolve through the capability extensions via
+    ``semantic_uri``. Fall back to the bare qname only when the prefix is
+    genuinely unregistered.
     """
     try:
         return semantic_uri(qname)
@@ -231,13 +231,17 @@ def build_graph_snapshot(
                 },
             )
 
+        # Every edge carries a declared predicate (2026-09-11). Before, four
+        # carried an upper-case relationship name or a class name as their
+        # predicate (dt:HAS_LOAD, cim:ConnectivityNode ...), and one a property
+        # EFOnt does not define -- IRIs no vocabulary described.
         raw_edges = [
             (
                 f"{scenario_node}|scenario_includes|{provider_id}",
                 scenario_node,
                 provider_id,
                 "scenario_includes",
-                "dt:INCLUDES_ASSET",
+                "dt:includesAsset",
                 {"scenario_id": scenario},
             ),
             (
@@ -245,7 +249,7 @@ def build_graph_snapshot(
                 provider_id,
                 building_id,
                 "offers_flexibility",
-                "efont:providesFlexibility",
+                SEMANTIC_TYPE["provides_flexibility"],
                 {"provider_type": provider["provider_type"]},
             ),
             (
@@ -253,7 +257,7 @@ def build_graph_snapshot(
                 building_id,
                 load_id,
                 "has_load",
-                "dt:HAS_LOAD",
+                "dt:hasLoad",
                 {"pandapower_load": provider.get("pandapower_load")},
             ),
             (
@@ -261,7 +265,7 @@ def build_graph_snapshot(
                 load_id,
                 load_bus_id,
                 "connected_to",
-                "cim:ConnectivityNode",
+                "dt:connectedTo",
                 {"path_role": "load_bus"},
             ),
             (
@@ -269,7 +273,7 @@ def build_graph_snapshot(
                 feeder_bus_id,
                 load_bus_id,
                 "feeds",
-                "cim:Feeder",
+                "dt:feeds",
                 {"path_role": "feeder_bus"},
             ),
         ]
@@ -280,7 +284,7 @@ def build_graph_snapshot(
                     building_id,
                     ev_id,
                     "has_evse",
-                    "dt:HAS_EVSE",
+                    "dt:hasEVSE",
                     {"provider_type": provider["provider_type"]},
                 )
             )
