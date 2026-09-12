@@ -6,7 +6,9 @@ and any other declared name was ignored in silence: measured 2026-09-10,
 ``profile_with_capabilities({"agent_interaction"})`` returned the core profile
 without complaint. A capability now exists only by being registered here, and
 resolving an unregistered ID raises :class:`UnknownSemanticCapabilityError`
-naming the known set.
+naming the known set. That example name is itself a registered capability
+since bd 4ky.7, so the tests measure the refusal with a name nothing
+registers.
 
 Modelled on the simulation registries (``backends``, ``surrogates``,
 ``policies``): explicit IDs, no discovery, ``register(..., replace=False)``,
@@ -32,6 +34,10 @@ CORE_CAPABILITY_VERSION = "1"
 #: Capabilities gridalyn ships, as ``id -> (module, attribute)``. Loaded when
 #: the default registry is first built, not when this module is imported.
 _CORE_CAPABILITIES: dict[str, tuple[str, str]] = {
+    "agent_interaction": (
+        "gridalyn.twin.semantic.capabilities.agent_interaction",
+        "AGENT_INTERACTION_CAPABILITY",
+    ),
     "flexibility": (
         "gridalyn.twin.semantic.capabilities.flexibility",
         "FLEXIBILITY_CAPABILITY",
