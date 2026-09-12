@@ -12,12 +12,28 @@
     rdfs:comment "Curtailment contracts, flexibility aggregators, portfolios, providers, offers and constraint zones, and the predicates of the network-impact surrogate graph." ;
     rdfs:seeAlso <https://lirei.ca/gridalyn/reference/ontology/flexint/>, <https://github.com/lirei-lab/gridalyn> .
 
+flexint:Agent a owl:Class ;
+    rdfs:label "Agent" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
 flexint:ConstraintZone a owl:Class ;
     rdfs:label "ConstraintZone" ;
     rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
 
+flexint:Conversation a owl:Class ;
+    rdfs:label "Conversation" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
 flexint:CurtailmentContract a owl:Class ;
     rdfs:label "CurtailmentContract" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:DemandResponseEvent a owl:Class ;
+    rdfs:label "DemandResponseEvent" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:DemandResponseProgram a owl:Class ;
+    rdfs:label "DemandResponseProgram" ;
     rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
 
 flexint:FlexibilityAggregator a owl:Class ;
@@ -35,6 +51,21 @@ flexint:FlexibilityPortfolio a owl:Class ;
 flexint:FlexibilityProvider a owl:Class ;
     rdfs:label "FlexibilityProvider" ;
     rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:Party a owl:Class ;
+    rdfs:label "Party" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:Role a owl:Class ;
+    rdfs:label "Role" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> .
+
+flexint:actsFor a owl:ObjectProperty ;
+    rdfs:label "actsFor" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:Agent ;
+    schema:rangeIncludes flexint:Party ;
+    rdfs:comment "An agent acts for exactly one party; a party holds several agents, which is the Hydro-Quebec case the role model exists for." .
 
 flexint:aggregates a owl:ObjectProperty ;
     rdfs:label "aggregates" ;
@@ -62,6 +93,12 @@ flexint:enablesContract a owl:ObjectProperty ;
     schema:domainIncludes brick:Electric_Vehicle_Charging_Station ;
     schema:rangeIncludes flexint:CurtailmentContract ;
     rdfs:comment "Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES with EFOnt's operation-to-flexibility property while meaning something else, and carried cls:enables." .
+
+flexint:followsEvent a owl:ObjectProperty ;
+    rdfs:label "followsEvent" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:Conversation ;
+    schema:rangeIncludes flexint:DemandResponseEvent .
 
 flexint:hasNetworkImpact a owl:ObjectProperty ;
     rdfs:label "hasNetworkImpact" ;
@@ -104,10 +141,29 @@ flexint:participatesIn a owl:ObjectProperty ;
     schema:domainIncludes brick:Building ;
     schema:rangeIncludes flexint:CurtailmentContract .
 
+flexint:participatesInConversation a owl:ObjectProperty ;
+    rdfs:label "participatesInConversation" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:Agent ;
+    schema:rangeIncludes flexint:Conversation .
+
+flexint:playsRole a owl:ObjectProperty ;
+    rdfs:label "playsRole" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:Agent ;
+    schema:rangeIncludes flexint:Role ;
+    rdfs:comment "Unconstrained on purpose: the log is the authority, and an agent observed sending under two roles is data to see, not a violation." .
+
 flexint:providesFlexibility a owl:ObjectProperty ;
     rdfs:label "providesFlexibility" ;
     rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
     rdfs:comment "Declared for a graph other than the semantic graph: the network-impact surrogate's edges." .
+
+flexint:schedulesEvent a owl:ObjectProperty ;
+    rdfs:label "schedulesEvent" ;
+    rdfs:isDefinedBy <https://w3id.org/gridalyn/ontology/flexint> ;
+    schema:domainIncludes flexint:DemandResponseProgram ;
+    schema:rangeIncludes flexint:DemandResponseEvent .
 
 flexint:targetsConstraint a owl:ObjectProperty ;
     rdfs:label "targetsConstraint" ;

@@ -30,6 +30,10 @@ DEFAULT_SCENARIO_DIR = DEFAULT_LAYOUT.scenarios
 DEFAULT_FLEXIBILITY_DIR = DEFAULT_LAYOUT.flexibility
 DEFAULT_TIMESERIES_DIR = DEFAULT_LAYOUT.timeseries
 DEFAULT_OUT_DIR = DEFAULT_LAYOUT.semantic
+#: Where an interaction protocol's message log lands for a named twin.
+#: Absent in every instance this repository ships, which is why the
+#: agent_interaction capability treats a missing log as an empty one.
+DEFAULT_INTERACTION_LOG = DEFAULT_LAYOUT.operations / "message_log.parquet"
 
 
 def _load_json_or_empty(path: Path) -> dict[str, Any]:
@@ -67,6 +71,7 @@ def generate_semantic_graph(
     out_dir: Path,
     root: Path | None = None,
     capabilities: set[str] | None = None,
+    interaction_log_path: Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     if profile not in SEMANTIC_PROFILE_IDS:
         raise ValueError(
@@ -106,6 +111,13 @@ def generate_semantic_graph(
         if provider_registry_path.exists()
         else pd.DataFrame()
     )
+    # A twin that has run no interaction protocol has no log, exactly as a
+    # model-first twin has no asset registry: absent is empty, not an error.
+    interaction_log = (
+        pd.read_parquet(interaction_log_path)
+        if interaction_log_path is not None and interaction_log_path.exists()
+        else pd.DataFrame()
+    )
     timeseries_manifests = {
         "powerflow_summary": _load_json_or_empty(
             timeseries_dir / "powerflow_smoke_summary.json"
@@ -122,6 +134,7 @@ def generate_semantic_graph(
         asset_registry=asset_registry,
         provider_registry=provider_registry,
         timeseries_manifests=timeseries_manifests,
+        interaction_log=interaction_log,
         capabilities=capabilities,
     )
 
@@ -172,6 +185,16 @@ def main() -> None:
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument(
+        "--interaction-log",
+        type=Path,
+        default=DEFAULT_INTERACTION_LOG,
+        help=(
+            "Message log the agent_interaction capability reads. A path "
+            "that does not exist is an empty log, so the default is safe "
+            "for a twin that has run no protocol."
+        ),
+    )
+    parser.add_argument(
         "--semantic-capabilities",
         nargs="*",
         default=None,
@@ -190,6 +213,7 @@ def main() -> None:
         flexibility_dir=args.flexibility_dir,
         timeseries_dir=args.timeseries_dir,
         out_dir=args.out_dir,
+        interaction_log_path=args.interaction_log,
         root=find_workspace_root(args.root),
         capabilities=(
             set(args.semantic_capabilities)
