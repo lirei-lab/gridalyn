@@ -221,10 +221,13 @@ the documentation site is served by GitHub Pages, which does no content
 negotiation, HTML and Turtle requests are redirected to distinct files by the
 w3id `.htaccess` itself: a 303 to the Turtle file when the `Accept` header asks
 for Turtle, and to the reference page otherwise. gridalyn's rules and README
-are kept in `tools/w3id/gridalyn/` and are submitted once the pages they point
-at are published; until that pull request is merged, the IRIs are stable names
-that do not yet resolve. [purl.archive.org](https://purl.archive.org/) is the
-fallback.
+are kept in `tools/w3id/gridalyn/`, and were merged as
+[perma-id/w3id.org#6686](https://github.com/perma-id/w3id.org/pull/6686) on
+2026-09-13, so the IRIs resolve. Verified 2026-09-14, for both vocabularies:
+`https://w3id.org/gridalyn/ontology/<name>` answers 303 to the Turtle file
+under `Accept: text/turtle` and to the reference page otherwise, and
+`https://w3id.org/gridalyn/` answers 302 to this site.
+[purl.archive.org](https://purl.archive.org/) is the fallback.
 
 ## Not confirmed from a primary source
 
