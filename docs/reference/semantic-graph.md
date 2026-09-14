@@ -47,8 +47,32 @@ Flexibility capability (`capabilities={"flexibility"}`, on-demand):
   `hard` — and for the market-management vocabulary of aggregators, portfolios,
   providers, offers and constraint zones. Its terms are documented in
   [Ontology: flexint](./ontology/flexint.md);
-- OpenADR 3.1.0 terms arrive with agent interaction, under a gridalyn-owned
-  namespace: the Alliance publishes no RDF, so no `openadr:` IRI is emitted.
+- OpenADR 3.1.0 terms arrive with the agent-interaction capability below,
+  under a gridalyn-owned namespace: the Alliance publishes no RDF, so no
+  `openadr:` IRI is emitted.
+
+Agent-interaction capability (`capabilities={"agent_interaction"}`,
+on-demand):
+
+- the agents, parties and functional roles a protocol run recorded, read as
+  parquet from the message log `gridalyn.operations.interaction` writes. The
+  semantic layer sits below operations and never imports it, so the role
+  table and the columns the emitter reads are restated in the capability and
+  pinned against their sources by
+  `tests/test_agent_interaction_capability.py`;
+- one summary node per conversation — message counts by outcome, the window
+  it spans, the message types and acts exchanged. Never a protocol state:
+  only a replay in `operations` can decide one, and a graph that stated a
+  state it had not computed would be a graph that lies;
+- `flexint:DemandResponseProgram` and `flexint:DemandResponseEvent`, the
+  first OpenADR-aligned nodes the graph emits. They are gridalyn's own terms
+  whose `aligns_with` property names the OpenADR 3.1.0 object they render,
+  carrying 3.1.0's own payload spellings (`programID`, the event window, the
+  import cap);
+- a conversation records the `constraint_id` its request named, not a zone
+  node id the log cannot know. `query_agents_answering_constraint` joins on
+  that property — the question the graph could not answer before: which
+  agents answered the request for a given constraint.
 
 The identifiers these standards actually publish — namespaces, versions, term
 spellings — are verified, with sources, in
@@ -164,6 +188,11 @@ checked against them by `tests/test_semantic_axioms.py`.
 | `PARTICIPATES_IN` | `flexint:participatesIn` | `Building` → `CurtailmentContract` | — | flexibility |
 | `QUANTIFIES` | `efont:Quantifies` | `EnergyFlexibilityKPI` → `EnergyFlexibility` | — | flexibility |
 | `TARGETS_CONSTRAINT` | `flexint:targetsConstraint` | `FlexibilityOffer` → `ConstraintZone` | — | flexibility |
+| `ACTS_FOR` | `flexint:actsFor` | `Agent` → `Party` | exactly 1 | agent_interaction |
+| `FOLLOWS_EVENT` | `flexint:followsEvent` | `Conversation` → `DemandResponseEvent` | — | agent_interaction |
+| `PARTICIPATES_IN_CONVERSATION` | `flexint:participatesInConversation` | `Agent` → `Conversation` | — | agent_interaction |
+| `PLAYS_ROLE` | `flexint:playsRole` | `Agent` → `Role` | — | agent_interaction |
+| `SCHEDULES_EVENT` | `flexint:schedulesEvent` | `DemandResponseProgram` → `DemandResponseEvent` | — | agent_interaction |
 
 **Re-based 2026-09-10.** Measured on the shipped graph before this change,
 `ENABLES` and `HAS_FLEXIBILITY_RESOURCE` each carried two predicate IRIs, and the

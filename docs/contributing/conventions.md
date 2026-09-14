@@ -60,6 +60,7 @@ acknowledge. An ignored convention stops being one.
 | `select_*` | Choose from candidates already in hand, returning one or a subset. | `select_cold_day`, `select_peak_load_day`, `select_archetype` |
 | `find_*` | Search the filesystem or graph for something whose location is not known in advance. | `find_workspace_root`, `find_project_root` |
 | `list_*` | Enumerate what is available, without resolving any of it. | `list_available_datasets`, `list_installed_extensions` |
+| `query_*` | Ask a materialized store — the semantic graph, a repository — a question and return the records that answer it. Read-only, and the caller already holds the store. | `query_providers_for_constraint`, `query_agents_answering_constraint`, `query_conversations_for_constraint` |
 | `parse_*` | Turn text or argv into structured values. No IO beyond the input. | `parse_args` |
 
 ## Prefixes that are not helpers

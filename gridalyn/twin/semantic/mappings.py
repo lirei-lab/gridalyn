@@ -56,6 +56,7 @@ def build_semantic_graph(
     asset_registry: pd.DataFrame | None = None,
     provider_registry: pd.DataFrame | None = None,
     timeseries_manifests: dict[str, Any] | None = None,
+    interaction_log: pd.DataFrame | None = None,
     capabilities: set[str] | None = None,
     registry: SemanticCapabilityRegistry | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
@@ -70,6 +71,8 @@ def build_semantic_graph(
         asset_registry: Scenario asset registry; empty when absent.
         provider_registry: Flexibility provider registry; empty when absent.
         timeseries_manifests: Run manifests keyed by name.
+        interaction_log: Message log an interaction protocol wrote, as
+            parquet; empty when absent. Read as a table, never imported.
         capabilities: Declared semantic capability IDs. ``None`` applies the
             legacy default (``flexibility``); an explicit set builds the
             model-first core plus exactly those capabilities (``set()`` for a
@@ -93,6 +96,7 @@ def build_semantic_graph(
         provider_registry if provider_registry is not None else pd.DataFrame()
     )
     timeseries_manifests = timeseries_manifests or {}
+    interaction_log = interaction_log if interaction_log is not None else pd.DataFrame()
     declared = resolve_declared_capabilities(capabilities)
     registry = registry or default_semantic_capability_registry()
     profile = profile_with_capabilities(declared, registry=registry)
@@ -117,6 +121,7 @@ def build_semantic_graph(
         asset_registry=asset_registry,
         provider_registry=provider_registry,
         timeseries_manifests=timeseries_manifests,
+        interaction_log=interaction_log,
     )
     for capability in active:
         if capability.extend is not None:

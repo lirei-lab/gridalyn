@@ -138,16 +138,24 @@ def _registry_with(*capabilities: SemanticCapability) -> SemanticCapabilityRegis
 
 class CapabilityResolutionTest(unittest.TestCase):
     def test_unknown_capability_is_rejected_naming_the_known_set(self) -> None:
+        """``agent_interaction`` was this test's unknown name until bd 4ky.7.
+
+        It is a registered capability now, so the example moved to a name
+        nothing will ever register: the gate is that an unknown ID raises
+        naming the known set, not that one particular name is missing.
+        """
         attempts = {
-            "profile": lambda: profile_with_capabilities({"agent_interaction"}),
-            "graph": lambda: _build({"agent_interaction"}),
+            "profile": lambda: profile_with_capabilities({"not_a_capability"}),
+            "graph": lambda: _build({"not_a_capability"}),
         }
         for label, attempt in attempts.items():
             with self.subTest(label):
                 with self.assertRaises(UnknownSemanticCapabilityError) as ctx:
                     attempt()
-                self.assertIn("'agent_interaction'", str(ctx.exception))
-                self.assertIn("known: flexibility", str(ctx.exception))
+                self.assertIn("'not_a_capability'", str(ctx.exception))
+                self.assertIn(
+                    "known: agent_interaction, flexibility", str(ctx.exception)
+                )
         self.assertTrue(issubclass(UnknownSemanticCapabilityError, ValueError))
 
     def test_twin_build_rejects_an_unknown_capability(self) -> None:
@@ -448,9 +456,9 @@ class DocsRelationshipTableTest(unittest.TestCase):
                 _per_source(spec["source_cardinality"]),
                 ", ".join(spec["declared_by"]),
             )
-            for name, spec in profile_with_capabilities({"flexibility"})[
-                "relationships"
-            ].items()
+            for name, spec in profile_with_capabilities(
+                {"agent_interaction", "flexibility"}
+            )["relationships"].items()
         }
         self.assertEqual(documented, declared)
 

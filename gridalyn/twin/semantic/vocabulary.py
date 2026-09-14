@@ -108,6 +108,10 @@ class CapabilityInputs:
         asset_registry: Scenario asset registry; empty when absent.
         provider_registry: Flexibility provider registry; empty when absent.
         timeseries_manifests: Run manifests keyed by name.
+        interaction_log: Message log an interaction protocol wrote, as the
+            parquet table ``operations.interaction.write_message_log``
+            produces; empty when absent. Read as a table, never imported: the
+            semantic layer sits below operations.
     """
 
     buses: pd.DataFrame
@@ -118,6 +122,7 @@ class CapabilityInputs:
     asset_registry: pd.DataFrame
     provider_registry: pd.DataFrame
     timeseries_manifests: Mapping[str, Any]
+    interaction_log: pd.DataFrame
 
 
 class GraphExtender(Protocol):

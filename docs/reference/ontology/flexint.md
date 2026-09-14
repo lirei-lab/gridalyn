@@ -10,21 +10,29 @@ Curtailment contracts, flexibility aggregators, portfolios, providers, offers an
 
 | Class | IRI |
 | --- | --- |
+| <a id="Agent"></a>`flexint:Agent` | `https://w3id.org/gridalyn/ontology/flexint#Agent` |
 | <a id="ConstraintZone"></a>`flexint:ConstraintZone` | `https://w3id.org/gridalyn/ontology/flexint#ConstraintZone` |
+| <a id="Conversation"></a>`flexint:Conversation` | `https://w3id.org/gridalyn/ontology/flexint#Conversation` |
 | <a id="CurtailmentContract"></a>`flexint:CurtailmentContract` | `https://w3id.org/gridalyn/ontology/flexint#CurtailmentContract` |
+| <a id="DemandResponseEvent"></a>`flexint:DemandResponseEvent` | `https://w3id.org/gridalyn/ontology/flexint#DemandResponseEvent` |
+| <a id="DemandResponseProgram"></a>`flexint:DemandResponseProgram` | `https://w3id.org/gridalyn/ontology/flexint#DemandResponseProgram` |
 | <a id="FlexibilityAggregator"></a>`flexint:FlexibilityAggregator` | `https://w3id.org/gridalyn/ontology/flexint#FlexibilityAggregator` |
 | <a id="FlexibilityOffer"></a>`flexint:FlexibilityOffer` | `https://w3id.org/gridalyn/ontology/flexint#FlexibilityOffer` |
 | <a id="FlexibilityPortfolio"></a>`flexint:FlexibilityPortfolio` | `https://w3id.org/gridalyn/ontology/flexint#FlexibilityPortfolio` |
 | <a id="FlexibilityProvider"></a>`flexint:FlexibilityProvider` | `https://w3id.org/gridalyn/ontology/flexint#FlexibilityProvider` |
+| <a id="Party"></a>`flexint:Party` | `https://w3id.org/gridalyn/ontology/flexint#Party` |
+| <a id="Role"></a>`flexint:Role` | `https://w3id.org/gridalyn/ontology/flexint#Role` |
 
 ## Properties
 
 | Property | Domain | Range | Relationship | Note |
 | --- | --- | --- | --- | --- |
+| <a id="actsFor"></a>`flexint:actsFor` | `flexint:Agent` | `flexint:Party` | `ACTS_FOR` | An agent acts for exactly one party; a party holds several agents, which is the Hydro-Quebec case the role model exists for. |
 | <a id="aggregates"></a>`flexint:aggregates` | `flexint:FlexibilityAggregator` | `flexint:FlexibilityProvider` | `AGGREGATES` | — |
 | <a id="constraintZoneFor"></a>`flexint:constraintZoneFor` | `flexint:ConstraintZone` | `cim:ACLineSegment` / `cim:ConnectivityNode` / `cim:PowerTransformer` | `CONSTRAINT_ZONE_FOR` | — |
 | <a id="describesFlexibility"></a>`flexint:describesFlexibility` | `flexint:CurtailmentContract` | `efont:EnergyFlexibility` | `DESCRIBES_FLEXIBILITY` | — |
 | <a id="enablesContract"></a>`flexint:enablesContract` | `brick:Electric_Vehicle_Charging_Station` | `flexint:CurtailmentContract` | `ENABLES_CONTRACT` | Until 2026-09-10 the EVSE-to-Hard-CLS edge shared the label ENABLES with EFOnt's operation-to-flexibility property while meaning something else, and carried cls:enables. |
+| <a id="followsEvent"></a>`flexint:followsEvent` | `flexint:Conversation` | `flexint:DemandResponseEvent` | `FOLLOWS_EVENT` | — |
 | <a id="hasNetworkImpact"></a>`flexint:hasNetworkImpact` | — | — | — | Declared for a graph other than the semantic graph: the network-impact surrogate's edges. |
 | <a id="implementsContract"></a>`flexint:implementsContract` | `flexint:FlexibilityProvider` | `flexint:CurtailmentContract` | `IMPLEMENTS_CONTRACT` | — |
 | <a id="includesProvider"></a>`flexint:includesProvider` | `flexint:FlexibilityPortfolio` | `flexint:FlexibilityProvider` | `INCLUDES_PROVIDER` | — |
@@ -32,7 +40,10 @@ Curtailment contracts, flexibility aggregators, portfolios, providers, offers an
 | <a id="managesPortfolio"></a>`flexint:managesPortfolio` | `flexint:FlexibilityAggregator` | `flexint:FlexibilityPortfolio` | `MANAGES_PORTFOLIO` | — |
 | <a id="offers"></a>`flexint:offers` | `flexint:FlexibilityProvider` | `flexint:FlexibilityOffer` | `OFFERS` | — |
 | <a id="participatesIn"></a>`flexint:participatesIn` | `brick:Building` | `flexint:CurtailmentContract` | `PARTICIPATES_IN` | — |
+| <a id="participatesInConversation"></a>`flexint:participatesInConversation` | `flexint:Agent` | `flexint:Conversation` | `PARTICIPATES_IN_CONVERSATION` | — |
+| <a id="playsRole"></a>`flexint:playsRole` | `flexint:Agent` | `flexint:Role` | `PLAYS_ROLE` | Unconstrained on purpose: the log is the authority, and an agent observed sending under two roles is data to see, not a violation. |
 | <a id="providesFlexibility"></a>`flexint:providesFlexibility` | — | — | — | Declared for a graph other than the semantic graph: the network-impact surrogate's edges. |
+| <a id="schedulesEvent"></a>`flexint:schedulesEvent` | `flexint:DemandResponseProgram` | `flexint:DemandResponseEvent` | `SCHEDULES_EVENT` | — |
 | <a id="targetsConstraint"></a>`flexint:targetsConstraint` | `flexint:FlexibilityOffer` | `flexint:ConstraintZone` | `TARGETS_CONSTRAINT` | — |
 
 ## Formerly written as
