@@ -430,6 +430,6 @@ __all__ = [
     "PROBLEM_DOUBLED_PREFIX",
     "PROBLEM_OUTSIDE_PROJECT",
     "PathContractViolation",
-    "find_path_contract_violations",
     "build_corrected_declaration",
+    "find_path_contract_violations",
 ]
