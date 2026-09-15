@@ -72,6 +72,8 @@ class MypyRejectsTheSwapTest(unittest.TestCase):
                     [
                         "--ignore-missing-imports",
                         "--disallow-untyped-defs",
+                        # Keep the imported types, report only the snippet.
+                        "--follow-imports=silent",
                         "--cache-dir",
                         str(Path(tmp) / "cache"),
                         str(snippet),

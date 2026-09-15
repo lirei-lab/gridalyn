@@ -20,6 +20,7 @@ import json
 import os
 import sys
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Mapping
@@ -92,13 +93,13 @@ class ProjectScript:
         """
         return self.project.root
 
-    @property
+    @cached_property
     def workspace_root(self) -> WorkspaceRoot:
         """The Gridalyn workspace enclosing this study.
 
         What ``ArtifactLayout`` and the operations/catalog helpers take as
         ``root``. Discovered from :attr:`root`, so it does not depend on
-        ``spec.pathBase``.
+        ``spec.pathBase``. Resolved once per script: discovery can spawn ``git``.
         """
         return find_workspace_root(self.project.root)
 
