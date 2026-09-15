@@ -770,10 +770,15 @@ TOPOLOGY_KEYS = (
     "block_penalty_km2",
     "lv_assignment",
     "max_customers_per_transformer",
+    "note",
     "snap_transformers_to_streets",
     "street_layer",
 )
-"""Keys ``config["topology"]`` may declare; any other key is refused by name."""
+"""Keys ``config["topology"]`` may declare; any other key is refused by name.
+
+``note`` carries no behaviour: JSON has no comments, and a declared limit should
+say where it comes from, the way transformer entries already carry a ``note``.
+"""
 
 EXTERNAL_GRID_KEYS = ("note", "vm_pu")
 """Keys ``config["external_grid"]`` may declare."""

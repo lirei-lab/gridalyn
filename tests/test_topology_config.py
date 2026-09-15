@@ -134,6 +134,18 @@ class ResolveTopologyOptionsTest(unittest.TestCase):
 
         self.assertFalse(options.snap_transformers_to_streets)
 
+    def test_a_note_is_accepted_and_changes_nothing(self) -> None:
+        """A citation beside a declared limit is data, not an option."""
+        with_note = resolve_topology_options(
+            {"topology": {"lv_assignment": "capacitated", "note": "HQ guide"}},
+            footprints_path="b.geojson",
+        )
+        without = resolve_topology_options(
+            {"topology": {"lv_assignment": "capacitated"}}, footprints_path="b.geojson"
+        )
+
+        self.assertEqual(with_note, without)
+
     def test_an_unknown_key_is_refused_by_name(self) -> None:
         """A typo fails listing the supported keys."""
         with self.assertRaises(ValueError) as caught:
