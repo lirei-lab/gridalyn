@@ -432,6 +432,31 @@ class ProjectScript:
                 f"{exc}"
             ) from exc
 
+    def resolve_extensions(self) -> list[Any]:
+        """Resolve the extensions this study declares and route each to its role.
+
+        A stage runs as its own process, so what the runner contributed before
+        the run is not registered here. A stage that builds with a declared
+        extension's contribution -- a semantic capability, say -- calls this
+        first. It is a no-op for a study that declares no extension (bd 4ky.8).
+
+        Returns:
+            The resolved extension descriptors, sorted by ID.
+
+        Raises:
+            UnknownExtensionError: A declared ID is not installed.
+            MissingCapabilityError: A declared extension's required capabilities
+                are not importable.
+            ValueError: A declared extension claims a role that cannot be
+                contributed, or its capability ID is already held by another
+                declaration.
+            TypeError: A declared extension's factory returns the wrong type for
+                its role.
+        """
+        from gridalyn.projects.extension_roles import register_declared_extensions
+
+        return register_declared_extensions(self.project)
+
 
 def project_script(
     root: Path | str | None = None,

@@ -1,0 +1,82 @@
+{
+  "buses": [
+    {
+      "bus_id": "bus:0",
+      "name": "mv_bus",
+      "pandapower_bus": 0
+    },
+    {
+      "bus_id": "bus:1",
+      "name": "lv_bus_a",
+      "pandapower_bus": 1
+    },
+    {
+      "bus_id": "bus:2",
+      "name": "lv_bus_b",
+      "pandapower_bus": 2
+    }
+  ],
+  "lines": [
+    {
+      "line_id": "line:0",
+      "from_bus_id": "bus:1",
+      "to_bus_id": "bus:2"
+    }
+  ],
+  "transformers": [
+    {
+      "transformer_id": "transformer:0",
+      "hv_bus_id": "bus:0",
+      "lv_bus_id": "bus:1"
+    },
+    {
+      "transformer_id": "transformer:1",
+      "hv_bus_id": "bus:0",
+      "lv_bus_id": "bus:2"
+    }
+  ],
+  "buildings": [
+    {
+      "building_id": "building:0",
+      "load_id": "load:0",
+      "lv_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:1",
+      "load_id": "load:1",
+      "lv_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:2",
+      "load_id": "load:2",
+      "lv_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:3",
+      "load_id": "load:3",
+      "lv_bus_id": "bus:2"
+    }
+  ],
+  "connectivity": [
+    {
+      "building_id": "building:0",
+      "load_id": "load:0",
+      "load_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:1",
+      "load_id": "load:1",
+      "load_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:2",
+      "load_id": "load:2",
+      "load_bus_id": "bus:1"
+    },
+    {
+      "building_id": "building:3",
+      "load_id": "load:3",
+      "load_bus_id": "bus:2"
+    }
+  ]
+}

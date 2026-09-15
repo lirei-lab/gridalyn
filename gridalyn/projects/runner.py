@@ -970,6 +970,14 @@ def run_project(
     stages: list[str] | None = None,
 ) -> list[str]:
     _refuse_stale_stage_paths(project)
+    # Declared extensions are resolved and routed to the registry of the role
+    # they serve before anything runs (bd 4ky.8): a declaration that cannot be
+    # honoured fails here, loudly, and provenance records what was
+    # contributed. Stages run as their own processes and resolve again through
+    # ProjectScript.resolve_extensions.
+    from gridalyn.projects.extension_roles import register_declared_extensions
+
+    register_declared_extensions(project)
     started_at = _utc_now()
     git_commit = _git_commit(project.base_dir)
     manifest = {
