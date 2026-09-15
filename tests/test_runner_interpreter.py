@@ -236,8 +236,10 @@ class TestShippedWorkflowsUseTheExplicitForm(unittest.TestCase):
         # build_base_mc_cache stage, the sole writer of the shared base-MC set
         # (bd c7f.2.1) + 3 stages of dr_agent_interaction, the seventh light
         # governed study: prepare_workspace, run_dr_program_day and
-        # validate_project_outputs (syntgrid-4ky.9).
-        self.assertEqual(69, declared)
+        # validate_project_outputs (syntgrid-4ky.9) + 1 replay_dr_program stage
+        # in ev_hosting_flex, the curtailment mechanism replayed as dr_program
+        # conversations (bd 4ky.10).
+        self.assertEqual(70, declared)
 
 
 if __name__ == "__main__":

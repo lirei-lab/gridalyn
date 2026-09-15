@@ -604,6 +604,17 @@ and the run's stage list, not a `report_id` and a summary. Wrapping it in a
 report envelope would break its consumers, which is the mistake §2 warns
 against.
 
+### Helper-routed total: 54 (2026-09-15)
+
+One site was added to `projects/ev_hosting_flex/scripts/pipeline/replay_dr_program.py`
+(bd 4ky.10): `derive_dr_replay::write_json#0`, the stage's study payload
+`outputs/json/dr_replay.json`. It is `NOT-A-REPORT` for the same reason as the
+flagship's other twenty study-data JSONs routed through `ProjectScript.write_json`
+(§13): the stage's governed account of itself is `dr_replay_report.json`, written
+through `script.write_report(...)`, and the payload is the data that report
+references as an artifact. Its message-log interaction report is written by
+`write_interaction_report`, which already routes through the report contract.
+
 ## 6. Not examined, and why
 
 Nothing in scope was excluded. For completeness, the following were deliberately **outside**
