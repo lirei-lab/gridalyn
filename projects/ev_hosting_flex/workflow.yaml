@@ -128,6 +128,32 @@ spec:
         - projects/ev_hosting_flex/outputs/json/curtailment_hosting.json
         - projects/ev_hosting_flex/outputs/reports/curtailment_contracts_report.json
 
+    # ── Stage 5c: demand-response replay (bd 4ky.10, the flexint epic) ───
+    # Additive. Replays the day-ahead call, the real-time backstop and its fair
+    # rotation as dr_program conversations at every level of the declared
+    # adoption grid (congestionEvPerHomeGrid), and writes a message log the
+    # semantic graph's agent_interaction capability reads. It reads what the
+    # curtailment stage reads, writes only its own files, and moves no pinned
+    # number. It depends on the curtailment stage alone: the locational
+    # contracts stage clears a 540-transformer fleet market and carries nothing
+    # about this feeder's mechanism, so depending on it would only add ~800 s
+    # of upstream chain to every `--stage` verification.
+    - id: replay_dr_program
+      needs: [apply_curtailment_contracts]
+      command: "{python} -m projects.ev_hosting_flex.scripts.pipeline.replay_dr_program"
+      inputs:
+        - projects/ev_hosting_flex/outputs/data/base_annual.npy
+        - projects/ev_hosting_flex/outputs/data/ev_fleet_annual.npy
+        - projects/ev_hosting_flex/outputs/data/fc_base_sigma_1.5.npy
+        - projects/ev_hosting_flex/outputs/cache/feeder_selection.json
+        - projects/ev_hosting_flex/outputs/cache/downstream_bus_map.json
+        - projects/ev_hosting_flex/outputs/cache/node_building_count.json
+      outputs:
+        - projects/ev_hosting_flex/outputs/json/dr_replay.json
+        - projects/ev_hosting_flex/outputs/operations/dr_replay_message_log.parquet
+        - projects/ev_hosting_flex/outputs/reports/dr_replay_interaction_report.json
+        - projects/ev_hosting_flex/outputs/reports/dr_replay_report.json
+
     # ── Stage 6b: study-B curtailment economics (live, F4 of the migration) ─
     - id: compute_curtailment_economics
       needs: [compute_congestion_annual]
