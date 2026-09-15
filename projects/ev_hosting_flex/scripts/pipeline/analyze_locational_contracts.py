@@ -320,7 +320,7 @@ def _persist_operational(
             # boilerplate migration swapped in script.root. Nothing caught it
             # for seventeen days because this is the only caller and it runs
             # only in a full flagship run.
-            root=script.base_dir,
+            root=script.workspace_root,
             project_id="ev_hosting_flex",
             scenario_id=scenario_id,
             flexibility_dir=flex_dir,

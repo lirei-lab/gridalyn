@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from gridalyn.foundation.platform.reports import read_json_report, validate_report
+from gridalyn.foundation.platform.roots import ProjectDir
 from gridalyn.projects.loader import load_project as _load_project
 from gridalyn.projects.models import StudyProject, ValidationReport, WorkflowStage
 from gridalyn.projects.outputs import prepare_project_workspace
@@ -307,7 +308,7 @@ def init_project(
         raise FileExistsError(f"target project directory is not empty: {root}")
 
     (root / "inputs").mkdir(parents=True, exist_ok=True)
-    prepare_project_workspace(root)
+    prepare_project_workspace(ProjectDir(root))
     (root / "scripts").mkdir(parents=True, exist_ok=True)
 
     project_file = root / "project.yaml"

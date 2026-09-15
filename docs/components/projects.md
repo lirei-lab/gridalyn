@@ -15,8 +15,9 @@ file another stage wrote, and its only output is a file on disk.
 - **`StudyProject` / `WorkflowStage`** — frozen dataclasses that are the
   in-memory form of the two YAML files, produced by `load_project`.
 - **`ProjectScript`** — the boilerplate-free stage-script context
-  (`project_script()`): workspace paths, headless matplotlib, typed input
-  loading, and `write_report`.
+  (`project_script()`): the study directory (`root`, a `ProjectDir`) and the
+  workspace root (`workspace_root`, a `WorkspaceRoot`) as distinct types,
+  output paths, headless matplotlib, typed input loading, and `write_report`.
 - **The typed input loaders** (`gridalyn/projects/model_inputs.py`) —
   `load_radial_feeder_spec`, `load_der_dispatch_assets`,
   `load_generated_load_profiles`, and siblings. They own the camelCase→

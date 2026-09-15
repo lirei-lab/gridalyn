@@ -6,6 +6,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from gridalyn.foundation.platform.roots import ProjectDir
+
+#: The default project directory: the current directory, as every caller assumed.
+_CURRENT_DIRECTORY = ProjectDir(Path("."))
 
 DEFAULT_OUTPUT_DIRECTORIES: tuple[str, ...] = (
     "outputs/data",
@@ -35,7 +39,7 @@ class ProjectWorkspacePreparation:
 
 
 def prepare_project_workspace(
-    root: Path | str = ".",
+    root: ProjectDir = _CURRENT_DIRECTORY,
     output_directories: tuple[str, ...] = DEFAULT_OUTPUT_DIRECTORIES,
 ) -> ProjectWorkspacePreparation:
     """Create standard output directories for a governed project."""

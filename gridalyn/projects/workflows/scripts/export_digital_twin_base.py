@@ -19,9 +19,10 @@ import argparse
 from pathlib import Path
 
 from gridalyn.foundation import workspace_from_environment
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.twin.adapters.registry import default_network_adapter_registry
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 WORKSPACE = workspace_from_environment(default_root=ROOT)
 DEFAULT_CACHE_DIR = WORKSPACE.layout.cache
 DEFAULT_CONFIG_PATH = ROOT / "configs" / "grid" / "config.json"

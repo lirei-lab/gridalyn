@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.projects.project_catalog import build_project_catalog
 from gridalyn.projects.scenario_catalog import BY_FILE as PARTITION_BY_FILE
 from gridalyn.twin.network import (
@@ -139,7 +140,7 @@ def build_dashboard_catalog(
     scenario_index: dict[str, Any],
     powerflow_summary: dict[str, Any],
     optional_extensions: dict[str, Path] | None,
-    root: Path,
+    root: WorkspaceRoot,
     network_repository: NetworkModelRepository | None = None,
     projects: Iterable[Any] | None = None,
     semantic_dir: Path | None = None,

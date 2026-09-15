@@ -6,8 +6,11 @@ This facade is the stable home for cross-cutting platform contracts.
 from __future__ import annotations
 
 from importlib import import_module
+from typing import TYPE_CHECKING
 
 _LAZY_EXPORTS = {
+    "ProjectDir": ("gridalyn.foundation.platform", "ProjectDir"),
+    "WorkspaceRoot": ("gridalyn.foundation.platform", "WorkspaceRoot"),
     "ArtifactPolicy": ("gridalyn.foundation.platform", "ArtifactPolicy"),
     "ArtifactPolicyReport": ("gridalyn.foundation.platform", "ArtifactPolicyReport"),
     "ArtifactLayout": ("gridalyn.foundation.platform", "ArtifactLayout"),
@@ -37,6 +40,39 @@ _LAZY_EXPORTS = {
     "write_manifest": ("gridalyn.foundation.platform", "write_manifest"),
     "write_report": ("gridalyn.foundation.platform", "write_report"),
 }
+
+
+if TYPE_CHECKING:
+    # Static re-exports: mypy checks callers against the real signatures while
+    # run time stays lazy (bd 6ns.1). pyflakes cannot see that __all__ lists
+    # them, hence the noqa.
+    from gridalyn.foundation.platform.roots import (  # noqa: F401
+        ProjectDir as ProjectDir,
+    )
+    from gridalyn.foundation.platform.roots import (  # noqa: F401
+        WorkspaceRoot as WorkspaceRoot,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        ArtifactLayout as ArtifactLayout,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        GridalynWorkspace as GridalynWorkspace,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        find_workspace_root as find_workspace_root,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        layout_from_environment as layout_from_environment,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        workspace_from_environment as workspace_from_environment,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        workspace_from_path as workspace_from_path,
+    )
+    from gridalyn.foundation.platform.workspace import (  # noqa: F401
+        workspace_from_root as workspace_from_root,
+    )
 
 __all__ = sorted(_LAZY_EXPORTS)
 

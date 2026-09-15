@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
+from gridalyn.foundation.platform.roots import ProjectDir
 from gridalyn.interfaces.cli.environment import configure_cli_environment
 
 configure_cli_environment()
@@ -105,7 +106,7 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def _prepare_workspace(args: argparse.Namespace) -> int:
-    report = prepare_project_workspace(Path(args.project))
+    report = prepare_project_workspace(ProjectDir(Path(args.project)))
     _print_json(report.to_dict())
     return 0
 

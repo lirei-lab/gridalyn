@@ -11,9 +11,10 @@ from typing import Any
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 
 SCENARIO_SOURCE_STANDARD = "pycity-inspired-scenario-overlay"
-DEFAULT_LAYOUT = ArtifactLayout(Path("."))
+DEFAULT_LAYOUT = ArtifactLayout(WorkspaceRoot(Path(".")))
 ASSET_REGISTRY_SOURCE_TABLE = (
     DEFAULT_LAYOUT.scenarios / "asset_registry.parquet"
 ).as_posix()

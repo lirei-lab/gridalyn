@@ -16,6 +16,7 @@ from gridalyn.foundation import (
     file_reference,
     write_report,
 )
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.operations import (
     build_constraint_requirements,
     build_locational_clearing,
@@ -103,7 +104,7 @@ def _infer_dt_h(transformer_timeseries: pd.DataFrame) -> float:
 
 def generate_locational_clearing(
     *,
-    root: Path,
+    root: WorkspaceRoot,
     provider_path: Path,
     impact_path: Path,
     overload_report_path: Path,
@@ -144,7 +145,7 @@ def generate_locational_clearing(
             inputs and writing artifacts outside a workspace.
         ValueError: If no constraint can be derived for ``scenario_id``.
     """
-    root = root.resolve()
+    root = WorkspaceRoot(root.resolve())
     layout = ArtifactLayout(root)
     if not layout.digital_twin.is_dir():
         raise FileNotFoundError(

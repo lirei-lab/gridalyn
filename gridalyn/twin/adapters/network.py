@@ -14,6 +14,7 @@ import pandapower as pp
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.twin.adapters.authority import (
     ModelAuthoritySet,
     ModelProfile,
@@ -587,7 +588,9 @@ def _adapter_id_from_name(adapter_name: str) -> str:
 
 
 def _validation_report_path(*, out_dir: Path, root: Path) -> Path:
-    layout = ArtifactLayout(root)
+    # The exporters' `root` is typed Path until the twin-owned phase of bd 6ns.1
+    # types it; every caller passes the workspace root the layout expects.
+    layout = ArtifactLayout(WorkspaceRoot(root))
     try:
         out_dir.resolve().relative_to(layout.base.resolve())
         return layout.reports / "network_adapter_validation_report.json"

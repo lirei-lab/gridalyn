@@ -117,6 +117,16 @@ runner is always invoked from inside a project's own directory, so it never
 passes `root` explicitly. This example names it so the snippet runs from
 anywhere.)
 
+The script keeps apart the roots a path can start from. `script.root` is the
+study's own directory. `script.workspace_root` is the Gridalyn workspace that
+holds `projects/` and `instances/`, and is what `ArtifactLayout` and the
+operations and catalog helpers take as `root`. They are typed `ProjectDir` and
+`WorkspaceRoot` (`gridalyn.foundation.platform.roots`), so mypy rejects one
+where the other is required. `script.base_dir` is neither: it is the directory
+the runner starts the stage in, which equals the workspace root only for a
+`pathBase: repo` study -- pass `root` or `workspace_root`, whichever the callee
+names.
+
 `script.write_report` fills a `ReportMetadata` from the project (`report_id`,
 `source_domain=script.name`, `project={"name": script.name}`) and routes
 through `build_report` / `write_report`, so every field the contract requires

@@ -7,6 +7,11 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from gridalyn.foundation.platform.roots import WorkspaceRoot
+
+#: The default workspace root: the current directory, as every caller assumed.
+_CURRENT_DIRECTORY = WorkspaceRoot(Path("."))
+
 
 def _looks_like_workspace(path: Path) -> bool:
     return (
@@ -39,7 +44,7 @@ def _has_git_metadata(start: Path) -> bool:
     return any((candidate / ".git").exists() for candidate in (start, *start.parents))
 
 
-def find_workspace_root(start: Path | str = ".") -> Path:
+def find_workspace_root(start: Path | str = ".") -> WorkspaceRoot:
     """Discover a Gridalyn workspace from a nested path.
 
     Git metadata is useful during development, but public archives should also
@@ -64,14 +69,14 @@ def find_workspace_root(start: Path | str = ".") -> Path:
             if result.returncode == 0:
                 candidate = Path(result.stdout.strip()).resolve()
                 if _looks_like_workspace(candidate):
-                    return candidate
+                    return WorkspaceRoot(candidate)
         except OSError:
             pass
 
     for candidate in (start_path, *start_path.parents):
         if _looks_like_workspace(candidate):
-            return candidate
-    return start_path
+            return WorkspaceRoot(candidate)
+    return WorkspaceRoot(start_path)
 
 
 @dataclass(frozen=True)
@@ -86,13 +91,18 @@ class ArtifactLayout:
     ``ArtifactLayout(root, instance=...)`` so that ``gridalyn twin`` is a
     general mechanism for *any* twin of *any* project, not a single
     hard-wired instance.
+
+    ``root`` is the WORKSPACE root -- the directory holding ``pyproject.toml``,
+    ``gridalyn/``, ``projects/`` and ``instances/`` -- never a study's own
+    directory. Passing a study directory is what pointed a layout at a path that
+    does not exist in bd 7rt; the :class:`WorkspaceRoot` type makes mypy reject it.
     """
 
-    root: Path | str = "."
+    root: WorkspaceRoot = _CURRENT_DIRECTORY
     instance: str = "default"
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "root", Path(self.root).resolve())
+        object.__setattr__(self, "root", WorkspaceRoot(Path(self.root).resolve()))
         if not isinstance(self.instance, str) or not self.instance.strip():
             raise ValueError(
                 f"instance must be a non-empty name, got {self.instance!r}"
@@ -194,13 +204,16 @@ class ArtifactLayout:
 
 @dataclass(frozen=True)
 class GridalynWorkspace:
-    """A repository or application workspace using Gridalyn artifact contracts."""
+    """A repository or application workspace using Gridalyn artifact contracts.
 
-    root: Path | str = "."
+    ``root`` is the workspace root, as for :class:`ArtifactLayout`.
+    """
+
+    root: WorkspaceRoot = _CURRENT_DIRECTORY
     instance: str = "default"
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "root", Path(self.root).resolve())
+        object.__setattr__(self, "root", WorkspaceRoot(Path(self.root).resolve()))
         object.__setattr__(self, "instance", self.instance or "default")
         object.__setattr__(self, "layout", ArtifactLayout(self.root, self.instance))
 
@@ -228,7 +241,7 @@ class GridalynWorkspace:
 
 def layout_from_environment(
     *,
-    default_root: Path | str = ".",
+    default_root: WorkspaceRoot = _CURRENT_DIRECTORY,
     instance_env: str = "GRIDALYN_INSTANCE",
     root_env: str = "GRIDALYN_WORKSPACE_ROOT",
 ) -> ArtifactLayout:
@@ -245,11 +258,11 @@ def layout_from_environment(
 
     instance = os.environ.get(instance_env) or "default"
     root = os.environ.get(root_env) or str(default_root)
-    return ArtifactLayout(root, instance=instance)
+    return ArtifactLayout(WorkspaceRoot(Path(root)), instance=instance)
 
 
 def workspace_from_root(
-    root: Path | str = ".", *, instance: str = "default"
+    root: WorkspaceRoot = _CURRENT_DIRECTORY, *, instance: str = "default"
 ) -> GridalynWorkspace:
     """Create a workspace object from a repository root."""
 
@@ -258,7 +271,7 @@ def workspace_from_root(
 
 def workspace_from_environment(
     *,
-    default_root: Path | str = ".",
+    default_root: WorkspaceRoot = _CURRENT_DIRECTORY,
     instance_env: str = "GRIDALYN_INSTANCE",
     root_env: str = "GRIDALYN_WORKSPACE_ROOT",
 ) -> GridalynWorkspace:

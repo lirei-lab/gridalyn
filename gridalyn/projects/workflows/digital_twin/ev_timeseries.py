@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.assets.datagen.agents import EVCharger
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
 from gridalyn.foundation import layout_from_environment  # noqa: E402
 

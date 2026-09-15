@@ -18,6 +18,7 @@ configure_cli_environment()
 # any effect, which is a silent failure rather than a loud one.
 
 from gridalyn.foundation import ArtifactLayout  # noqa: E402
+from gridalyn.foundation.platform.roots import WorkspaceRoot  # noqa: E402
 from gridalyn.interfaces.cli.script_runner import run_module_as_script  # noqa: E402
 from gridalyn.projects.workflows.digital_twin import (  # noqa: E402
     ev_scenarios,
@@ -39,7 +40,7 @@ from gridalyn.twin.geoprocess import (  # noqa: E402
 _DEFAULT_ROOT = Path(".")
 
 
-def _require_workspace_root(root: Path) -> Path:
+def _require_workspace_root(root: Path) -> WorkspaceRoot:
     """Resolve and validate a CLI-provided workspace root.
 
     Args:
@@ -63,7 +64,7 @@ def _require_workspace_root(root: Path) -> Path:
             "with every path composed from ArtifactLayout. Run from a "
             "workspace root, or pass --root <workspace>."
         )
-    return resolved
+    return WorkspaceRoot(resolved)
 
 
 def _display_path(path: Path) -> str:
