@@ -36,8 +36,9 @@ only adapt one someone else already built.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 import pandapower as pp
@@ -439,6 +440,7 @@ class PandapowerGridBuilder:
 
         ext_grids = []
         added_ext_grids = 0
+        vm_pu = external_grid_vm_pu(self.config)
         for hv_node, _hv_data in hv_substation_nodes.items():
             hv_bus = self.node_to_bus_mapping.get(hv_node)
             if hv_bus is None:
@@ -450,7 +452,7 @@ class PandapowerGridBuilder:
             ext_grid = pp.create_ext_grid(
                 self.net,
                 bus=hv_bus,
-                vm_pu=1.0,
+                vm_pu=vm_pu,
                 va_degree=0.0,
                 name=f"External Grid {hv_node}",
             )
@@ -650,9 +652,9 @@ def build_power_grid_and_network(
     footprints_path: str | Path,
     config: Dict[str, Any],
     clustering_crs: str | int | None = "auto",
-    snap_transformers_to_streets: bool = False,
-    lv_assignment: str = "kmeans",
-    block_penalty_km2: float = 0.0,
+    snap_transformers_to_streets: bool | None = None,
+    lv_assignment: str | None = None,
+    block_penalty_km2: float | None = None,
 ) -> Tuple[PowerGridGraph, pp.pandapowerNet]:
     """Build a `PowerGridGraph` and `pandapower` network from building footprints.
 
@@ -664,9 +666,17 @@ def build_power_grid_and_network(
     `gridalyn.simulation.simulators.powerflow.synthetic_network` for the full
     orchestration that adds them.
 
+    The partition and siting options can be declared in ``config["topology"]``
+    (keys in :data:`TOPOLOGY_KEYS`) and the slack setpoint in
+    ``config["external_grid"]["vm_pu"]``, so a study pins them as data and a
+    change to them changes the config hash every cache keys on. An explicit
+    argument here overrides the config; a config without those blocks builds
+    exactly what it built before they existed.
+
     Args:
         footprints_path: GeoJSON file with building polygons.
-        config: Grid configuration mapping (buses/lines/transformers/loads).
+        config: Grid configuration mapping (buses/lines/transformers/loads, and
+            optionally topology/external_grid).
         clustering_crs: Metric CRS for clustering. `"auto"` estimates a local
             UTM CRS from the footprint layer. Graph geodata stays
             longitude/latitude.
@@ -677,7 +687,8 @@ def build_power_grid_and_network(
             pandapower line, pinned today at `min_length_km` because the two
             nodes coincide. Siting on the street turns that stub into roughly
             20 m of conductor and moves the power flow, so enabling this is a
-            deliberate re-base, not a display change.
+            deliberate re-base, not a display change. ``None`` takes the config's
+            value.
         lv_assignment: How buildings are shared among MV/LV transformers, one of
             :data:`LV_ASSIGNMENT_METHODS`. ``"kmeans"`` (the default) partitions
             by geometry alone, which on the shipped footprints leaves 43 of 193
@@ -685,35 +696,41 @@ def build_power_grid_and_network(
             caps every transformer at the building count it was sized for.
             **Defaults to kmeans, and the default is load-bearing**: changing
             the partition changes which buildings share a transformer, so
-            enabling it is a deliberate re-base.
+            enabling it is a deliberate re-base. ``None`` takes the config's
+            value.
         block_penalty_km2: With ``"capacitated"``, the penalty in km^2 of
             squared distance for serving a building from a cluster centred on
             another street block. Capacity alone pushes edge buildings across
             the street; ``0.005`` was measured to recover that while keeping
-            every transformer within its limit. Requires the ``geo`` extra and
-            a street-network fetch. Defaults to ``0.0``, no penalty.
+            every transformer within its limit. Needs streets: a declared
+            ``topology.street_layer`` file, or the ``geo`` extra and a live
+            fetch. ``None`` takes the config's value, else ``0.0``.
 
     Returns:
         `(power_grid, net)`. `power_grid.building_data` carries the extracted
         building count and coordinates for a caller that needs them.
     """
-    capacitated = _check_lv_assignment(lv_assignment, block_penalty_km2)
+    options = resolve_topology_options(
+        config,
+        footprints_path=footprints_path,
+        lv_assignment=lv_assignment,
+        block_penalty_km2=block_penalty_km2,
+        snap_transformers_to_streets=snap_transformers_to_streets,
+    )
+    external_grid_vm_pu(config)  # refuse a bad setpoint before any IO
     power_grid = PowerGridGraph()
     power_grid.extract_building_centers_and_areas(
         str(Path(footprints_path)), clustering_crs=clustering_crs
     )
-    if snap_transformers_to_streets:
-        power_grid.street_snapper = _street_snapper_for(power_grid, footprints_path)
     block_ids = None
-    if block_penalty_km2 > 0:
-        block_ids = _street_block_ids_for(power_grid, footprints_path)
-    _build_graph_hierarchy(
-        power_grid,
-        config,
-        capacitated=capacitated,
-        block_ids=block_ids,
-        block_penalty_km2=block_penalty_km2,
-    )
+    if options.uses_streets:
+        snapper = _street_snapper_for(power_grid, footprints_path, options)
+        if options.snap_transformers_to_streets:
+            power_grid.street_snapper = snapper
+        if options.block_penalty_km2 > 0:
+            assert power_grid.building_centroids is not None  # extracted above
+            block_ids = snapper.block_ids(power_grid.building_centroids)
+    _build_graph_hierarchy(power_grid, config, options=options, block_ids=block_ids)
     net = _build_uniform_pandapower_network(power_grid, config)
     return power_grid, net
 
@@ -749,59 +766,315 @@ def _check_lv_assignment(lv_assignment: str, block_penalty_km2: float) -> bool:
     return lv_assignment == "capacitated"
 
 
-def _street_block_ids_for(
-    power_grid: PowerGridGraph, footprints_path: str | Path
-) -> np.ndarray:
-    """Return the street block of every extracted building.
+TOPOLOGY_KEYS = (
+    "block_penalty_km2",
+    "lv_assignment",
+    "max_customers_per_transformer",
+    "snap_transformers_to_streets",
+    "street_layer",
+)
+"""Keys ``config["topology"]`` may declare; any other key is refused by name."""
+
+EXTERNAL_GRID_KEYS = ("note", "vm_pu")
+"""Keys ``config["external_grid"]`` may declare."""
+
+
+@dataclass(frozen=True)
+class TopologyOptions:
+    """How a build partitions buildings and where it sites transformers.
+
+    Resolved once by :func:`resolve_topology_options`, so the builder and the
+    validation report cannot disagree about what was built.
+
+    Attributes:
+        lv_assignment: One of :data:`LV_ASSIGNMENT_METHODS`.
+        max_customers_per_transformer: Declared building limit, or ``None`` for
+            the sized count.
+        block_penalty_km2: Penalty for leaving a cluster's dominant block.
+        snap_transformers_to_streets: Whether transformers sit on the street.
+        street_layer_path: Declared street layer, resolved against the
+            footprints file's directory; ``None`` means a live fetch.
+        street_layer_sha256: The digest the config declares for that layer.
+    """
+
+    lv_assignment: str = "kmeans"
+    max_customers_per_transformer: Optional[int] = None
+    block_penalty_km2: float = 0.0
+    snap_transformers_to_streets: bool = False
+    street_layer_path: Optional[Path] = None
+    street_layer_sha256: Optional[str] = None
+
+    @property
+    def capacitated(self) -> bool:
+        """Whether the LV partition honours a per-transformer limit."""
+        return self.lv_assignment == "capacitated"
+
+    @property
+    def uses_streets(self) -> bool:
+        """Whether the build needs a street layer at all."""
+        return self.snap_transformers_to_streets or self.block_penalty_km2 > 0
+
+    def to_report(self) -> Dict[str, Any]:
+        """Return the options as a JSON-ready mapping for the validation report.
+
+        Returns:
+            The resolved options, with the street layer's path and digest.
+        """
+        street_layer = None
+        if self.street_layer_path is not None:
+            street_layer = {
+                "path": str(self.street_layer_path),
+                "sha256": self.street_layer_sha256,
+            }
+        return {
+            "lv_assignment": self.lv_assignment,
+            "max_customers_per_transformer": self.max_customers_per_transformer,
+            "block_penalty_km2": self.block_penalty_km2,
+            "snap_transformers_to_streets": self.snap_transformers_to_streets,
+            "street_layer": street_layer,
+        }
+
+
+def resolve_topology_options(
+    config: Mapping[str, Any],
+    *,
+    footprints_path: str | Path,
+    lv_assignment: str | None = None,
+    block_penalty_km2: float | None = None,
+    snap_transformers_to_streets: bool | None = None,
+) -> TopologyOptions:
+    """Resolve the topology options a build uses.
+
+    An explicit argument wins over ``config["topology"]``, which wins over the
+    defaults: plain K-means, no streets. Validated before any file is read.
 
     Args:
-        power_grid: The graph whose buildings have already been extracted.
-        footprints_path: The GeoJSON the buildings came from.
+        config: The grid configuration.
+        footprints_path: The footprint GeoJSON; a relative
+            ``street_layer.path`` resolves against its directory.
+        lv_assignment: Explicit partition method, or ``None``.
+        block_penalty_km2: Explicit block penalty, or ``None``.
+        snap_transformers_to_streets: Explicit siting choice, or ``None``.
 
     Returns:
-        ``(n,)`` block ids, ``-1`` for a building outside every block.
-    """
-    from gridalyn.twin.geoprocess.streets import BLOCK_BBOX_PADDING_DEG
+        The resolved :class:`TopologyOptions`.
 
-    snapper = _street_snapper_for(
-        power_grid, footprints_path, padding_deg=BLOCK_BBOX_PADDING_DEG
+    Raises:
+        ValueError: On an unknown key, a wrong type, or options that contradict
+            each other, naming the key and the remedy.
+    """
+    block = _topology_block(config)
+    method = str(_pick(lv_assignment, block, "lv_assignment", "kmeans"))
+    penalty = float(_pick(block_penalty_km2, block, "block_penalty_km2", 0.0))
+    snap = _pick(
+        snap_transformers_to_streets, block, "snap_transformers_to_streets", False
     )
-    assert power_grid.building_centroids is not None  # extracted by the caller
-    return snapper.block_ids(power_grid.building_centroids)
+    if not isinstance(snap, bool):
+        raise ValueError(
+            "config.topology.snap_transformers_to_streets must be true or false, "
+            f"found {type(snap).__name__}"
+        )
+    _check_lv_assignment(method, penalty)
+    street_path, street_sha256 = _street_layer(
+        block, footprints_path, uses_streets=snap or penalty > 0
+    )
+    return TopologyOptions(
+        lv_assignment=method,
+        max_customers_per_transformer=_max_customers(block, method),
+        block_penalty_km2=penalty,
+        snap_transformers_to_streets=snap,
+        street_layer_path=street_path,
+        street_layer_sha256=street_sha256,
+    )
+
+
+def external_grid_vm_pu(config: Mapping[str, Any]) -> float:
+    """Return the slack setpoint a build uses, ``1.0`` pu unless declared.
+
+    Args:
+        config: The grid configuration.
+
+    Returns:
+        ``config["external_grid"]["vm_pu"]``, or ``1.0``.
+
+    Raises:
+        ValueError: On an unknown key, or a setpoint outside [0.9, 1.1] pu.
+    """
+    block = config.get("external_grid", {})
+    if not isinstance(block, Mapping):
+        raise ValueError(
+            f"config.external_grid must be a mapping, found {type(block).__name__}"
+        )
+    unknown = sorted(set(block) - set(EXTERNAL_GRID_KEYS))
+    if unknown:
+        raise ValueError(
+            f"config.external_grid has unsupported keys: {', '.join(unknown)} "
+            f"(supported: {', '.join(EXTERNAL_GRID_KEYS)})"
+        )
+    vm_pu = float(block.get("vm_pu", 1.0))
+    if not 0.9 <= vm_pu <= 1.1:
+        raise ValueError(
+            f"config.external_grid.vm_pu must lie in [0.9, 1.1] pu, found {vm_pu}"
+        )
+    return vm_pu
+
+
+def _topology_block(config: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Return ``config["topology"]``, refusing unknown keys by name.
+
+    Args:
+        config: The grid configuration.
+
+    Returns:
+        The block, empty when absent.
+
+    Raises:
+        ValueError: If it is not a mapping or carries an unsupported key.
+    """
+    block = config.get("topology", {})
+    if not isinstance(block, Mapping):
+        raise ValueError(
+            f"config.topology must be a mapping, found {type(block).__name__}"
+        )
+    unknown = sorted(set(block) - set(TOPOLOGY_KEYS))
+    if unknown:
+        raise ValueError(
+            f"config.topology has unsupported keys: {', '.join(unknown)} "
+            f"(supported: {', '.join(TOPOLOGY_KEYS)})"
+        )
+    return block
+
+
+def _pick(explicit: Any, block: Mapping[str, Any], key: str, default: Any) -> Any:
+    """Return an explicit value, else the block's, else the default.
+
+    Args:
+        explicit: The caller's argument, ``None`` when not given.
+        block: ``config["topology"]``.
+        key: The key to read.
+        default: The value when neither declares one.
+
+    Returns:
+        The resolved value.
+    """
+    return explicit if explicit is not None else block.get(key, default)
+
+
+def _max_customers(block: Mapping[str, Any], method: str) -> Optional[int]:
+    """Return the declared per-transformer limit, validated.
+
+    Args:
+        block: ``config["topology"]``.
+        method: The resolved partition method.
+
+    Returns:
+        The limit, or ``None`` when not declared.
+
+    Raises:
+        ValueError: If it is not a positive integer, or K-means is in use.
+    """
+    value = block.get("max_customers_per_transformer")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            "config.topology.max_customers_per_transformer must be a positive "
+            f"integer, found {value!r}"
+        )
+    if method != "capacitated":
+        raise ValueError(
+            "config.topology.max_customers_per_transformer only applies to "
+            "lv_assignment='capacitated'; K-means has no limit to honour"
+        )
+    return int(value)
+
+
+def _street_layer(
+    block: Mapping[str, Any], footprints_path: str | Path, *, uses_streets: bool
+) -> Tuple[Optional[Path], Optional[str]]:
+    """Return the declared street layer's resolved path and digest.
+
+    Args:
+        block: ``config["topology"]``.
+        footprints_path: The footprint GeoJSON the path is relative to.
+        uses_streets: Whether any option needs streets.
+
+    Returns:
+        ``(path, sha256)``, or ``(None, None)`` when not declared.
+
+    Raises:
+        ValueError: If declared without a use, or without ``path``/``sha256``.
+    """
+    declared = block.get("street_layer")
+    if declared is None:
+        return None, None
+    if not uses_streets:
+        raise ValueError(
+            "config.topology.street_layer is declared but nothing uses it: set "
+            "block_penalty_km2 or snap_transformers_to_streets, or remove it"
+        )
+    if not isinstance(declared, Mapping) or not declared.get("path"):
+        raise ValueError(
+            "config.topology.street_layer must be a mapping with 'path' and "
+            '\'sha256\', e.g. {"path": "streets.geojson", "sha256": "<hex>"}'
+        )
+    if not declared.get("sha256"):
+        raise ValueError(
+            "config.topology.street_layer.sha256 is required: the digest is what "
+            "makes a changed layer change the config every cache keys on"
+        )
+    path = Path(str(declared["path"]))
+    if not path.is_absolute():
+        path = Path(footprints_path).parent / path
+    return path, str(declared["sha256"])
 
 
 def _street_snapper_for(
     power_grid: PowerGridGraph,
     footprints_path: str | Path,
-    *,
-    padding_deg: Optional[float] = None,
+    options: TopologyOptions,
 ) -> "StreetSnapper":
-    """Build a street snapper covering the footprint layer's extent.
+    """Return the street snapper a build uses: the declared layer, or a fetch.
 
     Args:
         power_grid: The graph whose buildings have already been extracted, so
             its resolved `clustering_crs` can be reused.
-        footprints_path: The GeoJSON the buildings came from, read again only
-            for its extent.
-        padding_deg: Fetch padding; ``None`` keeps the siting default.
+        footprints_path: The GeoJSON the buildings came from.
+        options: The resolved topology options.
 
     Returns:
         A `StreetSnapper` measuring in the same metric CRS the clustering used,
-        so siting and clustering cannot disagree about distance.
+        so siting, blocks and clustering cannot disagree about distance.
     """
     import geopandas as gpd
 
     from gridalyn.twin.geoprocess.streets import (
+        BLOCK_BBOX_PADDING_DEG,
         DEFAULT_BBOX_PADDING_DEG,
         load_street_snapper,
+        load_street_snapper_from_file,
     )
 
-    footprints = gpd.read_file(str(Path(footprints_path)))
-    metric_crs = power_grid.clustering_crs or str(footprints.estimate_utm_crs())
+    footprints = None
+    metric_crs = power_grid.clustering_crs
+    if metric_crs is None:
+        footprints = gpd.read_file(str(Path(footprints_path)))
+        metric_crs = str(footprints.estimate_utm_crs())
+    if options.street_layer_path is not None:
+        return load_street_snapper_from_file(
+            options.street_layer_path,
+            metric_crs=metric_crs,
+            expected_sha256=options.street_layer_sha256,
+        )
+    if footprints is None:
+        footprints = gpd.read_file(str(Path(footprints_path)))
+    padding = (
+        BLOCK_BBOX_PADDING_DEG
+        if options.block_penalty_km2 > 0
+        else DEFAULT_BBOX_PADDING_DEG
+    )
     return load_street_snapper(
-        footprints.total_bounds,
-        metric_crs=metric_crs,
-        padding_deg=DEFAULT_BBOX_PADDING_DEG if padding_deg is None else padding_deg,
+        footprints.total_bounds, metric_crs=metric_crs, padding_deg=padding
     )
 
 
@@ -809,11 +1082,11 @@ def _build_graph_hierarchy(
     power_grid: PowerGridGraph,
     config: Dict[str, Any],
     *,
-    capacitated: bool = False,
+    options: Optional[TopologyOptions] = None,
     block_ids: Optional[np.ndarray] = None,
-    block_penalty_km2: float = 0.0,
 ) -> None:
     """Build and merge the LV/MV/HV `PowerGridGraph` hierarchy in place."""
+    options = options or TopologyOptions()
     loads = config["loads"]
     transformers = config["transformers"]
     max_load_per_building = float(loads["max_load_per_building"])
@@ -829,9 +1102,10 @@ def _build_graph_hierarchy(
         mv_lv_transformer_capacity=mv_lv_capacity,
         capacity_utilization_factor=utilization,
         diversity_factor_lv=diversity_factor_lv,
-        capacitated=capacitated,
+        capacitated=options.capacitated,
         block_ids=block_ids,
-        block_penalty_km2=block_penalty_km2,
+        block_penalty_km2=options.block_penalty_km2,
+        max_customers=options.max_customers_per_transformer,
     )
     power_grid.extend_graph_with_cim("graph_lv_buses")
     power_grid.create_building_graph(
@@ -877,6 +1151,10 @@ def _build_uniform_pandapower_network(
             "mv_hv": dict(config["transformers"]["mv_hv"]),
         },
     }
+    if "external_grid" in config:
+        # The builder reads the slack setpoint from its own config; dropping the
+        # block here would silently build every declared setpoint at 1.0 pu.
+        pp_config["external_grid"] = config["external_grid"]
     builder = PandapowerGridBuilder(power_grid=power_grid, config=pp_config)
     builder.build_lv_buses_and_lines()
     builder.build_mv_buses_and_lines()

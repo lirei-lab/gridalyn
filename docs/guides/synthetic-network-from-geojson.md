@@ -88,6 +88,25 @@ Both options default off. They change which buildings share a transformer, so
 turning them on for an existing study is a deliberate re-base, not a display
 change.
 
+### Declaring topology in the grid config
+
+A study pins these choices as data instead of passing arguments. The grid
+config accepts a `topology` block with `lv_assignment`,
+`max_customers_per_transformer` (a limit the study can cite, which wins over the
+sized count), `block_penalty_km2`, `snap_transformers_to_streets` and
+`street_layer`, plus an `external_grid` block whose `vm_pu` sets the slack
+setpoint (1.0 pu when absent). An explicit argument to the builder overrides the
+config. A config without either block builds exactly what it built before.
+
+A live fetch from OpenStreetMap is not reproducible, because the map changes.
+Write the streets once with `python tools/snapshot_streets.py --footprints
+<buildings.geojson> --out <streets.geojson>`, commit the file beside the
+footprints with its OpenStreetMap attribution, and declare
+`street_layer` as its `path` (relative to the footprints file's directory) and
+the printed `sha256`. The build refuses a layer whose digest no longer matches,
+and because the digest lives in the config, a changed layer also changes the
+config hash every topology cache keys on.
+
 ## Offline Smoke Test
 
 Run the synthetic generator example:
