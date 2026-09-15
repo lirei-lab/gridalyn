@@ -1,0 +1,24 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: Workflow
+metadata:
+  name: feeder_criticality_study_workflow
+spec:
+  stages:
+    - id: prepare_workspace
+      command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace ."
+      outputs:
+        - outputs/data
+        - outputs/figures
+        - outputs/manifests
+        - outputs/operations
+        - outputs/reports
+    - id: build_semantic_graph
+      needs:
+        - prepare_workspace
+      command: "{python} scripts/build_semantic_graph.py"
+      inputs:
+        - inputs/network.json
+      outputs:
+        - outputs/data/semantic_nodes.parquet
+        - outputs/data/semantic_edges.parquet
+        - outputs/reports/semantic_graph_report.json

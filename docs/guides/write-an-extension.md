@@ -7,10 +7,12 @@ extension that participates in a run is declared, versioned and recorded in
 provenance.
 
 This page documents the foundation. The generic engine lives in
-`gridalyn/foundation/platform/extensions.py`; the five per-role registries
-(power-flow backend, surrogate, policy, observation producer, network adapter)
-are open to external registration, each through a public
-`register_<role>_extension` host API.
+`gridalyn/foundation/platform/extensions.py`; the six per-role registries
+(power-flow backend, surrogate, policy, channel model, observation producer,
+network adapter) are open to external registration, each through a public
+`register_<role>_extension` host API. A semantic capability can also arrive
+from an extension a study declares — see
+[Contributing a semantic capability](#contributing-a-semantic-capability).
 
 ## Try it
 
@@ -126,10 +128,14 @@ A project declares which extensions its runs resolve through
 `spec.inputs.extensions` in `project.yaml` — bare IDs in the default
 `gridalyn.extensions` group, or `{id, group}` mappings. `load_declared_extensions`
 and `resolve_declared_extensions` (in `gridalyn.projects.model_inputs`) read
-and resolve that declaration on demand. A project that declares nothing loads
-nothing, so its governed behavior stays unchanged; the only manifest
-change any run sees is the always-present empty `extensions: []` entry
-(a deliberate additive-key re-base — see the run-provenance docs).
+and load that declaration, and since bd 4ky.8 the runner acts on it: before any
+stage runs, `register_declared_extensions` (in `gridalyn.projects.extension_roles`)
+loads the declared extensions and routes each to the registry of the role it
+serves, so a declaration that cannot be honoured fails the run up front. A
+project that declares nothing loads nothing, so its governed behavior stays
+unchanged; the only manifest change any run sees is the always-present empty
+`extensions: []` entry (a deliberate additive-key re-base — see the
+run-provenance docs).
 
 **Extensible capabilities.** The core capability set (`geo`, `sim`, `ops` —
 truly-optional modules in `OPTIONAL_CAPABILITY_MODULES`) stays fixed. An
@@ -139,6 +145,46 @@ external package may declare NEW capability keys through the
 merges those declarations additively — an extra may only add new capabilities,
 never redefine the core set, and never an empty (always-green) one. The
 capability contract test validates this external format.
+
+## Contributing a semantic capability
+
+An extension whose descriptor declares `role="semantic_capability"` contributes a
+semantic capability: its `factory` returns a
+`gridalyn.twin.semantic.vocabulary.SemanticCapability` — namespaces, semantic
+types, relationships with their axioms, and an emitter. A study that lists the
+extension in `spec.inputs.extensions` can build a semantic graph with that
+capability exactly as it would with one gridalyn ships.
+
+- **Registered where the build happens.** The runner registers a study's
+  declared extensions before its first stage. A stage runs as its own process
+  and inherits none of that, so a stage that builds calls
+  `script.resolve_extensions()` first — a no-op for a study that declares
+  nothing. Registering the same extension twice in one process is a no-op; a
+  capability ID already held by a different source or version is refused,
+  because one ID names one declaration.
+- **Checked, not trusted.** A factory that returns anything but a
+  `SemanticCapability` is a located `TypeError`. The capability's emitter is
+  held to the same profile as a shipped one: its types and predicates must be
+  declared, and the validator checks domain, range and cardinality.
+- **Declared-only.** An extension that is installed but not declared is never
+  loaded, so a build that asks for its capability fails with
+  `UnknownSemanticCapabilityError`, naming the capabilities that are
+  registered — loudly, not silently.
+- **Interaction protocols are not open.** An extension declaring
+  `role="interaction_protocol"` is refused. The protocol set in
+  `gridalyn/operations/interaction/conversations.py` is closed by design: a
+  conversation's legality must not depend on what happens to be installed.
+- **Other roles** keep today's behaviour: they stay in the generic registry and
+  are recorded in `provenance.extensions`.
+
+A complete, runnable example ships at `examples/extensions/feeder_criticality/`:
+an extension that adds a criticality assessment to every distribution
+transformer, and a study at `examples/extensions/feeder_criticality/study/` that
+declares it (`spec.inputs.extensions: [feeder_criticality]`) and builds its graph
+with it. `examples/extensions/feeder_criticality/run_example.py` exposes the
+extension's entry point the way an installation does and runs the study for
+real; with `--without-declaration`, the same study fails its build.
+`tests/test_extension_semantic_capability.py` pins both.
 
 ## Authoring an extension
 
@@ -196,7 +242,9 @@ After installing the package (so its entry point is visible to
 in the generic engine's `DEFAULT_REGISTRY` (id, role, name, version, contract
 version, source, entry-point group, module hash), sorted by `extension_id` —
 populated whenever an extension is registered (host) or loaded (entry point)
-into the runner's process before the manifest is written. Role-level provenance
+into the runner's process before the manifest is written — since bd 4ky.8 that
+includes every extension a study declares, which the runner registers before it
+writes the manifest. Role-level provenance
 records which extension served a role: `provenance.powerflow_backend` carries
 `extension_id`/`extension_source`/`extension_version` when the resolved backend
 is an external extension (`source != "core"`), and `provenance.channel_model`

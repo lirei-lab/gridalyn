@@ -1,0 +1,11 @@
+[project]
+name = "feeder_criticality"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["gridalyn"]
+
+[project.entry-points.'gridalyn.extensions']
+feeder_criticality = "feeder_criticality"
+
+[tool.setuptools]
+py-modules = ["feeder_criticality"]

@@ -1,0 +1,47 @@
+apiVersion: gridalyn.io/v1alpha1
+kind: StudyProject
+metadata:
+  name: feeder_criticality_study
+  version: 0.1.0
+spec:
+  pathBase: project
+  simulation:
+    seed: 7
+  problem:
+    type: grid_study
+    dataset: project_inputs
+    environment: project_workflow
+    objective: Build a semantic graph with a capability contributed by a declared extension.
+    model:
+      type: workflow_model
+      name: feeder_criticality_study_workflow
+    scenarios:
+      - id: baseline
+        role: template_baseline
+        description: A two-transformer feeder assessed by the feeder_criticality capability.
+  experiments:
+    - id: baseline_run
+      scenario: baseline
+      objective: Build and validate the semantic graph with the declared capability.
+      metrics: []
+      model: feeder_criticality_study_workflow
+      artifacts:
+        - outputs/reports/semantic_graph_report.json
+  inputs:
+    raw: inputs
+    # Declared-only: an extension that is installed but not listed here is never
+    # loaded. Remove this entry and the semantic build fails, naming the
+    # capabilities that are registered.
+    extensions:
+      - feeder_criticality
+  workflow:
+    file: workflow.yaml
+  validation:
+    requiredReports:
+      - outputs/reports/semantic_graph_report.json
+    requiredFigures: []
+    senseChecks:
+      - id: every_transformer_assessed
+        report: outputs/reports/semantic_graph_report.json
+        field: summary.criticality_assessments
+        equals: 2

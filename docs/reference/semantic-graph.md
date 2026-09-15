@@ -24,8 +24,10 @@ A capability is a declaration registered by explicit ID in
 relationships with their axioms, and scenario count rules — not a branch in the
 orchestrator. Declaring a capability that is not registered raises, naming the
 registered set; until 2026-09-10 such a name was ignored in silence. A host
-registers its own with `register_semantic_capability_extension`. Every graph
-manifest records the capabilities it was built with.
+registers its own with `register_semantic_capability_extension`, and a study can
+declare an extension that contributes one through `spec.inputs.extensions`
+([Extension Framework](../guides/write-an-extension.md#contributing-a-semantic-capability)).
+Every graph manifest records the capabilities it was built with.
 
 Core (always emitted):
 
