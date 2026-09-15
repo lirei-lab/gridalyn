@@ -1,7 +1,7 @@
 """Shape-covering verification subset for the flagship ``ev_hosting_flex`` study.
 
 The flagship study's reproduce-and-pin tests pass against a cached tree, but a
-full source regeneration takes hours across 24 stages. This tool makes that
+full source regeneration takes hours across every stage. This tool makes that
 verification *source-proven by protocol*: it runs the pipeline's non-heavy
 stages end to end (the "shape" of the pipeline), records a per-stage result for
 every stage — run, skipped, or failed — and reports the R7 baseline check. The
@@ -14,7 +14,10 @@ hours. It takes five minutes, and because every analysis stage depends on it,
 skipping it skipped 21 of 24 stages: the "shape-covering subset" ran three
 setup stages in a tenth of a minute. The set below is the four stages a clean
 24-stage run timed above ten minutes; with them skipped the subset runs 16 of
-24 stages in about 24 minutes (bd zpz).
+24 stages in about 24 minutes (bd zpz). ``replay_dr_program`` (bd 4ky.10,
+2026-09-15) is a sub-second stage outside the heavy set, so the workflow now has
+25 stages and the subset runs 18 of them; the timing above was measured
+before it was added and has not been re-measured.
 
 Per-stage records are the payload for a verification-receipt entry's optional
 ``stages`` field (see ``docs/development/verification-receipts.json``), so a

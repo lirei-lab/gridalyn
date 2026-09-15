@@ -433,6 +433,8 @@ _HELPER_ROUTED_NOT_A_REPORT: frozenset[str] = frozenset(
         "derive_annual_congestion::write_json#0",
         "projects/ev_hosting_flex/scripts/pipeline/compute_curtailment_economics.py::"
         "derive_curtailment_economics::write_json#0",
+        "projects/ev_hosting_flex/scripts/pipeline/replay_dr_program.py::"
+        "derive_dr_replay::write_json#0",
         "projects/ev_hosting_flex/scripts/pipeline/validate_powerflow.py::"
         "run_stage::write_json#0",
         # twin_network_model_config.json: provenance for the twin-network-model
@@ -975,7 +977,7 @@ class ReportContractAuditTest(unittest.TestCase):
         )
         self.assertEqual(
             examined,
-            53,
+            54,
             "The 02-03 audit examined 22 helper-routed write sites across 15 "
             "helpers; retiring the orphaned-input commands on "
             "2026-08-06 removed five of them (the clearing scorecard, "
@@ -1001,7 +1003,10 @@ class ReportContractAuditTest(unittest.TestCase):
             "stage runs, the rewrite after each stage, and the partial-run "
             "path that annotates a full run's record instead of replacing "
             "it -- 53, all the same manifest and NOT-A-REPORT alongside the "
-            "two already there. A "
+            "two already there. The ev_hosting_flex demand-response replay "
+            "stage (bd 4ky.10) writes its study payload, dr_replay.json, "
+            "through script.write_json -- 54, NOT-A-REPORT like the "
+            "flagship's other twenty study-data JSONs. A "
             "different number means the tree moved; reconcile before "
             "adjusting this number.",
         )
