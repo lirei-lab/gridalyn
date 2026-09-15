@@ -61,6 +61,21 @@
             "note": "IEEE C57.91 dynamic rating. K(-22.5°C)=1.41 -> P_dyn=20.1 MW"
         }
     },
+    "topology": {
+        "lv_assignment": "capacitated",
+        "max_customers_per_transformer": 10,
+        "block_penalty_km2": 0.005,
+        "snap_transformers_to_streets": true,
+        "street_layer": {
+            "path": "streets.geojson",
+            "sha256": "e8c1059068e456bb2cdd710d651d4eba0fefe15bce7708877bc300b193c0adb2"
+        },
+        "note": "Up to 10 homes per MV/LV unit: Hydro-Quebec's own subdivision guide says a 100 kVA unit serves up to ten houses, and metered HQ electric-heated homes agree (100 kVA at nameplate holds 9 at P95, 11 at P50). The study rates each unit from transformerKvaLadder, so the limit is the largest residential unit's, not this 75 kVA placeholder's. Evidence and sources: CALIBRATION.md, bd 4os.7."
+    },
+    "external_grid": {
+        "vm_pu": 1.04,
+        "note": "Substation LTC setpoint, the same value the study declares as slackVmPu."
+    },
     "simulation": {
         "n_realizations": 30,
         "resolution_minutes": 5,

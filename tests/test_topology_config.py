@@ -52,10 +52,15 @@ _STREETS = [
 def _base_config() -> dict[str, Any]:
     """Return the SDK default config on 50 kVA units, so 16 buildings need 4.
 
+    The shipped topology and external_grid blocks are removed, so each test
+    states exactly the options it exercises.
+
     Returns:
         A fresh config mapping.
     """
     config = json.loads(Path("configs/grid/config.json").read_text(encoding="utf-8"))
+    config.pop("topology", None)
+    config.pop("external_grid", None)
     config["transformers"]["lv_mv"]["capacity_kva"] = 50
     return config
 

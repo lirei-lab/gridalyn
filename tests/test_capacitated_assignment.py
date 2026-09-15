@@ -309,6 +309,10 @@ class ValidationReportTest(unittest.TestCase):
             Path("configs/grid/config.json").read_text(encoding="utf-8")
         )
         config["transformers"]["lv_mv"]["capacity_kva"] = 50
+        # The shipped config declares its own limit; these tests exercise the
+        # sized count and the undeclared default, so start from neither.
+        config.pop("topology", None)
+        config.pop("external_grid", None)
         with tempfile.TemporaryDirectory() as tmp:
             footprints = Path(tmp) / "buildings.geojson"
             footprints.write_text(

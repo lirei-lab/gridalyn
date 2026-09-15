@@ -420,6 +420,10 @@ spec:
       source: projects/ev_hosting_flex/inputs/buildings.geojson
       format: GeoJSON FeatureCollection
       role: Project-local Trois-Rivieres building footprints used to synthesize the topology cache (D-03).
+    streetLayer:
+      source: projects/ev_hosting_flex/inputs/streets.geojson
+      format: "GeoJSON FeatureCollection, EPSG:4326"
+      role: "Pinned OpenStreetMap street network the topology build sites transformers on and keeps LV clusters within blocks of (bd 4os.7), declared with its sha256 in the grid config. Contains data (c) OpenStreetMap contributors, ODbL 1.0."
     grid:
       config: projects/ev_hosting_flex/inputs/synthetic_network_config.json
   workflow:
