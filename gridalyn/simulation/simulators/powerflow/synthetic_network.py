@@ -21,7 +21,12 @@ import numpy as np
 import pandapower as pp
 
 from gridalyn.simulation.backends.registry import solve_power_flow
-from gridalyn.twin.adapters.pandapower_builder import build_power_grid_and_network
+from gridalyn.twin.adapters.pandapower_builder import (
+    TopologyOptions,
+    build_power_grid_and_network,
+    external_grid_vm_pu,
+    resolve_topology_options,
+)
 from gridalyn.twin.core.graph import PowerGridGraph
 
 # Cap on the number of over-capacity line indices recorded in the report so a
@@ -67,8 +72,9 @@ def build_synthetic_network_from_geojson(
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
     check_line_sizing: bool = False,
-    lv_assignment: str = "kmeans",
-    block_penalty_km2: float = 0.0,
+    lv_assignment: str | None = None,
+    block_penalty_km2: float | None = None,
+    snap_transformers_to_streets: bool | None = None,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from building footprints.
 
@@ -91,13 +97,13 @@ def build_synthetic_network_from_geojson(
             on a deep copy after the build and emit a runtime warning on
             over-100% loading or a ~0 downstream-load/conductor correlation.
             Adds no report bytes. Defaults to ``False`` (zero behavior change).
-        lv_assignment: ``"kmeans"`` (the default, unchanged) or
-            ``"capacitated"``, which caps every MV/LV transformer at the
-            building count it was sized for and adds an ``lv_assignment`` block
-            to the report. See
+        lv_assignment: ``"kmeans"`` or ``"capacitated"``; ``None`` (the
+            default) takes ``config["topology"]``, else K-means. See
             :func:`gridalyn.twin.adapters.pandapower_builder.build_power_grid_and_network`.
         block_penalty_km2: With ``"capacitated"``, keep clusters from
-            straddling streets. Needs the ``geo`` extra and a street fetch.
+            straddling streets; ``None`` takes the config's value.
+        snap_transformers_to_streets: Site transformers on the street;
+            ``None`` takes the config's value.
     """
 
     config_file = Path(config_path)
@@ -114,6 +120,7 @@ def build_synthetic_network_from_geojson(
         check_line_sizing=check_line_sizing,
         lv_assignment=lv_assignment,
         block_penalty_km2=block_penalty_km2,
+        snap_transformers_to_streets=snap_transformers_to_streets,
     )
 
 
@@ -128,8 +135,9 @@ def build_synthetic_network_from_config(
     run_powerflow: bool = False,
     building_peak_loads_kw: Sequence[float] | None = None,
     check_line_sizing: bool = False,
-    lv_assignment: str = "kmeans",
-    block_penalty_km2: float = 0.0,
+    lv_assignment: str | None = None,
+    block_penalty_km2: float | None = None,
+    snap_transformers_to_streets: bool | None = None,
 ) -> SyntheticNetworkBuildResult:
     """Build a synthetic distribution network from an explicit config mapping.
 
@@ -147,13 +155,13 @@ def build_synthetic_network_from_config(
             on a deep copy after the build and warn on over-100% loading or a
             ~0 downstream-load/conductor correlation. Adds no report bytes.
             Defaults to ``False`` (zero behavior change).
-        lv_assignment: ``"kmeans"`` (the default, unchanged) or
-            ``"capacitated"``, which caps every MV/LV transformer at the
-            building count it was sized for and adds an ``lv_assignment`` block
-            to the report. See
+        lv_assignment: ``"kmeans"`` or ``"capacitated"``; ``None`` (the
+            default) takes ``config["topology"]``, else K-means. See
             :func:`gridalyn.twin.adapters.pandapower_builder.build_power_grid_and_network`.
         block_penalty_km2: With ``"capacitated"``, keep clusters from
-            straddling streets. Needs the ``geo`` extra and a street fetch.
+            straddling streets; ``None`` takes the config's value.
+        snap_transformers_to_streets: Site transformers on the street;
+            ``None`` takes the config's value.
 
     Returns:
         A :class:`SyntheticNetworkBuildResult`.
@@ -162,12 +170,17 @@ def build_synthetic_network_from_config(
     footprints = Path(footprints_path)
     output_dir = Path(out_dir) if out_dir is not None else None
 
+    overrides: dict[str, Any] = {
+        "lv_assignment": lv_assignment,
+        "block_penalty_km2": block_penalty_km2,
+        "snap_transformers_to_streets": snap_transformers_to_streets,
+    }
+    options = resolve_topology_options(config, footprints_path=footprints, **overrides)
     power_grid, net = build_power_grid_and_network(
         footprints_path=footprints,
         config=config,
         clustering_crs=clustering_crs,
-        lv_assignment=lv_assignment,
-        block_penalty_km2=block_penalty_km2,
+        **overrides,
     )
     line_sizing = _apply_load_aware_sizing_if_configured(net, config)
     if building_peak_loads_kw is not None:
@@ -188,7 +201,8 @@ def build_synthetic_network_from_config(
             "generated" if building_peak_loads_kw is not None else "config_envelope"
         ),
         line_sizing=line_sizing,
-        lv_assignment=_summarize_lv_assignment(power_grid, config),
+        lv_assignment=_summarize_lv_assignment(power_grid, config, options),
+        topology_options=_topology_options_block(config, options, overrides),
     )
 
     if check_line_sizing:
@@ -391,6 +405,7 @@ def _validation_report(
     loads_source: str = "config_envelope",
     line_sizing: dict[str, Any] | None = None,
     lv_assignment: dict[str, Any] | None = None,
+    topology_options: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     valid = topology["isolated_nodes_total"] == 0
     if powerflow["attempted"]:
@@ -458,8 +473,11 @@ def _validation_report(
             )
             report.setdefault("warnings", []).append(warning)
 
-    # Gated like line_sizing: under the default K-means partition the block is
-    # absent, so existing reports stay byte-identical.
+    # Gated like line_sizing: a config that declares no topology/external_grid
+    # block, built with no explicit override, keeps its report bytes.
+    if topology_options is not None:
+        report["topology_options"] = topology_options
+
     if lv_assignment is not None:
         report["lv_assignment"] = lv_assignment
         over = int(lv_assignment["transformers_over_rated_kva_at_envelope"])
@@ -467,9 +485,8 @@ def _validation_report(
             report.setdefault("warnings", []).append(
                 f"lv_assignment: {over} MV/LV transformer(s) above their rated "
                 f"{lv_assignment['rated_transformer_kva']} kVA at the declared "
-                "envelope even under the capacity limit; the limit is the building "
-                "count the transformer number was sized for, so the envelope and "
-                "the rating disagree"
+                "envelope even under the capacity limit; the limit and the "
+                "declared envelope disagree with the rating"
             )
         if not lv_assignment["converged"]:
             report.setdefault("warnings", []).append(
@@ -481,8 +498,32 @@ def _validation_report(
     return report
 
 
+def _topology_options_block(
+    config: dict[str, Any],
+    options: TopologyOptions,
+    overrides: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the resolved topology options for the report, when any were set.
+
+    Args:
+        config: The grid configuration the build used.
+        options: The options the build resolved.
+        overrides: The explicit arguments, ``None`` where not given.
+
+    Returns:
+        The block, or ``None`` when the config declares neither ``topology`` nor
+        ``external_grid`` and no argument overrode them.
+    """
+    declared = "topology" in config or "external_grid" in config
+    if not declared and all(value is None for value in overrides.values()):
+        return None
+    return {**options.to_report(), "external_grid_vm_pu": external_grid_vm_pu(config)}
+
+
 def _summarize_lv_assignment(
-    power_grid: PowerGridGraph, config: dict[str, Any]
+    power_grid: PowerGridGraph,
+    config: dict[str, Any],
+    options: TopologyOptions | None = None,
 ) -> dict[str, Any] | None:
     """Summarise a capacity-constrained LV partition for the validation report.
 
@@ -493,6 +534,7 @@ def _summarize_lv_assignment(
     Args:
         power_grid: The built graph.
         config: The grid configuration the build used.
+        options: The resolved options, to say where the limit came from.
 
     Returns:
         The report block, or ``None`` when the partition was plain K-means.
@@ -513,6 +555,11 @@ def _summarize_lv_assignment(
     return {
         "method": "capacitated",
         "capacity_customers": result.capacity,
+        "capacity_source": (
+            "declared"
+            if options is not None and options.max_customers_per_transformer is not None
+            else "sized_count"
+        ),
         "block_penalty_km2": result.block_penalty_km2,
         "iterations": result.iterations,
         "converged": result.converged,

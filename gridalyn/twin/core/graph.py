@@ -601,6 +601,7 @@ class PowerGridGraph:
         capacitated: bool = False,
         block_ids: Optional[np.ndarray] = None,
         block_penalty_km2: float = 0.0,
+        max_customers: Optional[int] = None,
     ) -> nx.Graph:
         """Creates the low-voltage (LV) graph from building centroids.
 
@@ -631,6 +632,10 @@ class PowerGridGraph:
                 assigning a building to a transformer whose cluster's dominant
                 block is not its own. Needs ``capacitated``, ``block_ids`` and a
                 metric ``clustering_crs``.
+            max_customers: A declared per-transformer building limit. When
+                ``None`` the limit is ``ceil(buildings / transformers)``, the
+                count the transformer number was sized for. Needs
+                ``capacitated``.
 
         Returns:
             nx.Graph: A NetworkX graph representing the LV network.
@@ -677,6 +682,7 @@ class PowerGridGraph:
             capacitated,
             block_ids,
             block_penalty_km2,
+            max_customers,
         )
         self.graph_lv_buses, self.labels_lv = self.create_cluster_graph(
             self._points_for_clustering(self.building_centroids),
@@ -697,14 +703,16 @@ class PowerGridGraph:
         capacitated: bool,
         block_ids: Optional[np.ndarray],
         block_penalty_km2: float,
+        max_customers: Optional[int] = None,
     ) -> Optional[int]:
         """Return the per-transformer building limit, or None for plain K-means.
 
-        The limit is ``ceil(buildings / transformers)``, the count the
-        transformer number was sized for. A nameplate-derived limit was measured
-        and rejected (bd 4os.7): it piles clusters exactly at the limit,
-        and at depressed voltage more transformers then load above 100% than
-        under plain K-means.
+        A declared ``max_customers`` wins; it is how a study states a limit it
+        can cite (the Quebec evidence is recorded on bd 4os.7). Without one the
+        limit is ``ceil(buildings / transformers)``, the count the transformer
+        number was sized for. A nameplate-derived limit was measured and
+        rejected there: it piles clusters exactly at the limit, and at depressed
+        voltage more transformers then load above 100% than under K-means.
 
         Args:
             num_buildings: Buildings to partition.
@@ -712,19 +720,21 @@ class PowerGridGraph:
             capacitated: Whether the partition is capacity-constrained.
             block_ids: Optional street block of each building.
             block_penalty_km2: Penalty for leaving the dominant block.
+            max_customers: Optional declared limit.
 
         Returns:
             The limit, or ``None`` when ``capacitated`` is false.
 
         Raises:
-            ValueError: If block options are given without ``capacitated``, or a
-                penalty is given while clustering in longitude/latitude.
+            ValueError: If partition options are given without ``capacitated``,
+                a penalty is given while clustering in longitude/latitude, or a
+                declared limit cannot hold every building.
         """
         if not capacitated:
-            if block_ids is not None or block_penalty_km2:
+            if block_ids is not None or block_penalty_km2 or max_customers:
                 raise ValueError(
-                    "block_ids and block_penalty_km2 only apply to a capacitated "
-                    "LV partition; pass capacitated=True"
+                    "block_ids, block_penalty_km2 and max_customers only apply to "
+                    "a capacitated LV partition; pass capacitated=True"
                 )
             return None
         if block_penalty_km2 > 0 and not self.clustering_crs:
@@ -732,7 +742,16 @@ class PowerGridGraph:
                 "block_penalty_km2 is measured in km^2 and needs clustering in a "
                 "metric CRS; extract the buildings with clustering_crs='auto'"
             )
-        return math.ceil(num_buildings / min(num_transformers, num_buildings))
+        sized = math.ceil(num_buildings / min(num_transformers, num_buildings))
+        if max_customers is None:
+            return sized
+        if max_customers < sized:
+            raise ValueError(
+                f"{num_buildings} buildings on {num_transformers} transformers need "
+                f"at least {sized} per transformer, so max_customers={max_customers} "
+                "cannot hold them; raise the limit or size more transformers"
+            )
+        return max_customers
 
     def create_mv_graph(
         self,

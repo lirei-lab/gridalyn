@@ -18,7 +18,9 @@ therefore the power flow. Every consumer must opt in.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
@@ -189,6 +191,11 @@ def load_street_snapper(
 ) -> StreetSnapper:
     """Fetch the street network for an extent and return a snapper over it.
 
+    A live fetch is not reproducible: the map changes under it. For a build
+    whose results are pinned, write the layer once with
+    :func:`write_street_snapshot` and load it with
+    :func:`load_street_snapper_from_file` instead.
+
     Args:
         bounds: ``(min_lon, min_lat, max_lon, max_lat)`` in EPSG:4326, e.g.
             a footprint layer's ``total_bounds``.
@@ -208,7 +215,183 @@ def load_street_snapper(
             street segments -- an empty layer would otherwise fail later, far
             from the cause.
     """
-    require_capabilities("geo", context="street-network siting")
+    edges = _fetch_street_edges(
+        bounds,
+        network_type=network_type,
+        padding_deg=padding_deg,
+        context="street-network siting",
+    )
+    return StreetSnapper(
+        edges=edges.to_crs(metric_crs).reset_index(drop=True),
+        metric_crs=str(metric_crs),
+    )
+
+
+def write_street_snapshot(
+    bounds: Sequence[float],
+    path: Path | str,
+    *,
+    network_type: str = DEFAULT_NETWORK_TYPE,
+    padding_deg: float = BLOCK_BBOX_PADDING_DEG,
+) -> str:
+    """Fetch the street network once and write it as a versionable input.
+
+    Declaring the written file and its digest in the grid config
+    (``topology.street_layer``) pins the streets a build uses the way a
+    committed ``buildings.geojson`` pins the footprints, so siting and block
+    coherence stop depending on the day the map was fetched.
+
+    The file holds OpenStreetMap data: whoever commits it must carry the
+    attribution "(c) OpenStreetMap contributors", licensed under the ODbL 1.0.
+
+    Args:
+        bounds: ``(min_lon, min_lat, max_lon, max_lat)`` in EPSG:4326.
+        path: GeoJSON file to write, in EPSG:4326.
+        network_type: OSMnx network type.
+        padding_deg: Degrees of padding. Defaults to
+            :data:`BLOCK_BBOX_PADDING_DEG`, so blocks at the extent edge close.
+
+    Returns:
+        The sha256 of the written file, the value to declare in the config.
+
+    Raises:
+        MissingCapabilityError: If the ``geo`` extra (OSMnx) is not installed.
+        ValueError: If ``bounds`` is not four values or the fetch is empty.
+    """
+    edges = _fetch_street_edges(
+        bounds,
+        network_type=network_type,
+        padding_deg=padding_deg,
+        context="street-network snapshot",
+    )
+    table = edges.reset_index()
+    columns = [
+        name
+        for name in ("u", "v", "key", "osmid", "highway", "name")
+        if name in table.columns
+    ]
+    table = table[columns + ["geometry"]].copy()
+    for name in ("osmid", "highway", "name"):
+        if name in table.columns:
+            table[name] = table[name].map(_as_text)
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # A fixed layer name keeps the bytes, and so the declared digest,
+    # independent of the file name the snapshot is written under.
+    table.to_crs("EPSG:4326").to_file(
+        target, driver="GeoJSON", layer="streets", COORDINATE_PRECISION=7
+    )
+    return street_layer_sha256(target)
+
+
+def _as_text(value: object) -> str | None:
+    """Return an OSM attribute as text, so GeoJSON holds one type per field.
+
+    OSMnx merges simplified edges into lists (``osmid``, sometimes ``highway``),
+    which OGR writes as string lists and then skips on read.
+
+    Args:
+        value: A scalar, a list of scalars, or a missing value.
+
+    Returns:
+        The text, lists joined by ``;``, or ``None`` when missing.
+    """
+    if isinstance(value, (list, tuple)):
+        return ";".join(str(item) for item in value)
+    if value is None or (isinstance(value, float) and value != value):
+        return None
+    return str(value)
+
+
+def street_layer_sha256(path: Path | str) -> str:
+    """Return the sha256 of a street-layer file.
+
+    Args:
+        path: The file to hash.
+
+    Returns:
+        The hex digest.
+    """
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_street_snapper_from_file(
+    path: Path | str,
+    *,
+    metric_crs: str,
+    expected_sha256: str | None = None,
+) -> StreetSnapper:
+    """Return a snapper over a street layer on disk, with no network access.
+
+    Args:
+        path: A street layer, e.g. one written by :func:`write_street_snapshot`.
+        metric_crs: Projected CRS to measure in.
+        expected_sha256: The digest the grid config declares. A mismatch is
+            refused, because a changed layer moves every network built from it.
+
+    Returns:
+        A :class:`StreetSnapper` over the projected layer.
+
+    Raises:
+        FileNotFoundError: If ``path`` does not exist.
+        ValueError: If the digest does not match or the layer is empty.
+    """
+    import geopandas as gpd
+
+    source = Path(path)
+    if not source.is_file():
+        raise FileNotFoundError(
+            f"{source}: street layer not found; write one with "
+            "write_street_snapshot (tools/snapshot_streets.py) or remove "
+            "topology.street_layer from the grid config"
+        )
+    if expected_sha256 is not None:
+        actual = street_layer_sha256(source)
+        if actual != expected_sha256:
+            raise ValueError(
+                f"{source}: sha256 {actual} does not match the declared "
+                f"{expected_sha256}; the layer changed after the config pinned "
+                "it. Restore the file, or re-declare the digest deliberately: "
+                "it moves every network built from this layer"
+            )
+    edges = gpd.read_file(source)
+    if edges.empty:
+        raise ValueError(f"{source}: street layer holds no segments")
+    if edges.crs is None:
+        edges = edges.set_crs("EPSG:4326")
+    return StreetSnapper(
+        edges=edges.to_crs(metric_crs).reset_index(drop=True),
+        metric_crs=str(metric_crs),
+    )
+
+
+def _fetch_street_edges(
+    bounds: Sequence[float],
+    *,
+    network_type: str,
+    padding_deg: float,
+    context: str,
+) -> "gpd.GeoDataFrame":
+    """Fetch street segments for a padded extent from OpenStreetMap.
+
+    Args:
+        bounds: ``(min_lon, min_lat, max_lon, max_lat)`` in EPSG:4326.
+        network_type: OSMnx network type.
+        padding_deg: Degrees of padding around ``bounds``.
+        context: The operation needing the fetch, for the capability error.
+
+    Returns:
+        The edges, in EPSG:4326.
+
+    Raises:
+        MissingCapabilityError: If the ``geo`` extra (OSMnx) is not installed.
+        ValueError: If ``bounds`` is not four values or the fetch is empty.
+    """
+    require_capabilities("geo", context=context)
 
     import osmnx as ox
 
@@ -235,10 +418,7 @@ def load_street_snapper(
             f"({min_lon}, {min_lat}, {max_lon}, {max_lat}) padded by "
             f"{padding_deg} deg; widen the extent or choose another network_type"
         )
-    return StreetSnapper(
-        edges=edges.to_crs(metric_crs).reset_index(drop=True),
-        metric_crs=str(metric_crs),
-    )
+    return edges
 
 
 __all__ = [
@@ -247,4 +427,7 @@ __all__ = [
     "DEFAULT_NETWORK_TYPE",
     "StreetSnapper",
     "load_street_snapper",
+    "load_street_snapper_from_file",
+    "street_layer_sha256",
+    "write_street_snapshot",
 ]
