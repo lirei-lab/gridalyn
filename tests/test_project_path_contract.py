@@ -20,6 +20,7 @@ from gridalyn.projects.path_contract import (
     PROBLEM_OUTSIDE_PROJECT,
     find_path_contract_violations,
 )
+from gridalyn.projects.runner import run_project
 from gridalyn.projects.scenario_catalog import SCENARIO_TOKEN
 from gridalyn.projects.validation import validate_project_file
 
@@ -46,8 +47,6 @@ def _violations_for(project_yaml: Path) -> list:
     project = load_project(project_yaml)
     return find_path_contract_violations(
         root=project.root,
-        base_dir=project.base_dir,
-        path_base=project.path_base,
         project_data=project.raw,
         workflow_data=read_yaml(project.workflow.path),
     )
@@ -168,7 +167,7 @@ def _rule(report: str) -> dict[str, Any]:
 
 
 class RealProjectsHonourTheContractTest(unittest.TestCase):
-    """The in-repo studies, both conventions, declare consistently."""
+    """The in-repo studies, under both path bases, declare consistently."""
 
     def test_every_project_declares_paths_inside_itself(self) -> None:
         """No checked path in any study escapes or re-prefixes its project."""
@@ -210,7 +209,7 @@ class RealProjectsHonourTheContractTest(unittest.TestCase):
 
 
 class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
-    """A declaration in the other study's convention fails, naming the convention."""
+    """A declaration that escapes or re-prefixes its project fails, naming the fix."""
 
     def test_repo_relative_path_in_a_project_based_study_is_doubled(self) -> None:
         """The exact mistake that previously surfaced as 'missing required report'."""
@@ -227,35 +226,42 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
         violation = violations[0]
         self.assertEqual(violation.problem, PROBLEM_DOUBLED_PREFIX)
         self.assertEqual(violation.location, "spec.validation.requiredReports[0]")
-        self.assertIn("every path in project.yaml is", violation.message)
+        self.assertIn("every declared path is", violation.message)
         self.assertEqual(violation.suggestion, "outputs/reports/r.json")
 
-    def test_project_relative_path_in_a_repo_based_study_escapes(self) -> None:
-        """Under pathBase: repo a bare outputs/... lands at the repo root."""
-        with tempfile.TemporaryDirectory() as raw:
-            manifest = _write_project(
-                Path(raw),
-                path_base="repo",
-                required="outputs/reports/r.json",
-                output="outputs/data/x.csv",
-            )
-            violations = _violations_for(manifest)
+    def test_repo_based_study_writing_stage_outputs_repo_relative_is_doubled(
+        self,
+    ) -> None:
+        """The breaking change of bd 6ns.2 part 2c, and what an external user hits.
 
-        self.assertEqual(len(violations), 1)
-        violation = violations[0]
-        self.assertEqual(violation.problem, PROBLEM_OUTSIDE_PROJECT)
-        self.assertEqual(violation.location, "stages[s1].outputs[0]")
-        self.assertIn("pathBase: repo", violation.message)
-        self.assertEqual(violation.suggestion, "projects/demo/outputs/data/x.csv")
-
-    def test_a_correct_repo_based_declaration_passes(self) -> None:
-        """Under pathBase: repo, project.yaml is project-relative and stages are not."""
+        Before it, a pathBase: repo study wrote stage outputs repo-relative and
+        was right. Now they resolve against the project directory too, so the
+        same declaration doubles it -- and the suggestion is the corrected entry.
+        """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
                 required="outputs/reports/r.json",
                 output="projects/demo/outputs/data/x.csv",
+            )
+            violations = _violations_for(manifest)
+
+        self.assertEqual(len(violations), 1)
+        violation = violations[0]
+        self.assertEqual(violation.problem, PROBLEM_DOUBLED_PREFIX)
+        self.assertEqual(violation.location, "stages[s1].outputs[0]")
+        self.assertIn("whatever pathBase says", violation.message)
+        self.assertEqual(violation.suggestion, "outputs/data/x.csv")
+
+    def test_a_correct_repo_based_declaration_passes(self) -> None:
+        """Under pathBase: repo both files are project-relative, like any study."""
+        with tempfile.TemporaryDirectory() as raw:
+            manifest = _write_project(
+                Path(raw),
+                path_base="repo",
+                required="outputs/reports/r.json",
+                output="outputs/data/x.csv",
             )
             self.assertEqual(_violations_for(manifest), [])
 
@@ -273,7 +279,7 @@ class ViolationsAreCaughtAndExplainedTest(unittest.TestCase):
                 Path(raw),
                 path_base="repo",
                 required="projects/demo/outputs/reports/r.json",
-                output="projects/demo/outputs/data/x.csv",
+                output="outputs/data/x.csv",
             )
             violations = _violations_for(manifest)
 
@@ -301,18 +307,18 @@ class SenseCheckReportTest(unittest.TestCase):
     """spec.validation.senseChecks[].report resolves against root, one level down."""
 
     def test_repo_based_rule_written_repo_relative_is_doubled(self) -> None:
-        """A rule report follows project.yaml's base, not the stage outputs'.
+        """A rule report written repo-relative doubles the project directory.
 
-        Under pathBase: repo the stage output is repo-relative and correct; a rule
-        report copying that prefix doubles the project directory. Before bd 6ns.2
-        part 2a this was the correct form and the project-relative one escaped.
+        Before bd 6ns.2 part 2a this was the correct form under pathBase: repo,
+        and the project-relative one escaped. Every declared path is
+        project-relative now, stage outputs included since part 2c.
         """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
                 required="outputs/reports/r.json",
-                output="projects/demo/outputs/data/x.csv",
+                output="outputs/data/x.csv",
                 sense_checks=[_rule("projects/demo/outputs/reports/r.json")],
             )
             violations = _violations_for(manifest)
@@ -349,7 +355,7 @@ class SenseCheckReportTest(unittest.TestCase):
                 Path(raw),
                 path_base="repo",
                 required="outputs/reports/r.json",
-                output="projects/demo/outputs/data/x.csv",
+                output="outputs/data/x.csv",
                 sense_checks=[_rule("outputs/reports/r.json")],
             )
             self.assertEqual(_violations_for(manifest), [])
@@ -359,18 +365,18 @@ class ScenarioContractTest(unittest.TestCase):
     """spec.scenarios is resolved against the project directory, whatever pathBase says."""
 
     def test_repo_based_study_writing_scenarios_repo_relative_is_doubled(self) -> None:
-        """The case no real study had exercised: following the file's own convention.
+        """Scenario paths written repo-relative double the project directory.
 
-        The workflow output is repo-relative and CORRECT here; the scenario paths
-        use the same prefix and are WRONG, because the catalog resolves them
-        against the project directory, as it does every path in project.yaml.
+        The catalog resolves them against the project directory, as it does
+        every declared path, so the ``projects/demo/`` prefix a pathBase: repo
+        study used to write is wrong here, and the suggestion drops it.
         """
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
                 required="outputs/reports/r.json",
-                output="projects/demo/outputs/data/x.csv",
+                output="outputs/data/x.csv",
                 scenarios=_column_scenarios("projects/demo/"),
             )
             violations = _violations_for(manifest)
@@ -389,13 +395,13 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertIn("spec.scenarios.index", "\n".join(report.errors))
 
     def test_repo_based_study_with_project_relative_scenarios_passes(self) -> None:
-        """Both conventions in one file, each right for its own consumer."""
+        """A repo-based study with project-relative scenario paths passes."""
         with tempfile.TemporaryDirectory() as raw:
             manifest = _write_project(
                 Path(raw),
                 path_base="repo",
                 required="outputs/reports/r.json",
-                output="projects/demo/outputs/data/x.csv",
+                output="outputs/data/x.csv",
                 scenarios=_column_scenarios(""),
             )
             self.assertEqual(_violations_for(manifest), [])
@@ -430,12 +436,139 @@ class ScenarioContractTest(unittest.TestCase):
             root = Path(raw)
             violations = find_path_contract_violations(
                 root=root,
-                base_dir=root,
-                path_base="project",
                 project_data={"spec": {"scenarios": {"index": "outputs/x.csv"}}},
                 workflow_data=None,
             )
         self.assertEqual(violations, [])
+
+
+def _write_runnable_project(tmp: Path, stages: list[dict[str, Any]]) -> Path:
+    """Write a repo-based project whose workflow holds ``stages``.
+
+    Args:
+        tmp: Temporary repository root.
+        stages: The workflow's ``spec.stages``, written as given.
+
+    Returns:
+        Path to the written ``project.yaml``.
+    """
+    manifest = _write_project(
+        tmp, path_base="repo", required="outputs/reports/r.json", output="outputs/x"
+    )
+    (manifest.parent / "workflow.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "gridalyn.io/v1alpha1",
+                "kind": "Workflow",
+                "metadata": {"name": "demo"},
+                "spec": {"stages": stages},
+            }
+        )
+    )
+    return manifest
+
+
+class RunnerRefusesStaleStagePathsTest(unittest.TestCase):
+    """``run_project`` refuses a doubled stage prefix before anything runs (bd 6ns.2).
+
+    Without the preflight a stale ``projects/<study>/`` output lets the stage run
+    to completion and then fails it for an output it "did not produce": the
+    wrong cause, after the stage's whole runtime.
+    """
+
+    def test_a_doubled_prefix_is_refused_before_any_stage_runs(self) -> None:
+        """The refusal names the correction; no stage ran and no manifest exists."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            sentinel = tmp / "stage_ran"
+            run_manifest = tmp / "run_manifest.json"
+            stage = {
+                "id": "s1",
+                "command": f"touch {str(sentinel)!r}",
+                "outputs": ["projects/demo/outputs/data/x.csv"],
+            }
+            project = load_project(_write_runnable_project(tmp, [stage]))
+
+            with self.assertRaises(ValueError) as caught:
+                run_project(project, manifest_path=run_manifest)
+
+            self.assertIn("stages[s1].outputs[0]", str(caught.exception))
+            self.assertIn("declare 'outputs/data/x.csv'", str(caught.exception))
+            self.assertFalse(sentinel.exists(), "a stage ran before the refusal")
+            self.assertFalse(run_manifest.exists(), "a manifest was written")
+
+    def test_a_stage_selection_does_not_narrow_the_check(self) -> None:
+        """A stale path in a stage outside the ``--stage`` selection still refuses."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            sentinel = tmp / "stage_ran"
+            stages = [
+                {"id": "s1", "command": f"touch {str(sentinel)!r}"},
+                {
+                    "id": "s2",
+                    "command": "true",
+                    "inputs": ["projects/demo/outputs/data/x.csv"],
+                },
+            ]
+            project = load_project(_write_runnable_project(tmp, stages))
+
+            with self.assertRaises(ValueError) as caught:
+                run_project(
+                    project, manifest_path=tmp / "run_manifest.json", stages=["s1"]
+                )
+
+            self.assertIn("stages[s2].inputs[0]", str(caught.exception))
+            self.assertFalse(sentinel.exists(), "the selected stage ran")
+
+    def test_a_project_relative_output_is_found_from_a_repo_root_stage(self) -> None:
+        """Under pathBase: repo the stage runs from the repo root; its output resolves
+        against the project directory.
+
+        Also the positive control for the refusals above: in this harness a stage
+        that is allowed to run does leave its sentinel.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            sentinel = tmp / "stage_ran"
+            written = "projects/demo/outputs/data/x.csv"  # relative to the cwd
+            stage = {
+                "id": "s1",
+                "command": (
+                    f"mkdir -p projects/demo/outputs/data && touch {written} "
+                    f"&& touch {str(sentinel)!r}"
+                ),
+                "outputs": ["outputs/data/x.csv"],
+            }
+            project = load_project(_write_runnable_project(tmp, [stage]))
+
+            executed = run_project(project, manifest_path=tmp / "run_manifest.json")
+
+            self.assertEqual(executed, ["s1"])
+            self.assertTrue(sentinel.exists())
+
+    def test_a_stage_input_outside_the_project_is_left_to_validate(self) -> None:
+        """OUTSIDE_PROJECT is not refused at run time (bd 6ns.5); validate reports it."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            sentinel = tmp / "stage_ran"
+            stage = {
+                "id": "s1",
+                "command": f"touch {str(sentinel)!r}",
+                "inputs": ["../../shared/data.csv"],
+            }
+            manifest = _write_runnable_project(tmp, [stage])
+
+            executed = run_project(
+                load_project(manifest), manifest_path=tmp / "run_manifest.json"
+            )
+
+            self.assertEqual(executed, ["s1"])
+            self.assertTrue(sentinel.exists())
+            # The gate does see it, so the runner's silence is scoped, not blind.
+            self.assertEqual(
+                [v.problem for v in _violations_for(manifest)],
+                [PROBLEM_OUTSIDE_PROJECT],
+            )
 
 
 class ValidateSurfacesTheContractTest(unittest.TestCase):

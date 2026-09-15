@@ -49,7 +49,7 @@ and validates.
 | `kind` | yes | Must be `StudyProject`. |
 | `metadata.name` | yes | Stable project identifier. |
 | `metadata.version` | required | Project contract version. |
-| `spec.pathBase` | recommended | `project` (the default) or `repo`. Sets the directory stage commands run from, and the base stage `inputs`/`outputs` resolve against. It does **not** govern `spec.workflow.file` or `spec.validation.*` paths, which are always relative to the project directory — see [Path Rules](#path-rules). |
+| `spec.pathBase` | recommended | `project` (the default) or `repo`. Sets the directory stage commands run from, and nothing else. It does **not** govern any declared path: `spec.workflow.file`, `spec.validation.*` and stage `inputs`/`outputs` are always relative to the project directory — see [Path Rules](#path-rules). |
 | `spec.inputs` | yes | Raw geography, grid configuration, external datasets, and assumptions. |
 | `spec.artifacts` | no | Accepted and **not read**. Output directories are fixed by `ProjectScript` (`outputs/data`, `figures`, `reports`, `manifests`, `operations`, `cache`), not by this block; declaring them here governs nothing. |
 | `spec.workflow.file` | yes | Workflow resource path. Relative to the project directory. |
@@ -80,7 +80,7 @@ spec:
       command: "{python} scripts/run_minimal_powerflow.py"
       inputs: []
       outputs:
-        - projects/minimal_grid_project/outputs/reports/minimal_grid_report.json
+        - outputs/reports/minimal_grid_report.json
 ```
 
 ### The Stage DAG
@@ -186,8 +186,8 @@ never touched. Treat the fallback as support for contracts already written, and
 | `id` | yes | Stable stage identifier used in logs and run manifests. |
 | `command` | yes | Shell command executed from repository root when `pathBase: repo`. Use `{python}` for the interpreter. |
 | `needs` | optional | Stage IDs that should run before this stage. |
-| `inputs` | optional | Artifacts the stage reads. Declarative: nothing checks them at run time yet, so keep them to artifacts (not source files — git and the manifest's `git_commit` are the provenance of code) and keep them true. |
-| `outputs` | optional | Files the stage produces. **Enforced:** after the stage exits zero, every listed path must exist, or the run fails naming the stage and the missing paths. A stage that lists none is not checked. |
+| `inputs` | optional | Artifacts the stage reads, relative to the project directory. Declarative: nothing checks them at run time yet, so keep them to artifacts (not source files — git and the manifest's `git_commit` are the provenance of code) and keep them true. |
+| `outputs` | optional | Files the stage produces, relative to the project directory. **Enforced:** after the stage exits zero, every listed path must exist, or the run fails naming the stage and the missing paths. A stage that lists none is not checked. |
 
 ## Path Rules
 
@@ -222,11 +222,23 @@ it ahead of the `missing required report` it would otherwise surface as.
     workflow.yaml`. A stale entry stops the project from loading, with an error
     naming the path it tried and the expected form.
 
-`spec.pathBase` still matters. `repo` makes stage commands run from the repository
-root, which a stage invoked as `{python} -m projects.<study>.scripts...` needs.
-It is also the base stage `inputs`/`outputs` resolve against — for now: unifying
-those onto the project directory is the rest of `bd 6ns.2`. `spec.workflow.file`
-no longer follows `pathBase`; it is relative to the project directory.
+!!! warning "Breaking change, 2026-09-11: stage inputs and outputs"
+    Until this date, a stage's `inputs` and `outputs` in `workflow.yaml` resolved
+    against `spec.pathBase`, so a `pathBase: repo` study wrote them as
+    `projects/<study>/outputs/...`. They now resolve against the project
+    directory (`bd 6ns.2`): drop the leading `projects/<study>/`. `gridalyn project
+    validate` reports a stale entry as a doubled prefix and names the corrected
+    declaration, and `gridalyn project run` refuses to start on one, before any
+    stage runs, with the same message.
+
+`spec.pathBase` still matters, for one thing: `repo` makes stage commands run
+from the repository root, which a stage invoked as
+`{python} -m projects.<study>.scripts...` needs. No declared path follows it.
+`spec.workflow.file` and a stage's `inputs` and `outputs` are relative to the
+project directory, like the validation paths above: a stage of a `pathBase: repo`
+study still declares `outputs/reports/analysis_report.json`, not
+`projects/<study>/outputs/reports/analysis_report.json`, even though its command
+runs from the repository root.
 
 `spec.inputs` entries may point outside the project, to shared data such as
 `instances/default/digital_twin/base/buildings.parquet` or
