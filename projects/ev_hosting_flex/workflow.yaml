@@ -15,7 +15,6 @@ spec:
       command: "{python} -m gridalyn.interfaces.cli.project prepare-workspace projects/ev_hosting_flex"
       outputs:
         - outputs/data
-        - outputs/json
         - outputs/reports
         - outputs/cache
         - outputs/figures

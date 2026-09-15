@@ -451,7 +451,10 @@ def test_ev_hosting_flex_load_aware_net_radial_varied_convergent(
 
     build = build_synthetic_network_from_config(
         footprints_path=footprints_path,
-        config=GRID_CONFIG,
+        # The study's topology block declares a street layer beside the real
+        # footprints; this test builds on generated footprints and pins only the
+        # load-aware line sizing, so it leaves the partition undeclared.
+        config={key: value for key, value in GRID_CONFIG.items() if key != "topology"},
         out_dir=tmp_path / "network",
         clustering_crs="auto",
         write_cache=False,
