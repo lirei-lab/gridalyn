@@ -87,12 +87,6 @@ class TestPowerGridModel(unittest.TestCase):
                 },  # Standard LV-MV transformer
                 "mv_hv": {"std_type": "40 MVA 110/20 kV"},  # Standard MV-HV transformer
             },
-            "external_grid": {
-                "voltage_kv": 110,
-                "va_degree": 0,
-                "p_mw": 1000,  # Increased power for larger grid
-                "q_mvar": 500,  # Increased reactive power
-            },
             "loads": {"avg_load_per_building": 15},  # 15 kW per building
         }
 

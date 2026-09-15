@@ -205,6 +205,13 @@ class ExternalGridSetpointTest(unittest.TestCase):
         config = {"external_grid": {"vm_pu": 1.04, "note": "substation LTC"}}
         self.assertEqual(external_grid_vm_pu(config), 1.04)
 
+    def test_keys_an_older_config_shape_carried_are_named_as_never_read(self) -> None:
+        """voltage_kv/p_mw/q_mvar/va_degree governed nothing; the error says so."""
+        with self.assertRaises(ValueError) as caught:
+            external_grid_vm_pu({"external_grid": {"voltage_kv": 120.0, "p_mw": 0.0}})
+        self.assertIn("never read", str(caught.exception))
+        self.assertIn("voltage_kv", str(caught.exception))
+
     def test_an_implausible_setpoint_is_refused(self) -> None:
         """A setpoint outside [0.9, 1.1] pu is almost certainly a units error."""
         with self.assertRaises(ValueError) as caught:

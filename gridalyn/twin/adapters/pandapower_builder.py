@@ -783,6 +783,14 @@ say where it comes from, the way transformer entries already carry a ``note``.
 EXTERNAL_GRID_KEYS = ("note", "vm_pu")
 """Keys ``config["external_grid"]`` may declare."""
 
+_NEVER_READ_EXTERNAL_GRID_KEYS = frozenset(
+    {"p_mw", "q_mvar", "va_degree", "voltage_kv"}
+)
+"""Keys an older config shape carried under ``external_grid`` that no code read.
+
+Refused like any unknown key, but named as such, so a config written in that
+shape learns it can delete them rather than looking for what they configure."""
+
 
 @dataclass(frozen=True)
 class TopologyOptions:
@@ -912,9 +920,16 @@ def external_grid_vm_pu(config: Mapping[str, Any]) -> float:
         )
     unknown = sorted(set(block) - set(EXTERNAL_GRID_KEYS))
     if unknown:
+        never_read = sorted(set(unknown) & _NEVER_READ_EXTERNAL_GRID_KEYS)
+        remedy = (
+            f"; {', '.join(never_read)} were never read by the builder, so "
+            "deleting them changes nothing"
+            if never_read
+            else ""
+        )
         raise ValueError(
             f"config.external_grid has unsupported keys: {', '.join(unknown)} "
-            f"(supported: {', '.join(EXTERNAL_GRID_KEYS)})"
+            f"(supported: {', '.join(EXTERNAL_GRID_KEYS)}){remedy}"
         )
     vm_pu = float(block.get("vm_pu", 1.0))
     if not 0.9 <= vm_pu <= 1.1:
