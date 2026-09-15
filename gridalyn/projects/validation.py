@@ -9,7 +9,7 @@ from jsonschema import Draft202012Validator
 from gridalyn.foundation.platform.artifacts import check_artifact_policy
 from gridalyn.foundation.platform.validation import register_workspace_validator
 from gridalyn.foundation.platform.workspace import GridalynWorkspace
-from gridalyn.projects.loader import read_yaml
+from gridalyn.projects.loader import build_missing_workflow_message, read_yaml
 from gridalyn.projects.models import ValidationReport
 from gridalyn.projects.path_contract import find_path_contract_violations
 
@@ -56,25 +56,30 @@ def _validate_schema(
 
 def _read_workflow_data(
     project_data: dict,
-    root: Path,
+    project_path: Path,
     report: ValidationReport,
 ) -> dict | None:
     """Load and schema-validate the workflow file a project declares.
 
     Args:
         project_data: The parsed ``project.yaml`` document.
-        root: The project directory. ``spec.workflow.file`` resolves against it
-            whatever ``spec.pathBase`` says (bd 6ns.2).
+        project_path: The resolved ``project.yaml``. ``spec.workflow.file``
+            resolves against its directory whatever ``spec.pathBase`` says
+            (bd 6ns.2).
         report: The validation report to record checks and errors into.
 
     Returns:
         The parsed workflow document, or ``None`` when the file is missing or
         fails schema validation (the error is already on ``report``).
     """
-    workflow_path = (root / project_data["spec"]["workflow"]["file"]).resolve()
+    declared = project_data["spec"]["workflow"]["file"]
+    workflow_path = (project_path.parent / declared).resolve()
     report.checked_files.append(str(workflow_path))
-    if not workflow_path.exists():
-        report.add_error(f"workflow file does not exist: {workflow_path}")
+    if not workflow_path.is_file():
+        # The same located, remediating text load_project raises (bd 6ns.6).
+        report.add_error(
+            build_missing_workflow_message(project_path, declared, workflow_path)
+        )
         return None
 
     workflow_data = read_yaml(workflow_path)
@@ -183,7 +188,7 @@ def validate_project_file(
     if not report.valid:
         return report
 
-    workflow_data = _read_workflow_data(project_data, project_path.parent, report)
+    workflow_data = _read_workflow_data(project_data, project_path, report)
     if workflow_data is None:
         return report
     _validate_workflow_stages(workflow_data, report)

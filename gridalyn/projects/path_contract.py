@@ -379,7 +379,7 @@ def _check_path(
         resolved=resolved,
         problem=problem,
         base_label=base_label,
-        suggestion=_suggest(declared, root=root),
+        suggestion=build_corrected_declaration(declared, root=root),
     )
 
 
@@ -403,12 +403,14 @@ def _problem(resolved: Path, root: Path) -> str | None:
     return None
 
 
-def _suggest(declared: str, *, root: Path) -> str | None:
+def build_corrected_declaration(declared: str, *, root: Path) -> str | None:
     """Derive the declaration that names the intended file, if unambiguous.
 
     Every declaration resolves against ``root``, so the one correction the
     string alone supports is dropping a repeated ``projects/<study>/`` -- the
     repository-relative form a ``pathBase: repo`` study wrote before bd 6ns.2.
+    Public so the loader names the same correction for ``spec.workflow.file``,
+    which this gate does not check (bd 6ns.6).
 
     Args:
         declared: The path as written, placeholders included.
@@ -428,5 +430,6 @@ __all__ = [
     "PROBLEM_DOUBLED_PREFIX",
     "PROBLEM_OUTSIDE_PROJECT",
     "PathContractViolation",
+    "build_corrected_declaration",
     "find_path_contract_violations",
 ]
