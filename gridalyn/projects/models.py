@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from gridalyn.foundation.platform.roots import ProjectDir
+
 
 @dataclass(frozen=True)
 class ScenarioSpec:
@@ -53,10 +55,24 @@ class WorkflowSpec:
 
 @dataclass(frozen=True)
 class StudyProject:
+    """A loaded study: its identity, contract and the directories it involves.
+
+    Attributes:
+        root: The study's own directory, the parent of ``project.yaml``. Every
+            path the study declares resolves against it (bd 6ns.2), and it is
+            what to pass wherever a :class:`ProjectDir` is required.
+        base_dir: The directory the runner starts stage commands in -- the
+            workspace root under ``pathBase: repo``, ``root`` otherwise. It is a
+            working directory, not a root: it equals the workspace root for
+            only some studies, so passing it where a
+            :class:`WorkspaceRoot` is required is right by coincidence (bd 7rt).
+        path_base: The ``spec.pathBase`` value that chose ``base_dir``.
+    """
+
     name: str
     version: str
     path: Path
-    root: Path
+    root: ProjectDir
     base_dir: Path
     path_base: str
     raw: dict[str, Any]

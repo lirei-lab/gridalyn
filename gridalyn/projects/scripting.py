@@ -20,12 +20,15 @@ import json
 import os
 import sys
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Mapping
 
 import numpy as np
 
+from gridalyn.foundation.platform.roots import ProjectDir, WorkspaceRoot
+from gridalyn.foundation.platform.workspace import find_workspace_root
 from gridalyn.projects import model_inputs
 from gridalyn.projects.loader import load_project
 from gridalyn.projects.models import StudyProject
@@ -81,11 +84,33 @@ class ProjectScript:
         return self.project.version
 
     @property
-    def root(self) -> Path:
+    def root(self) -> ProjectDir:
+        """The study's directory, the parent of ``project.yaml``.
+
+        Use it for anything the study owns. For workspace-level artifacts --
+        ``ArtifactLayout``, the twin's instances, another study -- use
+        :attr:`workspace_root` instead.
+        """
         return self.project.root
+
+    @cached_property
+    def workspace_root(self) -> WorkspaceRoot:
+        """The Gridalyn workspace enclosing this study.
+
+        What ``ArtifactLayout`` and the operations/catalog helpers take as
+        ``root``. Discovered from :attr:`root`, so it does not depend on
+        ``spec.pathBase``. Resolved once per script: discovery can spawn ``git``.
+        """
+        return find_workspace_root(self.project.root)
 
     @property
     def base_dir(self) -> Path:
+        """The working directory the runner starts this study's stages in.
+
+        Not a root to build paths from: it is the workspace root under
+        ``pathBase: repo`` and :attr:`root` otherwise. Pass :attr:`root` or
+        :attr:`workspace_root`, whichever the callee names.
+        """
         return self.project.base_dir
 
     @property

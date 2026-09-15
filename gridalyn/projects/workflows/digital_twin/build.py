@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.twin.semantic.registry import default_semantic_capability_registry
 
 
@@ -251,7 +252,7 @@ def write_build_manifest(path: Path, manifest: dict[str, Any]) -> Path:
 
 def run_digital_twin_build(
     *,
-    root: Path,
+    root: WorkspaceRoot,
     skip_heavy: bool = False,
     include_network_impact: bool = False,
     dry_run: bool = False,

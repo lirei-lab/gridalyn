@@ -26,10 +26,11 @@ from pandapower.control import ConstControl
 from pandapower.timeseries import DFData, OutputWriter, run_timeseries
 
 from gridalyn.foundation import workspace_from_environment
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
 from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 WORKSPACE = workspace_from_environment(default_root=ROOT)
 DEFAULT_BASE_DIR = WORKSPACE.layout.base
 DEFAULT_TIMESERIES_DIR = WORKSPACE.layout.timeseries

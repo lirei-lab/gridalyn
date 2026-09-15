@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.interfaces.reporting.schemas import (
     canonical_report,
     load_json,
@@ -20,7 +21,7 @@ from gridalyn.interfaces.reporting.schemas import (
 # Current-directory default, matching ArtifactLayout's own root default. Never
 # derive the root from __file__: in an installed wheel that resolves to
 # site-packages, where reads return {} and writes land inside the package.
-_DEFAULT_ROOT = Path(".")
+_DEFAULT_ROOT = WorkspaceRoot(Path("."))
 
 
 def _load_optional_json(path: Path) -> dict[str, Any]:
@@ -29,7 +30,7 @@ def _load_optional_json(path: Path) -> dict[str, Any]:
 
 def build_digital_twin_reports(
     *,
-    root: Path = _DEFAULT_ROOT,
+    root: WorkspaceRoot = _DEFAULT_ROOT,
     out_dir: Path | None = None,
     instance: str = "default",
 ) -> dict[str, Any]:
@@ -51,7 +52,7 @@ def build_digital_twin_reports(
             the guard that keeps an installed package from reading empty
             inputs and writing degenerate reports outside a workspace.
     """
-    root = root.resolve()
+    root = WorkspaceRoot(root.resolve())
     layout = ArtifactLayout(root, instance=instance)
     if not layout.digital_twin.is_dir():
         raise FileNotFoundError(

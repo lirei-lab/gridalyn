@@ -7,7 +7,9 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[4]
+from gridalyn.foundation.platform.roots import WorkspaceRoot
+
+ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
 from gridalyn.foundation import layout_from_environment  # noqa: E402
 

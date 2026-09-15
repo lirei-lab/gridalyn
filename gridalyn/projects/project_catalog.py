@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from gridalyn.foundation.platform.reports import REQUIRED_REPORT_FIELDS
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.projects.scenario_catalog import (
     ScenarioContract,
     ScenarioContractError,
@@ -152,7 +153,7 @@ def describe_artifact(
 def build_project_catalog(
     projects: Iterable[Any],
     *,
-    root: Path,
+    root: WorkspaceRoot,
 ) -> list[dict[str, Any]]:
     """Describe every project's declared result artifacts.
 

@@ -16,6 +16,7 @@ from gridalyn.assets.modeling.archetypes import (
 from gridalyn.assets.modeling.environment import ModelingEnvironment
 from gridalyn.assets.modeling.synthesis import synthesize_building_model_tables
 from gridalyn.foundation import ArtifactLayout
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.twin.network import NetworkModelRepository
 
 TABLE_FILENAMES = {
@@ -24,7 +25,7 @@ TABLE_FILENAMES = {
     "device_registry": "device_registry.parquet",
     "end_use_loads": "end_use_loads.parquet",
 }
-DEFAULT_ROOT = Path(".")
+DEFAULT_ROOT = WorkspaceRoot(Path("."))
 DEFAULT_LAYOUT = ArtifactLayout(DEFAULT_ROOT)
 
 

@@ -29,6 +29,7 @@ from gridalyn.foundation import (
     file_reference,
     write_report,
 )
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.operations.constraints import build_network_constraint_set
 from gridalyn.operations.contracts import build_operation_context
 from gridalyn.operations.domain import (
@@ -42,7 +43,7 @@ from gridalyn.operations.settlement import build_operational_kpi_report
 
 def materialize_flexibility_operation_artifacts(
     *,
-    root: Path,
+    root: WorkspaceRoot,
     project_id: str,
     scenario_id: str,
     flexibility_dir: Path | None = None,
@@ -53,7 +54,7 @@ def materialize_flexibility_operation_artifacts(
 ) -> dict[str, Path]:
     """Write project-local operational Parquet artifacts and KPI reports."""
 
-    root = root.resolve()
+    root = WorkspaceRoot(root.resolve())
     layout = ArtifactLayout(root)
     flexibility_dir = (flexibility_dir or layout.flexibility).resolve()
     project_output_root = root / "projects" / project_id / "outputs"
@@ -255,7 +256,7 @@ def clearing_method_from_events(events: pd.DataFrame) -> str:
     return values[0] if values else "surrogate"
 
 
-def model_version_id_from_artifacts(root: Path) -> str | None:
+def model_version_id_from_artifacts(root: WorkspaceRoot) -> str | None:
     """Resolve the active model-version identifier from default artifacts."""
 
     metadata_path = ArtifactLayout(root).base / "metadata.json"
@@ -273,7 +274,7 @@ def model_version_id_from_artifacts(root: Path) -> str | None:
 
 
 def study_run_id_from_manifest(
-    root: Path,
+    root: WorkspaceRoot,
     project_id: str,
     manifest_path: Path | None = None,
 ) -> str | None:
@@ -294,7 +295,7 @@ def study_run_id_from_manifest(
     return study_run.get("run_id")
 
 
-def scenario_ids(root: Path, active_scenario_id: str) -> list[str]:
+def scenario_ids(root: WorkspaceRoot, active_scenario_id: str) -> list[str]:
     """Return expected scenario ids from the default digital-twin scenario index."""
 
     index_path = ArtifactLayout(root).scenarios / "index.json"
@@ -316,7 +317,7 @@ def scenario_ids(root: Path, active_scenario_id: str) -> list[str]:
 
 def build_operations_catalog(
     *,
-    root: Path,
+    root: WorkspaceRoot,
     project_id: str,
     scenario_id: str,
     report: dict[str, Any],

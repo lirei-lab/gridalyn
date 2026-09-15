@@ -15,6 +15,7 @@ from typing import Any, NoReturn
 
 import yaml
 
+from gridalyn.foundation.platform.roots import ProjectDir, WorkspaceRoot
 from gridalyn.foundation.platform.workspace import find_workspace_root
 from gridalyn.projects.models import (
     ExperimentSpec,
@@ -312,7 +313,7 @@ def load_workflow(path: Path | str) -> WorkflowSpec:
     )
 
 
-def find_repo_root(start: Path) -> Path:
+def find_repo_root(start: Path) -> WorkspaceRoot:
     """Return the workspace root enclosing ``start``.
 
     Args:
@@ -584,7 +585,7 @@ def load_project(path: Path | str) -> StudyProject:
             expected=hint("metadata.version"),
         ),
         path=project_path,
-        root=root,
+        root=ProjectDir(root),
         base_dir=base_dir,
         path_base=path_base,
         raw=raw,

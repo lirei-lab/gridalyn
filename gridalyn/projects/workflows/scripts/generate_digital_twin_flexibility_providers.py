@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.foundation import layout_from_environment
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
@@ -16,7 +17,7 @@ from gridalyn.operations import (
 )
 from gridalyn.twin.network import NetworkModelRepository
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
 DEFAULT_LAYOUT = layout_from_environment(default_root=ROOT)
 

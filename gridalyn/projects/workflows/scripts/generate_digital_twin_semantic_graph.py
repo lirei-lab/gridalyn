@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 
 from gridalyn.foundation import find_workspace_root, layout_from_environment
+from gridalyn.foundation.platform.roots import WorkspaceRoot
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.twin.semantic.mappings import (
     build_semantic_graph,
@@ -21,7 +22,7 @@ from gridalyn.twin.semantic.profile import SEMANTIC_PROFILE_IDS
 # Current-directory default, matching ArtifactLayout's own root default. Never
 # derive the root from __file__: in an installed wheel that resolves to
 # site-packages, not the workspace (Phase 9, finding G7).
-_DEFAULT_ROOT = Path(".")
+_DEFAULT_ROOT = WorkspaceRoot(Path("."))
 
 DEFAULT_LAYOUT = layout_from_environment(default_root=_DEFAULT_ROOT)
 
