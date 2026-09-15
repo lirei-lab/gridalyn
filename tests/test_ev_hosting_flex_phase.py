@@ -85,6 +85,7 @@ def test_solve_phase_min_voltage_real_net() -> None:
 
     from projects.ev_hosting_flex.scripts._powerflow import to_three_phase_mv
     from projects.ev_hosting_flex.scripts.config import (
+        GRID_CONFIG,
         PHASE_R0_MULT,
         PHASE_X0_MULT,
         PROJECT_CACHE_DIR,
@@ -105,7 +106,11 @@ def test_solve_phase_min_voltage_real_net() -> None:
     load_kw = {t: 20.0 for t in trafos}
     bal = _solve_phase_min_v(mv, pole_to_mv, load_kw, balanced=True)
     unb = _solve_phase_min_v(mv, pole_to_mv, load_kw, balanced=False)
-    assert 0.7 < unb["min_vm_pu"] <= bal["min_vm_pu"] <= 1.01
+    # The ceiling is the declared slack setpoint, not a constant: the twin's
+    # external grid is config-declared since bd 4os.14, and a flat-load solve
+    # cannot exceed it. Hardcoding 1.01 pinned the old implicit 1.0 pu slack.
+    slack_vm_pu = float(GRID_CONFIG.get("external_grid", {}).get("vm_pu", 1.0))
+    assert 0.7 < unb["min_vm_pu"] <= bal["min_vm_pu"] <= slack_vm_pu + 1e-6
     assert unb["vuf"] >= bal["vuf"] - 1e-9  # unbalanced no less unbalanced
 
 

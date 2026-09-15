@@ -20,3 +20,22 @@ asserts nothing about how they got there. The commits that last moved them:
 
 
 sha256: 96019e2bf0e7bcac37a86d46975d189193ae3f5721eee3d1487a56d2ffbd2e42
+
+## 2026-09-15 — topology re-base: capacity-limited partition, street siting, declared slack
+
+42 of 94 pins moved, on one cold full run from committed code (25 stages, no
+stage filter, manifest `completed`, `git_commit` 6de591bd, 19:02-22:26Z). The
+rationale, the evidence for the 10-home limit and the measured limits are the
+dated section in `CALIBRATION.md`; `bd 4os.7` and `bd 4os.14` carry the
+measurements behind it.
+
+What moved, by family: cluster 6, congestion 3, fleet 8, netchar 5, nonwires 4, perf 2, pf 6, phase 2, voltage 2, voltage_net 4. The hosting headlines did not: `annual.*`,
+`cred.*`, `insurance.*`, `coldcoupling.*` and `flexincentive.*` are
+value-identical, because the worked example is still a 6-home 71.25 kW unit.
+
+The two numbers a reader should carry: network undervoltage risk at 1 EV/home
+`voltage_net.p_undervolt_at_ref` 0.0 -> 0.11273, and the fleet screen
+`fleet.n_at_risk_at_1ev_static` 500 -> 506.
+
+
+sha256: 97a5947214083e403db07a8c06ccb619c41258416c8a8c4b96cc5370b0370ec3

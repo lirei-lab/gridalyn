@@ -46,16 +46,16 @@ bannered below — Cold-load pickup (retired Phase 15) and Recommended values
 | Short years if planning at P50 | 0.24 | `insurance.short_years_if_plan_p50` |
 | corr(winter severity, firm) | 0.36 | `insurance.delta_firm_correlation` |
 | Fleet: transformers in the fleet | 540 | `fleet.n_transformers` |
-| Fleet at risk at 1 EV/home, static rating | 500 | `fleet.n_at_risk_at_1ev_static` |
-| Fleet deferred by flexibility at 1 EV/home, static | 73 | `fleet.flex_defers_at_1ev_static` |
+| Fleet at risk at 1 EV/home, static rating | 506 | `fleet.n_at_risk_at_1ev_static` |
+| Fleet deferred by flexibility at 1 EV/home, static | 66 | `fleet.flex_defers_at_1ev_static` |
 | Fleet needing steel at 1 EV/home, static | 1 | `fleet.needs_steel_at_1ev_static` |
-| Fleet base-constrained at 1 EV/home, static | 426 | `fleet.base_constrained_at_1ev_static` |
-| Fleet deferred fraction of at-risk, static | 0.146 | `fleet.deferred_fraction_at_1ev_static` |
-| Fleet at risk at 1 EV/home, hourly rating | 185 | `fleet.n_at_risk_at_1ev_hourly_kt` |
-| Fleet deferred by flexibility at 1 EV/home, hourly | 182 | `fleet.flex_defers_at_1ev_hourly_kt` |
-| Fleet needing steel at 1 EV/home, hourly | 3 | `fleet.needs_steel_at_1ev_hourly_kt` |
+| Fleet base-constrained at 1 EV/home, static | 439 | `fleet.base_constrained_at_1ev_static` |
+| Fleet deferred fraction of at-risk, static | 0.130435 | `fleet.deferred_fraction_at_1ev_static` |
+| Fleet at risk at 1 EV/home, hourly rating | 199 | `fleet.n_at_risk_at_1ev_hourly_kt` |
+| Fleet deferred by flexibility at 1 EV/home, hourly | 195 | `fleet.flex_defers_at_1ev_hourly_kt` |
+| Fleet needing steel at 1 EV/home, hourly | 4 | `fleet.needs_steel_at_1ev_hourly_kt` |
 | Fleet base-constrained at 1 EV/home, hourly | 0 | `fleet.base_constrained_at_1ev_hourly_kt` |
-| Fleet deferred fraction of at-risk, hourly | 0.983784 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
+| Fleet deferred fraction of at-risk, hourly | 0.979899 | `fleet.deferred_fraction_at_1ev_hourly_kt` |
 
 **The fleet rows are the study's declared primary result** — `project.yaml`
 calls `fleet_triage` "the study's primary result; the per-feeder stages below
@@ -101,11 +101,12 @@ pinned as `fleet.headline_rating_convention`.
 **The consequence a reader meets, stated here rather than discovered.** The two
 halves describe the *same physical transformer* and disagree about it. The
 worked example's feeder has 6 homes — the median size across the 540
-transformers (histogram 1:6, 2:9, 3:34, 4:60, 5:111, 6:107, 7:100, 8:66, 9:34,
-10:6, 11:6, 12:1, verified against the cached network 2026-09-08). At the same
+transformers (histogram 1:5, 2:9, 3:44, 4:87, 5:93, 6:96, 7:76, 8:54, 9:33,
+10:43, verified against the cached network 2026-09-15, after the topology
+re-base recorded below). At the same
 71.25 kW rating and the same load, firm hosting for that unit is **3 EVs** under
 `static` and **11 EVs** under `hourly_kt` — 3.7x. At 1 EV/home it carries 6, so
-the fleet screen counts it among the 500 at risk while the worked example finds
+the fleet screen counts it among the 506 at risk while the worked example finds
 it has nothing to insure (activation frequency 0, $0/yr deferred). Both are
 correct under their stated convention. Neither is the whole answer. **Do not
 carry a fleet count and a feeder finding into one sentence without naming the
@@ -897,6 +898,75 @@ right edge moves by one rung.
 
 Reinforcement is lumpy (ladder rungs) while insurance scales smoothly — that shape,
 and the activation frequency, are the robust results; the dollars are illustrative.
+
+## Topology re-base: capacity-limited partition, street siting, declared slack (2026-09-15)
+
+The 7th deliberate re-base, and the first driven by the **network model** rather
+than by the load model. It moved 42 of the study's 94 pins. The hosting
+headlines did not move: firm 11 EVs, flexible 16, and every `cred.*` and
+`insurance.*` pin is value-identical, because the worked example is still a
+6-home, 71.25 kW physical twin (`feeder_selection.json`: idx-0, 6 homes,
+against idx-10 before). What moved is everything computed over the *fleet* and
+over the *whole network*.
+
+**What changed in the model** (`bd 4os.7`, `bd 4os.14`, declared in
+`inputs/synthetic_network_config.json`, mechanism in SDK PR #50):
+
+1. **The LV partition now honours a per-transformer limit.** K-means sized the
+   transformer count from the coincident load and then partitioned by geometry
+   alone, so nothing held a cluster to what it was sized for: 1 to 12 homes per
+   75 kVA unit, 209 of 540 above 100% at the declared envelope. The partition is
+   now capacity-constrained at **10 homes**, and that number is cited rather than
+   derived: Hydro-Québec's subdivision guide states a 100 kVA unit serves up to
+   ten houses, and the metered HQ data in `datasets/hq` agrees — across 573
+   electric-heated homes, the hourly coincident annual peak of 9 homes (P95) to
+   11 (P50) fits 100 kVA at nameplate. The study rates each unit from
+   `transformerKvaLadder`, so the limit is the largest residential unit's, not
+   the 75 kVA placeholder's. Fleet: 1-10 homes, mean 5.99 (5.99 before).
+2. **Transformers sit on the street.** Sited on the building they serve, the
+   service drop collapsed to `min_length_km`; sited on the nearest street it is
+   real conductor. LV circuit length rises about 15%.
+3. **Clusters respect street blocks.** A penalty of 0.005 km² for leaving a
+   cluster's dominant block cuts block crossings forced by the partition from
+   308 to 38, and 503 of 540 clusters now sit inside a single block.
+4. **The slack is declared at 1.04 pu** instead of an implicit 1.0 with neutral
+   taps — the same setpoint `studyConfig.slackVmPu` already declared for the
+   study's own solves, now also the twin's.
+
+**The headline consequence: the network-level undervoltage risk is real.**
+`voltage_net.p_undervolt_at_ref` moves 0.0 → **0.113** and
+`first_risk_ev_per_home` 1.563 → **0.943**, with the binding bus on a 10-home
+cluster (a 12-home one before). The earlier "no undervoltage risk at 1 EV/home"
+was a property of service drops modelled as 1 m stubs. This is the re-base's
+most important number for a reader: the network reaches >10% undervoltage risk
+**below** one EV per home, where it previously did so only above 1.5.
+
+**Fleet and value.** `fleet.n_at_risk_at_1ev_static` 500 → 506 and
+`flex_defers` 73 → 66 under the screen; under `hourly_kt`, at-risk 185 → 199 and
+deferrals 182 → 195. Deferral value rises with them:
+`nonwires.total_deferral_npv` 6,359.52 → **14,448.16 $** and
+`peak_capex_deferred` 1,428,450 → 1,740,087.50 $. Losses rise from 3.24% to
+**4.15%** at 0 EV, which is the new LV conductor being modelled rather than
+assumed away. Congestion at the reference scenario falls, 252 → 243 units above
+the 5% threshold, while the first-risk trigger tightens to 0.31 EV/home.
+
+**Method.** One cold, full run from committed code: 25 stages, no stage filter,
+manifest `completed`, `git_commit` 6de591bd, 2026-09-15 19:02-22:26Z, in a
+dedicated worktree so nothing else on the machine could touch it. The 42 moved
+pins were re-based against that run; the other 52 are value-identical. The
+per-stage attribution of each moved pin to each of the four changes above was
+**not** measured — the four moved together in one run — so this section states
+what the combination did, not what each part contributed.
+
+**Limits.** The 10-home limit is a planning limit, not a fit to Trois-Rivières:
+Hydro-Québec publishes no per-transformer customer rule, and the two sources
+agreeing (a subdivision guide and metered peaks) is the strongest evidence
+available rather than a measurement of this feeder. The street layer is pinned
+as `inputs/streets.geojson` with its sha256 in the grid config, so the topology
+no longer depends on the day OpenStreetMap was fetched; rebuilding it is itself
+a re-base. The slack at 1.04 pu is held flat across load levels, which is a
+conservative stand-in for a substation LTC: at 2% of design load the LV maximum
+reaches 1.0397 pu against CSA's 1.042, a 0.002 pu margin measured, not assumed.
 
 ## Sources
 
