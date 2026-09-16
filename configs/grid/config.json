@@ -38,7 +38,6 @@
         "lv_mv": {
             "std_type": "0.21 MVA 25/0.4 kV synthetic",
             "capacity_kva": 210,
-            "sizing_capacity_kva": 250,
             "utilization_margin": 0.80,
             "custom_type": true,
             "vk_percent": 6.0,
@@ -51,12 +50,20 @@
         "mv_hv": {
             "std_type": "15 MVA 120/25 kV HQ",
             "capacity_kva": 15000,
-            "count": 1,
             "power_factor": 0.95,
             "theta_max_c": 110,
             "custom_type": true,
             "note": "IEEE C57.91 dynamic rating. K(-22.5°C)=1.41 -> P_dyn=20.1 MW"
         }
+    },
+    "topology": {
+        "lv_assignment": "capacitated",
+        "max_customers_per_transformer": 20,
+        "note": "Limit for the 210 kVA unit this config declares: 20 metered Hydro-Quebec electric-heated homes peak at 190.6 kW (hourly coincident annual peak, P95 over random groups) against 205.8 kW usable at nameplate (bd 4os.7). No street layer, because this config is used with arbitrary footprints."
+    },
+    "external_grid": {
+        "vm_pu": 1.04,
+        "note": "Sending-end setpoint (bd 4os.14). At 1.0 pu with neutral taps 72% of LV buses sat below 0.95; at 1.04 none do at the design envelope, and at 2% load the LV maximum stays below CSA's 1.042."
     },
     "simulation": {
         "n_realizations": 30,
