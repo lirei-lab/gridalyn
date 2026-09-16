@@ -658,5 +658,67 @@ class NetworkAdaptersTest(unittest.TestCase):
         )
 
 
+class GeoJsonCoordinateOrderTest(unittest.TestCase):
+    """A bus's ``geo`` is read as [longitude, latitude], the GeoJSON order.
+
+    Regression, bd 06l: both readers below took ``coordinates[0]`` as the
+    latitude, so every freshly exported twin transposed every bus. It stayed
+    invisible because the committed base predates the pandapower ``geo``
+    column and both fields are floats: nothing in the suite referenced either
+    helper, and a swap only shows up as a map centred in the South Atlantic.
+    """
+
+    #: Trois-Rivieres, the feeder the flagship study builds on.
+    LON = -72.6041
+    LAT = 46.3429
+
+    def _bus_geo(self) -> str:
+        """A bus's ``geo`` value, written by pandapower from (x, y)."""
+        net = pp.create_empty_network()
+        pp.create_bus(net, vn_kv=0.4, name="lv_bus_0", geodata=(self.LON, self.LAT))
+        return str(net.bus.loc[0, "geo"])
+
+    def test_pandapower_writes_geo_in_geojson_order(self):
+        """The premise: what the writer emits, not what the reader assumes."""
+        coordinates = json.loads(self._bus_geo())["coordinates"]
+
+        self.assertAlmostEqual(coordinates[0], self.LON)
+        self.assertAlmostEqual(coordinates[1], self.LAT)
+
+    def test_exported_bus_table_keeps_latitude_and_longitude_apart(self):
+        net = pp.create_empty_network()
+        pp.create_bus(net, vn_kv=0.4, name="lv_bus_0", geodata=(self.LON, self.LAT))
+
+        buses = _make_bus_table(net)
+
+        self.assertAlmostEqual(buses.loc[0, "lat"], self.LAT)
+        self.assertAlmostEqual(buses.loc[0, "lon"], self.LON)
+
+    def test_an_exported_quebec_bus_lands_in_quebec(self):
+        """The bound a transposition cannot satisfy, whatever the columns say.
+
+        A Quebec latitude and longitude have different signs and disjoint
+        ranges, so this fails on a swap even if someone renames the columns.
+        """
+        net = pp.create_empty_network()
+        pp.create_bus(net, vn_kv=0.4, name="lv_bus_0", geodata=(self.LON, self.LAT))
+
+        buses = _make_bus_table(net)
+
+        self.assertTrue(40.0 < buses.loc[0, "lat"] < 60.0, buses.loc[0, "lat"])
+        self.assertTrue(-80.0 < buses.loc[0, "lon"] < -60.0, buses.loc[0, "lon"])
+
+    def test_the_powerflow_export_reads_the_same_order(self):
+        """The second reader, which writes the per-scenario node artifacts."""
+        from gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow import (
+            _coords_from_geo,
+        )
+
+        latitude, longitude = _coords_from_geo(self._bus_geo())
+
+        self.assertAlmostEqual(latitude, self.LAT)
+        self.assertAlmostEqual(longitude, self.LON)
+
+
 if __name__ == "__main__":
     unittest.main()

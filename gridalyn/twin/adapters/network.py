@@ -626,8 +626,12 @@ def _coords_from_geo(geo: Any) -> tuple[float | None, float | None]:
         try:
             data = json.loads(geo.replace("'", '"'))
             coords = data.get("coordinates", [None, None])
-            # Existing source stores [latitude, longitude].
-            return float(coords[0]), float(coords[1])
+            # GeoJSON Point coordinates are [longitude, latitude] (RFC 7946),
+            # which is what pandapower writes into `geo` from the builder's
+            # x=longitude / y=latitude node attributes. Read as [latitude,
+            # longitude] until bd 06l, this silently transposed every exported
+            # bus: a rebuilt Trois-Rivieres base carried lat -72.6 / lon 46.3.
+            return float(coords[1]), float(coords[0])
         except Exception:
             return None, None
     return None, None
