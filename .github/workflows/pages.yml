@@ -46,7 +46,7 @@ jobs:
       - name: Install documentation dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,docs]"
+          python tools/pip_install_retry.py -- -e ".[all,docs]"
 
       - name: Build MkDocs site
         run: mkdocs build --strict -f docs/mkdocs.yml

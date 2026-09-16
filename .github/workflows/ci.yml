@@ -157,9 +157,14 @@ jobs:
         # which step failed. Both were judged worth one fewer install and one
         # fewer thing to schedule. The stub environment is unchanged, so the
         # baseline still reads the same number it does locally.
+        #
+        # Routed through `tools/pip_install_retry.py` (bd ahx): a cut package
+        # fetch reddened six jobs on 2026-09-16, none of them a failing test.
+        # It retries only transport errors, so a resolution error still fails
+        # on the first attempt.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,test,typing]"
+          python tools/pip_install_retry.py -- -e ".[all,test,typing]"
 
       - name: Run test suite
         run: python -m pytest -q --durations=15
@@ -225,7 +230,7 @@ jobs:
         # per job on every push.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,test]"
+          python tools/pip_install_retry.py -- -e ".[all,test]"
 
       - name: Smoke-run the documented instruction subset
         # The instruction ledger (docs/development/instruction-ledger.json)
@@ -396,7 +401,7 @@ jobs:
           cache-dependency-path: .pre-commit-config.yaml
 
       - name: Install pre-commit
-        run: python -m pip install pre-commit
+        run: python tools/pip_install_retry.py -- pre-commit
 
       - name: Run pre-commit on changed files
         # SKIP=mypy: type checking in CI belongs to the `typecheck` job above,
@@ -448,7 +453,7 @@ jobs:
       - name: Install package with runtime and docs extras
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all,docs]"
+          python tools/pip_install_retry.py -- -e ".[all,docs]"
 
       - name: Build the documentation site
         # `--strict` turns every mkdocs and griffe warning into a failure, which
