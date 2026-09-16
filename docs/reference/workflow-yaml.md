@@ -220,7 +220,8 @@ it ahead of the `missing required report` it would otherwise surface as.
     `pathBase: repo` study wrote `file: projects/<study>/workflow.yaml`. It now
     resolves against the project directory (`bd 6ns.2`): write `file:
     workflow.yaml`. A stale entry stops the project from loading, with an error
-    naming the path it tried and the expected form.
+    naming the path it tried, the expected form and the corrected declaration;
+    `gridalyn project validate` reports the same message.
 
 !!! warning "Breaking change, 2026-09-11: stage inputs and outputs"
     Until this date, a stage's `inputs` and `outputs` in `workflow.yaml` resolved

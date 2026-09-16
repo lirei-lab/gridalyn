@@ -25,6 +25,7 @@ from gridalyn.projects.models import (
     WorkflowSpec,
     WorkflowStage,
 )
+from gridalyn.projects.path_contract import build_corrected_declaration
 
 #: Required fields of a ``kind: StudyProject`` document, keyed by YAML path and
 #: valued with the shape a valid entry takes. A ``[]`` segment marks a field of
@@ -313,6 +314,37 @@ def load_workflow(path: Path | str) -> WorkflowSpec:
     )
 
 
+def build_missing_workflow_message(
+    project_path: Path, declared: object, resolved: Path
+) -> str:
+    """Describe a ``spec.workflow.file`` that names no file, with the remedy.
+
+    :func:`load_project` and ``gridalyn project validate`` both report this, and
+    both use this text, so the two cannot drift apart again (bd 6ns.6).
+
+    Args:
+        project_path: The ``project.yaml`` that makes the declaration.
+        declared: The value as written.
+        resolved: Where the file was looked for.
+
+    Returns:
+        Where the declaration is, the path tried and the expected form. When
+        the declaration repeats the project directory -- the repository-relative
+        form a ``pathBase: repo`` study wrote before bd 6ns.2 -- and the corrected
+        file exists, it also names the declaration to write instead.
+    """
+    message = (
+        f"{project_path}: spec.workflow.file names {declared!r}, which does not "
+        f"exist at {resolved} -- expected "
+        f"{PROJECT_REQUIRED_FIELDS['spec.workflow.file']}"
+    )
+    root = project_path.parent
+    suggestion = build_corrected_declaration(str(declared), root=root)
+    if suggestion is not None and (root / suggestion).is_file():
+        message += f"; declare {suggestion!r}"
+    return message
+
+
 def find_repo_root(start: Path) -> WorkspaceRoot:
     """Return the workspace root enclosing ``start``.
 
@@ -555,9 +587,7 @@ def load_project(path: Path | str) -> StudyProject:
         # FileNotFoundError, not ValueError: the contract is well-formed, the
         # file it names is absent. Still located, per the error convention.
         raise FileNotFoundError(
-            f"{project_path}: spec.workflow.file names {workflow_file!r}, which "
-            f"does not exist at {workflow_path} -- expected "
-            f"{hint('spec.workflow.file')}"
+            build_missing_workflow_message(project_path, workflow_file, workflow_path)
         )
     workflow = load_workflow(workflow_path)
     problem = load_problem_spec(raw, project_path)

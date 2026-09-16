@@ -18,6 +18,7 @@ from gridalyn.projects.model_inputs import (
     load_radial_feeder_spec,
     project_input,
 )
+from gridalyn.projects.validation import validate_project_file
 
 
 def _make_project(tmp: str) -> Path:
@@ -273,3 +274,46 @@ class TestLoaderRequiredFieldErrors(unittest.TestCase):
             self.assertIn("project.yaml", message)
             self.assertIn("spec.workflow.file", message)
             self.assertIn("does not exist at", message)
+            # Nothing to derive: the file is simply gone, so no correction.
+            self.assertNotIn("declare", message)
+
+    def _stale_workflow_file(self, target: Path, declared: str) -> None:
+        document = read_yaml(target / "project.yaml")
+        document["spec"]["workflow"]["file"] = declared
+        self._write(target, "project.yaml", document)
+
+    def test_a_stale_repo_relative_workflow_file_names_the_correction(self) -> None:
+        """The pre-6ns.2 form a pathBase: repo study wrote gets the fix, not a shrug."""
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            self._stale_workflow_file(target, "projects/my_case/workflow.yaml")
+
+            with self.assertRaises(FileNotFoundError) as ctx:
+                load_project(target / "project.yaml")
+
+            self.assertIn("declare 'workflow.yaml'", str(ctx.exception))
+
+    def test_validate_reports_the_same_message_as_load(self) -> None:
+        """validate used to say only 'workflow file does not exist' (bd 6ns.6)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            self._stale_workflow_file(target, "projects/my_case/workflow.yaml")
+
+            with self.assertRaises(FileNotFoundError) as ctx:
+                load_project(target / "project.yaml")
+            report = validate_project_file(target / "project.yaml")
+
+            self.assertIn(str(ctx.exception), report.errors)
+
+    def test_no_correction_is_named_when_the_corrected_file_is_absent(self) -> None:
+        """A suggestion that would also fail is worse than none."""
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _make_project(tmp)
+            self._stale_workflow_file(target, "projects/my_case/elsewhere.yaml")
+
+            with self.assertRaises(FileNotFoundError) as ctx:
+                load_project(target / "project.yaml")
+
+            message = str(ctx.exception)
+            self.assertIn("expected", message)
+            self.assertNotIn("declare", message)
