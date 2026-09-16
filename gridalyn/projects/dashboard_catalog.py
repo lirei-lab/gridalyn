@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.projects.project_catalog import build_project_catalog
 from gridalyn.projects.scenario_catalog import BY_FILE as PARTITION_BY_FILE
 from gridalyn.twin.network import (
@@ -461,7 +461,7 @@ def _geography(
     return payload
 
 
-def _load_network_metadata(base_dir: Path) -> dict[str, Any]:
+def _load_network_metadata(base_dir: BaseArtifactDir) -> dict[str, Any]:
     path = base_dir / "metadata.json"
     if not path.exists():
         return {}

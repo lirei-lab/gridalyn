@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from gridalyn.foundation import layout_from_environment
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.operations import (
     build_network_sensitivity,
     build_provider_registry,
@@ -106,7 +106,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate digital-twin flexibility provider registry artifacts."
     )
-    parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=DEFAULT_BASE_DIR,
+    )
     parser.add_argument("--scenario-dir", type=Path, default=DEFAULT_SCENARIO_DIR)
     parser.add_argument("--models-dir", type=Path, default=DEFAULT_MODELS_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)

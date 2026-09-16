@@ -26,7 +26,7 @@ from pandapower.control import ConstControl
 from pandapower.timeseries import DFData, OutputWriter, run_timeseries
 
 from gridalyn.foundation import workspace_from_environment
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.simulation.backends.contract import LIGHTSIM2GRID_BACKEND_ID
 from gridalyn.simulation.backends.registry import resolve_powerflow_backend
 
@@ -437,7 +437,13 @@ def main() -> None:
         description="Run digital-twin EV powerflow smoke scenarios."
     )
     parser.add_argument("--scenarios", nargs="+", default=list(DEFAULT_SCENARIOS))
-    parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=DEFAULT_BASE_DIR,
+    )
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)
     parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE_DIR)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)

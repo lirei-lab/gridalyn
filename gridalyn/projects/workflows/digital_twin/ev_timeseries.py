@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from gridalyn.assets.datagen.agents import EVCharger
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 
 ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
@@ -200,7 +200,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generate digital-twin EV load time series."
     )
-    parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=DEFAULT_BASE_DIR,
+    )
     parser.add_argument("--scenario-dir", type=Path, default=DEFAULT_SCENARIO_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)

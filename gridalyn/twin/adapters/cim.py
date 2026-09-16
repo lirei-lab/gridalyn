@@ -23,6 +23,7 @@ from typing import Any
 
 import pandas as pd
 
+from gridalyn.foundation.platform.roots import BaseArtifactDir
 from gridalyn.twin.adapters.authority import (
     ModelAuthoritySet,
     ModelProfile,
@@ -139,7 +140,10 @@ class CimParquetAdapter:
         snapshot = self.load_snapshot()
         artifact_paths = snapshot.write_parquet(out_dir)
         metadata_path = write_base_metadata(
-            base_dir=out_dir,
+            # The caller states that this export writes the instance's canonical base.
+            # `out_dir` itself stays a Path: an export need not land there, which is why
+            # _validation_report_path falls back when it does not (bd 6ns.1).
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             config_path=self.source_dir / "manifest.json",
             config_hash=_source_hash(self.source_dir),
@@ -159,7 +163,7 @@ class CimParquetAdapter:
         )
         validation_report_path = write_network_adapter_validation_report(
             path=out_dir / "network_adapter_validation_report.json",
-            base_dir=out_dir,
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             adapter_id=self.adapter_id,
             source_adapter=self.source_adapter,

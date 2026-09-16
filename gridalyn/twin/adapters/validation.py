@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from gridalyn.foundation import ReportMetadata, file_reference, write_report
+from gridalyn.foundation.platform.roots import BaseArtifactDir
 from gridalyn.twin.network import NetworkModelRepository
 
 NETWORK_ADAPTER_VALIDATION_SCHEMA_VERSION = "1.0"
@@ -21,7 +22,7 @@ NETWORK_ADAPTER_VALIDATION_SCHEMA_VERSION = "1.0"
 
 def build_network_adapter_validation_report(
     *,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     root: Path,
     adapter_id: str | None = None,
     source_adapter: str,
@@ -31,7 +32,11 @@ def build_network_adapter_validation_report(
     artifact_paths: dict[str, Path],
     metadata_path: Path,
 ) -> dict[str, Any]:
-    """Build a standard validation report for an exported network snapshot."""
+    """Build a standard validation report for an exported network snapshot.
+
+    ``base_dir`` is the instance's canonical base-artifact directory, which the
+    report's integrity check reads.
+    """
     repository = NetworkModelRepository.from_parquet(base_dir)
     model = repository.load_model()
     validation = repository.validate_integrity()
@@ -79,7 +84,7 @@ def build_network_adapter_validation_report(
 def write_network_adapter_validation_report(
     *,
     path: Path,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     root: Path,
     adapter_id: str | None = None,
     source_adapter: str,
@@ -89,7 +94,11 @@ def write_network_adapter_validation_report(
     artifact_paths: dict[str, Path],
     metadata_path: Path,
 ) -> Path:
-    """Write a governed validation report for an exported network snapshot."""
+    """Write a governed validation report for an exported network snapshot.
+
+    ``base_dir`` is the instance's canonical base-artifact directory; ``path`` is
+    where the report itself is written.
+    """
     report = build_network_adapter_validation_report(
         base_dir=base_dir,
         root=root,
