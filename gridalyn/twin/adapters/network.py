@@ -14,7 +14,7 @@ import pandapower as pp
 import pandas as pd
 
 from gridalyn.foundation import ArtifactLayout
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.twin.adapters.authority import (
     ModelAuthoritySet,
     ModelProfile,
@@ -178,7 +178,11 @@ def exported_model_identity(out_dir: Path) -> ModelIdentity:
         ValueError: If the manifest is present but is not a JSON object.
         RuntimeError: If the manifest parsed but declared no identity.
     """
-    repository = NetworkModelRepository.from_parquet(out_dir, provenance="require")
+    # Same claim as the metadata writes below: the caller states that this
+    # export is the canonical base it then reads back (bd 6ns.1).
+    repository = NetworkModelRepository.from_parquet(
+        BaseArtifactDir(out_dir), provenance="require"
+    )
     identity = repository.load_model().identity
     if identity is None:  # pragma: no cover - "require" raises before this
         raise RuntimeError(
@@ -309,7 +313,10 @@ class SyntheticPandapowerAdapter:
         artifact_paths = snapshot.write_parquet(out_dir)
         validation_report_path = _validation_report_path(out_dir=out_dir, root=root)
         metadata_path = write_base_metadata(
-            base_dir=out_dir,
+            # The caller states that this export writes the instance's canonical base.
+            # `out_dir` itself stays a Path: an export need not land there, which is why
+            # _validation_report_path falls back when it does not (bd 6ns.1).
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             config_path=self.config_path,
             config_hash=_config_hash(config),
@@ -328,7 +335,7 @@ class SyntheticPandapowerAdapter:
         )
         write_network_adapter_validation_report(
             path=validation_report_path,
-            base_dir=out_dir,
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             adapter_id=self.adapter_id,
             source_adapter=self.source_adapter,
@@ -464,7 +471,7 @@ class PandapowerTopologyAdapter:
         artifact_paths = snapshot.write_parquet(out_dir)
         validation_report_path = _validation_report_path(out_dir=out_dir, root=root)
         metadata_path = write_base_metadata(
-            base_dir=out_dir,
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             config_path=self.config_path,
             config_hash=_config_hash(config),
@@ -483,7 +490,7 @@ class PandapowerTopologyAdapter:
         )
         write_network_adapter_validation_report(
             path=validation_report_path,
-            base_dir=out_dir,
+            base_dir=BaseArtifactDir(out_dir),
             root=root,
             adapter_id=self.adapter_id,
             source_adapter=self.source_adapter,

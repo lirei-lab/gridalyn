@@ -16,7 +16,7 @@ from gridalyn.assets.modeling.archetypes import (
 from gridalyn.assets.modeling.environment import ModelingEnvironment
 from gridalyn.assets.modeling.synthesis import synthesize_building_model_tables
 from gridalyn.foundation import ArtifactLayout
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.twin.network import NetworkModelRepository
 
 TABLE_FILENAMES = {
@@ -37,9 +37,13 @@ def _relative(path: Path, root: Path) -> str:
 
 
 def load_base_inputs(
-    base_dir: Path = DEFAULT_LAYOUT.base,
+    base_dir: BaseArtifactDir = DEFAULT_LAYOUT.base,
 ) -> tuple[pd.DataFrame, pd.DataFrame | None]:
-    """Load canonical digital-twin building inputs."""
+    """Load canonical digital-twin building inputs.
+
+    ``base_dir`` is the instance's canonical base-artifact directory; it defaults
+    to the layout's, which is the one the shipped twin writes.
+    """
 
     model = NetworkModelRepository.from_parquet(base_dir).load_model()
     connectivity = None if model.connectivity.empty else model.connectivity

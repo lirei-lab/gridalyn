@@ -20,6 +20,7 @@ from typing import Any, Mapping
 import pandas as pd
 
 from gridalyn.foundation.platform.governance import build_model_version
+from gridalyn.foundation.platform.roots import BaseArtifactDir
 from gridalyn.twin.network.model import (
     BASE_TABLE_FILENAMES,
     OPERATIONAL_STATES,
@@ -40,7 +41,7 @@ BASE_ARTIFACTS: dict[str, str] = dict(BASE_TABLE_FILENAMES)
 
 def build_base_metadata(
     *,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     root: Path,
     config_path: Path,
     config_hash: str,
@@ -60,7 +61,8 @@ def build_base_metadata(
     """Build a repository-centric manifest for a canonical digital-twin snapshot.
 
     Args:
-        base_dir: Directory holding the canonical base Parquet artifacts.
+        base_dir: The instance's canonical base-artifact directory, holding
+            the base Parquet artifacts.
         root: Workspace root that declared paths are recorded relative to.
         config_path: Grid configuration the snapshot declares as its input.
         config_hash: Digest of that configuration's contents.
@@ -200,7 +202,7 @@ def build_base_metadata(
 
 def write_base_metadata(
     *,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     root: Path,
     config_path: Path,
     config_hash: str,
@@ -220,7 +222,8 @@ def write_base_metadata(
     """Write `metadata.json` for a base digital-twin snapshot.
 
     Args:
-        base_dir: Directory holding the canonical base Parquet artifacts.
+        base_dir: The instance's canonical base-artifact directory, holding
+            the base Parquet artifacts.
         root: Workspace root that declared paths are recorded relative to.
         config_path: Grid configuration the snapshot declares as its input.
         config_hash: Digest of that configuration's contents.
@@ -287,7 +290,7 @@ def write_base_metadata(
 
 def _artifact_metadata(
     *,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     root: Path,
     frames: dict[str, pd.DataFrame],
 ) -> dict[str, dict[str, Any]]:

@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 
 #: The default workspace root: the current directory, as every caller assumed.
 _CURRENT_DIRECTORY = WorkspaceRoot(Path("."))
@@ -118,8 +118,9 @@ class ArtifactLayout:
         return self.digital_twin / "cache"
 
     @property
-    def base(self) -> Path:
-        return self.digital_twin / "base"
+    def base(self) -> BaseArtifactDir:
+        """The instance's canonical base artifacts, which the twin layer reads."""
+        return BaseArtifactDir(self.digital_twin / "base")
 
     @property
     def scenarios(self) -> Path:

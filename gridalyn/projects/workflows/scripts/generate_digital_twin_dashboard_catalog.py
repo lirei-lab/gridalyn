@@ -8,7 +8,7 @@ import json
 import sys
 from pathlib import Path
 
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 
 ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
@@ -75,7 +75,13 @@ def _relpath(path: Path) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario-index", type=Path, default=DEFAULT_SCENARIO_INDEX)
-    parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=DEFAULT_BASE_DIR,
+    )
     parser.add_argument(
         "--powerflow-summary", type=Path, default=DEFAULT_POWERFLOW_SUMMARY
     )

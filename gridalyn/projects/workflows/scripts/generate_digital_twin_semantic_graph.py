@@ -10,7 +10,7 @@ from typing import Any
 import pandas as pd
 
 from gridalyn.foundation import find_workspace_root, layout_from_environment
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 from gridalyn.twin.network import NetworkModelRepository
 from gridalyn.twin.semantic.mappings import (
     build_semantic_graph,
@@ -180,7 +180,13 @@ def main() -> None:
     )
     parser.add_argument("--profile", default="north_america")
     parser.add_argument("--root", type=Path, default=_DEFAULT_ROOT)
-    parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=DEFAULT_BASE_DIR,
+    )
     parser.add_argument("--scenario-dir", type=Path, default=DEFAULT_SCENARIO_DIR)
     parser.add_argument("--flexibility-dir", type=Path, default=DEFAULT_FLEXIBILITY_DIR)
     parser.add_argument("--timeseries-dir", type=Path, default=DEFAULT_TIMESERIES_DIR)

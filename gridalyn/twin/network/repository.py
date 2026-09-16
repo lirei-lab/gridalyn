@@ -10,6 +10,7 @@ from typing import Any, Literal, Mapping, cast
 
 import pandas as pd
 
+from gridalyn.foundation.platform.roots import BaseArtifactDir
 from gridalyn.twin.network.model import (
     BASE_PROFILE_ID,
     DEFAULT_OPERATIONAL_STATE,
@@ -105,7 +106,7 @@ class NetworkModelRepository:
             the sentinel costs no existing call site a change.
     """
 
-    base_dir: Path
+    base_dir: BaseArtifactDir
     provenance: ProvenancePolicy = "warn"
     operational_state: OperationalState | None = None
 
@@ -235,13 +236,27 @@ class NetworkModelRepository:
     @classmethod
     def from_parquet(
         cls,
-        base_dir: Path | str,
+        base_dir: BaseArtifactDir | Path | str,
         *,
         provenance: ProvenancePolicy = "warn",
         operational_state: OperationalState | None = None,
     ) -> "NetworkModelRepository":
+        """Open the repository stored in one instance's base-artifact directory.
+
+        Args:
+            base_dir: The instance's canonical base-artifact directory. The
+                field it fills is typed; this constructor still accepts any
+                path-like, so callers that hold a plain ``Path`` keep working.
+                Narrowing it waits for the workflow signatures that still
+                declare ``base_dir: Path`` (bd 6ns.1).
+            provenance: What to do when the manifest is absent, as on the class.
+            operational_state: Overrides the state the manifest declares.
+
+        Returns:
+            The repository reading that directory.
+        """
         return cls(
-            base_dir=Path(base_dir),
+            base_dir=BaseArtifactDir(Path(base_dir)),
             provenance=provenance,
             operational_state=operational_state,
         )

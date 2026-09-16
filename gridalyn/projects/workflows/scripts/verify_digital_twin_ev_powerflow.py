@@ -18,7 +18,7 @@ from typing import Any
 
 import pandas as pd
 
-from gridalyn.foundation.platform.roots import WorkspaceRoot
+from gridalyn.foundation.platform.roots import BaseArtifactDir, WorkspaceRoot
 
 ROOT = WorkspaceRoot(Path(__file__).resolve().parents[4])
 
@@ -192,7 +192,13 @@ def main() -> None:
     )
     parser.add_argument("--scenarios", nargs="+", default=["S0", "S1"])
     parser.add_argument("--timeseries-dir", type=Path, default=TIMESERIES_DIR)
-    parser.add_argument("--base-dir", type=Path, default=BASE_DIR)
+    parser.add_argument(
+        "--base-dir",
+        # Typed where argparse produces it: what this flag names is a
+        # base-artifact directory, not any directory (bd 6ns.1).
+        type=lambda value: BaseArtifactDir(Path(value)),
+        default=BASE_DIR,
+    )
     args = parser.parse_args()
     report = verify_scenarios(args.scenarios, args.timeseries_dir, args.base_dir)
     print("=== EV Powerflow Verification ===")
