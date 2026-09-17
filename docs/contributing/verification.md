@@ -254,31 +254,45 @@ HEAD).
 Two operator commands:
 
 - `python tools/flagship_verify.py` — the shape-covering subset, the fast
-  source-proven proof used on generator/kernel changes. It runs 16 of the 24
-  stages in about 24 minutes, skipping the four a clean run timed above ten
-  minutes (`analyze_congestion_risk`, `analyze_credibility`,
-  `analyze_cold_insurance`, `analyze_voltage_risk_network`) and, by
-  dependency, the three that need the first. Until 2026-09-04 the heavy set was
+  source-proven proof used on generator/kernel changes. It runs 18 of the 25
+  stages in about 34 minutes (measured 2026-09-17; the 24 minutes recorded on
+  2026-09-04 predate both the `replay_dr_program` stage and the topology
+  re-base), skipping the four a clean run timed above ten minutes
+  (`analyze_congestion_risk`, `analyze_credibility`, `analyze_cold_insurance`,
+  `analyze_voltage_risk_network`) and, by dependency, the three that need the
+  first. Until 2026-09-04 the heavy set was
   `{generate_annual_mc}` alone, and because every analysis stage depends on it
   the subset executed 2 stages in ~4 s — a proof of almost nothing
   (`bd zpz`).
 - `python tools/flagship_verify.py --include-heavy` — the full regeneration
-  (about four hours cold as of 2026-09-04, down from six after the shared
-  base-MC cache stopped regenerating four times), operator-scheduled at
-  milestones; the resulting receipt is recorded at the commit it ran at.
+  (3 h 24 min cold, measured 2026-09-15 over all 25 stages through the project
+  runner and recorded on the `flagship-reproduce` receipt; down from six hours
+  after the shared base-MC cache stopped regenerating four times),
+  operator-scheduled at milestones; the resulting receipt is recorded at the
+  commit it ran at.
 
 The full regeneration remains operator-scheduled; the subset is what keeps the
 study source-proven between those runs.
 
-### Executed run (2026-08-06, recorded at 6ea8a92a)
+### Executed run (2026-09-17, recorded at 52182c5b)
 
-The shape-covering subset was executed and its receipts recorded: 22 stages,
-2 ran OK (`prepare_workspace` 0.4 s, `prepare_topology_cache` 3.1 s, topology
-cache 4320 buses), 20 skipped (the heavy `generate_annual_mc` plus its
-downstream dependents), and the baseline check returned **PASS — baselines
-byte-identical**. Per-stage records are embedded on the `flagship-subset`
-receipt; the `flagship-reproduce` receipt is now `recorded` (source-proven by
-protocol). The full ~6 h regeneration remains operator-scheduled.
+The shape-covering subset was executed and its receipt re-recorded: 25 stages,
+18 ran OK and 7 skipped (the four heavy stages plus the three that depend on
+them), stage time 33.8 minutes, and the baseline check returned **PASS —
+baselines byte-identical**. That PASS is the first independent confirmation
+that the topology re-base of `bd 4os.7`/`4os.14` reproduces: the pins re-based
+against the 2026-09-15 cold run come back byte-identical when the non-heavy
+stages are regenerated from committed code at a later commit. Per-stage records
+are embedded on the `flagship-subset` receipt.
+
+It replaces the 2026-08-06 record at `6ea8a92a`, which had gone stale — 87
+files had changed under its watched paths, it described a 22-stage workflow
+where there are now 25, and only 2 of those 22 stages had actually run, because
+the heavy set was then `{generate_annual_mc}` alone and every analysis stage
+depends on it. What the new receipt does **not** cover: the four heavy stages
+and their three dependents were not re-run, so the seven outputs they own still
+date from the cold run recorded on `flagship-reproduce`. The full regeneration
+remains operator-scheduled.
 
 ## 7. Twin Consumer Identity
 

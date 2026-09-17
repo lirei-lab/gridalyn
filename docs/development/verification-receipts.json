@@ -45,108 +45,126 @@
     },
     "flagship-subset": {
       "status": "recorded",
-      "command": "python tools/flagship_verify.py -- the shape-covering subset runner (default = skip the heavy ~6 h annual-MC stage, per-stage records + R7 baseline check; --include-heavy for the full operator-scheduled regeneration).",
-      "commit": "6ea8a92a8c76305c06ac4478712d55565f1b8b6c",
-      "recorded_on": "2026-08-06",
-      "result": "Executed: 22 stages, 2 ran OK (prepare_workspace ok 0.39s; prepare_topology_cache ok 3.1s), 20 skipped; R7 baselines PASS.",
-      "evidence": "Per-stage records sha256 d1c89581446844ef3717e3813205e620973f9827ec66ce1a1d030195fbcb9183.",
+      "command": "python tools/flagship_verify.py --out-json <records.json> -- the shape-covering subset runner: runs every non-heavy stage end to end against the study workspace, skips the four stages a clean run timed above ten minutes (and the three that depend on them) with a recorded reason, writes per-stage records, and reports the R7 baseline check. --include-heavy runs the full operator-scheduled regeneration.",
+      "commit": "52182c5bba46fd8c702fd9c06db38f0412c05c03",
+      "recorded_on": "2026-09-17",
+      "result": "Executed: 25 stages, 18 ran OK, 7 skipped; R7 baselines PASS -- baselines byte-identical, and the runner exited 0. Skipped: the four heavy stages (analyze_congestion_risk, analyze_voltage_risk_network, analyze_credibility, analyze_cold_insurance) and the three that depend on them (analyze_fleet_triage, analyze_nonwires_value, build_study_reports). Stage time 2029.9 s (33.8 min), wall 13:11-13:46 UTC; the longest stages were analyze_locational_contracts 529.8 s, validate_powerflow 413.1 s, analyze_clustered_adoption 404.4 s and generate_annual_mc 304.4 s -- all below the ten-minute threshold that defines the heavy set, so the set still holds.",
+      "evidence": "Per-stage records sha256 c0f974edf6ae4f2716ada7e97d6dcdd7fbd4d7a74a10a9092056efc3d12f8d71 -- the sha256 of the file written by --out-json, whose top level is {stages, baselines, exit_code} and whose stages list is embedded verbatim below. Nothing in the repository computes or checks this digest, so it is stated with its source named rather than as a bare number. The study outputs were snapshotted outside the repository at /home/lirei-lenovo/lirei/ev_hosting_flex-outputs-prerun-20260917.tar.gz (42 MB, 133 files, manifest included) before the run, per the standing rule that a closed run is snapshotted before another is launched. The run rewrote only gitignored artefacts under projects/ev_hosting_flex/outputs/; git status stayed clean.",
       "watched": [
         "gridalyn/assets/datagen",
         "gridalyn/simulation",
         "projects/ev_hosting_flex",
         "tools/flagship_verify.py"
       ],
-      "rationale": "Recorded at 6ea8a92a: the shape-covering subset is the fast source-proven proof used on generator/kernel changes; per-stage records make partial regeneration auditable. Its stage execution is quick (recorded run: 2 stages in ~4 s; the heavy annual-MC stage and its dependents are skipped with recorded reasons); wall time is dominated by environment/toolchain setup, not stage work. The full ~6 h regeneration remains operator-scheduled.",
+      "rationale": "Re-recorded at 52182c5b, replacing the 2026-08-06 record at 6ea8a92a which had gone stale: 87 files had changed under the watched paths since, it described a 22-stage workflow where there are now 25, and of those 22 only 2 stages had actually run -- the heavy set at the time was {generate_annual_mc} alone, and because every analysis stage depends on it the subset proved almost nothing. This run exercises 18 of 25 stages and its baseline check is the first independent confirmation that the topology re-base of bd 4os.7/4os.14 reproduces: the pins re-based against the 2026-09-15 cold run come back byte-identical when the non-heavy stages are regenerated from committed code at a later commit. Limit: it is not the full regeneration. The four heavy stages and the three that depend on them were not re-run, so the seven outputs they own still date from the cold run recorded on flagship-reproduce; this receipt vouches for the other 18.",
       "stages": [
         {
           "name": "prepare_workspace",
           "status": "ok",
-          "duration_s": 0.39,
+          "duration_s": 0.42,
           "reason": null
         },
         {
           "name": "prepare_topology_cache",
           "status": "ok",
-          "duration_s": 3.1,
+          "duration_s": 3.23,
+          "reason": null
+        },
+        {
+          "name": "export_twin_network_model",
+          "status": "ok",
+          "duration_s": 5.37,
           "reason": null
         },
         {
           "name": "generate_annual_mc",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "heavy \u2014 requires operator full regen"
+          "status": "ok",
+          "duration_s": 304.38,
+          "reason": null
+        },
+        {
+          "name": "build_base_mc_cache",
+          "status": "ok",
+          "duration_s": 9.11,
+          "reason": null
         },
         {
           "name": "compute_congestion_annual",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 0.6,
+          "reason": null
         },
         {
           "name": "analyze_cold_coupling",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 5.03,
+          "reason": null
         },
         {
           "name": "analyze_network_characterization",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 19.76,
+          "reason": null
         },
         {
           "name": "analyze_clustered_adoption",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 404.44,
+          "reason": null
         },
         {
           "name": "analyze_flexibility_incentive",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 2.61,
+          "reason": null
         },
         {
           "name": "analyze_network_performance",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 8.48,
+          "reason": null
         },
         {
           "name": "analyze_congestion_risk",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "reason": "heavy \u2014 requires operator full regen"
+        },
+        {
+          "name": "analyze_locational_contracts",
+          "status": "ok",
+          "duration_s": 529.84,
+          "reason": null
         },
         {
           "name": "analyze_phase_imbalance",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 148.58,
+          "reason": null
         },
         {
           "name": "analyze_voltage_risk",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "status": "ok",
+          "duration_s": 168.15,
+          "reason": null
         },
         {
           "name": "analyze_voltage_risk_network",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc"
+          "reason": "heavy \u2014 requires operator full regen"
         },
         {
           "name": "apply_curtailment_contracts",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage compute_congestion_annual"
+          "status": "ok",
+          "duration_s": 3.5,
+          "reason": null
         },
         {
           "name": "compute_curtailment_economics",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage compute_congestion_annual"
+          "status": "ok",
+          "duration_s": 2.2,
+          "reason": null
         },
         {
           "name": "analyze_fleet_triage",
@@ -158,37 +176,37 @@
           "name": "analyze_nonwires_value",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage analyze_network_characterization, analyze_congestion_risk"
+          "reason": "depends on skipped stage analyze_congestion_risk"
+        },
+        {
+          "name": "replay_dr_program",
+          "status": "ok",
+          "duration_s": 1.1,
+          "reason": null
         },
         {
           "name": "analyze_credibility",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc, compute_congestion_annual, apply_curtailment_contracts"
-        },
-        {
-          "name": "analyze_locational_contracts",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage analyze_fleet_triage"
+          "reason": "heavy \u2014 requires operator full regen"
         },
         {
           "name": "validate_powerflow",
-          "status": "skipped",
-          "duration_s": null,
-          "reason": "depends on skipped stage compute_congestion_annual, apply_curtailment_contracts"
+          "status": "ok",
+          "duration_s": 413.08,
+          "reason": null
         },
         {
           "name": "analyze_cold_insurance",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage generate_annual_mc, analyze_credibility"
+          "reason": "heavy \u2014 requires operator full regen"
         },
         {
           "name": "build_study_reports",
           "status": "skipped",
           "duration_s": null,
-          "reason": "depends on skipped stage compute_curtailment_economics, validate_powerflow"
+          "reason": "depends on skipped stage analyze_cold_insurance, analyze_nonwires_value, analyze_voltage_risk_network"
         }
       ]
     },
