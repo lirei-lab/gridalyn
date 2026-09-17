@@ -58,7 +58,9 @@ def _coords_from_geo(geo: Any) -> tuple[float, float]:
     try:
         data = json.loads(str(geo).replace("'", '"'))
         coords = data.get("coordinates", [0.0, 0.0])
-        return float(coords[0]), float(coords[1])
+        # [longitude, latitude] per RFC 7946; the caller unpacks (lat, lon).
+        # Same transposition as the base export carried until bd 06l.
+        return float(coords[1]), float(coords[0])
     except Exception:
         return 0.0, 0.0
 
