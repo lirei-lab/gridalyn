@@ -87,18 +87,26 @@ def _generate_base_building_loads(
     generator_type: str,
 ) -> tuple[np.ndarray, np.ndarray]:
     from gridalyn.assets.datagen import GridLoadFacade, download_tmy, select_cold_day
+    from gridalyn.assets.datagen.agents import QUEBEC_ALL_ELECTRIC
 
     macro_rng = np.random.default_rng(seed)
     cold_day = select_cold_day(download_tmy())
     t_offset = float(macro_rng.normal(0, 1.5))
     perturbed_temp_air = cold_day["temp_air"] + t_offset
 
+    # The twin models a Québec all-electric feeder, so it states that archetype
+    # rather than inheriting the engine's energy-derived default, which reads
+    # about half the per-dwelling peak a utility sizes for. Only the
+    # thermodynamic engine has an envelope to state: the parametric one is a
+    # trained macro-shape model and refuses an archetype.
+    archetype = QUEBEC_ALL_ELECTRIC if generator_type == "thermodynamic" else None
     heat_kw, bg_kw = GridLoadFacade.generate_loads(
         generator_type=generator_type,
         df_weather=perturbed_temp_air,
         n_houses=n_houses,
         resolution_minutes=resolution_minutes,
         seed=seed,
+        archetype=archetype,
     )
     total_kw = heat_kw + bg_kw
 

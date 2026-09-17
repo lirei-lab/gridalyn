@@ -53,13 +53,18 @@ def run_single_realization(
     n_houses = n_blocks
 
     from gridalyn.assets.datagen import GridLoadFacade
+    from gridalyn.assets.datagen.agents import QUEBEC_ALL_ELECTRIC
 
+    # Same archetype the twin states: this runner drives the same Québec
+    # all-electric feeder. Only the thermodynamic engine takes one.
+    archetype = QUEBEC_ALL_ELECTRIC if generator_type == "thermodynamic" else None
     heat_kw, bg_kw = GridLoadFacade.generate_loads(
         generator_type=generator_type,
         df_weather=perturbed_temp_air,
         n_houses=n_houses,
         resolution_minutes=resolution_minutes,
         seed=seed,
+        archetype=archetype,
     )
 
     # The output is (time_steps, n_houses)

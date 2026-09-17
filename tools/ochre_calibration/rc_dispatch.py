@@ -80,20 +80,31 @@ def run_arm(
     overrides: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Run the RC fleet, optionally shifting setpoints each step."""
-    from gridalyn.assets.datagen.agents import make_buildings
+    from gridalyn.assets.datagen.agents import (
+        DEFAULT_ARCHETYPE,
+        ThermalArchetype,
+        make_buildings,
+    )
     from gridalyn.assets.datagen.load_profiles import ParametricArxGenerator
 
-    buildings = make_buildings(n_homes, seed=seed)
+    # The study does not run the RC on its library defaults: it states thermal
+    # resistance and heater capacity per project.yaml. Comparing the surrogate
+    # against the reference on defaults would measure a model the study never
+    # uses. Declared rather than overwritten after construction (bd irz), which
+    # is value-identical: each pinned parameter still consumes its draw.
+    archetype = DEFAULT_ARCHETYPE
     if overrides:
-        # The study does not run the RC on its library defaults: it overrides
-        # thermal resistance and heater capacity per project.yaml. Comparing the
-        # surrogate against the reference on defaults would measure a model the
-        # study never uses.
-        for building in buildings:
-            if "r" in overrides:
-                building.R = overrides["r"]
-            if "p_heat_max" in overrides:
-                building.p_heat_max = overrides["p_heat_max"]
+        archetype = ThermalArchetype(
+            r_mean=overrides.get("r", DEFAULT_ARCHETYPE.r_mean),
+            r_std=0.0 if "r" in overrides else DEFAULT_ARCHETYPE.r_std,
+            p_heat_max_kw=overrides.get("p_heat_max", DEFAULT_ARCHETYPE.p_heat_max_kw),
+            p_heat_fraction_min=(
+                1.0
+                if "p_heat_max" in overrides
+                else DEFAULT_ARCHETYPE.p_heat_fraction_min
+            ),
+        )
+    buildings = make_buildings(n_homes, seed=seed, archetype=archetype)
     base_setpoints = [b.zone_setpoints.copy() for b in buildings]
 
     generator = ParametricArxGenerator(random_seed=seed)
