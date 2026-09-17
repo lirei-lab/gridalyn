@@ -14,7 +14,11 @@ spreads each session evenly over the plugged window, which pre-flattens the
 peak a flexibility study is trying to measure.
 """
 
-from gridalyn.assets.datagen.agents.buildings import Building
+from gridalyn.assets.datagen.agents.buildings import (
+    DEFAULT_ARCHETYPE,
+    Building,
+    ThermalArchetype,
+)
 from gridalyn.assets.datagen.agents.dhw import (
     DHWDrawProfile,
     DHWTankParams,
@@ -33,10 +37,12 @@ from gridalyn.assets.datagen.agents.fleet import make_buildings, simulate_buildi
 __all__ = [
     "Building",
     "CHARGER_MIX_L2",
+    "DEFAULT_ARCHETYPE",
     "DHWDrawProfile",
     "DHWTankParams",
     "EVCharger",
     "L2_MID_KW",
+    "ThermalArchetype",
     "dhw_draw_profile",
     "make_buildings",
     "make_cold_coupled_ev_fleet",

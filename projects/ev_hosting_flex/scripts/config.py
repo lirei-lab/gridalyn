@@ -650,7 +650,9 @@ R_QUEBEC = _CONFIG["rQuebec"]
 """Recalibrated per-home thermal envelope resistance (°C/kW) of the SDK building
 agent for the Québec all-electric archetype (GEN-02; the LOCKED operating point).
 
-After ``make_buildings(n, seed)`` each ``Building.R`` is overridden to this value.
+``build_study_thermal_archetype`` below states this as the dwelling's envelope
+resistance, so ``make_buildings`` samples it rather than having it overwritten
+afterwards (bd irz).
 The SDK default (``R_MEAN ≈ 11``) under-loads the 7-home idx-62 unit to ~6.5 kW/
 home / ~60% of the 71.25 kW rating; ``R = 7.0`` lands the EV-free design-day base
 at **~8.4 kW/home coincident / ~82–87% of the 71.25 kW rating, firm=3**
@@ -664,11 +666,47 @@ P_HEAT_QUEBEC = _CONFIG["pHeatQuebec"]
 """Recalibrated per-home baseboard heating capacity (kW) of the SDK building agent
 (GEN-02; the LOCKED operating point).
 
-After ``make_buildings`` each ``Building.p_heat_max`` is overridden to this value
-(the SDK default ``P_HEAT_MAX_KW = 8.0`` under-sizes the all-electric Québec
-baseboard). Anchored to the Québec all-electric archetype (~13 kW installed
+``build_study_thermal_archetype`` below states this as the dwelling's installed
+capacity, so ``make_buildings`` samples it rather than having it overwritten
+afterwards (bd irz). The SDK default ``P_HEAT_MAX_KW = 8.0`` under-sizes the
+all-electric Québec baseboard. Anchored to the Québec all-electric archetype (~13 kW installed
 baseboard nameplate; HQ 10–15 kW/dwelling), it pairs with ``R_QUEBEC = 7.0`` to
 land the design-day base at the locked ~82–87% rating / firm=3 operating point."""
+
+
+def build_study_thermal_archetype():
+    """Return this study's dwelling population, as the SDK sampler takes it.
+
+    Until bd irz the study built its fleet with ``make_buildings`` and then
+    overwrote ``building.R`` and ``building.p_heat_max`` on every object,
+    because the SDK exposed no way to state an archetype. It does now, and this
+    is the single place the study says which dwelling it models.
+
+    Value-identical to the overwrite it replaces, by construction: ``r_std=0``
+    pins ``R`` at ``R_STUDY_B`` and ``p_heat_fraction_min=1.0`` pins
+    ``p_heat_max`` at ``P_HEAT_QUEBEC``, while each still consumes its draw in
+    the same order -- so ``C``, the background load, the occupancy offset and
+    the initial temperature are unchanged and no pin moves.
+
+    The SDK's own default archetype is energy-derived (``R_MEAN ≈ 11``, an 8 kW
+    baseboard) and under-loads a Québec all-electric dwelling; ``R_STUDY_B`` and
+    ``P_HEAT_QUEBEC`` above carry the recalibration and its evidence.
+
+    Returns:
+        A ``ThermalArchetype`` for ``make_buildings(archetype=...)``.
+    """
+    # Imported here, not at module scope: this module is the study's constant
+    # table and is imported by everything, including tooling with no reason to
+    # pull the SDK's agent stack.
+    from gridalyn.assets.datagen.agents import ThermalArchetype
+
+    return ThermalArchetype(
+        r_mean=R_STUDY_B,
+        r_std=0.0,
+        p_heat_max_kw=P_HEAT_QUEBEC,
+        p_heat_fraction_min=1.0,
+    )
+
 
 DESIGN_DAY_RES_MINUTES = _CONFIG["designDayResMinutes"]
 """Monte-Carlo aggregation resolution (minutes) for the design-day ensemble (GEN-01,
