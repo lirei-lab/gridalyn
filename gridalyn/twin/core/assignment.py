@@ -27,6 +27,17 @@ Two measured findings shape the API:
   flagship config. A penalty for leaving a cluster's dominant block recovers
   them (308 -> 197 at 0.005 km^2) while keeping 0 overloads. That is what
   ``block_ids`` and ``block_penalty_km2`` are for.
+
+  Those three figures are measured **at the sized capacity**,
+  ``ceil(3235 / 540)`` = 6, which is what this module uses when no limit is
+  declared. How hard the constraint pushes depends on it: re-measured
+  2026-09-17 at the flagship's declared limit of 10, the same metric reads 308
+  -> 308 without the penalty and 38 with it. Quote a figure with its capacity,
+  or two correct measurements read as a contradiction -- the flagship study's
+  ``CALIBRATION.md`` (2026-09-17) records both.
+  The metric throughout is *extra blocks per cluster*, summed over clusters
+  (distinct blocks touched, minus one), not misplaced customers, which run
+  about twice as high.
 """
 
 from __future__ import annotations

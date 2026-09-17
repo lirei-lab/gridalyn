@@ -968,6 +968,82 @@ a re-base. The slack at 1.04 pu is held flat across load levels, which is a
 conservative stand-in for a substation LTC: at 2% of design load the LV maximum
 reaches 1.0397 pu against CSA's 1.042, a 0.002 pu margin measured, not assumed.
 
+## Topology re-base: what each of the four changes contributed (2026-09-17) — NO value change
+
+The section above states that the per-stage attribution "was **not** measured —
+the four moved together in one run". It is measured now, and this section
+supersedes that sentence. No pin moves: every number below comes from builds
+made for this question alone, on the same committed footprints
+(`inputs/buildings.geojson`, 3235 dwellings) and the same declared config, one
+change at a time.
+
+**The four changes, measured separately.** Structural and static-solve figures
+at the declared envelope, 540 LV units:
+
+| Changed alone | LV conductor | Worst unit | Units over nameplate | LV buses < 0.95 pu | Minimum pu |
+|---|---|---|---|---|---|
+| *(baseline: K-means, on-building siting, slack 1.0)* | 68.6 km | 160 % | 113 | 2283 | 0.844 |
+| Capacity-limited partition (10 homes) | 68.6 km | **133 %** | 115 | 2308 | 0.852 |
+| Transformers on the street | **79.3 km** | 160 % | 113 | **3129** | **0.820** |
+| Block penalty (0.005 km², on top of the capacitated partition) | 65.3 km | 133 % | **130** | 2425 | 0.842 |
+| Slack declared at 1.04 pu | 68.6 km | 160 % | 113 | **361** | **0.893** |
+| *(all four, as shipped)* | 76.1 km | 133 % | 130 | 945 | 0.876 |
+
+Read as attribution:
+
+- **Street siting is what creates the undervoltage risk.** Alone it lengthens LV
+  conductor 15.6 % — the "about 15%" claimed above, now measured — and moves
+  more buses below 0.95 pu than any other change. The re-base's headline number
+  comes from here.
+- **The declared slack is the only change that improves voltage**, and it is the
+  largest single effect on this axis: 2283 → 361 buses below 0.95 pu. In the
+  shipped combination it offsets part of what the street conductor costs.
+- **The capacity limit fixes the tail, not the aggregate.** Worst unit 160 % →
+  133 % and the maximum cluster 12 → 10 homes, while units over nameplate barely
+  move (113 → 115): it redistributes load rather than removing it.
+- **The block penalty trades conductor for concentration:** 4.8 % shorter LV
+  network, but units over nameplate 115 → 130.
+
+**One of the four is not isolable, by construction.** A block penalty requires
+the capacitated partition — `block_penalty_km2` on plain K-means is refused with
+"K-means has no assignment step to add the penalty to" — so its row is an
+increment over the capacitated partition, not an independent contribution. The
+same guard refuses a declared customer limit without the capacitated partition.
+
+**Block coherence: both figures in this repository are right, at different
+capacities.** The metric is *extra blocks per cluster*, summed over clusters
+(distinct blocks a cluster touches, minus one) — not misplaced customers, which
+run about twice as high. Measured with the repository's own dominant-block rule
+(`gridalyn/twin/core/assignment.py`), over 108 blocks polygonized from the
+pinned `inputs/streets.geojson`, every building inside one:
+
+| Partition | Capacity | Extra blocks | Clusters in a single block |
+|---|---|---|---|
+| K-means | — | 308 | 244 of 540 |
+| Capacitated, no penalty | 10 (declared) | 308 | 244 |
+| Capacitated + penalty | 10 (declared) | **38** | **503** |
+| Capacitated, no penalty | 6 (sized) | 433 | 165 |
+| Capacitated + penalty | 6 (sized) | 197 | 358 |
+
+The section above cites 308 → 38 and 503 of 540; `assignment.py` cites 308 → 433
+→ 197. Both reproduce exactly. They differ because one measured at the limit the
+study declares (10 homes) and the other at the limit the transformer count was
+sized for (`ceil(3235 / 540)` = 6), and neither said which. The tighter capacity
+is what pushes customers across streets: at 6 the constraint alone raises extra
+blocks 308 → 433, at 10 it changes nothing.
+
+**Street siting does not affect block coherence at all** — the shipped
+combination and the same build without siting give identical figures (38 extra
+blocks, 503 single-block clusters). Siting moves the transformer onto the
+street; which block a *building* sits in is untouched.
+
+**Limits.** These are structural and static-solve measurements at the declared
+envelope, not the study's cold-day chain, so they attribute the *mechanism* and
+do not re-derive the pins in the section above — those still come from the one
+cold run recorded there. Per-variant builds are reproducible from the committed
+footprints and config; the harness is not committed, because it answers a
+question asked once.
+
 ## Sources
 
 - Hydro-Québec — winter grid-capacity / cold-day heating share (≈80 % of household electricity).
