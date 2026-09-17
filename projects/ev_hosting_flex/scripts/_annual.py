@@ -65,12 +65,10 @@ from projects.ev_hosting_flex.scripts.config import (
     EVENING_WINDOW_ANNUAL,
     FIRM_P95_LIMIT_PERCENT,
     HEATING_CONTROL,
-    P_HEAT_QUEBEC,
     PLUGIN_BASE,
     PLUGIN_KCOLD,
     PLUGIN_MAX,
     POWER_FACTOR,
-    R_STUDY_B,
     RAMP_HORIZON_YEARS,
     RAMP_MAX_EV_PER_HOME,
     RAMP_MIDPOINT_YEAR,
@@ -80,6 +78,7 @@ from projects.ev_hosting_flex.scripts.config import (
     TMY_INPUT_PATH,
     TRANSFORMER_KVA,
     TRIAGE_HOTSPOT_LIMIT_C,
+    build_study_thermal_archetype,
 )
 
 N_DAYS = CALENDAR_HOURS // 24
@@ -424,10 +423,11 @@ def annual_base_realization(
         temp = temp + np.repeat(offset, 24)[: len(temp)]
     temp_1min = temp.resample("1min").interpolate()
 
-    buildings = make_buildings(int(n_homes), seed=int(seed))
-    for building in buildings:
-        building.R = R_STUDY_B
-        building.p_heat_max = P_HEAT_QUEBEC
+    # Declared, not overwritten after construction (bd irz). Value-identical to
+    # the overwrite it replaces: the pinned parameters still consume their draw.
+    buildings = make_buildings(
+        int(n_homes), seed=int(seed), archetype=build_study_thermal_archetype()
+    )
     results = simulate_buildings(
         buildings,
         temp_1min,
@@ -502,10 +502,10 @@ def design_day_base_per_home(
     window = temp_hourly.iloc[start * 24 : (int(design_day_idx) + 1) * 24]
     window_1min = window.resample("1min").interpolate()
 
-    buildings = make_buildings(int(n_homes), seed=int(seed))
-    for building in buildings:
-        building.R = R_STUDY_B
-        building.p_heat_max = P_HEAT_QUEBEC
+    # Declared, not overwritten after construction (bd irz).
+    buildings = make_buildings(
+        int(n_homes), seed=int(seed), archetype=build_study_thermal_archetype()
+    )
     results = simulate_buildings(
         buildings,
         window_1min,

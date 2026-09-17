@@ -36,18 +36,31 @@ def evaluate(R: float, element: float, daily: float, bg_scale: float) -> dict:
     from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
 
     temp = load_annual_tmy()
-    b = make_buildings(NH, seed=cfg.SEED)
-    for x in b:
-        x.R = R
-        x.p_heat_max = cfg.P_HEAT_QUEBEC
+    # This probe sweeps R, so it states the swept value rather than the study's
+    # locked one; everything else matches build_study_thermal_archetype (bd irz).
+    from gridalyn.assets.datagen.agents import ThermalArchetype
+
+    b = make_buildings(
+        NH,
+        seed=cfg.SEED,
+        archetype=ThermalArchetype(
+            r_mean=R,
+            r_std=0.0,
+            p_heat_max_kw=cfg.P_HEAT_QUEBEC,
+            p_heat_fraction_min=1.0,
+        ),
+    )
     r = simulate_buildings(
         b, temp.resample("1min").interpolate(), burnin_hours=6, random_seed=cfg.SEED
     )
     heat = sum(r[u]["p_heat_kw"] for u in r).resample(f"{RES}min").mean().to_numpy()
     cool = sum(r[u]["p_cool_kw"] for u in r).resample(f"{RES}min").mean().to_numpy()
     bg = (
-        bg_scale * sum(r[u]["p_bg_kw"] for u in r)
-    ).resample(f"{RES}min").mean().to_numpy()
+        (bg_scale * sum(r[u]["p_bg_kw"] for u in r))
+        .resample(f"{RES}min")
+        .mean()
+        .to_numpy()
+    )
     n = 365 * SPD
     heat = np.pad(heat, (0, max(0, n - len(heat))), "edge")[:n]
     cool = np.pad(cool, (0, max(0, n - len(cool))), "edge")[:n]

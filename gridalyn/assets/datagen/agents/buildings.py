@@ -25,6 +25,19 @@ decision with regression-baseline risk for any study built on this module,
 out of scope for a coherence pass. If you are looking to change either
 model's capacity constants, check whether the other one should move too;
 if you are looking to unify them, that is a separate, deliberate phase.
+
+**The constants below are ONE archetype, not the only one (bd irz).** They are
+energy-derived for the Québec all-electric dwelling described above -- annual
+kWh and heating degree-days give ``R = 11`` -- which is a different question
+from the installed capacity a utility sizes for. A study calibrated to the
+nameplate instead (~13 kW of baseboard, and the lower envelope resistance that
+goes with it) reads roughly twice the per-dwelling peak, and the flagship study
+does exactly that: see its ``CALIBRATION.md``, which carries the evidence and
+names both. Such a caller states a :class:`ThermalArchetype` rather than
+overwriting attributes on constructed objects, which is what it had to do
+before that class existed. Neither calibration is wrong; they answer different
+questions, so a number quoted from either belongs with the archetype it came
+from.
 """
 
 from __future__ import annotations
@@ -92,17 +105,105 @@ DT_MIN = 1  # simulation time step in minutes
 DT_H = DT_MIN / 60.0
 
 
+@dataclass(frozen=True)
+class ThermalArchetype:
+    """The dwelling population a :class:`Building` is sampled from.
+
+    The constants above describe one archetype -- the Québec all-electric
+    dwelling this module derives in its header -- and were reachable only as
+    module globals, so a study calibrated to a different one had no way to say
+    so. ``ev_hosting_flex`` therefore built its fleet and then overwrote
+    ``building.R`` and ``building.p_heat_max`` on every object (bd irz). This
+    dataclass is the seam that removes the need to: a caller states the
+    archetype, and nothing is mutated after construction.
+
+    Defaults reproduce the module constants exactly, so an existing caller gets
+    the sampling it always had, draw for draw.
+
+    **A re-parameterised archetype consumes the same random draws in the same
+    order**, which is what makes it safe for a study with frozen baselines: the
+    number and sequence of ``rng`` calls in ``Building.__post_init__`` does not
+    depend on the values here. A fixed parameter is expressed as a zero-width
+    distribution -- ``r_std=0.0`` gives every dwelling ``r_mean`` while still
+    drawing once -- rather than by skipping a draw, which would shift every
+    later value and silently move a pin. The module's own zone sampling carries
+    the same warning below, for the same reason.
+
+    Attributes:
+        r_mean: Mean envelope thermal resistance (°C/kW).
+        r_std: Standard deviation of ``R``; ``0.0`` pins every dwelling.
+        c_mean: Mean air-node capacitance (kWh/°C).
+        c_std: Standard deviation of ``C``; ``0.0`` pins every dwelling.
+        p_heat_max_kw: Installed baseboard capacity (kW), the upper bound.
+        p_heat_fraction_min: Lower bound as a fraction of ``p_heat_max_kw``;
+            ``1.0`` pins every dwelling at the nameplate.
+        p_cool_max_kw: Installed cooling capacity (kW), the upper bound.
+        p_cool_fraction_min: Lower bound as a fraction of ``p_cool_max_kw``.
+        bg_mean_kw: Mean non-HVAC background load (kW).
+        bg_std_kw: Standard deviation of the background load (kW).
+        bg_std_spread_fraction: Spread of the per-dwelling ``bg_std`` draw,
+            as a fraction of ``bg_std_kw``.
+        floor_fraction: Lower clamp on ``R``, ``C`` and ``bg_mean``, as a
+            fraction of their means, so a tail draw cannot produce a dwelling
+            the RC model cannot integrate.
+    """
+
+    r_mean: float = R_MEAN
+    r_std: float = R_STD
+    c_mean: float = C_MEAN
+    c_std: float = C_STD
+    p_heat_max_kw: float = P_HEAT_MAX_KW
+    p_heat_fraction_min: float = 0.4
+    p_cool_max_kw: float = P_COOL_MAX_KW
+    p_cool_fraction_min: float = 0.4
+    bg_mean_kw: float = BG_MEAN_KW
+    bg_std_kw: float = BG_STD_KW
+    bg_std_spread_fraction: float = 0.1
+    floor_fraction: float = 0.3
+
+    def __post_init__(self) -> None:
+        """Refuse a parameter set the sampler cannot honour.
+
+        Raises:
+            ValueError: If a spread is negative or a bound fraction is outside
+                ``(0, 1]``, naming the field and the value.
+        """
+        for name in ("r_std", "c_std", "bg_std_kw", "bg_std_spread_fraction"):
+            value = float(getattr(self, name))
+            if value < 0.0:
+                raise ValueError(
+                    f"ThermalArchetype.{name} must be >= 0, found {value}; a "
+                    "standard deviation of 0 pins the parameter, a negative "
+                    "one has no meaning"
+                )
+        for name in ("p_heat_fraction_min", "p_cool_fraction_min", "floor_fraction"):
+            value = float(getattr(self, name))
+            if not 0.0 < value <= 1.0:
+                raise ValueError(
+                    f"ThermalArchetype.{name} must be in (0, 1], found {value}; "
+                    "it is a fraction of the capacity, and 1.0 pins every "
+                    "dwelling at it"
+                )
+
+
+#: The archetype the module's constants describe, used when none is stated.
+DEFAULT_ARCHETYPE = ThermalArchetype()
+
+
 @dataclass
 class Building:
     """
     A single residential dwelling.
 
     Parameters are randomly sampled at initialisation to create natural
-    diversity in the feeder population.
+    diversity in the feeder population. Which population they are sampled from
+    is :class:`ThermalArchetype`; the default reproduces this module's
+    constants.
     """
 
     unit_id: int
     rng: np.random.Generator = field(default_factory=lambda: np.random.default_rng())
+    archetype: ThermalArchetype = DEFAULT_ARCHETYPE
 
     # Physical parameters (sampled)
     R: float = field(init=False)  # °C/kW
@@ -117,17 +218,38 @@ class Building:
     heating_on: bool = False
 
     def __post_init__(self):
-        self.R = float(self.rng.normal(R_MEAN, R_STD))
-        self.C = float(self.rng.normal(C_MEAN, C_STD))
-        self.R = max(self.R, R_MEAN * 0.3)
-        self.C = max(self.C, C_MEAN * 0.3)
+        # Every draw below reads the archetype rather than the module constant,
+        # in the same order and count as before: the default archetype IS those
+        # constants, so an existing caller samples exactly what it always did.
+        archetype = self.archetype
+        self.R = float(self.rng.normal(archetype.r_mean, archetype.r_std))
+        self.C = float(self.rng.normal(archetype.c_mean, archetype.c_std))
+        self.R = max(self.R, archetype.r_mean * archetype.floor_fraction)
+        self.C = max(self.C, archetype.c_mean * archetype.floor_fraction)
         # Wide distribution of capacities
-        self.p_heat_max = float(self.rng.uniform(P_HEAT_MAX_KW * 0.4, P_HEAT_MAX_KW))
-        self.p_cool_max = float(self.rng.uniform(P_COOL_MAX_KW * 0.4, P_COOL_MAX_KW))
-        self.bg_mean = float(self.rng.normal(BG_MEAN_KW, BG_STD_KW))
-        self.bg_mean = max(self.bg_mean, BG_MEAN_KW * 0.3)
-        self.bg_std = float(self.rng.normal(BG_STD_KW, BG_STD_KW * 0.1))
-        self.bg_std = max(self.bg_std, BG_STD_KW * 0.3)
+        self.p_heat_max = float(
+            self.rng.uniform(
+                archetype.p_heat_max_kw * archetype.p_heat_fraction_min,
+                archetype.p_heat_max_kw,
+            )
+        )
+        self.p_cool_max = float(
+            self.rng.uniform(
+                archetype.p_cool_max_kw * archetype.p_cool_fraction_min,
+                archetype.p_cool_max_kw,
+            )
+        )
+        self.bg_mean = float(self.rng.normal(archetype.bg_mean_kw, archetype.bg_std_kw))
+        self.bg_mean = max(
+            self.bg_mean, archetype.bg_mean_kw * archetype.floor_fraction
+        )
+        self.bg_std = float(
+            self.rng.normal(
+                archetype.bg_std_kw,
+                archetype.bg_std_kw * archetype.bg_std_spread_fraction,
+            )
+        )
+        self.bg_std = max(self.bg_std, archetype.bg_std_kw * archetype.floor_fraction)
         self.occupancy_offset_min = int(self.rng.integers(-30, 31))
         # Initial conditions: spread broadly so thermostat phases are uncorrelated
         # T_in sampled from [T_off - 3°C, T_off + 3°C] around setpoint

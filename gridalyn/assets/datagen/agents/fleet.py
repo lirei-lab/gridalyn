@@ -1,13 +1,31 @@
 import numpy as np
 import pandas as pd
 
-from gridalyn.assets.datagen.agents.buildings import Building
+from gridalyn.assets.datagen.agents.buildings import (
+    DEFAULT_ARCHETYPE,
+    Building,
+    ThermalArchetype,
+)
 
 
-def make_buildings(n: int, seed: int = 0) -> list[Building]:
-    """Construct n Building objects with reproducible diversity."""
+def make_buildings(
+    n: int, seed: int = 0, archetype: ThermalArchetype = DEFAULT_ARCHETYPE
+) -> list[Building]:
+    """Construct n Building objects with reproducible diversity.
+
+    Args:
+        n: Number of dwellings.
+        seed: Base seed; dwelling ``i`` draws from ``seed + i``.
+        archetype: The population to sample from. Defaults to the module
+            constants, which is what every caller got before the archetype
+            existed (bd irz); a study calibrated to a different dwelling states
+            it here instead of overwriting attributes afterwards.
+
+    Returns:
+        The constructed dwellings, in unit-id order.
+    """
     rngs = [np.random.default_rng(seed + i) for i in range(n)]
-    return [Building(unit_id=i, rng=rngs[i]) for i in range(n)]
+    return [Building(unit_id=i, rng=rngs[i], archetype=archetype) for i in range(n)]
 
 
 def simulate_buildings(
