@@ -22,9 +22,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gridalyn.assets.datagen.agents import DEFAULT_ARCHETYPE, Building, ThermalArchetype
+from gridalyn.assets.datagen.agents import (
+    DEFAULT_ARCHETYPE,
+    QUEBEC_ALL_ELECTRIC,
+    Building,
+    ThermalArchetype,
+)
 from gridalyn.assets.datagen.agents import buildings as building_module
 from gridalyn.assets.datagen.agents import make_buildings
+from gridalyn.assets.datagen.api import generate_residential_load_profiles
 from gridalyn.assets.datagen.core import GridLoadFacade
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -163,6 +169,95 @@ class ArchetypeValidationTest(unittest.TestCase):
     def test_a_zero_fraction_is_refused(self):
         with self.assertRaises(ValueError):
             ThermalArchetype(floor_fraction=0.0)
+
+
+class PackagedQuebecArchetypeTest(unittest.TestCase):
+    """The named archetype the in-package consumers state.
+
+    It exists because the twin and the Monte-Carlo runner live inside this
+    package and cannot read a study's ``project.yaml``; the two studies that
+    carry this calibration keep declaring it in their own contracts, and those
+    values must not drift from this one.
+    """
+
+    def test_it_carries_the_installed_capacity_calibration(self):
+        self.assertEqual(QUEBEC_ALL_ELECTRIC.r_mean, 7.5)
+        self.assertEqual(QUEBEC_ALL_ELECTRIC.p_heat_max_kw, 13.0)
+
+    def test_it_pins_rather_than_spreads(self):
+        """Every dwelling gets the stated envelope and nameplate."""
+        self.assertEqual(QUEBEC_ALL_ELECTRIC.r_std, 0.0)
+        self.assertEqual(QUEBEC_ALL_ELECTRIC.p_heat_fraction_min, 1.0)
+
+        for building in make_buildings(8, seed=3, archetype=QUEBEC_ALL_ELECTRIC):
+            with self.subTest(unit_id=building.unit_id):
+                self.assertEqual(building.R, 7.5)
+                self.assertEqual(building.p_heat_max, 13.0)
+
+    def test_the_default_is_still_the_energy_derived_archetype(self):
+        """Adopting it elsewhere must not have changed what an unstated call gets."""
+        self.assertNotEqual(DEFAULT_ARCHETYPE.r_mean, QUEBEC_ALL_ELECTRIC.r_mean)
+        self.assertEqual(DEFAULT_ARCHETYPE.r_mean, building_module.R_MEAN)
+
+    def test_it_draws_roughly_twice_the_peak_of_the_default(self):
+        """The difference that makes the adoption a re-base, not a refactor."""
+        index = pd.date_range("2024-01-01", periods=240, freq="1min")
+        weather = pd.Series(np.full(len(index), -20.0), index=index)
+
+        default_heat, _ = GridLoadFacade.generate_loads(
+            "thermodynamic", weather, n_houses=6, resolution_minutes=15, seed=5
+        )
+        quebec_heat, _ = GridLoadFacade.generate_loads(
+            "thermodynamic",
+            weather,
+            n_houses=6,
+            resolution_minutes=15,
+            seed=5,
+            archetype=QUEBEC_ALL_ELECTRIC,
+        )
+
+        self.assertGreater(
+            quebec_heat.sum(axis=1).max(), default_heat.sum(axis=1).max()
+        )
+
+
+class PublicEntryPassesTheArchetypeThroughTest(unittest.TestCase):
+    """``generate_residential_load_profiles`` is the documented way in."""
+
+    def test_the_parametric_engine_refuses_one_through_the_public_entry(self):
+        with self.assertRaises(ValueError) as caught:
+            generate_residential_load_profiles(
+                n_units=2,
+                day="cold",
+                resolution_minutes=60,
+                seed=1,
+                generator="parametric",
+                weather="synthetic",
+                archetype=QUEBEC_ALL_ELECTRIC,
+            )
+        self.assertIn("thermodynamic", str(caught.exception))
+
+    def test_stating_the_archetype_changes_the_profile(self):
+        default = generate_residential_load_profiles(
+            n_units=4,
+            day="cold",
+            resolution_minutes=60,
+            seed=1,
+            generator="thermodynamic",
+            weather="synthetic",
+        )
+        quebec = generate_residential_load_profiles(
+            n_units=4,
+            day="cold",
+            resolution_minutes=60,
+            seed=1,
+            generator="thermodynamic",
+            weather="synthetic",
+            archetype=QUEBEC_ALL_ELECTRIC,
+        )
+
+        self.assertEqual(default.shape, quebec.shape)
+        self.assertGreater(quebec.sum(axis=1).max(), default.sum(axis=1).max())
 
 
 class FacadeRoutingTest(unittest.TestCase):

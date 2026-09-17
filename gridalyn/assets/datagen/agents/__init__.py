@@ -16,6 +16,7 @@ peak a flexibility study is trying to measure.
 
 from gridalyn.assets.datagen.agents.buildings import (
     DEFAULT_ARCHETYPE,
+    QUEBEC_ALL_ELECTRIC,
     Building,
     ThermalArchetype,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "DHWTankParams",
     "EVCharger",
     "L2_MID_KW",
+    "QUEBEC_ALL_ELECTRIC",
     "ThermalArchetype",
     "dhw_draw_profile",
     "make_buildings",

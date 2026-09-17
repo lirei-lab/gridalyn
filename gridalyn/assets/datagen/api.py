@@ -18,7 +18,7 @@ magnitude anchoring (peaks, totals) stays an explicit, declared decision.
 
 from __future__ import annotations
 
-from typing import Literal, Mapping
+from typing import Any, Literal, Mapping
 
 import numpy as np
 import pandas as pd
@@ -30,7 +30,6 @@ from gridalyn.assets.datagen.data.weather import (
     select_cold_day,
     select_peak_load_day,
 )
-
 
 DayKind = Literal["peak", "cold"]
 
@@ -44,12 +43,20 @@ def generate_residential_load_profiles(
     seed: int = 42,
     generator: LoadGeneratorType = "parametric",
     weather: WeatherSource = "auto",
+    archetype: Any | None = None,
 ) -> pd.DataFrame:
     """Generate per-unit residential load profiles for one study day.
 
     Returns a DataFrame in kilowatts with shape ``(time_steps, n_units)``,
     columns ``unit_000 ...``, and a DatetimeIndex at ``resolution_minutes``.
     Deterministic for a fixed ``seed`` when ``weather="synthetic"``.
+
+    ``archetype`` states the dwelling population for the ``thermodynamic``
+    engine -- a
+    :class:`~gridalyn.assets.datagen.agents.ThermalArchetype`, such as the
+    packaged ``QUEBEC_ALL_ELECTRIC``. ``None`` keeps the engine's own default
+    population. The ``parametric`` engine refuses one: it is a trained
+    macro-shape model with no envelope to re-parameterise.
     """
     if day == "peak":
         window = select_peak_load_day(
@@ -69,9 +76,12 @@ def generate_residential_load_profiles(
         n_houses=n_units,
         resolution_minutes=resolution_minutes,
         seed=seed,
+        archetype=archetype,
     )
     total_kw = heat_kw + bg_kw
-    index = temperature.resample(f"{resolution_minutes}min").mean().index[: len(total_kw)]
+    index = (
+        temperature.resample(f"{resolution_minutes}min").mean().index[: len(total_kw)]
+    )
     return pd.DataFrame(
         total_kw,
         index=index,
@@ -195,8 +205,7 @@ def coincident_peak_loads_mw(
         raise ValueError("generated profiles have no positive coincident load")
     anchor_total_mw = float(sum(anchor_loads_mw.values()))
     return {
-        int(key): float(peak_row[key]) * (anchor_total_mw / total_kw)
-        for key in keys
+        int(key): float(peak_row[key]) * (anchor_total_mw / total_kw) for key in keys
     }
 
 

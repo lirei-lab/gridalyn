@@ -189,6 +189,32 @@ class ThermalArchetype:
 #: The archetype the module's constants describe, used when none is stated.
 DEFAULT_ARCHETYPE = ThermalArchetype()
 
+#: The Québec all-electric dwelling as its INSTALLED CAPACITY, not its energy.
+#:
+#: The default above is derived from annual consumption -- degree-days over
+#: heating kWh give ``R = 11`` -- and answers "what does this dwelling use in a
+#: year?". This one is derived from what a utility sizes for: ~13 kW of
+#: installed baseboard (PMC/NCBI PMC11534675; Hydro-Québec 10-15 kW per
+#: dwelling) and the lower envelope resistance that goes with it. On the same
+#: feeder the two differ by roughly a factor of two in per-dwelling peak, which
+#: is why a figure quoted from either belongs with the archetype it came from.
+#:
+#: Both studies that carry a Québec calibration declare exactly these values in
+#: their own ``project.yaml`` (7.5 °C/kW, 13.0 kW), and they keep doing so --
+#: a study's contract is its own file, not this constant. This exists for
+#: consumers INSIDE this package, which cannot read a study's configuration:
+#: the digital twin's power flow and the Monte-Carlo runner.
+#:
+#: Stating it here does not make this module "calibrated to a territory": the
+#: default is unchanged, and a caller that says nothing still samples the
+#: energy-derived population.
+QUEBEC_ALL_ELECTRIC = ThermalArchetype(
+    r_mean=7.5,
+    r_std=0.0,
+    p_heat_max_kw=13.0,
+    p_heat_fraction_min=1.0,
+)
+
 
 @dataclass
 class Building:

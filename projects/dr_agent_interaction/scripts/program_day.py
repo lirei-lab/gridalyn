@@ -120,7 +120,15 @@ class Home:
 
 
 def build_homes(count: int, seed: int) -> list[Home]:
-    """Build ``count`` homes, reproducibly from ``seed``."""
+    """Build ``count`` homes, reproducibly from ``seed``.
+
+    These stay on the engine's default archetype while the rest of the tree
+    adopts the Québec one (bd irz follow-up): measured 2026-09-17, adopting it
+    here takes the program peak from 152 to 263 kW against a baseline of 192,
+    so this study's own ``dr_event_peak_reduced`` check fails -- its event
+    thresholds and curtailment sizing were tuned to the lighter dwelling.
+    Re-tuning them is a modelling change, not a calibration swap.
+    """
     buildings = make_buildings(count, seed=seed)
     return [
         Home(

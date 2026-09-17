@@ -17,18 +17,31 @@ def main() -> None:
     )
     temperature = window["temp_air"]
     # The SDK agent is driven directly rather than through GridLoadFacade: the
-    # facade takes no calibration overrides and integrates at the output
-    # resolution, while the Québec operating point needs the envelope/capacity
-    # overrides and a 1-min integration (latching thermostats resolved at
-    # 15 min would smear their cycling into the very average they should break).
-    from gridalyn.assets.datagen.agents import make_buildings, simulate_buildings
+    # facade integrates at the output resolution, while this study needs a 1-min
+    # integration (latching thermostats resolved at 15 min would smear their
+    # cycling into the very average they should break).
+    from gridalyn.assets.datagen.agents import (
+        ThermalArchetype,
+        make_buildings,
+        simulate_buildings,
+    )
     from gridalyn.assets.datagen.agents.dhw import make_dhw_tank_fleet
 
     minutely = temperature.resample("1min").interpolate()
-    buildings = make_buildings(C.N_AGENTS, seed=C.SEED)
-    for building in buildings:
-        building.R = C.R_STUDY_B
-        building.p_heat_max = C.P_HEAT_QUEBEC
+    # Declared, not overwritten after construction (bd irz). Value-identical to
+    # the overwrite it replaces: a zero-width distribution pins the parameter
+    # while still consuming its draw, so every other sampled value is unchanged.
+    # The values stay this study's own, from its project.yaml.
+    buildings = make_buildings(
+        C.N_AGENTS,
+        seed=C.SEED,
+        archetype=ThermalArchetype(
+            r_mean=C.R_STUDY_B,
+            r_std=0.0,
+            p_heat_max_kw=C.P_HEAT_QUEBEC,
+            p_heat_fraction_min=1.0,
+        ),
+    )
     results = simulate_buildings(
         buildings, minutely, random_seed=C.SEED, control=C.HEATING_CONTROL
     )
