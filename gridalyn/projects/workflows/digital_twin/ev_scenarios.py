@@ -57,13 +57,25 @@ def _scenario_ev_count(n_buildings: int, penetration_pct: int) -> int:
 
 
 def generate_ev_scenarios(
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     out_dir: Path,
     config_path: Path,
     assignment_seed: int | None,
     charger_kw: float,
     c_soft_fraction: float,
 ) -> None:
+    """Write the EV adoption scenarios a study's timeseries stage then reads.
+
+    Args:
+        base_dir: The instance's canonical base-artifact directory, read for the
+            network model, its integrity and its ``metadata.json``.
+        out_dir: Directory the scenario tables are written to.
+        config_path: JSON config declaring the adoption grid and charger mix.
+        assignment_seed: Seed for the EV-to-building assignment; ``None`` takes
+            the seed the config declares.
+        charger_kw: Charger rating in kW.
+        c_soft_fraction: Fraction of chargers enrolled as soft-controllable.
+    """
     metadata_path = base_dir / "metadata.json"
     repo = NetworkModelRepository.from_parquet(base_dir)
     validation = repo.validate_integrity()

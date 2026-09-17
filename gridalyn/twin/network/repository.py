@@ -236,7 +236,7 @@ class NetworkModelRepository:
     @classmethod
     def from_parquet(
         cls,
-        base_dir: BaseArtifactDir | Path | str,
+        base_dir: BaseArtifactDir,
         *,
         provenance: ProvenancePolicy = "warn",
         operational_state: OperationalState | None = None,
@@ -245,10 +245,11 @@ class NetworkModelRepository:
 
         Args:
             base_dir: The instance's canonical base-artifact directory. The
-                field it fills is typed; this constructor still accepts any
-                path-like, so callers that hold a plain ``Path`` keep working.
-                Narrowing it waits for the workflow signatures that still
-                declare ``base_dir: Path`` (bd 6ns.1).
+                annotation requires the type, so mypy rejects a project
+                directory or a workspace root here -- the swap bd 7rt made. The
+                body still passes the value through ``Path``, so a caller
+                holding a plain ``Path`` or a ``str`` keeps working at run
+                time; what tightened is what type-checks, where mypy looks.
             provenance: What to do when the manifest is absent, as on the class.
             operational_state: Overrides the state the manifest declares.
 

@@ -36,11 +36,23 @@ def _relpath(path: Path) -> str:
 
 def generate_flexibility_provider_artifacts(
     *,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     scenario_dir: Path,
     models_dir: Path,
     out_dir: Path,
 ) -> dict:
+    """Build the flexibility provider registry the clearing stages consume.
+
+    Args:
+        base_dir: The instance's canonical base-artifact directory, read for the
+            network model and its connectivity.
+        scenario_dir: Directory holding the scenario asset registry.
+        models_dir: Directory holding the per-scenario device registries.
+        out_dir: Directory the provider artifacts are written to.
+
+    Returns:
+        The summary payload the caller writes alongside the artifacts.
+    """
     asset_registry = pd.read_parquet(scenario_dir / "asset_registry.parquet")
     network_repository = NetworkModelRepository.from_parquet(base_dir)
     validation = network_repository.validate_integrity()

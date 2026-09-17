@@ -65,7 +65,7 @@ def _relpath(path: Path, root: Path) -> str:
 def generate_semantic_graph(
     *,
     profile: str,
-    base_dir: Path,
+    base_dir: BaseArtifactDir,
     scenario_dir: Path,
     flexibility_dir: Path,
     timeseries_dir: Path,
@@ -74,6 +74,25 @@ def generate_semantic_graph(
     capabilities: set[str] | None = None,
     interaction_log_path: Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Project the twin and its declared capabilities onto the semantic graph.
+
+    Args:
+        profile: Semantic profile id; an unknown one raises, naming the known set.
+        base_dir: The instance's canonical base-artifact directory, read for the
+            network model the graph describes.
+        scenario_dir: Directory holding the scenario tables.
+        flexibility_dir: Directory holding the flexibility artifacts.
+        timeseries_dir: Directory holding the per-scenario timeseries.
+        out_dir: Directory the graph tables and manifest are written to.
+        root: Workspace root that recorded paths are relative to; discovered
+            from ``out_dir`` when unset.
+        capabilities: Declared capability names; ``None`` keeps the legacy
+            flexibility default, and an unregistered name raises.
+        interaction_log_path: Message log an agent-interaction capability reads.
+
+    Returns:
+        The node and edge frames, and the manifest payload.
+    """
     if profile not in SEMANTIC_PROFILE_IDS:
         raise ValueError(
             f"unknown semantic profile {profile!r} "
@@ -83,7 +102,7 @@ def generate_semantic_graph(
     # an explicit set is the model-first declared-capability contract, and an
     # unregistered capability name raises when the graph is built.
     capabilities = resolve_declared_capabilities(capabilities)
-    base_dir = base_dir.resolve()
+    base_dir = BaseArtifactDir(base_dir.resolve())
     scenario_dir = scenario_dir.resolve()
     flexibility_dir = flexibility_dir.resolve()
     timeseries_dir = timeseries_dir.resolve()
