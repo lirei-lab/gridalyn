@@ -30,18 +30,18 @@
     },
     "flagship-reproduce": {
       "status": "recorded",
-      "command": "python tools/flagship_verify.py -- see docs/development/verification.md; the shape-covering staged-regeneration protocol.",
-      "commit": "6ea8a92a8c76305c06ac4478712d55565f1b8b6c",
-      "recorded_on": "2026-08-06",
-      "result": "Shape-covering subset executed at 6ea8a92a: 22 stages, 2 ran OK (prepare_workspace ok 0.39s; prepare_topology_cache ok 3.1s), 20 skipped (1 heavy + dependents); R7 baselines PASS (byte-identical).",
-      "evidence": "Per-stage records: /tmp/flagship_subset_stages.json sha256 d1c89581446844ef3717e3813205e620973f9827ec66ce1a1d030195fbcb9183 (embedded on the flagship-subset receipt stages). Full ~6 h regeneration remains operator-scheduled.",
+      "command": "PYTHONPATH=<worktree> .venv/bin/python -m gridalyn.interfaces.cli.project run projects/ev_hosting_flex -- the FULL cold regeneration, 25 stages, no stage filter, in a dedicated worktree so nothing else on the machine could touch it.",
+      "commit": "9781415ddc041262e259483d446f7706933f8b0b",
+      "recorded_on": "2026-09-16",
+      "result": "25/25 stages completed, manifest status 'completed', 2026-09-15T19:02:09Z to 2026-09-15T22:26:04Z (3 h 24 min). This run IS the topology re-base of bd 4os.7/4os.14: regression moved 42 of 94 pins, which were re-based against it and then verified 94/94 valid; the flagship sweep passed 157; sense-check valid at score 1.0. The rationale and limits are the dated section in projects/ev_hosting_flex/CALIBRATION.md, the digest is in baselines/REBASE_LOG.md.",
+      "evidence": "Run manifest outputs/manifests/project_run_manifest.json sha256 3219eca751932e6f50d4e799e66e7e4b1b39d1b7d55537f3e0ae346051241b72, carrying per-stage status, timings, git_commit 6de591bd (the branch commit that ran, squash-merged as 9781415d) and the provenance block. Outputs snapshotted outside the repository at /home/lirei-lenovo/lirei/flagship-snapshots/rebase-6de591bd-20260915 (66 MB) before any further run.",
       "watched": [
         "gridalyn/assets/datagen",
         "gridalyn/simulation",
         "projects/ev_hosting_flex",
         "tools/flagship_verify.py"
       ],
-      "rationale": "Recorded: the flagship is now SOURCE-proven by protocol via the executed shape-covering subset, replacing the cache-only proof (ledger #17). The subset runs the non-heavy stages end-to-end and reports the R7 baseline check; the full ~6 h regeneration remains operator-scheduled."
+      "rationale": "Recorded: the full ~6 h regeneration CI cannot host was actually run, cold, from committed code, and its numbers are what the study now pins. It replaces the shape-covering subset as this protocol's evidence. Limit: one run proves the pipeline reproduces itself end to end at this commit; it does not attribute each moved pin to each model change, since the four changes of the re-base moved together."
     },
     "flagship-subset": {
       "status": "recorded",
