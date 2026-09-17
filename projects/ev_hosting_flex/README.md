@@ -159,9 +159,9 @@ rationale, is in `projects/ev_hosting_flex/CALIBRATION.md`.
 ### Reproducing it
 
 The study is heavy — the annual Monte-Carlo base and the AC power-flow stages
-are the multi-hour core of the roughly six-hour full regeneration, so it is
-**not** executed in CI. Its regression baseline is **operator-verified** (a
-shape-covering subset runs the non-heavy stages via
+are the multi-hour core of the full regeneration (3 h 24 min cold, measured
+2026-09-15), so it is **not** executed in CI. Its regression baseline is
+**operator-verified** (a shape-covering subset runs the non-heavy stages via
 `tools/flagship_verify.py`; the full regeneration is scheduled and recorded in
 the verification receipts). Since Phase 20 the stages are invoked as
 interpreter-bound modules (module identity for the pickled caches):
