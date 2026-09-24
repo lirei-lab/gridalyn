@@ -107,9 +107,12 @@ are drawn per dwelling so that a fleet has realistic diversity.
   number. Every shipped archetype keeps `0.0`, which is bit-identical to the
   model without sun. Against the metered homes, 2 m² with `R` 5.5 flattens
   the October–April monthly bias from −2.3 % … +4.7 % to −0.6 % … +0.5 %.
-  It also reproduces the measured midday heating dip. The study adoption is
-  tracked separately, so the figures above still describe `QUEBEC_ALL_ELECTRIC`
-  as shipped. Irradiance must share the temperature series' index, and each
+  It also reproduces the measured midday heating dip. `ev_hosting_flex`
+  adopts that pair together with its water-heater recalibration.
+  `QUEBEC_ALL_ELECTRIC` keeps `R` 5.7 with no aperture, because its callers
+  pass no irradiance, and without sun the lower `R` would overheat. The
+  synthetic weather source carries zero irradiance, so studies on it keep the
+  no-sun pair too. Irradiance must share the temperature series' index, and each
   value must sit at its own timestamp. The committed study TMY labels hour
   means at their start, and the HQ export labels them at their end, so both
   need centring first (`load_annual_tmy_ghi`, `tools/fit_dwelling_year.py`).
