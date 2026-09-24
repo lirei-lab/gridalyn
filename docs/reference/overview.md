@@ -1,0 +1,37 @@
+# Reference
+
+Reference pages define stable contracts. They are not tutorials. Use them when
+you already know what you want to do and need the exact command, schema,
+artifact rule, or validation behavior.
+
+## Reference Index
+
+| Page | Use it for |
+| --- | --- |
+| [CLI Reference](cli.md) | Canonical `gridalyn` commands and command groups. |
+| [Python API Reference](python-api.md) | Auto-generated docstring reference for the seven layer facades. |
+| [Project And Workflow YAML](workflow-yaml.md) | Every field of `project.yaml` (`StudyProject`) and `workflow.yaml` (`Workflow`), generated from their JSON Schemas; path rules and the stage graph. |
+| [Report And Run-Manifest Schema](report-schema.md) | The platform report, run manifest, regression baseline and regression report formats. |
+| [Semantic Model And Graph](semantic-graph.md) | Node/edge schema, ontology profile, query API, graph artifacts, and the Cypher export for a graph database. |
+| [Digital-Twin Vocabulary](./ontology/digital-twin.md) | Terms of gridalyn's `dt:` vocabulary, generated from its declarations. |
+| [Flexint Vocabulary](./ontology/flexint.md) | Terms of gridalyn's `flexint:` vocabulary, generated from its declarations. |
+| [Standards Alignment](standards-alignment.md) | Verified identifiers, versions and term spellings of the standards the semantic profile names, and where the profile disagrees. |
+| [Artifact Policy](artifact-policy.md) | What can be committed, generated, ignored, or published. |
+| [Glossary](glossary.md) | One-line definitions of the terms the rest of the site uses without redefining. |
+
+## Contract Style
+
+Reference pages should answer:
+
+- what the contract is called;
+- which file, command, or API owns it;
+- which inputs are required;
+- which outputs are produced;
+- how to validate it;
+- what should remain stable for users.
+
+Explanatory background belongs in [Components](../components/overview.md).
+Step-by-step instructions belong in [Start](../start/quickstart.md) or
+[Guides](../guides/overview.md). The ladder of checks a project passes, from
+`validate` to `verify-all`, is in
+[Testing And Validation](../contributing/testing-and-validation.md).
