@@ -650,6 +650,7 @@ Passed through to `gridalyn.projects.workflows.scripts.generate_locational_flexi
 | `--clearing-method` | one of `surrogate`, `topology` | `surrogate` |  |
 | `--constraint-id` | text, repeatable |  |  |
 | `--top-constraints` | int | `3` |  |
+| `--instance` | text | `default` | Named twin instance (default: GRIDALYN_INSTANCE or 'default'). |
 
 #### `gridalyn market network-impact-catalog`
 

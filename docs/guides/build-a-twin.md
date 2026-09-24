@@ -154,9 +154,11 @@ uv run gridalyn twin build --dry-run --skip-heavy --root /tmp/twin-plan
 ```
 
 It prints the planned steps and writes nothing; add `--manifest <path>` to keep
-the plan as a file. `--skip-heavy` drops the EV power-flow step, `--instance`
-selects another instance, and `--capabilities` names the capability layers to
-include.
+the plan as a file. `--skip-heavy` drops the EV power-flow step and every step
+that reads its output (the transformer overload report, locational clearing
+and the dashboard catalog), and the build manifest lists each of them as
+`skipped` with the reason. `--instance` selects another instance, and
+`--capabilities` names the capability layers to include.
 
 !!! warning "A full build rewrites tracked files"
     Without `--dry-run`, `twin build` writes the build manifest
