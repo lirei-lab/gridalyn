@@ -34,6 +34,7 @@ minutes; the third is the studies that take hours.
 
 | Study | Run time | Tier | Extras | What it is |
 | --- | --- | --- | --- | --- |
+| `cold_load_pickup_feeder` | seconds | CI fixture | none | Forty-eight Québec all-electric homes lose power for four hours at -25 °C; the study re-energises their feeder all at once and section by section, and reports transformer loading, feeder-head demand and voltage against the same evening without the outage. |
 | `der_voltage_optimization` | seconds | CI fixture | `ops`, `sim` | Small synthetic feeder with Gridalyn DER dispatch and physical voltage verification. |
 | `dr_agent_interaction` | seconds | CI fixture | none | Twenty Québec all-electric homes answer a day of OpenADR 3.1.0 demand-response events over a lossy channel, through the dr_program protocol. |
 | `flex_trading_congestion` | seconds | CI fixture | none | A distribution operator buys battery flexibility over UFTP to hold a feeder-head import limit, over a lossy channel, with and without order acknowledgements. |

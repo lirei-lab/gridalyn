@@ -141,7 +141,16 @@ are drawn per dwelling so that a fleet has realistic diversity.
   pickup peak in kW is set by installed capacity, so the ratio to normal load
   rises as the weather warms — 1.6 at −25 °C, 2.3 at −10 °C, 3.2 at 0 °C for
   groups of 60 on the Québec dwelling with its mass — and a transformer should
-  be judged on the kW, not the ratio.
+  be judged on the kW, not the ratio. A feeder restored in stages is one
+  window per section: `generate_restoration_fleet`
+  (`gridalyn.assets.datagen.agents.restoration`) runs each section through its
+  own window from the same dwellings, seeds and appliance background, so a
+  staged restoration, a simultaneous one and the no-outage reference differ by
+  their windows alone. The `cold_load_pickup_feeder` study (see
+  [The Studies](../start/studies.md)) solves that through a feeder of 75 kVA
+  transformers: after 4 hours at −25 °C every transformer runs near 130 % of
+  nameplate for hours, and staging trims the feeder-head peak but not the
+  transformers' — each is switched back with all its homes at once.
 - **Other agents** — `make_dhw_tank_fleet` generates thermostatic electric
   hot-water tanks with staggered reheats; `make_cold_coupled_ev_fleet`
   generates EV charging load; `EVCharger` is a stateful *actuator* for

@@ -73,7 +73,7 @@ done
 for study in minimal_grid_project synthetic_geojson_feeder ieee_33_bus_demo \
              der_voltage_optimization prosumer_battery_market \
              rl_voltage_control_lightsim dr_agent_interaction \
-             flex_trading_congestion; do
+             flex_trading_congestion cold_load_pickup_feeder; do
   "$PY" -m gridalyn.interfaces.cli.project run        "projects/${study}"
   "$PY" -m gridalyn.interfaces.cli.project regression "projects/${study}"
 done
