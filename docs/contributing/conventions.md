@@ -15,9 +15,9 @@ Two of these are gated by tests rather than by review: verb prefixes
 The public SDK uses verb prefixes consistently. Knowing them makes the API
 predictable without reading source code.
 
-The table below describes the verbs the SDK **actually uses**, not an aspiration
-for it. `tools/verb_prefixes.py` measures the gap: it reads the prefixes out of
-this page, AST-scans every public module-level function under `gridalyn/`, and
+The table below describes the verbs the SDK uses, not an aspiration for it.
+`tools/verb_prefixes.py` measures the gap: it reads the prefixes out of this
+page, AST-scans every public module-level function under `gridalyn/`, and
 reports the compliance rate. Run it before adding a verb:
 
 ```bash
@@ -27,7 +27,7 @@ python tools/verb_prefixes.py --check  # fail if an undocumented verb is establi
 
 `--check` fails once an undocumented prefix reaches three public functions,
 because at that point it is a verb the SDK uses and this page does not
-acknowledge. An ignored convention stops being one.
+acknowledge.
 
 ## Reading and constructing
 
@@ -249,8 +249,8 @@ turns every lazily resolved name into `object` for its callers.
 
 The map is a means, not the rule. Many `__init__.py` files carry no map and
 are correct, because nothing they import reaches an optional module. Add a map
-when a package needs one — it reaches an optional dependency, or deferring its
-import cost is worth it — not as a style sweep. Where an optional dependency is
+when a package needs one (it reaches an optional dependency, or deferring its
+import cost is worth it), not as a style sweep. Where an optional dependency is
 needed at run time, call `require_capabilities(..., context=...)` first; it
 raises `MissingCapabilityError` with an install hint instead of an
 `ImportError`. Never wrap an optional import in a bare `try`/`except
@@ -272,6 +272,6 @@ An error says **where** it happened and **what would fix it**. A bare
 | Leave a durable trace | a failed stage is marked `failed` in the run manifest with its exit code, and the runner prints `Inspect the run manifest: <path>` before re-raising |
 
 Use `ValueError` for contract violations, `FileNotFoundError` for missing
-paths, `KeyError` only for a genuinely unknown lookup key, and
+paths, `KeyError` only for an unknown lookup key, and
 `MissingCapabilityError` for a missing optional dependency. Do not invent
 per-module exception types for input validation.

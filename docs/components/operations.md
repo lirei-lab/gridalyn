@@ -5,7 +5,7 @@
 `simulation` tells you whether the network holds up physically, including how
 much headroom it has left. `operations` answers the economic question sitting
 on top of that: which flexibility providers get called on, at what price, to
-relieve a constraint — and how the result is dispatched, settled, scored and
+relieve a constraint, and how the result is dispatched, settled, scored and
 checked afterward. Providers, aggregators, locational clearing, dispatch,
 settlement, KPIs and the messages agents exchange are a platform layer here,
 reused by every study that needs a market rather than rewritten per study.
@@ -50,8 +50,8 @@ target back onto per-load matrices.
 **The selection contract.**
 `build_locational_clearing(*, requirements, providers, impact, scenario_id,
 dt_h, clearing_method="surrogate", max_selected_providers_per_event=1000)`
-takes three DataFrames — what the network needs relieved, who can offer it,
-and the impact model connecting an offer to relief — and returns
+takes three DataFrames (what the network needs relieved, who can offer it,
+and the impact model connecting an offer to relief) and returns
 `(events, selections, report)`: one row per constraint event, one row per
 selected provider, and a scenario-level report dict. The call does not depend
 on which study invokes it.
@@ -155,8 +155,8 @@ each with a `build_*` function that produces a DataFrame of them:
 | `SettlementRecord` | `build_settlement_records` | The financial close-out of one instruction. |
 
 `FlexibilityOperationContext` (`gridalyn/operations/contracts.py`) is the
-identity and governance scope of one clearing operation — operation id,
-scenario, clearing method, time step, market role, semantic profile — built by
+identity and governance scope of one clearing operation (operation id,
+scenario, clearing method, time step, market role, semantic profile), built by
 `build_operation_context`.
 
 Constraints live in `gridalyn/operations/constraints.py`. `NetworkConstraint`
@@ -164,7 +164,7 @@ is the record of one active constraint that flexibility can clear, and
 `build_network_constraint_set` / `summarize_network_constraints` build and
 summarize a set of them. `NetworkConstraintModel` is different: it is a
 `typing.Protocol`, the interface a network model offers to dispatch and market
-simulation — a `p_limit_kw`, a `thermal_model` and a
+simulation: a `p_limit_kw`, a `thermal_model` and a
 `probabilistic_constraint_check(p_mean_kw, p_std_kw, *, ambient_c, epsilon)`
 method. Any object with those members satisfies it.
 
@@ -183,8 +183,8 @@ this check keeps it a reference.
   scores a run from its events, dispatch instructions, settlement records and
   constraints, the same way for every study.
 - **Scorecard.** `build_flexibility_clearing_scorecard` compares the policies
-  of one scenario — unmanaged, aggregate CLS and the clearing variants whose
-  reports it is given — from their pandapower-validated reports, and
+  of one scenario (unmanaged, aggregate CLS and the clearing variants whose
+  reports it is given) from their pandapower-validated reports, and
   `write_flexibility_clearing_scorecard` writes it.
 - **Physical verification.** `apply_locational_selections` applies
   provider-level selections to building and EV load matrices,
@@ -296,8 +296,8 @@ feeder over a lossy channel.
 `dr_program` is one OpenADR 3.1.0 `event` between the business logic and one
 VEN (an aggregator or an active customer). Its states are `idle`, `notified`,
 `active`, `completed`, `cancelled` and `opted_out`. Payload fields are 3.1.0's,
-verbatim. What 3.1.0 lacks — cancellation, opt-out and the event window in
-simulated time — is an extension with the `flexint:` prefix, and the protocol
+verbatim. What 3.1.0 lacks (cancellation, opt-out and the event window in
+simulated time) is an extension with the `flexint:` prefix, and the protocol
 refuses to label it otherwise:
 
 | Message | Act | From → to | Origin | State change |
@@ -386,5 +386,5 @@ this page.
 `operations` sits on [Simulation](simulation.md): a clearing round needs a
 network-impact model, which only exists once a solve or a surrogate has
 produced one. What builds on `operations` is [Projects](projects.md): the
-layer that drives a full study — data generation, twin, simulation and
-operations, in that order — as one reproducible YAML-declared run.
+layer that drives a full study (data generation, twin, simulation and
+operations, in that order) as one reproducible YAML-declared run.

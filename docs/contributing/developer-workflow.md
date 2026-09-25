@@ -59,11 +59,11 @@ or reports read goes under `instances/<name>/digital_twin/`. The directory
 layout of both is owned by `ArtifactLayout`, described in
 [Foundation](../components/foundation.md); what may be committed at all is the
 [Artifact Policy](../reference/artifact-policy.md). Dashboard-facing state
-flows through those contracts — the catalog at
+flows through those contracts (the catalog at
 `instances/<name>/digital_twin/dashboard/catalog.json`, the semantic
 artifacts, the canonical reports under
 `instances/<name>/digital_twin/reports/canonical/`, and each study's platform
-reports — never through a script writing into the dashboard directly.
+reports), never through a script writing into the dashboard directly.
 
 Running studies and twin commands regenerates files, and a few commands
 rewrite **tracked** files by design: `gridalyn twin build` rewrites files under
@@ -96,8 +96,8 @@ Run the commit-stage hooks over the whole tree:
 pre-commit run --all-files
 ```
 
-Add `--hook-stage pre-push` to run the mypy ratchets instead. Three things
-worth knowing:
+Add `--hook-stage pre-push` to run the mypy ratchets instead. Three notes on
+these hooks:
 
 - The tree passes `flake8` with both plugins. CI lints only the files a pull
   request changes, so a clean tree is a state to hold, not one the gate
@@ -151,10 +151,10 @@ fixture-study list the `projects` job loops over is in `ci.yml`; the two
 operator-verified studies are not in it, and what that leaves to you is on
 [Operator Verification](verification.md).
 
-**Every night** the same workflow runs on `main` at full strength: the
+Every night the same workflow runs on `main` at full strength: the
 Hypothesis property test runs its full example count instead of the `ci`
 profile. A red nightly run opens its own tracker issue, separate from the one
-for pushes to `main`, and only a green nightly run closes it -- a green push
+for pushes to `main`, and only a green nightly run closes it, because a green push
 runs the lighter gate and cannot vouch for what the full-strength run checks.
 
 ## Commit

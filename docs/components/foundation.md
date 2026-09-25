@@ -2,14 +2,14 @@
 
 ## What problem this layer solves
 
-Every other layer in Gridalyn produces something — a network snapshot, a
-power-flow result, a cleared market, a finished study run — and every one of
+Every other layer in Gridalyn produces something (a network snapshot, a
+power-flow result, a cleared market, a finished study run), and every one of
 those things needs to say, in a machine-checkable way, what it is, what it
 depended on, and whether it can be trusted. `foundation` is where that
 capability lives. It has no domain knowledge of grids, buildings or markets;
 its whole job is governance: report shape, artifact provenance, capability
 availability, and workspace paths. It is the only layer that depends on
-nothing else in this repository — standard library only.
+nothing else in this repository: it uses the standard library only.
 
 ## The vocabulary
 
@@ -43,14 +43,14 @@ nothing else in this repository — standard library only.
   required `.gitignore` rules, and the minimal tutorial dataset.
 - **`require_capabilities` / `MissingCapabilityError`** — the preflight for
   optional dependencies. `OPTIONAL_CAPABILITY_MODULES` names exactly three:
-  `lightsim2grid` (`sim`), `cvxpy` (`ops`), `osmnx` (`geo`) — the only modules
-  in the platform that are genuinely absent from the base install. Everything
+  `lightsim2grid` (`sim`), `cvxpy` (`ops`), `osmnx` (`geo`). They are the only
+  modules in the platform absent from the base install. Everything
   else, including `pandapower` and `lightgbm`, is a base dependency and always
   importable.
 
 ## The contract
 
-**The report contract is the one every other layer must satisfy.** Every
+**The report contract** is the one every other layer must satisfy. Every
 artifact-producing run writes its account of itself as a platform report
 through `build_report` / `write_report`, and `write_report` refuses a payload
 that breaks the contract before it reaches disk. Its fields, the rules of its optional
@@ -77,7 +77,7 @@ modifying the repository. It records an error when:
   rule (a commented-out line does not count);
 - a tracked file matches a forbidden pattern (build caches, editor and agent
   state, generated PDFs, per-instance parquet/pickle/NumPy data, HDF5) and no
-  allowed pattern — the packaged macro-model weights are the one allowance;
+  allowed pattern (the packaged macro-model weights are the one allowance);
 - an untracked file that `.gitignore` does not exclude matches a forbidden
   pattern, since `git add -A` would commit it;
 - the minimal tutorial dataset (`examples/tutorials/data/minimal`) is missing,
@@ -152,7 +152,7 @@ studies declare their inputs in `project.yaml` instead.
 
 ## Verifying it
 
-Run a fixture study and read what its stages actually wrote:
+Run a fixture study and read what its stages wrote:
 
 ```bash
 uv run gridalyn project run projects/minimal_grid_project
@@ -167,7 +167,7 @@ know them; the run's identity, including the `study_run` record built by
 
 ## Where this sits
 
-Nothing sits below `foundation` — it is the floor of the stack, and every
+Nothing sits below `foundation`: it is the floor of the stack, and every
 layer above it depends on it directly or transitively. What builds on it first
 is [Twin](twin.md): the network model that gives the report contract, the
 capability gate and the workspace layout something concrete to describe.

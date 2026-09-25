@@ -2,7 +2,7 @@
 
 ## What problem this layer solves
 
-Every layer above this one — assets, simulation, operations — needs one
+Every layer above this one (assets, simulation, operations) needs one
 trustworthy answer to "what does the grid look like right now, and where did
 that answer come from." `twin` is that answer: a canonical network model with
 a declared schema, a stamped identity, and a contract for how observed state
@@ -10,13 +10,13 @@ enters it. It does not solve power flow and it does not model building
 behaviour; it holds the topology and state that everything else reasons about,
 the adapters that produce them, and the semantic graph that describes them.
 
-**The name is aspirational, and this page says so on purpose.** Kritzinger's
+**The name is aspirational.** Kritzinger's
 digital-twin taxonomy separates *digital model*, *digital shadow* and *digital
 twin* by how data moves between the physical and digital sides, not by how
-detailed either one is. By that measure `gridalyn.twin` is a **canonical,
-identified, schema-declared digital model** with a one-way, automated
-measured-state **ingest** path: physical → digital only. A *deployment*
-becomes a digital **shadow** when its operator feeds it real measured data
+detailed either one is. By that measure `gridalyn.twin` is a canonical,
+identified, schema-declared digital model with a one-way, automated
+measured-state ingest path: physical → digital only. A *deployment*
+becomes a digital shadow when its operator feeds it real measured data
 through that path; the SDK on its own is not one, because every producer it
 exercises in CI is simulated or a fixture. Bidirectional flow (digital →
 physical control) is a non-goal.
@@ -40,7 +40,7 @@ physical control) is a non-goal.
 - **`ModelAuthoritySet` / `ModelProfile`** (`twin/adapters/authority.py`) — the
   CGMES Model Authority Set and profile pattern expressed as *fields and rules
   over parquet*, never as RDF/XML serialization. A profile's dependencies are
-  **derived** from `BASE_TABLE_SCHEMAS`'s column references, not hand-declared,
+  derived from `BASE_TABLE_SCHEMAS`'s column references, not hand-declared,
   so they cannot drift out of sync with the schema.
 - **Source adapters** — anything satisfying the `NetworkSourceAdapter`
   protocol: `load_snapshot()` returns an in-memory `NetworkModel`, and
@@ -56,7 +56,7 @@ physical control) is a non-goal.
   The construction step behind `synthetic_pandapower` lives here too:
   `build_power_grid_and_network` and `PandapowerGridBuilder`
   (`twin/adapters/pandapower_builder.py`) turn footprints into a grid graph
-  and a pandapower network — topology only, no solve. A grid config can
+  and a pandapower network (topology only, no solve). A grid config can
   declare a sourced conductor catalog instead of pandapower's European line
   types (`"catalog": "hydro_quebec_overhead"` under `lines`,
   `twin/adapters/conductor_catalogs.py`); see
@@ -76,7 +76,7 @@ physical control) is a non-goal.
   (`semantic_uri`), under `north_america_profile()`. The profile is
   model-first: a core (IEC CIM, ASHRAE 223 and Brick, Green Button) is always
   emitted, and further vocabulary arrives only through capabilities a caller
-  declares by ID — `flexibility`, `agent_interaction` and `metering`,
+  declares by ID: `flexibility`, `agent_interaction` and `metering`,
   registered in `twin/semantic/registry.py`; an unregistered ID raises.
   `validate_semantic_graph` checks a graph against the profile it was built
   with, including each relationship's predicate, domain, range and
@@ -91,19 +91,19 @@ physical control) is a non-goal.
   never by `entry_points` auto-discovery, and are listed under
   [What is registered](#what-is-registered). The power-flow producer,
   `observe_network`, stamps `as_of` only when the caller passes it. The
-  measured-ingest producer, `read_measured_observations`, stamps it **from the
-  datum** and rejects naive timestamps rather than silently localizing them;
+  measured-ingest producer, `read_measured_observations`, stamps it from the
+  datum and rejects naive timestamps rather than silently localizing them;
   it reads `voltage_pu` → `bus_voltage_pu` and
   `active_power_mw` → `bus_active_power_mw`, load-positive (the unit is in the
   name; a kW meter reading is converted by the caller, in the open).
 
   **What a measurement makes measured, and what it does not.** A voltage or a
   line loading solved by power flow from measured injections is
-  `provenance="simulated"` — it came out of a solver. Only the observation the
+  `provenance="simulated"`, because it came out of a solver. Only the observation the
   ingest emits is `measured`, and a report that solves on it names that
   observation as its input through `file_reference`. There is no third
   provenance value for a solved number that stands on a measurement: minting
-  one would let a solved number pass for a reading, which is exactly what the
+  one would let a solved number pass for a reading, which is what the
   required field exists to prevent.
 - **`ObservationPublication`** — `resolve_observation_publication` answers,
   for any instance, whether it carries measured observations: measurement
@@ -168,7 +168,7 @@ flowchart LR
 
 The right-hand lane is the one that can make a deployment a shadow.
 
-**The first such deployment, and exactly what it is.** The
+**The first such deployment.** The
 `measured_shadow_feeder`
 study feeds one measured week of Hydro-Québec per-home consumption through
 this lane into a small feeder. Run on the measured export, it is a digital
@@ -197,12 +197,12 @@ down as configuration. What the study found, and its limits, live in its own
 
 **Authority partition.** `validate_authority_partition` runs at the top of
 every source adapter's `load_snapshot()` and checks that the declared
-authority sets partition the canonical artifacts exactly — no table claimed
-twice, none left unclaimed — raising before any table is built.
+authority sets partition the canonical artifacts exactly (no table claimed
+twice, none left unclaimed), raising before any table is built.
 
 **Loading is not checking.** `NetworkModelRepository.load_model()` returns
 what is on disk: the canonical tables, and the identity, source adapter and
-operational state from `metadata.json`. It does not validate the tables — an
+operational state from `metadata.json`. It does not validate the tables: an
 absent parquet file loads as an empty frame. `validate_integrity()` is the
 check, and it keeps three outcomes apart: an **absent** artifact is an error,
 a **present but empty** one is a warning (every check over it would be
@@ -217,7 +217,7 @@ without `metadata.json` is its `provenance` policy. `"warn"`, the default,
 returns the model marked `provenance_status="absent"` and emits
 `MissingProvenanceWarning`; `"require"` raises `FileNotFoundError`;
 `"ignore"` is silent, and exists for the manifest's own writer, which runs
-before the manifest does — so under `"ignore"` an existing manifest is not
+before the manifest does, so under `"ignore"` an existing manifest is not
 consulted for the operational state either.
 
 **Which state a snapshot is read as.** A snapshot's operational state is
@@ -228,8 +228,8 @@ one: a value outside that set is a `ValueError` naming the manifest path and
 the valid set, whatever the caller passed, so no argument can make a corrupt
 manifest load. Then, in order of authority: an explicit `operational_state=`
 passed to the repository wins; failing that, the manifest's value; failing
-that, `base`. An absent key is not an error — a manifest written by a
-producer never told which state it exports loads as `base` — and no instance
+that, `base`. An absent key is not an error: a manifest written by a
+producer never told which state it exports loads as `base`. No instance
 this repository ships records one.
 
 A non-`base` state reaches disk one way: `write_base_metadata(...,
@@ -237,9 +237,9 @@ operational_state=...)`, which rejects anything outside that set, and every
 source adapter's `export(...)` takes the same keyword and passes it through.
 A study that solves a measured operating point can therefore write it as
 `current` and read it back as `current` with no argument. The
-`NetworkExportResult` reports the state a reader resolves — read back through
-the repository, not echoed from the argument, so `base` for an export that
-declared none. The state belongs to a repository's *reading* of a snapshot,
+`NetworkExportResult` reports the state a reader resolves. It is read back through
+the repository, not echoed from the argument, so it is `base` for an export
+that declared none. The state belongs to a repository's *reading* of a snapshot,
 not to the tables: a `NetworkModel` a source adapter builds in memory carries
 `operational_state=None`, because nothing has declared which state it
 represents.
@@ -278,14 +278,14 @@ flowchart TB
 
 **Why no `rdflib`.** CGMES semantics are adopted as *fields and rules*, never
 as *serialization*: the base is parquet, and identity, authority sets and
-profiles are fields on it. `rdflib` is not a dependency of this repository —
-not in `pyproject.toml`, not in any extra — and real imports of it under
+profiles are fields on it. `rdflib` is not a dependency of this repository
+(not in `pyproject.toml`, not in any extra), and real imports of it under
 `gridalyn/` are pinned at zero by an AST scan. Adding it to serialize the twin
 would introduce a second representation that nothing reads.
 
 ## Using it
 
-The base parquet files are not committed — only `metadata.json` is — so build
+The base parquet files are not committed (only `metadata.json` is), so build
 the default instance's base once with `uv run gridalyn twin base` (see
 [Build A Twin](../guides/build-a-twin.md#rebuild-an-instance)). Then, from the
 workspace root:
@@ -423,8 +423,8 @@ python tools/generate_registry_reference.py --check
 paths through `ArtifactLayout`, stamps model identity with
 `build_model_version`, writes the adapter validation report through the
 report contract, records which extension served each registry entry, and
-gates its one optional dependency — `osmnx`, for street and footprint
-download in `twin/geoprocess/` — through `require_capabilities("geo", ...)`.
+gates its one optional dependency, `osmnx` (street and footprint
+download in `twin/geoprocess/`), through `require_capabilities("geo", ...)`.
 What builds on `twin` is [Assets](assets.md): the buildings, EVs and DER that
 the network model's `buildings` and `building_grid_connectivity` tables anchor
 to bus and transformer identities.

@@ -14,7 +14,7 @@ The two fields every Gridalyn YAML file opens with, e.g.
 
 ### artifact
 
-A file a run produces and records provenance for — path, byte count, SHA-256 —
+A file a run produces and records provenance for (path, byte count, SHA-256)
 via `file_reference(path, root)`. Which artifacts may be committed is the
 [Artifact Policy](artifact-policy.md). See
 [Report And Run-Manifest Schema](report-schema.md#file-records).
@@ -27,8 +27,8 @@ silently localized. See [Twin](../components/twin.md).
 
 ### backend
 
-Which power-flow solver a simulation run used — `lightsim2grid` or
-`pandapower_native` — resolved by explicit ID through `PowerFlowBackendRegistry`
+Which power-flow solver a simulation run used (`lightsim2grid` or
+`pandapower_native`), resolved by explicit ID through `PowerFlowBackendRegistry`
 and recorded in `provenance.powerflow_backend`. See
 [Simulation](../components/simulation.md).
 
@@ -61,7 +61,7 @@ Three distinct things share the word:
 ### channel model
 
 Whether, and at what simulated time, a message between two simulated agents
-arrives — `ideal`, `fixed_latency`, `bernoulli_loss` or `fixed_outage` —
+arrives (`ideal`, `fixed_latency`, `bernoulli_loss` or `fixed_outage`),
 resolved by explicit ID through `ChannelModelRegistry`. Stochastic models draw
 from their seed and the message's identity only, so the same seed reproduces
 the same deliveries. See [Simulation](../components/simulation.md).
@@ -75,7 +75,7 @@ study contract. See [The Studies](../start/studies.md#the-two-tiers).
 ### clearing
 
 Deciding which flexibility providers relieve a network constraint, at what
-price — `build_locational_clearing` in `operations/clearing/selection.py`.
+price: `build_locational_clearing` in `operations/clearing/selection.py`.
 See [Operations](../components/operations.md).
 
 ### CLS
@@ -97,7 +97,7 @@ relieves, resolved to one CIM `PowerTransformer`, `ACLineSegment` or
 
 ### conversation
 
-One run of an interaction protocol between concrete agents — a `Conversation`,
+One run of an interaction protocol between concrete agents: a `Conversation`,
 which accepts a message only when its protocol has a transition for it and
 otherwise raises an error naming its state and what that state would accept.
 See [Operations](../components/operations.md).
@@ -111,7 +111,7 @@ contract also gets an EFOnt flexibility description in the graph. See
 
 ### DER
 
-Distributed energy resource — a battery, PV installation, or other
+Distributed energy resource: a battery, PV installation, or other
 grid-connected device declared via `BatteryAsset`, `PVAsset`, `DERDispatchAsset`.
 See [Assets](../components/assets.md).
 
@@ -141,8 +141,8 @@ instance come from `ArtifactLayout`, never from string joins. See
 
 ### layer facade
 
-The public import surface of one of the seven layers — `gridalyn.foundation`
-through `gridalyn.interfaces` — resolving its names lazily through
+The public import surface of one of the seven layers (`gridalyn.foundation`
+through `gridalyn.interfaces`), resolving its names lazily through
 `_LAZY_EXPORTS`. See [Python API](python-api.md).
 
 ### manifest
@@ -168,7 +168,7 @@ A row of a deployment's metering-point table, `usage_point_id` plus the twin
 
 ### model identity
 
-`ModelIdentity` — the header stamped on a canonical network model. `id`,
+`ModelIdentity`: the header stamped on a canonical network model. `id`,
 `created` and `profile` carry CGMES `FullModel` semantics; `scenario_time`,
 `artifact_paths` and `governance_schema_version` complete it. See
 [Twin](../components/twin.md).
@@ -186,7 +186,7 @@ Which state a network snapshot represents: `base`, `normal`, `current`,
 `planned` or `study_case`. Declared, never inferred from the tables;
 `NetworkModelRepository` resolves exactly one per loaded model, preferring an
 explicit `operational_state=` over the manifest's, over `base`. A model a
-source adapter builds in memory carries `None` — nothing has declared its
+source adapter builds in memory carries `None`: nothing has declared its
 state. See [Twin](../components/twin.md).
 
 ### operator-verified study
@@ -200,7 +200,7 @@ tests skip when its outputs are absent. See
 ### pathBase
 
 `spec.pathBase` in `project.yaml`: `project` (the default) or `repo`. It sets
-the directory stage commands run from, and nothing else — declared paths stay
+the directory stage commands run from, and nothing else: declared paths stay
 relative to the project directory. See
 [Project And Workflow YAML](workflow-yaml.md#path-rules).
 
@@ -259,8 +259,8 @@ deliberate re-base. See
 
 ### role
 
-What an agent does in a protocol — `distribution_operator`, `aggregator`,
-`program_administrator` or `active_customer` — kept apart from the party that
+What an agent does in a protocol (`distribution_operator`, `aggregator`,
+`program_administrator` or `active_customer`), kept apart from the party that
 plays it, so one utility can request flexibility in one conversation and
 publish a demand-response event in another. See
 [Operations](../components/operations.md).
@@ -326,7 +326,7 @@ measured and, when it was not, why. See
 ### twin (network model)
 
 `gridalyn.twin`: a canonical, identified, schema-declared digital model of the
-network — five base tables, a `ModelIdentity` and the observed-state contract —
+network (five base tables, a `ModelIdentity` and the observed-state contract),
 with a one-way, automated measured-state ingest path. It is not a digital twin;
 a deployment fed real measured data is a [digital shadow](#digital-shadow).
 See [Twin](../components/twin.md).

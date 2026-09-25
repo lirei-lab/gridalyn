@@ -2,7 +2,7 @@
 
 The SDK ships the measured-state ingest *path*, not measured data. Feeding a
 deployment's own meter or SCADA export through that path is what makes the
-deployment a digital **shadow** rather than a digital model, and only for the
+deployment a digital *shadow* rather than a digital model, and only for the
 quantities it measures. The observation contract itself, its two producers and
 the rule for what a measurement does and does not make measured, are defined
 in [Twin](../components/twin.md); this guide is the recipe.

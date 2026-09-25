@@ -3,7 +3,7 @@
 ![The Trois-Rivières feeder held in the network model, its medium-voltage backbone coloured by electrical depth](docs/assets/feeder-hero.png)
 
 **Reproducible, citable studies of electric distribution grids and their
-distributed energy resources — declarative YAML in, baseline-pinned numbers
+distributed energy resources: declarative YAML in, baseline-pinned numbers
 out.**
 
 [![Documentation](https://img.shields.io/badge/docs-lirei.ca%2Fgridalyn-2f6f4e)](https://lirei.ca/gridalyn/)
@@ -17,26 +17,26 @@ out.**
 [Contributing](CONTRIBUTING.md)
 
 Gridalyn is an open-source Python SDK for modeling, simulating, and
-optimizing multi-scale distribution systems — the flexible building loads, EV
+optimizing multi-scale distribution systems: the flexible building loads, EV
 chargers, and storage at the edge, and the feeders and transformers they
 stress. It is built for researchers who need studies that survive re-running:
 validated synthetic data, recorded seeds, and headline numbers that carry their
 uncertainty. Its core has the parts a utility digital-twin platform is built
-on — a canonical network model, ingest adapters, a measured-state path — without
+on (a canonical network model, ingest adapters, a measured-state path) without
 being one;
 [What Is Gridalyn?](https://lirei.ca/gridalyn/start/what-is-gridalyn/) states
 exactly what it is and is not.
 
 Most grid studies are hard to reproduce: the load generator was never validated
 against anything real, the seed was never written down, and the scripts drifted
-after the paper shipped. Gridalyn's answer is to make a study **data, not
-code** — and to enforce that posture with tests rather than convention.
+after the paper shipped. Gridalyn makes a study data, not code, and enforces
+that with tests rather than convention.
 
 ![The bundled dashboard showing the network model: nodal voltage drop across the Trois-Rivières feeder, with grid health and ontology counts resolved from the model's own artifacts](docs/assets/dashboard-twin.jpg)
 
 <sub>The browser dashboard under `dashboard/`, on the network model in
 `instances/default/digital_twin/`. Everything in the panel is read from the
-generated artifacts — the model SHA-256, the scenario, and the entity counts
+generated artifacts: the model SHA-256, the scenario, and the entity counts
 that match the network tables. `SIMULATED` is the observation provenance the
 model records, not a label added for the screenshot.</sub>
 
@@ -60,8 +60,8 @@ uv sync
 uv run gridalyn quickstart my-first-study
 ```
 
-The last command scaffolds a small power-flow study and runs it — the first
-result in one command:
+The last command scaffolds a small power-flow study and runs it, so the first
+result takes one command:
 
 ![A terminal session: cloning gridalyn, running uv sync, then gridalyn quickstart scaffolding a study, running its two workflow stages and printing the figure and report it wrote](docs/assets/quickstart-recording.svg)
 
@@ -182,8 +182,8 @@ its own is not a digital twin. The full statement is in
 `gridalyn` is the root entry point; seven domains hang off it as subcommands
 (`twin`, `project`, `market`, `semantic`, `dashboard`, `platform`,
 `extension`). All but `extension` are also installed as standalone scripts for
-automation — `gridalyn-dt`, `gridalyn-project`, `gridalyn-flex`,
-`gridalyn-semantic`, `gridalyn-dashboard` and `gridalyn-platform`:
+automation (`gridalyn-dt`, `gridalyn-project`, `gridalyn-flex`,
+`gridalyn-semantic`, `gridalyn-dashboard` and `gridalyn-platform`):
 
 ```bash
 uv run gridalyn --help

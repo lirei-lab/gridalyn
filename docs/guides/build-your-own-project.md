@@ -12,8 +12,8 @@ assumes you have finished the [Quickstart](../start/quickstart.md).
 
 If you ran the Quickstart, you already have this project: `gridalyn quickstart`
 scaffolded `my-first-study` from the same `powerflow-demo` template and ran it.
-You can continue in it — pass `my-first-study` as the project path in the
-commands below, and step 2's `run` has already happened — or scaffold a fresh
+You can continue in it (pass `my-first-study` as the project path in the
+commands below; step 2's `run` has already happened) or scaffold a fresh
 one under `projects/`, beside the studies that ship with the repository:
 
 ```bash
@@ -57,8 +57,8 @@ step has a working example to replace. The other two templates are skeletons:
 `uv run gridalyn project init --list-templates` prints the same list.
 
 The scaffold sets `spec.pathBase: project`, so stage commands run from the
-project directory. Every path the contract declares — `spec.workflow.file`,
-`spec.validation.*`, a stage's `inputs` and `outputs` — is relative to the
+project directory. Every path the contract declares (`spec.workflow.file`,
+`spec.validation.*`, a stage's `inputs` and `outputs`) is relative to the
 project directory whatever `pathBase` says; see
 [Path Rules](../reference/workflow-yaml.md#path-rules).
 
@@ -81,7 +81,7 @@ manifest to `outputs/manifests/project_run_manifest.json`, and
 that order: `status --check-artifacts`, `validate --check-artifacts` and
 `verify` read artifacts rather than produce them, so before the first run they
 fail naming the missing reports. `verify` covers the contract, the artifacts
-and the sense checks; it does not compare results against a baseline — that is
+and the sense checks; it does not compare results against a baseline, which is
 `regression`, step 7. The full check ladder is in
 [Testing And Validation](../contributing/testing-and-validation.md).
 
@@ -264,9 +264,10 @@ spec:
         min: 0.95
 ```
 
-A project must declare sense checks — declarative `senseChecks` like these, a
-`senseChecker: scripts/<file>.py:<function>` for checks that need code, or
-both — or `verify` fails on `project_has_registered_sense_checks`.
+A project must declare sense checks, or `verify` fails on
+`project_has_registered_sense_checks`. They can be declarative `senseChecks`
+like these, a `senseChecker: scripts/<file>.py:<function>` for checks that
+need code, or both.
 
 ## 6. Run And Verify
 

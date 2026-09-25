@@ -103,8 +103,8 @@ ValueError: <project>/project.yaml: spec.simulation.powerflowBackend names an un
 - **Node ids are `<kind>:<id>`, never a term of a bound namespace.** Types and
   predicates use the capability's prefix; the ids of the nodes it emits use a
   kind of their own. The example below binds `crit:` for its terms and emits
-  nodes as `criticality:<transformer>`. An id whose kind is a bound prefix —
-  `crit:<transformer>`, or `efont:...` — reads as a term of that namespace and
+  nodes as `criticality:<transformer>`. An id whose kind is a bound prefix
+  (`crit:<transformer>`, or `efont:...`) reads as a term of that namespace and
   would expand to an IRI inside it, so the validator refuses it with a located
   error.
 - **Declared-only.** An installed extension that the study does not declare is

@@ -47,8 +47,8 @@ YAMLs and their pinned baselines, at the tagged commit) has been pushed to it:
    there whose tag matches the version. Zenodo archives the
    tarball and mints two DOIs: a **concept DOI** that always resolves to the
    newest version, and a **version DOI** for that release alone.
-3. Put the **concept DOI** in `CITATION.cff` as a bare `doi:` field — the
-   identifier, not a URL:
+3. Put the concept DOI in `CITATION.cff` as a bare `doi:` field (the
+   identifier, not a URL):
 
    ```yaml
    doi: 10.5281/zenodo.XXXXXXX

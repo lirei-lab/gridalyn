@@ -21,8 +21,8 @@ print `"valid": false` and exit 1; drop `--summary-only` to see each error.
 - **No forbidden path is tracked.** A tracked file matching a forbidden
   pattern is an error, unless a shipped exception also matches it.
 - **No forbidden path is waiting to be committed.** The same patterns apply to
-  files Git sees but neither tracks nor ignores — the ones `git add -A` would
-  commit. Other untracked files are not reported.
+  files Git sees but neither tracks nor ignores (the ones `git add -A` would
+  commit). Other untracked files are not reported.
 - **`.gitignore` carries every required rule** as an active line. A rule that
   is only mentioned in a comment does not count.
 - **The minimal demo dataset is intact:** the directory exists, stays under the

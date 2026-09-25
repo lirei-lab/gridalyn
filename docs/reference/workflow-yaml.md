@@ -8,7 +8,7 @@ JSON Schema, `gridalyn/projects/schemas/study_project.schema.json` and
 page are generated from those schemas.
 
 Both schemas are closed: a key that a table below does not list fails
-validation. The exceptions are the free-form mappings — `spec.inputs`,
+validation. The exceptions are the free-form mappings: `spec.inputs`,
 `spec.problem.model`, every `parameters` map, and `spec.validation`, which
 accepts keys beyond the ones listed.
 
@@ -203,8 +203,8 @@ Stage commands run through a shell, so a bare `python` is resolved against
 and the stage dies with exit 127. Write `{python}` instead: the runner replaces
 every occurrence with the interpreter executing the workflow
 (`sys.executable`), shell-quoted so an interpreter path containing spaces
-survives. Quote the whole scalar in YAML — a leading `{` would otherwise start
-a flow mapping.
+survives. Quote the whole scalar in YAML, because a leading `{` would otherwise
+start a flow mapping.
 
 When a command contains no `{python}`, a *leading* bare `python` token is
 rewritten to the same interpreter. It applies to the first token only, so
@@ -216,7 +216,7 @@ running; `{python}` is the form to author.
 
 `needs` is the only thing that orders a run. The runner sorts the stages
 topologically, refuses a cycle, and executes the result **one stage at a
-time** — so the graph describes what *could* run in parallel, not what does.
+time**, so the graph describes what *could* run in parallel, not what does.
 It is also what `--stage <id>` resolves against: asking for one stage pulls in
 its transitive dependencies and nothing else.
 

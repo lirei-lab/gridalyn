@@ -1,17 +1,17 @@
 # Open The Dashboard
 
 The dashboard is the React application under `dashboard/`
-([Interfaces](../components/interfaces.md) describes where it sits). It knows
-one URL by heart — the catalog of the `default` twin instance,
-`/instances/default/digital_twin/dashboard/catalog.json` — and reads everything
-else, scenarios, map layers and study reports, from what that catalog
+([Interfaces](../components/interfaces.md) describes where it sits). It starts
+from one fixed URL, the catalog of the `default` twin instance,
+`/instances/default/digital_twin/dashboard/catalog.json`, and reads everything
+else (scenarios, map layers and study reports) from what that catalog
 declares.
 
 ## What A Fresh Checkout Already Has
 
 The catalog and the small JSON manifests beside it are committed. The Parquet
-files they point at — the base network tables and the per-scenario power-flow
-time series — are generated and gitignored. On a fresh checkout the dashboard
+files they point at (the base network tables and the per-scenario power-flow
+time series) are generated and gitignored. On a fresh checkout the dashboard
 therefore opens with the scenario list, the study workspaces and the network
 model's counts and extent, but the map has no time series to draw until the
 twin is built.
@@ -56,7 +56,7 @@ twin instance, as they do for the `gridalyn twin` commands.
 
 ## Check What It Reads
 
-`verify` reads the built instance. Its its generated tables are not committed, so on a fresh clone run `gridalyn twin build` first; otherwise it reports each missing file.
+`verify` reads the built instance. Its generated tables are not committed, so on a fresh clone run `gridalyn twin build` first; otherwise it reports each missing file.
 
 ```bash
 uv run gridalyn dashboard verify
@@ -65,8 +65,8 @@ uv run gridalyn dashboard verify
 This is read-only. It checks the catalog's `report_id` and `schema_version`,
 and that every scenario names its four time-series files and that each one
 exists, then prints a JSON verdict and exits non-zero on any error. On a fresh
-checkout it lists every scenario's Parquet files as missing — the expected
-state until the twin is built.
+checkout it lists every scenario's Parquet files as missing, which is the
+expected state until the twin is built.
 
 In the browser, a catalog the client cannot read shows a "Twin not found"
 message; the browser console carries the reason.
@@ -117,8 +117,8 @@ it differently on purpose:
   and "this catalog is too old to say" the same answer.
 
 `semantic.classes` is the load-bearing part of 1.3. The twin's classes come
-from three populations that do not coincide — the base tables' own class
-column, the semantic graph's `semantic_type`, and the scenario asset registry —
+from three populations that do not coincide (the base tables' own class
+column, the semantic graph's `semantic_type`, and the scenario asset registry),
 so every entry names the population it came from, the artifact and columns it
 was read off, and whether that artifact's rows carry coordinates. A class the
 map can draw and a class it would have to join to reach are different answers,

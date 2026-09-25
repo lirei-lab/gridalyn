@@ -3,10 +3,10 @@
 ## What problem this layer solves
 
 `twin` tells you what the network is. `assets` tells you what is *connected*
-to it — the buildings, EV chargers, batteries, PV and other distributed energy
-resources whose behavior a study actually cares about. It splits into two
+to it: the buildings, EV chargers, batteries, PV and other distributed energy
+resources whose behavior a study cares about. It splits into two
 concerns: **modeling** (typed specs for physical devices) and **datagen**
-(reproducible synthetic time series for the ones that need one — mainly
+(reproducible synthetic time series for the ones that need one, mainly
 residential load).
 
 ## The vocabulary
@@ -30,7 +30,7 @@ residential load).
 - **Building model tables** — `synthesize_building_model_tables`
   (`synthesis.py`) fills the twin's building tables from a static per-archetype
   lookup (`archetypes.py`, profile `north_america_residential_v1`). It has no
-  time dimension. Its R, C and kW/m² values are **deliberately independent** of
+  time dimension. Its R, C and kW/m² values are deliberately independent of
   the RC simulator's below: one sizes structural records, the other drives a
   stateful simulation with pinned baselines. Two tables of R and C are not
   drift; change one only after reading why the other exists.
@@ -49,14 +49,14 @@ in a project, route through `GridLoadFacade` to one of:
 | `"thermodynamic"` | Per-dwelling RC thermal simulator (`make_buildings` / `simulate_buildings`, below). | `DEFAULT_ARCHETYPE`, or the `ThermalArchetype` passed as `archetype=`. |
 
 Both return heating kW and background kW separately and sum them into a
-`(time_steps, n_units)` DataFrame. **Both depend on the packaged background
-weights**: the thermodynamic engine draws its appliance background from the
+`(time_steps, n_units)` DataFrame. Both depend on the packaged background
+weights: the thermodynamic engine draws its appliance background from the
 same macro model, so the LightGBM runtime matters to it too.
 
 `loadGeneration` has no `archetype` key, so a project that selects
 `thermodynamic` in YAML gets `DEFAULT_ARCHETYPE`. A study that carries its own
-calibration — `ev_hosting_flex`, `admm_thermal_consensus`,
-`dr_agent_interaction` — calls the agents API directly and states its
+calibration (`ev_hosting_flex`, `admm_thermal_consensus`,
+`dr_agent_interaction`) calls the agents API directly and states its
 archetype there.
 
 ### The RC dwelling simulator
@@ -120,8 +120,8 @@ are drawn per dwelling so that a fleet has realistic diversity.
   gives each dwelling a stochastic weekday setback schedule: whether it sets
   back at all, programmed versus occasional, departure and return hours,
   depth, and which days are empty. `HQ_MEASURED_SETBACK` carries the
-  distributions fitted to metered Hydro-Québec homes, with `adoption=0.0` —
-  no setback — because the metered record does not pin adoption to one value;
+  distributions fitted to metered Hydro-Québec homes, with `adoption=0.0`
+  (no setback), because the metered record does not pin adoption to one value;
   a study sets and sweeps it. Setback draws come from their own stream, so
   attaching one never moves any other draw.
 - **Building mass** — an archetype may add a second thermal node for the
@@ -142,8 +142,8 @@ are drawn per dwelling so that a fleet has realistic diversity.
   with the same fleet run without the outage: indoor drop, pickup peak per
   home for groups of each size, recovery time and the energy repaid. The
   pickup peak in kW is set by installed capacity, so the ratio to normal load
-  rises as the weather warms — 1.6 at −25 °C, 2.3 at −10 °C, 3.2 at 0 °C for
-  groups of 60 on the Québec dwelling with its mass — and a transformer should
+  rises as the weather warms (1.6 at −25 °C, 2.3 at −10 °C, 3.2 at 0 °C for
+  groups of 60 on the Québec dwelling with its mass), and a transformer should
   be judged on the kW, not the ratio. A feeder restored in stages is one
   window per section: `generate_restoration_fleet`
   (`gridalyn.assets.datagen.agents.restoration`) runs each section through its
@@ -153,7 +153,7 @@ are drawn per dwelling so that a fleet has realistic diversity.
   [The Studies](../start/studies.md)) solves that through a feeder of 75 kVA
   transformers: after 4 hours at −25 °C every transformer runs near 130 % of
   nameplate for hours, and staging trims the feeder-head peak but not the
-  transformers' — each is switched back with all its homes at once.
+  transformers', because each is switched back with all its homes at once.
 - **Other agents** — `make_dhw_tank_fleet` generates thermostatic electric
   hot-water tanks with staggered reheats; `make_cold_coupled_ev_fleet`
   generates EV charging load; `EVCharger` is a stateful *actuator* for
@@ -162,14 +162,14 @@ are drawn per dwelling so that a fleet has realistic diversity.
 ### Which model for which question
 
 - **The RC model** for anything that turns on coincidence, cycling or
-  small-group peaks — with `control="hysteresis"`.
+  small-group peaks, with `control="hysteresis"`.
 - **The EnergyPlus reference** for annual energy, per-end-use split or
   envelope response. It runs EnergyPlus through OpenStudio-HPXML over real
   NRCan Québec archetypes, in `tools/ochre_calibration/`, deliberately outside
   the SDK: the toolchain is ~1.6 GB and pins numpy below this repository's
   floor, so it cannot run in CI and hands over parquet instead. Nothing in the
   SDK calls it.
-- **The metered record `datasets/hq`** when the two disagree — neither model
+- **The metered record `datasets/hq`** when the two disagree; neither model
   is the arbiter for the other. `tests/test_building_diversity_vs_hq.py`
   encodes that comparison.
 - **Not the parametric engine** for anything that turns on a diversified peak.
@@ -177,22 +177,22 @@ are drawn per dwelling so that a fleet has realistic diversity.
   less than measured ones: on a weather-matched cold week its coincidence
   factor runs 17–32 % below the metered curve from 6 to 24 homes, where
   the RC fleet sits within a few percent above it. It is a fixture-grade
-  generator — fast, reproducible, right in shape and energy — and
+  generator (fast, reproducible, right in shape and energy), and
   `tests/test_datagen_diversity.py` pins its coincidence factor so the gap
   cannot move unobserved.
 
-The measured results — the flexibility relief on a disjoint holdout, the RC
-model's error bound under full curtailment (it understates relief: read it as
-conservative, not accurate), and the coincidence curve against `datasets/hq` —
-are tracked as receipts, each number with its source file:
-`tools/ochre_calibration/receipts/`.
+The measured results are tracked as receipts in
+`tools/ochre_calibration/receipts/`, each number with its source file: the
+flexibility relief on a disjoint holdout, the RC model's error bound under full
+curtailment (it understates relief, so read it as conservative, not accurate),
+and the coincidence curve against `datasets/hq`.
 
 The error bound also ships beside the model, as
 `gridalyn.assets.datagen.agents.RC_CURTAILMENT_RELIEF_BOUND` (an `ErrorBound`,
 equal to the receipt field for field). A study that takes flexibility relief
-from the RC agents records it in the report that quotes the relief —
-`inputs=[{"name": "rc_model_error_bound", "type": "error_bound",
-**RC_CURTAILMENT_RELIEF_BOUND.as_dict()}]` — and
+from the RC agents records it in the report that quotes the relief
+(`inputs=[{"name": "rc_model_error_bound", "type": "error_bound",
+**RC_CURTAILMENT_RELIEF_BOUND.as_dict()}]`), and
 `tests/test_rc_error_bound_is_carried.py` fails a study that runs the agents
 without it, unless it is exempted with the reason it takes no relief from
 them.
@@ -233,11 +233,11 @@ rejected with an error that names the offending key and the supported set.
 packaged weights, the generator falls back to an analytical macro model that
 produces different profiles from the same seed. It emits a warning when it
 does, but still exits 0, so the warning alone is easy to lose. The run
-manifest's `provenance.macro_model` records the deciding conditions —
-`expected` (`lgbm` or `analytical`), `lightgbm_runtime`, `packaged_weights` —
-and is what makes two runs comparable.
+manifest's `provenance.macro_model` records the deciding conditions:
+`expected` (`lgbm` or `analytical`), `lightgbm_runtime` and `packaged_weights`.
+That record is what makes two runs comparable.
 
-**Downstream shaping** goes through `aggregate_load_multipliers`,
+Downstream shaping goes through `aggregate_load_multipliers`,
 `scale_profiles_to_peaks` and `coincident_peak_loads_mw`
 (`gridalyn.assets.datagen`), not through ad-hoc DataFrame arithmetic in a stage
 script. Weather comes from `download_tmy`, with `select_peak_load_day` and
@@ -261,8 +261,8 @@ print(profiles.shape, list(profiles.columns)[:3])
 ```
 
 Six units, one day at 15-minute resolution (96 = 24h × 4), columns
-`unit_000`, `unit_001`, ... — deterministic for a fixed seed under
-`weather="synthetic"`. The first line is the day selector's progress note, on
+`unit_000`, `unit_001`, ... The output is deterministic for a fixed seed
+under `weather="synthetic"`. The first line is the day selector's progress note, on
 stderr, so stdout carries only what the snippet prints.
 
 The RC simulator, with a stated archetype, latching thermostats and half the
@@ -307,7 +307,7 @@ The last line shows which dwellings drew a setback schedule.
 
 ## Verifying it
 
-The engines are not interchangeable, and the API says so — an archetype handed
+The engines are not interchangeable, and the API says so: an archetype handed
 to the parametric engine is refused rather than silently ignored:
 
 ```bash
@@ -327,7 +327,7 @@ archetype applies to generator_type='thermodynamic' only; the parametric engine 
 ```
 
 Or generate a full project's loads and check `provenance.macro_model` in its
-run manifest to confirm which macro model actually ran:
+run manifest to confirm which macro model ran:
 
 ```bash
 uv run gridalyn project run projects/minimal_grid_project

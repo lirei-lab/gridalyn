@@ -15,8 +15,8 @@ anything a study's baseline depends on. For everyday work,
 **The operator-verified studies are invisible to CI.**
 `projects/ev_hosting_flex/outputs/` and
 `projects/admm_thermal_consensus/outputs/` are gitignored. Their
-reproduce-and-pin tests — the ones asserting that the study's pinned numbers
-are still the numbers — are guarded by `skipif` on the presence of those
+reproduce-and-pin tests (the ones asserting that the study's pinned numbers
+are still the numbers) are guarded by `skipif` on the presence of those
 outputs, for example in `tests/test_ev_hosting_flex_annual.py`:
 
 ```python
@@ -24,8 +24,8 @@ outputs, for example in `tests/test_ev_hosting_flex_annual.py`:
 ```
 
 A fresh CI checkout has no such file, so every test guarded this way skips and
-the job reports green. **CI is not failing to verify these studies; it is
-declining to.** CI cannot close the gap itself: a cold regeneration of
+the job reports green. CI does not attempt to verify these studies, and it
+cannot close the gap itself: a cold regeneration of
 `ev_hosting_flex` takes hours (the `flagship-reproduce` receipt records the
 last measured run), against a `projects` job whose timeout is measured in
 minutes.
@@ -86,7 +86,8 @@ Step 4 must print **nothing**. A printed path means a pinned result changed:
 either a defect or a deliberate re-base, recorded as the next section says.
 
 If you cannot afford step 1's hours, run `admm_thermal_consensus` only and say
-so. A partial run recorded honestly is worth more than a full run claimed.
+so. A partial run recorded as partial is worth more than a full run claimed
+but not made.
 
 ### Two further legs for `ev_hosting_flex`
 
@@ -109,8 +110,8 @@ unexplained diff.
 - **Every study** records the sha256 of its `results_baseline.json` in
   `baselines/REBASE_LOG.md`, newest entry last, and
   `tests/test_baseline_rebase_declared.py` recomputes it. A re-base therefore
-  costs one extra step — append an entry saying what moved and why, with the
-  new digest — and that step is the point: the rule forbids silence, not
+  costs one extra step (append an entry saying what moved and why, with the
+  new digest), and that step is the point: the rule forbids silence, not
   change. The log does not verify the new numbers (that needs the outputs CI
   does not have), and nothing stops an author updating the digest without
   thinking; what it removes is a pin moving with nobody noticing.
@@ -162,7 +163,7 @@ after its commit. That says which protocols are unverified against the current
 tree, not whether a number moved; only a re-run says that.
 
 A receipt has a **role**. A `claim` (the default) asserts something about the
-current tree — the flagship reproduces its pins — and goes stale when a file it
+current tree, such as that the flagship reproduces its pins, and goes stale when a file it
 watches moves. A `measurement` records a dated observation kept for its
 provenance, such as a coverage figure on a given day; it asserts nothing about
 the current tree and so cannot go stale. `docs-instruction-sweep` is a claim:
@@ -170,9 +171,9 @@ it vouches that every documented instruction works, so its staleness is a real
 gap. For each stale claim the report says how far behind it is, in watched
 files and in commits, and lists the furthest-behind first.
 
-For `ev_hosting_flex` and `admm_thermal_consensus` the `watched` list is **derived, not
-written**: exactly the files a full regeneration loads — the stage modules the
-study's `workflow.yaml` names, imported in a clean interpreter — plus the
+For `ev_hosting_flex` and `admm_thermal_consensus` the `watched` list is derived, not
+written: exactly the files a full regeneration loads (the stage modules the
+study's `workflow.yaml` names, imported in a clean interpreter), plus the
 project, the workflow DAG, the committed inputs and the pins the run is judged
 by. `tests/test_heavy_study_receipts.py` requires equality and prints the
 replacement list when they drift. `ev_hosting_flex` is receipted as
@@ -193,8 +194,8 @@ The study is verified by protocol rather than by one opaque run:
   hours cold, recorded on the `flagship-reproduce` receipt at the commit it ran
   at.
 
-Each run records per-stage entries — name, status, duration, and a reason when
-a stage is skipped — so a partial regeneration is auditable. A receipt may
+Each run records per-stage entries (name, status, duration, and a reason when
+a stage is skipped), so a partial regeneration is auditable. A receipt may
 carry such a list; each stage must have a `name` and a `status` (`ok`,
 `skipped` or `failed`), and any per-stage `commit` must exist in this history
 and lead to HEAD.
@@ -214,7 +215,7 @@ Run it with `python tools/r7_twin_consumer_identity.py <before-ref> <after-ref>`
 
 **What it does.** It checks out each ref into its own git worktree and, from
 each, captures `NetworkModelRepository.load_model()`,
-`.validate_integrity()` and `build_dashboard_catalog()` over the **same** base
+`.validate_integrity()` and `build_dashboard_catalog()` over the same base
 directory. It hashes each capture and classifies the difference as
 `identical`, `additive` or `regressed`. Comparing two code revisions over one
 set of artifacts is the point: a regenerated base would change the digest by
@@ -235,7 +236,7 @@ imported `gridalyn` from, and fails unless that directory lies inside the
 ref's worktree, so a capture that silently read the main checkout fails
 instead of matching itself.
 
-**Two disclosed weaknesses.** `created_at` is stripped, because
+**Two weaknesses.** `created_at` is stripped, because
 `build_dashboard_catalog` derives it from `datetime.now()`. `identity.created`
 is **not** stripped: it is read from the base manifest, so it is constant for a
 fixed base, and code that stopped propagating it is a real difference.
@@ -243,8 +244,8 @@ fixed base, and code that stopped propagating it is a real difference.
 **Why CI cannot run it.** The base parquet files are gitignored, so a runner
 has no base to capture over, and the protocol needs full git history and two
 working trees. Re-run it whenever a file on the receipt's `watched` list moves.
-That list is exactly the code the capture loads — the `gridalyn` modules its
-imports pull in, plus the tool itself — pinned by
+That list is exactly the code the capture loads (the `gridalyn` modules its
+imports pull in, plus the tool itself), pinned by
 `tests/test_r7_twin_consumer_identity.py`, which prints the replacement list
 when the two drift apart. The receipt reading `STALE` after such a change is
 the intended signal.

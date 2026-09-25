@@ -1,14 +1,14 @@
 # The Platform, In One Pass
 
 Gridalyn is seven packages under `gridalyn/`. Each one imports only from the
-packages below it — `foundation → twin → assets → simulation → operations →
-projects → interfaces` — and that single rule is enforced, not aspirational:
+packages below it (`foundation → twin → assets → simulation → operations →
+projects → interfaces`), and tests enforce that rule:
 `tests/test_layer_direction.py` and the `tests/test_*_boundaries.py` suite fail
 the build on an upward import.
 
 This page is the map. The seven pages that follow it walk the stack bottom to
-top, one layer per page, each ending with a link to the next — so reading them
-in order is reading the platform in the same direction its own imports run.
+top, one layer per page, each ending with a link to the next, so reading them
+in order follows the direction the imports run.
 
 ## The stack
 
@@ -49,8 +49,7 @@ flowchart TB
 | [Interfaces](interfaces.md) | How does a person reach any of this? | CLI, reports, dashboard |
 
 Start at [Foundation](foundation.md) and follow each page's last section to the
-next; by the end you have read the platform in the order its own imports run.
-Unfamiliar terms are collected in the [Glossary](../reference/glossary.md); every
+next. Unfamiliar terms are collected in the [Glossary](../reference/glossary.md); every
 public class and function this walk names is indexed by module, and rendered
 from its live docstrings, in the [Python API Reference](../reference/python-api.md).
 
@@ -68,7 +67,7 @@ wholesale: the durable utility network-model philosophy of platforms such as
 Evolve, and the clean study/simulation separation of tools like Sienna. What
 Gridalyn adds on top is treating providers, clearing, dispatch, settlement and
 KPIs as a first-class platform layer (`operations`) rather than
-per-study glue code — every study that needs a market reuses the same
+per-study glue code: every study that needs a market reuses the same
 `operations` contract instead of reimplementing it.
 
 ## What is stable, what is not
@@ -88,10 +87,10 @@ git ignores; retired paths kept only for git history.
 ## Where a new capability belongs
 
 Ask which of the seven questions above it answers, and place it in that layer.
-If it genuinely spans two layers, it is almost always because one of them is
-being asked to do the other's job — the fix is usually to thin the higher layer
-down to orchestration and push the actual behavior into the lower one, not to
-invent an eighth layer.
+If it spans two layers, it is almost always because one of them is being asked
+to do the other's job. The fix is usually to thin the higher layer down to
+orchestration and push the behavior into the lower one, not to invent an
+eighth layer.
 
 If two projects independently need the same behavior, that behavior belongs in
 `gridalyn/`, not duplicated in `projects/<name>/scripts/`. A project script's

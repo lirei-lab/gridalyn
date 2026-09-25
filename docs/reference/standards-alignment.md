@@ -2,8 +2,8 @@
 
 The semantic graph and the agent-interaction protocols name external standards:
 IEC CIM, Brick, EFOnt, IEEE 2030.5, OpenADR, USEF/UFTP, S2, SAREF4ENER and FIPA
-ACL. This page records what each of those standards publishes — identifiers,
-versions, term spellings — verified against primary sources, and where the
+ACL. This page records what each of those standards publishes (identifiers,
+versions, term spellings), verified against primary sources, and where the
 profile agrees. Which standards each capability claims is listed in
 [Semantic Graph](semantic-graph.md#profile-and-capabilities).
 
@@ -53,8 +53,8 @@ capabilities under `gridalyn/twin/semantic/capabilities/`.
   [doi:10.1016/j.adapen.2022.100113](https://doi.org/10.1016/j.adapen.2022.100113).
 - Published file:
   [LBNL-ETA/EnergyFlexibilityOntology](https://github.com/LBNL-ETA/EnergyFlexibilityOntology),
-  file EFOnt.ttl in its ontology directory. **The repository declares no licence**
-  — check before redistributing EFOnt content.
+  file EFOnt.ttl in its ontology directory. **The repository declares no licence**;
+  check before redistributing EFOnt content.
 - `allows`: domain `FlexibilityResources`, range `FlexibleOperation`.
   `enables`: domain `FlexibleOperation`, range `EnergyFlexibility`.
   `Quantifies`: domain `EnergyFlexibilityKPI`, range `EnergyFlexibility`.
@@ -72,8 +72,8 @@ by content rather than by its IRI:
 **The namespace does not resolve.** `http://www.semanticweb.org/hlee9/ontologies/2021/4/EF-core`
 is Protégé's default working IRI and answers no request, so an `efont:` term in
 a gridalyn document dereferences to nothing. gridalyn keeps EFOnt's own
-namespace anyway — minting a gridalyn namespace for EFOnt's terms would make
-them different terms — and pins the file by hash so a reader can check every
+namespace anyway (minting a gridalyn namespace for EFOnt's terms would make
+them different terms) and pins the file by hash so a reader can check every
 term. Because the repository declares no licence, the file is identified here
 and not copied. If EFOnt is republished under a persistent IRI, the prefix is
 rebound and the old IRIs stay resolvable through the capability's `TermAlias`
@@ -94,7 +94,7 @@ file, so a new one cannot enter unchecked.
 
 ## OpenADR 3
 
-- Current release **3.1.0** (Definitions document dated 2025-08-07), declared
+- Current release 3.1.0 (Definitions document dated 2025-08-07), declared
   **not backward compatible** with 3.0.1. The Alliance's own repository is
   gated; the public mirror is
   [grid-coordination/openadr3-specification](https://github.com/grid-coordination/openadr3-specification).
@@ -140,7 +140,7 @@ file, so a new one cannot enter unchecked.
   the Aggregator role "can be taken by either existing market parties … or new
   entrants" (§2.1.2, §2.1.4).
 - Market coordination phases: Contract, Plan, Validate, Operate, Settle.
-- UFTP **3.1.0** (released 2025-11-27), maintained by the LF Energy project
+- UFTP 3.1.0 (released 2025-11-27), maintained by the LF Energy project
   Shapeshifter:
   [shapeshifter/shapeshifter-specification](https://github.com/shapeshifter/shapeshifter-specification).
   Messages include `FlexReservationUpdate`, `D-Prognosis` (with the hyphen),
@@ -186,9 +186,9 @@ The role alignment and the message tables of `flex_trading` and `dr_program` are
 gridalyn's own vocabularies live under `https://w3id.org/gridalyn/ontology/`:
 `dt:` at `https://w3id.org/gridalyn/ontology/digital-twin#`, and `flexint:` at
 `https://w3id.org/gridalyn/ontology/flexint#`. Each is generated from its
-declarations by `tools/export_ontology.py` into a reference page —
-[Digital-Twin Vocabulary](./ontology/digital-twin.md),
-[Flexint Vocabulary](./ontology/flexint.md) — and a Turtle file under
+declarations by `tools/export_ontology.py` into a reference page
+([Digital-Twin Vocabulary](./ontology/digital-twin.md),
+[Flexint Vocabulary](./ontology/flexint.md)) and a Turtle file under
 `docs/ontology/`; `tests/test_ontology_documents.py` fails when either is stale.
 The Turtle marks every retired `cls:` term `owl:deprecated`, with
 `dcterms:isReplacedBy` naming its replacement.

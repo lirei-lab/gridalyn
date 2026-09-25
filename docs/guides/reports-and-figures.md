@@ -176,7 +176,7 @@ summary under the same metric name, as the stage above does.
 Pass the `seed` when the study fixes one: it is what makes the interval
 reproducible rather than merely reported. `build_uncertainty([])` raises, so a
 stage with nothing to report omits `uncertainty=` entirely. An estimate that
-names a metric the summary does not carry is refused at write time — here, a
+names a metric the summary does not carry is refused at write time. Here, a
 summary that reports `peak_kw_max` while the estimate qualifies
 `peak_kw_median`:
 
@@ -186,7 +186,7 @@ peak_summary_report: invalid uncertainty block: uncertainty.peak_kw_median quali
 
 When a study cannot defend its interval, it leaves the block out and says why
 in `validation.warnings`. `projects/measured_shadow_feeder/scripts/compare_peaks.py`
-does exactly this when its median falls outside its own bootstrap interval.
+does this when its median falls outside its own bootstrap interval.
 
 ## Figures
 

@@ -3,9 +3,9 @@
 ## What problem this layer solves
 
 Everything below this layer is a capability the SDK offers; `projects` is
-where a specific study actually consumes them, and it does so as **data, not
+where a specific study consumes them, and it does so as **data, not
 code**. A `project.yaml` (`kind: StudyProject`) plus a `workflow.yaml`
-(`kind: Workflow`) fully describe a study — the DAG of stages, their inputs,
+(`kind: Workflow`) fully describe a study: the DAG of stages, their inputs,
 and what gets validated. `gridalyn/projects/runner.py` executes that DAG as
 subprocesses; nothing shares process memory, so a stage's only input is a
 file another stage wrote, and its only output is a file on disk.
@@ -36,8 +36,8 @@ file another stage wrote, and its only output is a file on disk.
   a stage consumes a resolved component rather than importing a solver or a
   surrogate directly. The backend (`spec.simulation.powerflowBackend`) and the
   surrogate (`spec.simulation.surrogate`) are always bound, each resolved
-  through its registry — to the registry default when the study declares
-  none — and recorded in the run manifest. `consume(role, id)` returns a
+  through its registry (to the registry default when the study declares
+  none) and recorded in the run manifest. `consume(role, id)` returns a
   component the project registered itself, and serves the `backend` role
   only: `registered` is filled from the non-core entries of the power-flow
   backend registry. The `observation_producer` and `policy` roles are not
@@ -61,12 +61,12 @@ Three distinct questions, three distinct mechanisms, never conflated: is the
 contract well-formed (`validate_project_file`, before anything runs); do the
 numbers make sense (`project_sense_check`, which writes
 `project_sense_check_report.json` and fails `validation.valid` on any
-**error**-severity check); did the numbers move (`run_project_regression`,
+error-severity check); did the numbers move (`run_project_regression`,
 which reads the pinned baseline and compares `json_path` by `json_path`). A
-project with **neither** a registered checker **nor** declarative sense-check
+project with neither a registered checker nor declarative sense-check
 rules in its YAML fails the `project_has_registered_sense_checks` gate, and a
-declared checker that records no check fails `project_checker_recorded_no_checks`
-— a study cannot pass vacuously, whether by declaring nothing or by checking
+declared checker that records no check fails `project_checker_recorded_no_checks`.
+A study cannot pass vacuously, whether by declaring nothing or by checking
 nothing.
 
 ```mermaid
@@ -113,7 +113,7 @@ still leaves its completed stages behind. It carries `git_commit`; a
 resolved backend and surrogate, input hashes, extensions); one entry per stage
 with `status`/`started_at`/`ended_at`/`exit_code`; and, at close, an
 `artifacts` map fingerprinting every file under `outputs/` plus a `study_run`
-governance record. A stage completes only if it exits zero **and** produces
+governance record. A stage completes only if it exits zero and produces
 every `outputs:` path it declares: a non-zero exit, or a zero exit with a
 declared output absent (recorded as `"declared output missing"`), marks the
 stage and the run `"failed"` and re-raises. A `--dry-run` records every stage,
@@ -124,13 +124,13 @@ intact.
 
 A declared role is recorded, not merely resolved. `provenance.powerflow_backend`
 names the solver a run used. `provenance.surrogate` names the surrogate that
-stood in for a solve **and its stated error bound**, because naming a surrogate
+stood in for a solve and its stated error bound, because naming a surrogate
 without its accuracy invites the reader to assume there is none. It does so
-only on evidence: each stage writes what it really used to a file the runner
+only on evidence: each stage writes what it used to a file the runner
 hands it, and a run whose stages never predict with a surrogate records
 `status: "none reached"`, `reached_by: []` and no ID. Both carry a
 `declared_source` saying whether the study declared the component or inherited
-the registry default — so a study that names the default explicitly stays
+the registry default, so a study that names the default explicitly stays
 distinguishable from one that named nothing.
 
 ### Declared contracts
@@ -195,7 +195,7 @@ uv run python -m json.tool projects/minimal_grid_project/outputs/manifests/proje
 
 `project run` executes the study's three stages and writes under its
 `outputs/`, which git ignores. The manifest it produces carries the fields
-described above — this page's claims are read off that file, not recalled.
+described above; this page's claims are read off that file, not recalled.
 
 ## Where this sits
 
@@ -203,4 +203,4 @@ described above — this page's claims are read off that file, not recalled.
 below): a study's stages call down through simulation, assets and twin, using
 operations when the study needs a market. What builds on `projects` is
 [Interfaces](interfaces.md): the CLI, reports and dashboard that let a person
-actually run and read what this layer produces.
+run and read what this layer produces.

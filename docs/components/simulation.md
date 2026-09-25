@@ -6,9 +6,9 @@
 as data. `simulation` is where that data becomes a solvable power-flow
 network and gets checked physically: does every bus hold voltage, does every
 line stay under its thermal rating. It also owns the machinery for standing
-in for a full solve when one is too slow — surrogates — for deciding what
-action a controller takes — policies — and for deciding whether, and when, a
-message between simulated agents arrives — channel models.
+in for a full solve when one is too slow (surrogates), for deciding what
+action a controller takes (policies), and for deciding whether, and when, a
+message between simulated agents arrives (channel models).
 
 ## The vocabulary
 
@@ -41,7 +41,7 @@ message between simulated agents arrives — channel models.
   depend on the seed and the endpoint alone, so it is deterministic too. At
   the same share of time down, it and `bernoulli_loss` can disagree sharply:
   in `flex_trading_congestion`, independent loss is the pessimistic case.
-- **`lightsim2grid` is genuinely optional**, gated through
+- **`lightsim2grid` is optional**, gated through
   `require_capabilities("sim", ...)`; `pandapower` itself is a base
   dependency and always available, so the `pandapower_native` backend never
   needs a capability check.
@@ -135,14 +135,14 @@ run actually used lands in `provenance.powerflow_backend`, so two runs on
 different machines can be compared knowing which solver produced each. A
 surrogate is different, because a run can resolve one and never ask it
 anything. `provenance.surrogate` therefore names a surrogate only after a stage
-has really used one, either by a prediction or by a clearing on predicted
+has used one, either by a prediction or by a clearing on predicted
 impact. Until then it records `status: "none reached"` and no ID.
 
 Every registered surrogate states an `ErrorBound` (defined in
 [Foundation](foundation.md), re-exported here); `SurrogateRegistry`
 refuses a descriptor without one (`UnboundedSurrogateError`). The bound is
-either `measured` — a value, its sample size and the protocol that produced
-it — or `unmeasured`, carrying no value and a located reason. The table
+either `measured` (a value, its sample size and the protocol that produced
+it) or `unmeasured`, carrying no value and a located reason. The table
 above gives each shipped surrogate's status. An `unmeasured` bound on a
 network-impact surrogate means the physics labels its relief error was
 measured against have no writer in this repository, so the number cannot be
@@ -153,13 +153,13 @@ registered surrogate's bound, reason included.
 for any surrogate against any physical reference, in that domain's own
 units; `measure_relief_error_bound` is its network-impact caller. Pairing
 stays the caller's job: how a prediction is matched to an observation is
-domain knowledge — join keys for a tabular impact frame, a shared timestamp
+domain knowledge: join keys for a tabular impact frame, a shared timestamp
 for a dispatch replay.
 
 Measuring a bound and being resolvable by ID are separate claims. Entering
 `SurrogateRegistry` means implementing `fit`/`predict`/`verify` over that
 domain's frames; a surrogate measured through `measure_error_bound` has a
-real, falsifiable bound without necessarily being in the registry.
+falsifiable bound without necessarily being in the registry.
 
 ## Using it
 
@@ -218,5 +218,5 @@ against this repository.
 `simulation` sits on [Assets](assets.md): it needs a feeder spec or a twin
 snapshot plus the DER attached to it before there is anything to solve. What
 builds on `simulation` is [Operations](operations.md): the layer that decides
-what to do with the headroom (or lack of it) simulation reveals — clearing a
+what to do with the headroom (or lack of it) simulation reveals: clearing a
 market, dispatching a DER, settling a transaction.

@@ -36,9 +36,9 @@ under its owning facade.
   `gridalyn.simulation.policies`, `gridalyn.simulation.channels`,
   and `gridalyn.operations.interaction`. Each is rendered under
   [Stable sub-packages](#stable-sub-packages) below.
-- **Nothing else.** Any other module path — for example
+- **Nothing else.** Any other module path (for example
   `gridalyn.simulation.simulators.powerflow.synthetic_network` rather than
-  `gridalyn.simulation` — is an implementation detail and may move between
+  `gridalyn.simulation`) is an implementation detail and may move between
   releases.
 
 Project scripts may orchestrate a study, but they should not become hidden

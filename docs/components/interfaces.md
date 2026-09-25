@@ -2,8 +2,8 @@
 
 ## What problem this layer solves
 
-Every layer below this one produces something governed — a network snapshot,
-a settled market, a completed study run — and `interfaces` is the only layer
+Every layer below this one produces something governed (a network snapshot,
+a settled market, a completed study run), and `interfaces` is the only layer
 whose job is to let a person reach it: the `gridalyn` CLI, the reporting
 helpers, visualization helpers, and the dashboard SPA. It never duplicates
 platform logic; if a dashboard needs a number the platform hasn't computed,
@@ -52,9 +52,9 @@ is handed to that domain's module:
 | `platform` | `governance` | `gridalyn-platform` | Run platform governance and artifact checks. |
 | `extension` | `extensions` | — | List, validate, and inspect installed extensions. |
 
-Each domain subcommand either calls a lower-layer function — `gridalyn project
+Each domain subcommand either calls a lower-layer function (`gridalyn project
 run` calls `gridalyn.projects.api.run_workflow`, `gridalyn platform` calls the
-foundation artifact-policy check — or runs a packaged workflow script under
+foundation artifact-policy check) or runs a packaged workflow script under
 `gridalyn.projects.workflows.scripts`, which is how every `market`,
 `semantic` and `dashboard` subcommand and part of `twin` work. The CLI modules hold argument
 parsing, not platform logic. `gridalyn market` checks for the `ops` extra
@@ -68,8 +68,8 @@ exits 2 with the missing-capability message. Every command and flag is in the
 uv run gridalyn --help
 ```
 
-The domains listed in that output are read straight from `DOMAIN_MODULES` —
-confirm the source matches what a user actually sees:
+The domains listed in that output are read straight from `DOMAIN_MODULES`.
+Printing it confirms that the source matches what a user sees:
 
 ```python
 from gridalyn.interfaces.cli.gridalyn import DOMAIN_MODULES
@@ -87,14 +87,14 @@ uv run gridalyn twin --help
 uv run gridalyn project --help
 ```
 
-Both commands exit 0 and print the subcommands their domain module actually
-registers — which is the same mechanism this page's own example used, not a
+Both commands exit 0 and print the subcommands their domain module
+registers, through the same mechanism as the example above rather than a
 separate one documented only in prose.
 
 ## Where this sits
 
 `interfaces` sits on [Projects](projects.md), and through it on every layer
-below — it is the top of the stack, the layer a person actually touches. There
-is nothing above it in the component walk. From here, [Guides](../guides/overview.md)
+below. It is the top of the stack, the layer a person touches; nothing sits
+above it in the component walk. From here, [Guides](../guides/overview.md)
 covers task-shaped how-tos, and [Reference](../reference/overview.md) covers
 the CLI, the Python API, and the YAML contracts in full.
