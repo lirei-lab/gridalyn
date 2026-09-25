@@ -168,6 +168,35 @@ counts, and the source tag is kept as `Building Type` whenever the layer
 carries one. The load and EV draw of each customer are not touched: the block
 decides only who is a customer.
 
+### Does the network look like a distribution network?
+
+Every build's `synthetic_network_validation.json` carries a `realism` block:
+properties that published data can bound, each with its band, its source and
+whether the build sits inside it.
+
+| Metric | Band | Source |
+|---|---|---|
+| `mv_line_km_per_customer` | typical up to 0.145 km, uncommon up to 1.24 km, rare beyond | Krishnan et al. 2020, Table IV (about 8 600 real U.S. feeders) |
+| `lv_service_voltage_pu` | 0.95–1.05 pu (ANSI C84.1 Range A) | Krishnan et al. 2020, Table II |
+| `mv_lv_transformers_over_rating` | none above 100 % loading | Krishnan et al. 2020, Table II |
+| `losses_percent_of_load` | below 10 % | Krishnan et al. 2020, Table II |
+| `customers_per_mv_lv_transformer` | reported; judged only for a Hydro-Québec reading | see below |
+
+The last three need a power flow, so they are measured only when the build
+ran one (`run_powerflow=True`) and it converged; otherwise the block lists
+them under `not_measured`. Declaring `"realism": {"region": "hydro_quebec"}`
+in the grid config switches the voltage band to CSA C235's normal operating
+range (0.917–1.042 pu). It also bounds customers per transformer by
+Hydro-Québec's own figures: at most ten houses on a 100 kVA unit, and a fleet
+mean of at most about 6.8 subscriptions per transformer. The full citations
+are in the block's `sources`.
+
+A metric outside its band adds a warning to the payload's `warnings`; it does
+not change `valid`, because a network outside a band is still a network that
+was built. The payload stays a domain diagnostic, not a platform report.
+Properties without a defensible published band, such as LV circuit length per
+customer, are not judged.
+
 ## Offline Smoke Test
 
 Run the synthetic generator example:
