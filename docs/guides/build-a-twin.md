@@ -134,6 +134,16 @@ into `expected`. An instance directory without a contract fails
 `test_every_instance_declares_a_contract`, which is deliberate: an instance
 nobody can rebuild is an artifact, not a model.
 
+The building models are synthesized at one floor area for every building, not
+from the footprints: a ground print is not a floor area without a storey count.
+Declare it under `spec.models.floorArea`, as a positive `valueM2` and a `source`
+citing where the figure comes from; a value without a source is refused.
+Without the block the SDK default of 100 m² applies, and the building model
+manifest records it as `sdk_default` rather than `declared`. The `default`
+instance declares 148.7 m², the average single-detached floor space in Quebec
+from Natural Resources Canada's Comprehensive Energy Use Database; its
+`twin.yaml` carries the derivation.
+
 `twin base` reads the contract, and the footprints, grid config and weather
 snapshot it names, from the workspace root: `--root` when given, otherwise the
 current directory. The steps above work in any workspace that holds those
