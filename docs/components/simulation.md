@@ -36,7 +36,11 @@ message between simulated agents arrives — channel models.
   the message's identity only, so the same seed gives a byte-identical event
   trace whatever order handlers run in; `fixed_outage` silences an exact,
   nested, seeded subset of endpoints, the shape of a communication-failure
-  sweep.
+  sweep. `burst_outage` takes endpoints down for exponential periods, so an
+  outage takes a whole exchange with it rather than one message. Its periods
+  depend on the seed and the endpoint alone, so it is deterministic too. At
+  the same share of time down, it and `bernoulli_loss` can disagree sharply:
+  in `flex_trading_congestion`, independent loss is the pessimistic case.
 - **`lightsim2grid` is genuinely optional**, gated through
   `require_capabilities("sim", ...)`; `pandapower` itself is a base
   dependency and always available, so the `pandapower_native` backend never
@@ -99,6 +103,7 @@ Every ID each shared default registry holds, the default in bold:
 | `PolicyRegistry` | `sensitivity_dispatch` | `gridalyn.simulation.policies.registry.SensitivityDispatchPolicy` |  | Local voltage-sensitivity dispatch (finite-difference, single bus) |
 | `PolicyRegistry` | `tabular_rl` | `gridalyn.simulation.control.tabular_voltage.TabularRLPolicy` |  | Tabular Q-learning voltage-control policy (greedy lookup) |
 | `ChannelModelRegistry` | `bernoulli_loss` | `gridalyn.simulation.channels.models.BernoulliLossChannel` |  | independent per-message loss |
+| `ChannelModelRegistry` | `burst_outage` | `gridalyn.simulation.channels.models.BurstOutageChannel` |  | burst outage: endpoints down for exponential periods |
 | `ChannelModelRegistry` | `fixed_latency` | `gridalyn.simulation.channels.models.FixedLatencyChannel` |  | fixed latency, no loss |
 | `ChannelModelRegistry` | `fixed_outage` | `gridalyn.simulation.channels.models.FixedOutageChannel` |  | fixed outage: exact seeded subset of silent endpoints |
 | `ChannelModelRegistry` | **`ideal`** | `gridalyn.simulation.channels.models.IdealChannel` |  | ideal channel: zero latency, no loss |
