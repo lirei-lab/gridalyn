@@ -268,9 +268,12 @@ flowchart LR
     analyze_credibility --> analyze_cold_insurance
     generate_annual_mc --> analyze_cold_coupling
     generate_annual_mc --> analyze_network_characterization
+    build_base_mc_cache --> analyze_network_characterization
     generate_annual_mc --> analyze_clustered_adoption
+    build_base_mc_cache --> analyze_clustered_adoption
     generate_annual_mc --> analyze_flexibility_incentive
     generate_annual_mc --> analyze_network_performance
+    build_base_mc_cache --> analyze_network_performance
     generate_annual_mc --> analyze_congestion_risk
     build_base_mc_cache --> analyze_congestion_risk
     analyze_congestion_risk --> analyze_fleet_triage
@@ -281,10 +284,13 @@ flowchart LR
     analyze_congestion_risk --> analyze_nonwires_value
     build_base_mc_cache --> analyze_nonwires_value
     generate_annual_mc --> analyze_phase_imbalance
+    build_base_mc_cache --> analyze_phase_imbalance
     generate_annual_mc --> analyze_voltage_risk
     generate_annual_mc --> analyze_voltage_risk_network
+    build_base_mc_cache --> analyze_voltage_risk_network
     compute_congestion_annual --> validate_powerflow
     apply_curtailment_contracts --> validate_powerflow
+    build_base_mc_cache --> validate_powerflow
     analyze_clustered_adoption --> build_study_reports
     analyze_cold_coupling --> build_study_reports
     analyze_cold_insurance --> build_study_reports
