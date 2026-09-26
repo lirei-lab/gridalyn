@@ -1,0 +1,251 @@
+site_name: Gridalyn
+# Shown at the right of the header, next to search.
+repo_url: https://github.com/lirei-lab/gridalyn
+repo_name: GitHub
+site_dir: ../site
+docs_dir: .
+# ``docs_dir: .`` means every markdown file beneath docs/ is built, whether or
+# not it appears in ``nav``. ``superpowers/`` holds AI-assistant plan and spec
+# records that are git-ignored, so a CI build (which checks out from git) never
+# sees them -- but a local ``mkdocs build`` or ``gh-deploy`` would sweep 41
+# such pages onto the published site. This repo deliberately purged
+# AI-assistant material in the 2026-08-04 history rewrite; excluding the tree
+# keeps a local deploy from undoing that, without deleting a contributor's
+# untracked working files. The pattern is gitignore-style and matches nothing
+# in a clean checkout, which is why it is silent rather than an error there.
+exclude_docs: |
+  superpowers/
+  components/_merge/
+  reference/_merge/
+  development/
+# Broken in-page anchors are INFO by default, so `--strict` let one through
+# unnoticed; as warnings they fail the strict build like a broken link does.
+validation:
+  links:
+    anchors: warn
+nav:
+  - Home: index.md
+  - Start:
+      - What Is Gridalyn?: start/what-is-gridalyn.md
+      - Installation: start/installation.md
+      - Quickstart: start/quickstart.md
+      - Reading The Outputs: start/reading-the-outputs.md
+      - The Studies: start/studies.md
+  - Components:
+      - Component Overview: components/overview.md
+      - Foundation: components/foundation.md
+      - Twin: components/twin.md
+      - Assets: components/assets.md
+      - Simulation: components/simulation.md
+      - Operations: components/operations.md
+      - Projects: components/projects.md
+      - Interfaces: components/interfaces.md
+  - Guides:
+      # Ordered as a study uses them -- declare the project, model what it
+      # acts on, publish, reproduce, inspect -- not alphabetically; Write An
+      # Extension applies at any point. guides/overview.md lists the same order.
+      - Guide Overview: guides/overview.md
+      - Build Your Own Project: guides/build-your-own-project.md
+      - Build A Twin: guides/build-a-twin.md
+      - Synthetic Networks From GeoJSON: guides/synthetic-network-from-geojson.md
+      - Feed Measured Data: guides/feed-measured-data.md
+      - Write Governed Reports And Figures: guides/reports-and-figures.md
+      - Reproduce A Published Result: guides/reproducibility.md
+      - Open The Dashboard: guides/open-the-dashboard.md
+      - Write An Extension: guides/write-an-extension.md
+  - Reference:
+      - Reference Overview: reference/overview.md
+      - CLI: reference/cli.md
+      - Python API: reference/python-api.md
+      - Project And Workflow YAML: reference/workflow-yaml.md
+      - Report And Run-Manifest Schema: reference/report-schema.md
+      - Semantic Graph: reference/semantic-graph.md
+      - Ontology:
+          - Digital-Twin Vocabulary: reference/ontology/digital-twin.md
+          - Flexint Vocabulary: reference/ontology/flexint.md
+      - Standards Alignment: reference/standards-alignment.md
+      - Artifact Policy: reference/artifact-policy.md
+      - Glossary: reference/glossary.md
+  - Contributing:
+      - Contributing Overview: contributing/overview.md
+      - Architecture Rules: contributing/module-boundaries.md
+      - Conventions: contributing/conventions.md
+      - Development Workflow: contributing/developer-workflow.md
+      - Testing And Validation: contributing/testing-and-validation.md
+      - Operator Verification: contributing/verification.md
+      - Releasing: contributing/releasing.md
+theme:
+  name: material
+  logo: _static/logo.png
+  favicon: _static/logo.png
+  features:
+    # Each top-level nav section is a tab under the header; the left sidebar
+    # then carries only the active section's pages.
+    - navigation.tabs
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+extra_css:
+  - stylesheets/extra.css
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lirei-lab/gridalyn
+markdown_extensions:
+  # `!!! note` blocks render as literal text without this; the docs use them to
+  # carry the class statement on the twin surfaces.
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+  - search
+  - redirects:
+      redirect_maps:
+        concepts/data-and-artifact-model.md: components/foundation.md
+        concepts/model-states.md: components/twin.md
+        concepts/naming-conventions.md: contributing/conventions.md
+        concepts/network-model.md: components/twin.md
+        concepts/overview.md: components/overview.md
+        concepts/scenarios.md: components/assets.md
+        contributing/project-hygiene.md: contributing/developer-workflow.md
+        development/artifact-policy.md: reference/artifact-policy.md
+        development/core-package-architecture.md: components/overview.md
+        development/developer-workflow.md: contributing/developer-workflow.md
+        development/module-boundaries.md: contributing/module-boundaries.md
+        development/overview.md: contributing/overview.md
+        development/project-hygiene.md: contributing/developer-workflow.md
+        development/release-readiness.md: contributing/releasing.md
+        development/testing-and-validation.md: contributing/testing-and-validation.md
+        development/verification.md: contributing/verification.md
+        flexibility/clearing.md: components/operations.md
+        flexibility/control.md: components/operations.md
+        flexibility/economic-validation.md: components/operations.md
+        flexibility/network-impact-surrogate.md: components/simulation.md
+        flexibility/overview.md: components/operations.md
+        flexibility/providers-and-aggregators.md: components/operations.md
+        getting-started/build-your-own-project.md: guides/build-your-own-project.md
+        getting-started/documentation-map.md: index.md
+        getting-started/first-hour.md: start/quickstart.md
+        getting-started/installation.md: start/installation.md
+        getting-started/quickstart.md: start/quickstart.md
+        getting-started/reproducibility.md: guides/reproducibility.md
+        getting-started/run-demo-projects.md: start/studies.md
+        getting-started/what-is-gridalyn.md: start/what-is-gridalyn.md
+        guides/author-a-workflow.md: guides/build-your-own-project.md
+        guides/project-template.md: guides/build-your-own-project.md
+        platform/applications-and-interfaces.md: components/interfaces.md
+        platform/architecture.md: components/overview.md
+        platform/artifact-lifecycle.md: components/foundation.md
+        platform/capability-architecture.md: components/overview.md
+        platform/dashboard.md: components/interfaces.md
+        platform/digital-twin-layering.md: components/twin.md
+        platform/digital-twin.md: components/twin.md
+        platform/extensions.md: guides/write-an-extension.md
+        platform/operations.md: components/operations.md
+        platform/overview.md: components/overview.md
+        platform/platform-layer-model.md: components/overview.md
+        platform/platform-sdk-projects.md: components/overview.md
+        platform/project-development.md: components/projects.md
+        platform/utility-platform-roadmap.md: index.md
+        projects/overview.md: components/projects.md
+        projects/problem-contract.md: components/projects.md
+        projects/project-model.md: components/projects.md
+        projects/projects-and-workflows.md: components/projects.md
+        projects/template-guide.md: guides/build-your-own-project.md
+        reference/api.md: reference/python-api.md
+        reference/falkordb.md: reference/semantic-graph.md
+        reference/public-api.md: reference/python-api.md
+        reference/reports.md: reference/report-schema.md
+        sdk/adapters.md: components/twin.md
+        sdk/building-models.md: components/assets.md
+        sdk/clearing-contract.md: components/operations.md
+        sdk/data-generation.md: components/assets.md
+        sdk/market-operations.md: components/operations.md
+        sdk/modeling.md: components/assets.md
+        sdk/network-repository.md: components/twin.md
+        sdk/overview.md: components/overview.md
+        sdk/public-api.md: reference/python-api.md
+        sdk/public-contract.md: components/foundation.md
+        sdk/reporting.md: components/foundation.md
+        sdk/semantic-graph.md: index.md
+        sdk/simulation.md: components/simulation.md
+        sdk/solver-and-model-adapters.md: components/simulation.md
+        start/first-study.md: start/quickstart.md
+        start/run-demo-projects.md: start/studies.md
+        tutorials/build-minimal-digital-twin.md: guides/build-a-twin.md
+        tutorials/generate-reports-and-figures.md: guides/reports-and-figures.md
+        tutorials/open-dashboard.md: guides/open-the-dashboard.md
+        tutorials/overview.md: guides/overview.md
+        tutorials/synthetic-network-from-geojson.md: guides/synthetic-network-from-geojson.md
+        workflows/creating-new-workflow.md: guides/build-your-own-project.md
+        workflows/workflow-yaml-reference.md: reference/workflow-yaml.md
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - ..
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            docstring_options:
+              # Griffe's Google parser defaults this to ``true``, which splits a
+              # multi-line ``Returns:`` block into one returned value per line
+              # and reads a leading ``float:`` as a value *name* rather than a
+              # type. This repository documents a single return in prose, never
+              # several named values, so ``false`` is what its docstrings
+              # actually mean. Left at the default, every ``@property`` with a
+              # multi-line ``Returns:`` fails ``mkdocs build --strict``: the
+              # signature annotation is unavailable under ``force_inspection``
+              # (below), so each split line renders as an un-annotated return.
+              returns_multiple_items: false
+              # Also a griffe default (``true``) that misreads this repo's
+              # style: it parses ``float: description`` as a *named* return
+              # value called "float" instead of a return *typed* ``float``.
+              # Nothing here names its return values, so a leading token before
+              # the colon is always a type.
+              returns_named_value: false
+            # The layer facades expose their public names through a lazy
+            # ``__getattr__`` over ``_LAZY_EXPORTS``. Static analysis cannot see
+            # those names, so the handler must inspect the imported module.
+            force_inspection: true
+            show_root_heading: true
+            show_root_full_path: true
+            show_source: false
+            show_submodules: false
+            show_if_no_docstring: false
+            show_labels: false
+            members_order: alphabetical
+            filters:
+              - "!^_"
+            heading_level: 2

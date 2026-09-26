@@ -1,0 +1,5950 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../overview/">
+      
+      
+        <link rel="next" href="../python-api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../_static/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>CLI - Gridalyn</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cli-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Gridalyn" class="md-header__button md-logo" aria-label="Gridalyn" data-md-component="logo">
+      
+  <img src="../../_static/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Gridalyn
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/lirei-lab/gridalyn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/what-is-gridalyn/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../components/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Gridalyn" class="md-nav__button md-logo" aria-label="Gridalyn" data-md-component="logo">
+      
+  <img src="../../_static/logo.png" alt="logo">
+
+    </a>
+    Gridalyn
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/lirei-lab/gridalyn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/what-is-gridalyn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Is Gridalyn?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/reading-the-outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reading The Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/studies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Studies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/foundation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Twin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/assets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/build-your-own-project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build Your Own Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/build-a-twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build A Twin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/synthetic-network-from-geojson/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Synthetic Networks From GeoJSON
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/feed-measured-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feed Measured Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/reports-and-figures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Governed Reports And Figures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproduce A Published Result
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/open-the-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open The Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/write-an-extension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write An Extension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-arguments-reach-a-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How arguments reach a command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common workflows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands-that-rewrite-tracked-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands that rewrite tracked files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gridalyn-market-needs-the-ops-extra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market needs the ops extra
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn quickstart
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-doctor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn doctor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn twin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-clip-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin clip-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-download-osm-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin download-osm-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-prepare-microsoft-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin prepare-microsoft-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin timeseries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-base" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin base
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-network-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin network-cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-building-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin building-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-scenario-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin scenario-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-powerflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin powerflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-timeseries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-powerflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-powerflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-asset-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin asset-registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-overload-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin overload-report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-dashboard-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin dashboard-catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn project">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project init
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-prepare-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project prepare-workspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project regression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-sense-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project sense-check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-verify-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project verify-all
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn market">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-surrogate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market surrogate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-locational-clearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market locational-clearing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-network-impact-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market network-impact-catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn semantic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn platform
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn platform">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-platform-check-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn platform check-artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn extension">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension new
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow-yaml/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project And Workflow YAML
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../report-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report And Run-Manifest Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../semantic-graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ontology
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ontology
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/digital-twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital-Twin Vocabulary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/flexint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flexint Vocabulary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../standards-alignment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifact-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifact Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/module-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/developer-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/testing-and-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing And Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operator Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-arguments-reach-a-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How arguments reach a command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common workflows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands-that-rewrite-tracked-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands that rewrite tracked files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gridalyn-market-needs-the-ops-extra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market needs the ops extra
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn quickstart
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-doctor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn doctor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn twin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-clip-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin clip-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-download-osm-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin download-osm-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-prepare-microsoft-buildings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin prepare-microsoft-buildings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin timeseries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-base" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin base
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-network-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin network-cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-building-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin building-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-scenario-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin scenario-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-powerflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin powerflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-timeseries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-verify-powerflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin verify-powerflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-asset-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin asset-registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-overload-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin overload-report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-twin-dashboard-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn twin dashboard-catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn project">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project init
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-prepare-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project prepare-workspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project regression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-sense-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project sense-check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-verify-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project verify-all
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-project-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn project catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn market">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-surrogate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market surrogate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-locational-clearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market locational-clearing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-market-network-impact-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn market network-impact-catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn semantic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-semantic-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn semantic validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard catalog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-dashboard-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn dashboard verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn platform
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn platform">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-platform-check-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn platform check-artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gridalyn extension">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gridalyn-extension-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gridalyn extension new
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cli-reference">CLI Reference</h1>
+<p><code>gridalyn</code> is the one command-line entry point. Its first argument is a
+command: <code>quickstart</code>, <code>validate</code> and <code>doctor</code> run directly, and every other
+command names a domain (<code>twin</code>, <code>project</code>, <code>market</code>, <code>semantic</code>, <code>dashboard</code>,
+<code>platform</code>, <code>extension</code>) whose own parser reads the rest of the line. Most
+domains also install a console script of their own, such as <code>gridalyn-dt</code> for
+<code>gridalyn twin</code>; the <a href="#command-reference">command tables</a> below list each one.</p>
+<h2 id="how-arguments-reach-a-command">How arguments reach a command</h2>
+<p>A domain subcommand is served in one of two ways:</p>
+<ul>
+<li><strong>By the command itself.</strong> <code>project</code>, <code>platform</code>, <code>extension</code>, <code>twin build</code>
+  and the twin building-footprint commands parse every argument they accept.</li>
+<li><strong>By a workflow script.</strong> The twin layer commands (<code>twin base</code>,
+  <code>twin powerflow</code>, ...) and every <code>market</code>, <code>semantic</code> and <code>dashboard</code>
+  subcommand run a module from <code>gridalyn.projects.workflows</code>. The subcommand
+  parses its own options, when it has any, and hands everything else on the
+  line to the script's parser. The tables list both sets.</li>
+</ul>
+<p><code>gridalyn &lt;domain&gt; --help</code> lists a domain's subcommands, and
+<code>gridalyn &lt;domain&gt; &lt;subcommand&gt; --help</code> prints every option that subcommand
+accepts, the same as its console script (<code>gridalyn-dt base --help</code>). For a
+pass-through subcommand that is its own options, when it has any, followed by
+the options of the script it runs.</p>
+<p>Path defaults in the tables are shown relative to the workspace root, for the
+<code>default</code> twin instance. The twin layer commands move them with <code>--root</code> and
+<code>--instance</code>, which they pass to the script as <code>GRIDALYN_WORKSPACE_ROOT</code> and
+<code>GRIDALYN_INSTANCE</code>.</p>
+<h2 id="common-workflows">Common workflows</h2>
+<p>Discover the commands and check the install:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>--help
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>--help
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>doctor
+</span></code></pre></div>
+<p>Run a CI fixture study and put it through the checks. What each check answers,
+and which to run when, is on
+<a href="../../contributing/testing-and-validation/">Testing And Validation</a>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>validate<span class="w"> </span>projects/minimal_grid_project
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>plan<span class="w"> </span>projects/minimal_grid_project
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>run<span class="w"> </span>projects/minimal_grid_project
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>verify<span class="w"> </span>projects/minimal_grid_project
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>project<span class="w"> </span>regression<span class="w"> </span>projects/minimal_grid_project
+</span></code></pre></div>
+<p><code>gridalyn project run --stage &lt;id&gt;</code> runs one stage and the stages it depends
+on, and <code>--dry-run</code> writes the run manifest with every stage <code>planned</code> without
+executing one. Scaffolding a study of your own starts at
+<a href="../../start/quickstart/">Quickstart</a> and continues in
+<a href="../../guides/build-your-own-project/">Build Your Own Project</a>; the extension
+loop (<code>extension new</code>, install, <code>extension validate</code>) is in
+<a href="../../guides/write-an-extension/">Write An Extension</a>.</p>
+<p>Plan a twin build without running it. <code>--dry-run</code> writes nothing on its own;
+<code>--manifest</code> keeps the plan as a file outside the repository:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>twin<span class="w"> </span>build<span class="w"> </span>--dry-run<span class="w"> </span>--skip-heavy<span class="w"> </span>--manifest<span class="w"> </span>/tmp/twin-plan.json
+</span></code></pre></div>
+<p>The full build, instance selection and <code>--capabilities</code> are covered in
+<a href="../../guides/build-a-twin/">Build A Twin</a>.</p>
+<h2 id="commands-that-rewrite-tracked-files">Commands that rewrite tracked files</h2>
+<p><code>twin build</code> and the commands served by a workflow script work in
+<code>instances/&lt;instance&gt;/digital_twin/</code>, and most of them write there. In a
+checkout several files under <code>instances/default/</code> are committed, so a command
+run on the <code>default</code> instance can leave the working tree dirty without
+failing. Check <code>git status -- instances</code> afterwards, and point the output
+elsewhere when you only want to look:</p>
+<ul>
+<li><strong><code>gridalyn twin build</code> writes its build manifest</strong> to
+  <code>instances/&lt;instance&gt;/digital_twin/reports/digital_twin_build_manifest.json</code>,
+  which is committed for <code>default</code>. Pass <code>--manifest &lt;path&gt;</code> to write it
+  elsewhere. A <code>--dry-run</code> writes nothing unless <code>--manifest</code> is given.</li>
+<li><strong><code>gridalyn dashboard catalog</code> rewrites the committed
+  <code>instances/default/digital_twin/dashboard/catalog.json</code></strong> when the twin's
+  generated artifacts are all present; when any are missing it refuses,
+  naming each file and the command that produces it, and writes nothing.
+  Pass <code>--out &lt;path&gt;</code> to write it elsewhere. The dashboard itself is covered
+  in <a href="../../guides/open-the-dashboard/">Open The Dashboard</a>.</li>
+</ul>
+<p>The other script-served commands that write committed reports, scenarios,
+flexibility summaries or the semantic graph take an output option too; the
+tables below list it.</p>
+<h2 id="gridalyn-market-needs-the-ops-extra"><code>gridalyn market</code> needs the <code>ops</code> extra</h2>
+<p>Every <code>market</code> subcommand, and <code>gridalyn market --help</code> itself, first checks
+that the <code>ops</code> capability (<code>cvxpy</code>) imports. Without it the command prints
+which extra is missing and exits with status 2 before parsing anything.
+Installing extras is covered in <a href="../../start/installation/">Installation</a>.</p>
+<h2 id="command-reference">Command reference</h2>
+<p>Generated from the parsers by <code>tools/generate_cli_reference.py</code>;
+<code>tests/test_cli_reference.py</code> fails when this section and the code disagree.
+Edit the parsers and rerun the tool rather than editing the tables.</p>
+<!-- BEGIN GENERATED: tools/generate_cli_reference.py -->
+
+<h3 id="gridalyn"><code>gridalyn</code></h3>
+<p>Console script: <code>gridalyn</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Aliases</th>
+<th>Console script</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quickstart</code></td>
+<td></td>
+<td></td>
+<td>Scaffold and run a small power-flow study (first simulation in one command).</td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td></td>
+<td></td>
+<td>Run the unified workspace validation ladder.</td>
+</tr>
+<tr>
+<td><code>doctor</code></td>
+<td></td>
+<td></td>
+<td>Inspect the local Gridalyn installation, workspace, projects, and optional capabilities.</td>
+</tr>
+<tr>
+<td><code>twin</code></td>
+<td><code>dt</code>, <code>model</code></td>
+<td><code>gridalyn-dt</code></td>
+<td>Build and inspect twin (network model) artifacts.</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td><code>projects</code></td>
+<td><code>gridalyn-project</code></td>
+<td>Create, validate, plan, and run project workflows.</td>
+</tr>
+<tr>
+<td><code>market</code></td>
+<td><code>flex</code>, <code>flexibility</code></td>
+<td><code>gridalyn-flex</code></td>
+<td>Run flexibility-market and network-impact commands.</td>
+</tr>
+<tr>
+<td><code>semantic</code></td>
+<td><code>semantics</code></td>
+<td><code>gridalyn-semantic</code></td>
+<td>Build and validate the semantic graph.</td>
+</tr>
+<tr>
+<td><code>dashboard</code></td>
+<td><code>dash</code></td>
+<td><code>gridalyn-dashboard</code></td>
+<td>Generate and validate dashboard catalogs.</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td><code>governance</code></td>
+<td><code>gridalyn-platform</code></td>
+<td>Run platform governance and artifact checks.</td>
+</tr>
+<tr>
+<td><code>extension</code></td>
+<td><code>extensions</code></td>
+<td>none</td>
+<td>List, validate, and inspect installed extensions.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-quickstart"><code>gridalyn quickstart</code></h4>
+<p>Scaffold and run a small power-flow study (first simulation in one command).</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td>Directory to create the project in.</td>
+</tr>
+<tr>
+<td><code>--name</code></td>
+<td>text</td>
+<td></td>
+<td>Project name (defaults to the directory name).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-validate"><code>gridalyn validate</code></h4>
+<p>Run the unified workspace validation ladder.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--project</code></td>
+<td>text, repeatable</td>
+<td></td>
+<td>Project path to validate. May be provided multiple times.</td>
+</tr>
+<tr>
+<td><code>--check-project-artifacts</code></td>
+<td>flag</td>
+<td></td>
+<td>Also check required project reports and figures exist.</td>
+</tr>
+<tr>
+<td><code>--regression</code></td>
+<td>flag</td>
+<td></td>
+<td>Also run configured project regression checks.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-doctor"><code>gridalyn doctor</code></h4>
+<p>Inspect the local Gridalyn installation, workspace, projects, and optional capabilities.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>flag</td>
+<td></td>
+<td>Print the full machine-readable payload instead of the summary.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-twin"><code>gridalyn twin</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build</code></td>
+<td>Build or plan the twin's artifacts.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>clip-buildings</code></td>
+<td>Clip building GeoJSON to a polygon.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>download-osm-buildings</code></td>
+<td>Download OSM building footprints with OSMnx.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>prepare-microsoft-buildings</code></td>
+<td>Convert local Microsoft building-footprint partitions to GeoJSON.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>scenarios</code></td>
+<td>Generate EV adoption scenarios over the twin</td>
+<td><code>ev_scenarios</code></td>
+</tr>
+<tr>
+<td><code>timeseries</code></td>
+<td>Generate EV charging time series for the scenarios</td>
+<td><code>ev_timeseries</code></td>
+</tr>
+<tr>
+<td><code>base</code></td>
+<td>Export the twin's base network model</td>
+<td><code>export_digital_twin_base</code></td>
+</tr>
+<tr>
+<td><code>network-cache</code></td>
+<td>Build the twin's pandapower cache from its contract</td>
+<td><code>prepare_digital_twin_network_cache</code></td>
+</tr>
+<tr>
+<td><code>building-models</code></td>
+<td>Generate building models for the twin's dwellings</td>
+<td><code>generate_digital_twin_building_models</code></td>
+</tr>
+<tr>
+<td><code>scenario-models</code></td>
+<td>Generate per-scenario network models</td>
+<td><code>generate_digital_twin_scenario_models</code></td>
+</tr>
+<tr>
+<td><code>powerflow</code></td>
+<td>Run power flow over the twin's EV scenarios</td>
+<td><code>run_digital_twin_ev_powerflow</code></td>
+</tr>
+<tr>
+<td><code>verify-scenarios</code></td>
+<td>Check the generated EV scenarios for contract violations</td>
+<td><code>verify_digital_twin_ev_scenarios</code></td>
+</tr>
+<tr>
+<td><code>verify-timeseries</code></td>
+<td>Check the generated EV time series for contract violations</td>
+<td><code>verify_digital_twin_ev_timeseries</code></td>
+</tr>
+<tr>
+<td><code>verify-powerflow</code></td>
+<td>Check the EV power-flow results for contract violations</td>
+<td><code>verify_digital_twin_ev_powerflow</code></td>
+</tr>
+<tr>
+<td><code>asset-registry</code></td>
+<td>Generate the twin's device and asset registry</td>
+<td><code>generate_digital_twin_asset_registry</code></td>
+</tr>
+<tr>
+<td><code>overload-report</code></td>
+<td>Report MV/LV transformers loaded past their rating</td>
+<td><code>report_mv_lv_transformer_overloads</code></td>
+</tr>
+<tr>
+<td><code>dashboard-catalog</code></td>
+<td>Generate the twin's dashboard catalog</td>
+<td><code>generate_digital_twin_dashboard_catalog</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-build"><code>gridalyn twin build</code></h4>
+<p>Build or plan the twin's artifacts.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root containing instances/&lt;instance&gt;/digital_twin (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance under &lt;root&gt;/instances/&lt;instance&gt;/digital_twin (default: default). Build any project's twin by selecting its instance.</td>
+</tr>
+<tr>
+<td><code>--capabilities</code></td>
+<td>text</td>
+<td></td>
+<td>Comma-separated capability layers to include (default: the legacy ev-hosting,flexibility build). Pass an empty value for a generic model-first build with no capability layers.</td>
+</tr>
+<tr>
+<td><code>--skip-heavy</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--include-network-impact</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>flag</td>
+<td></td>
+<td>Print the build plan and write nothing (no manifest either, unless --manifest names a destination).</td>
+</tr>
+<tr>
+<td><code>--continue-on-error</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--manifest</code></td>
+<td>path</td>
+<td></td>
+<td>Destination for the build manifest (default: &lt;root&gt;/instances/&lt;instance&gt;/digital_twin/reports/digital_twin_build_manifest.json; a --dry-run writes one only when this is given).</td>
+</tr>
+</tbody>
+</table>
+<p>Known <code>--capabilities</code> values: <code>agent_interaction</code>, <code>ev-hosting</code>, <code>flexibility</code>, <code>metering</code>. Any other name is refused with the known set in the error.</p>
+<h4 id="gridalyn-twin-clip-buildings"><code>gridalyn twin clip-buildings</code></h4>
+<p>Clip building GeoJSON to a polygon.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--buildings-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--polygon-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--output-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-download-osm-buildings"><code>gridalyn twin download-osm-buildings</code></h4>
+<p>Download OSM building footprints with OSMnx.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--polygon-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--output-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-prepare-microsoft-buildings"><code>gridalyn twin prepare-microsoft-buildings</code></h4>
+<p>Convert local Microsoft building-footprint partitions to GeoJSON.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--input-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--output-file</code></td>
+<td>path</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--polygon-file</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--limit</code></td>
+<td>int</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-scenarios"><code>gridalyn twin scenarios</code></h4>
+<p>Generate EV adoption scenarios over the twin</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.digital_twin.ev_scenarios</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--config</code></td>
+<td>path</td>
+<td><code>configs/grid/config.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--assignment-seed</code></td>
+<td>int</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--charger-kw</code></td>
+<td>float</td>
+<td><code>3.84</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--c-soft-fraction</code></td>
+<td>float</td>
+<td><code>0.65</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-timeseries"><code>gridalyn twin timeseries</code></h4>
+<p>Generate EV charging time series for the scenarios</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.digital_twin.ev_timeseries</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--config</code></td>
+<td>path</td>
+<td><code>configs/grid/config.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--start-timestamp</code></td>
+<td>text</td>
+<td><code>2024-01-01 00:00:00</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--resolution-minutes</code></td>
+<td>int</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-base"><code>gridalyn twin base</code></h4>
+<p>Export the twin's base network model</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.export_digital_twin_base</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--adapter-id</code></td>
+<td>text</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--cache-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/cache</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--config</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--footprints</code></td>
+<td>path</td>
+<td></td>
+<td>Building footprints to build from, overriding the instance contract. Without a contract or this option the export falls back to reading the instance cache.</td>
+</tr>
+<tr>
+<td><code>--source-dir</code></td>
+<td>path</td>
+<td></td>
+<td>Source directory for adapters such as cim_parquet.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-network-cache"><code>gridalyn twin network-cache</code></h4>
+<p>Build the twin's pandapower cache from its contract</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.prepare_digital_twin_network_cache</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--cache-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/cache</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--footprints</code></td>
+<td>path</td>
+<td></td>
+<td>Footprints to build from, overriding the instance contract.</td>
+</tr>
+<tr>
+<td><code>--config</code></td>
+<td>path</td>
+<td></td>
+<td>Grid configuration, overriding the instance contract.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-building-models"><code>gridalyn twin building-models</code></h4>
+<p>Generate building models for the twin's dwellings</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_building_models</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/models</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--profile</code></td>
+<td>text</td>
+<td><code>north_america_residential_v1</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-scenario-models"><code>gridalyn twin scenario-models</code></h4>
+<p>Generate per-scenario network models</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_scenario_models</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--models-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/models</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/models/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-id</code></td>
+<td>text</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-powerflow"><code>gridalyn twin powerflow</code></h4>
+<p>Run power flow over the twin's EV scenarios</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.run_digital_twin_ev_powerflow</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenarios</code></td>
+<td>one or more text</td>
+<td></td>
+<td>Scenario ids to solve; defaults to every scenario in the index. Pass a subset for a smoke run.</td>
+</tr>
+<tr>
+<td><code>--scenarios-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--timeseries-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--cache-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/cache</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--config</code></td>
+<td>path</td>
+<td><code>configs/grid/config.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--start-timestamp</code></td>
+<td>text</td>
+<td><code>2024-01-01 00:00:00</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--weather</code></td>
+<td>one of <code>snapshot</code>, <code>synthetic</code>, <code>auto</code>, <code>pvgis</code></td>
+<td><code>snapshot</code></td>
+<td>Weather source for the building baseline. The default reads the digest-pinned TMY the instance contract declares, which is both real Quebec weather and reproducible.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-verify-scenarios"><code>gridalyn twin verify-scenarios</code></h4>
+<p>Check the generated EV scenarios for contract violations</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.verify_digital_twin_ev_scenarios</code>:</p>
+<p>The script parses no arguments.</p>
+<h4 id="gridalyn-twin-verify-timeseries"><code>gridalyn twin verify-timeseries</code></h4>
+<p>Check the generated EV time series for contract violations</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.verify_digital_twin_ev_timeseries</code>:</p>
+<p>The script parses no arguments.</p>
+<h4 id="gridalyn-twin-verify-powerflow"><code>gridalyn twin verify-powerflow</code></h4>
+<p>Check the EV power-flow results for contract violations</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.verify_digital_twin_ev_powerflow</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenarios</code></td>
+<td>one or more text</td>
+<td><code>S0</code> <code>S1</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--timeseries-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-asset-registry"><code>gridalyn twin asset-registry</code></h4>
+<p>Generate the twin's device and asset registry</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_asset_registry</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-path</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/asset_registry.parquet</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--summary-path</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/asset_registry_summary.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--soft-participation-rate</code></td>
+<td>float</td>
+<td><code>0.3</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--soft-assignment-seed</code></td>
+<td>int</td>
+<td><code>3042</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--prefer-existing-soft-participants</code></td>
+<td>flag</td>
+<td></td>
+<td>Use base buildings.cls_participant when it exists and has true values.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-overload-report"><code>gridalyn twin overload-report</code></h4>
+<p>Report MV/LV transformers loaded past their rating</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.report_mv_lv_transformer_overloads</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--timeseries-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/reports/mv_lv_transformer_overload_report.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenarios</code></td>
+<td>one or more text</td>
+<td></td>
+<td>Scenario ids; defaults to every scenario in the index.</td>
+</tr>
+<tr>
+<td><code>--scenarios-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--top-n</code></td>
+<td>int</td>
+<td><code>10</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-twin-dashboard-catalog"><code>gridalyn twin dashboard-catalog</code></h4>
+<p>Generate the twin's dashboard catalog</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_dashboard_catalog</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenario-index</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/index.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--powerflow-summary</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries/powerflow_smoke_summary.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--semantic-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/semantic</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-assets</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/asset_registry.parquet</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--observations-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/observations</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/dashboard/catalog.json</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-project"><code>gridalyn project</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>init</code></td>
+<td>Scaffold a new study directory from a template</td>
+<td></td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>Check project.yaml/workflow.yaml against the schema (is the contract well-formed?)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>plan</code></td>
+<td>Print the stage DAG in execution order without running anything</td>
+<td></td>
+</tr>
+<tr>
+<td><code>run</code></td>
+<td>Execute the workflow stages and write governed artifacts</td>
+<td></td>
+</tr>
+<tr>
+<td><code>prepare-workspace</code></td>
+<td>Create the outputs/ directories a study's stages write into</td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>Report which artifacts and reports a study has produced so far</td>
+<td></td>
+</tr>
+<tr>
+<td><code>regression</code></td>
+<td>Compare results against baselines/results_baseline.json (did the numbers move?)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sense-check</code></td>
+<td>Run the study's objective plausibility checks (do the numbers make sense?)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>verify</code></td>
+<td>Run the ladder: contract + artifact status + sense checks, as one payload. Excludes regression</td>
+<td></td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>List the studies found under a workspace root</td>
+<td></td>
+</tr>
+<tr>
+<td><code>verify-all</code></td>
+<td>Run the verify ladder over every study under a workspace root</td>
+<td></td>
+</tr>
+<tr>
+<td><code>catalog</code></td>
+<td>Write each study's dashboard catalog next to the study</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-init"><code>gridalyn project init</code></h4>
+<p>Scaffold a new study directory from a template</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--name</code></td>
+<td>text</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--template</code></td>
+<td>one of <code>grid-study</code>, <code>minimal</code>, <code>powerflow-demo</code></td>
+<td><code>minimal</code></td>
+<td>Project scaffold template to create.</td>
+</tr>
+<tr>
+<td><code>--list-templates</code></td>
+<td>flag</td>
+<td></td>
+<td>List available templates and exit.</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Scaffolds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grid-study</code></td>
+<td>Contract plus a summary-report stage wired for verification.</td>
+</tr>
+<tr>
+<td><code>minimal</code></td>
+<td>Smallest valid project contract with a placeholder workflow.</td>
+</tr>
+<tr>
+<td><code>powerflow-demo</code></td>
+<td>Runnable IEEE 33-bus power-flow study producing a figure and a governed report (requires only base dependencies, e.g. pandapower).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-validate"><code>gridalyn project validate</code></h4>
+<p>Check project.yaml/workflow.yaml against the schema (is the contract well-formed?)</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--check-artifacts</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-plan"><code>gridalyn project plan</code></h4>
+<p>Print the stage DAG in execution order without running anything</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-run"><code>gridalyn project run</code></h4>
+<p>Execute the workflow stages and write governed artifacts</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--manifest-path</code></td>
+<td>text</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--stage</code></td>
+<td>text, repeatable</td>
+<td></td>
+<td>Run only this stage and its dependencies (repeatable).</td>
+</tr>
+<tr>
+<td><code>--quiet</code></td>
+<td>flag</td>
+<td></td>
+<td>Disable per-stage progress output.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-prepare-workspace"><code>gridalyn project prepare-workspace</code></h4>
+<p>Create the outputs/ directories a study's stages write into</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-status"><code>gridalyn project status</code></h4>
+<p>Report which artifacts and reports a study has produced so far</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--check-artifacts</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-regression"><code>gridalyn project regression</code></h4>
+<p>Compare results against baselines/results_baseline.json (did the numbers move?)</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-sense-check"><code>gridalyn project sense-check</code></h4>
+<p>Run the study's objective plausibility checks (do the numbers make sense?)</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--no-write</code></td>
+<td>flag</td>
+<td></td>
+<td>Run checks without writing outputs/reports/project_sense_check_report.json.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-verify"><code>gridalyn project verify</code></h4>
+<p>Run the ladder: contract + artifact status + sense checks, as one payload. Excludes regression</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td>text</td>
+<td>required</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--no-write</code></td>
+<td>flag</td>
+<td></td>
+<td>Run verification without writing outputs/reports/project_sense_check_report.json.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-list"><code>gridalyn project list</code></h4>
+<p>List the studies found under a workspace root</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-verify-all"><code>gridalyn project verify-all</code></h4>
+<p>Run the verify ladder over every study under a workspace root</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--write</code></td>
+<td>flag</td>
+<td></td>
+<td>Write project sense-check reports.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-project-catalog"><code>gridalyn project catalog</code></h4>
+<p>Write each study's dashboard catalog next to the study</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--check</code></td>
+<td>flag</td>
+<td></td>
+<td>Report catalogs that no longer match their study; write nothing.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-market"><code>gridalyn market</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>providers</code></td>
+<td>Generate the flexibility providers available on the twin</td>
+<td><code>generate_digital_twin_flexibility_providers</code></td>
+</tr>
+<tr>
+<td><code>surrogate</code></td>
+<td>Fit the network-impact surrogate the clearing decides on</td>
+<td><code>generate_network_impact_surrogate</code></td>
+</tr>
+<tr>
+<td><code>locational-clearing</code></td>
+<td>Clear flexibility locationally against network constraints</td>
+<td><code>generate_locational_flexibility_clearing</code></td>
+</tr>
+<tr>
+<td><code>network-impact-catalog</code></td>
+<td>Generate the network-impact dashboard catalog</td>
+<td><code>generate_network_impact_dashboard_catalog</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-market-providers"><code>gridalyn market providers</code></h4>
+<p>Generate the flexibility providers available on the twin</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_flexibility_providers</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--models-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/models</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-market-surrogate"><code>gridalyn market surrogate</code></h4>
+<p>Fit the network-impact surrogate the clearing decides on</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_network_impact_surrogate</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenario-id</code></td>
+<td>text</td>
+<td><code>S4</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--provider-registry</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility/provider_registry.parquet</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--sensitivity</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility/network_sensitivity.parquet</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-market-locational-clearing"><code>gridalyn market locational-clearing</code></h4>
+<p>Clear flexibility locationally against network constraints</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_locational_flexibility_clearing</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td>Workspace root containing instances/default/digital_twin (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--provider-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--impact-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--overload-report-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--transformers-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--transformer-timeseries-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--report-path</code></td>
+<td>path</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-id</code></td>
+<td>text</td>
+<td><code>S4</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--clearing-method</code></td>
+<td>one of <code>surrogate</code>, <code>topology</code></td>
+<td><code>surrogate</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--constraint-id</code></td>
+<td>text, repeatable</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--top-constraints</code></td>
+<td>int</td>
+<td><code>3</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-market-network-impact-catalog"><code>gridalyn market network-impact-catalog</code></h4>
+<p>Generate the network-impact dashboard catalog</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_network_impact_dashboard_catalog</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenario-index</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/index.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility/network_impact_catalog.json</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-semantic"><code>gridalyn semantic</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build</code></td>
+<td>Generate the semantic graph from the twin</td>
+<td><code>generate_digital_twin_semantic_graph</code></td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>Check the generated semantic graph for contract violations</td>
+<td><code>validate_digital_twin_semantics</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-semantic-build"><code>gridalyn semantic build</code></h4>
+<p>Generate the semantic graph from the twin</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_semantic_graph</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--profile</code></td>
+<td>text</td>
+<td><code>north_america</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--flexibility-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/flexibility</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--timeseries-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/semantic</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--interaction-log</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/operations/message_log.parquet</code></td>
+<td>Message log the agent_interaction capability reads. A path that does not exist is an empty log, so the default is safe for a twin that has run no protocol.</td>
+</tr>
+<tr>
+<td><code>--metering-points</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/observations/metering_points.parquet</code></td>
+<td>Metering-point table the metering capability reads. A path that does not exist is an empty table, so the default is safe for a twin nobody meters.</td>
+</tr>
+<tr>
+<td><code>--semantic-capabilities</code></td>
+<td>zero or more text</td>
+<td></td>
+<td>Declared semantic capabilities (e.g. 'flexibility'). Defaults to flexibility for backwards compatibility; pass an empty list for a model-first core-only graph.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-semantic-validate"><code>gridalyn semantic validate</code></h4>
+<p>Check the generated semantic graph for contract violations</p>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.validate_digital_twin_semantics</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--semantic-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/semantic</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-dashboard"><code>gridalyn dashboard</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>catalog</code></td>
+<td>Generate the dashboard catalog from the twin</td>
+<td><code>generate_digital_twin_dashboard_catalog</code></td>
+</tr>
+<tr>
+<td><code>verify</code></td>
+<td>Check the dashboard's catalog against the twin it describes</td>
+<td><code>verify_dashboard_consistency</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-dashboard-catalog"><code>gridalyn dashboard catalog</code></h4>
+<p>Generate the dashboard catalog from the twin</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td></td>
+<td>Workspace root (default: GRIDALYN_WORKSPACE_ROOT, else the current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.generate_digital_twin_dashboard_catalog</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--scenario-index</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/index.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/base</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--powerflow-summary</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/timeseries/powerflow_smoke_summary.json</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--semantic-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/semantic</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--scenario-assets</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/scenarios/asset_registry.parquet</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--observations-dir</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/observations</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/dashboard/catalog.json</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-dashboard-verify"><code>gridalyn dashboard verify</code></h4>
+<p>Check the dashboard's catalog against the twin it describes</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>path</td>
+<td></td>
+<td>Workspace root (default: GRIDALYN_WORKSPACE_ROOT, else the current directory).</td>
+</tr>
+<tr>
+<td><code>--instance</code></td>
+<td>text</td>
+<td><code>default</code></td>
+<td>Named twin instance (default: GRIDALYN_INSTANCE or 'default').</td>
+</tr>
+</tbody>
+</table>
+<p>Passed through to <code>gridalyn.projects.workflows.scripts.verify_dashboard_consistency</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--catalog</code></td>
+<td>path</td>
+<td><code>instances/default/digital_twin/dashboard/catalog.json</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-platform"><code>gridalyn platform</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check-artifacts</code></td>
+<td>Check Git artifact policy and the minimal demo dataset contract.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-platform-check-artifacts"><code>gridalyn platform check-artifacts</code></h4>
+<p>Check Git artifact policy and the minimal demo dataset contract.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--root</code></td>
+<td>text</td>
+<td><code>.</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--summary-only</code></td>
+<td>flag</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="gridalyn-extension"><code>gridalyn extension</code></h3>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Purpose</th>
+<th>Pass-through script</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list</code></td>
+<td>List installed extensions without importing them (awareness).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>Load declared extension IDs and report resolution (declared-only).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>new</code></td>
+<td>Scaffold a conformant extension package.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-extension-list"><code>gridalyn extension list</code></h4>
+<p>List installed extensions without importing them (awareness).</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--group</code></td>
+<td>text</td>
+<td><code>gridalyn.extensions</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>flag</td>
+<td></td>
+<td>Emit JSON.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-extension-validate"><code>gridalyn extension validate</code></h4>
+<p>Load declared extension IDs and report resolution (declared-only).</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--group</code></td>
+<td>text</td>
+<td><code>gridalyn.extensions</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>extension_ids</code></td>
+<td>zero or more text</td>
+<td></td>
+<td>Declared extension IDs to resolve (at least one required).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gridalyn-extension-new"><code>gridalyn extension new</code></h4>
+<p>Scaffold a conformant extension package.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>text</td>
+<td>required</td>
+<td>Extension ID / package name.</td>
+</tr>
+<tr>
+<td><code>--role</code></td>
+<td>text</td>
+<td><code>powerflow_backend</code></td>
+<td>Role the extension serves (default: powerflow_backend).</td>
+</tr>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td></td>
+<td>Directory to write the package into (default: current directory).</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>flag</td>
+<td></td>
+<td>Overwrite an already-existing package directory.</td>
+</tr>
+</tbody>
+</table>
+<!-- END GENERATED -->
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/lirei-lab/gridalyn" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
