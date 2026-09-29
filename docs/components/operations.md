@@ -49,7 +49,8 @@ target back onto per-load matrices.
 
 **The selection contract.**
 `build_locational_clearing(*, requirements, providers, impact, scenario_id,
-dt_h, clearing_method="surrogate", max_selected_providers_per_event=1000)`
+dt_h, clearing_method="surrogate", max_selected_providers_per_event=1000,
+provider_availability=None)`
 takes three DataFrames (what the network needs relieved, who can offer it,
 and the impact model connecting an offer to relief) and returns
 `(events, selections, report)`: one row per constraint event, one row per
@@ -70,6 +71,14 @@ deliverability factor), then `selection_priority`, then rank score, then
 `provider_id`, so the order is deterministic. A provider is selected for the
 smaller of its capacity and the relief still needed; what no provider covers is
 the event's `shortfall_kw`.
+
+`available_capacity_kw` is a static, contracted capacity: without more
+information every provider offers it at every step. A curtailable load can
+only shed what it is drawing, so pass `provider_availability`, a frame with
+`provider_id`, `timestep` and `available_kw`, whenever that draw varies over
+time. A provider then delivers at most the smaller of its contracted capacity
+and its `available_kw` at that step, and a provider with no row at a step is
+unavailable there: an EV that is not charging has nothing to curtail.
 
 ```python
 import pandas as pd
