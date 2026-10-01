@@ -43,7 +43,7 @@ minutes; the third is the studies that take hours.
 | `prosumer_battery_market` | seconds | CI fixture | none | Small synthetic feeder with distributed prosumers, batteries, and a real-time local market. |
 | `synthetic_geojson_feeder` | seconds | CI fixture | none | Converts generated building-footprint GeoJSON into a synthetic distribution feeder. |
 | `rl_voltage_control_lightsim` | minutes | CI fixture | `sim` | Trains a tabular Q-learning agent to control feeder voltage with a battery, using lightsim2grid for fast power-flow simulation. |
-| `admm_thermal_consensus` | minutes | operator-verified | `ops`, `sim` | Network-validated distributed ADMM coordination of cold-climate electric-heating homes with ML imputation of communication-failed agents, validated on the IEEE-33 feeder with pandapower. |
+| `admm_thermal_consensus` | minutes | operator-verified | `ops`, `sim` | Network-validated distributed ADMM coordination of cold-climate electric-heating homes with ML imputation of communication-failed agents, validated by AC power flow on a synthetic LV feeder behind a 500 kVA distribution transformer, and measured as the number of homes that transformer hosts under IEEE C57.91. |
 | `measured_shadow_feeder` | minutes | operator-verified | none | Feed one measured week of per-home power through the semantic graph into a small feeder, solve it, and compare its peak transformer loading with the same feeder driven by the synthetic load generator. |
 
 ### Rung 3: full studies
