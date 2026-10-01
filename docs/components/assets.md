@@ -74,10 +74,11 @@ are drawn per dwelling so that a fleet has realistic diversity.
     - `QUEBEC_ALL_ELECTRIC` is derived from **installed capacity**, what a
       utility sizes for. On the same feeder it reads roughly twice the
       per-dwelling peak. It also lets appliance electricity heat the air node
-      (`internal_gain_fraction = 0.6`), with `R` refitted to 5.7 alongside it
-      against the metered Hydro-Québec homes: October–April
-      monthly means within ±5 %, pooled peaks per home within ±1 % at 6, 12 and
-      60 homes. The default archetype keeps no internal gains, as before.
+      (`internal_gain_fraction = 0.6`) and carries the building-mass node
+      below, with `R` refitted to 5.4 alongside them against the metered
+      Hydro-Québec homes. The fit and its residuals are recorded in
+      `projects/ev_hosting_flex/CALIBRATION.md`, "Building-mass re-base". The
+      default archetype keeps no internal gains and no mass, as before.
 
     Neither is wrong, so a figure quoted from either belongs with the archetype
     it came from. A re-parameterised archetype consumes the same random draws
@@ -109,8 +110,8 @@ are drawn per dwelling so that a fleet has realistic diversity.
   the October–April monthly bias from −2.3 % … +4.7 % to −0.6 % … +0.5 %.
   It also reproduces the measured midday heating dip. `ev_hosting_flex`
   adopts that pair together with its water-heater recalibration.
-  `QUEBEC_ALL_ELECTRIC` keeps `R` 5.7 with no aperture, because its callers
-  pass no irradiance, and without sun the lower `R` would overheat. The
+  `QUEBEC_ALL_ELECTRIC` keeps no aperture, because its callers pass no
+  irradiance, and its `R` (5.4) is fitted without sun. The
   synthetic weather source carries zero irradiance, so studies on it keep the
   no-sun pair too. Irradiance must share the temperature series' index, and each
   value must sit at its own timestamp. The committed study TMY labels hour
@@ -128,22 +129,23 @@ are drawn per dwelling so that a fleet has realistic diversity.
   dwelling's walls, floors and furniture (`mass_capacitance_kwh_per_c`,
   `air_mass_resistance_c_per_kw`, `mass_conductance_share`, and
   `solar_mass_fraction` for the sunlight that lands on it). `R` still sets the
-  steady-state loss; the mass only changes when heat flows. Off by default in
-  every shipped archetype. It matters when the heat stops for hours: against
-  EnergyPlus on 23 Québec fleet dwellings, the air node alone puts the indoor
-  drop after an 8-hour outage at about twice the measured 11 °C, while
-  air 1.8 kWh/°C, mass 10 kWh/°C, 2.0 °C/kW between them and 30 % of the
-  envelope through the mass lands within 1.5 °C and keeps the metered cycling
-  and pooled peaks within a few percent of the single node. Only the Euler
-  integrator runs it.
+  steady-state loss; the mass only changes when heat flows. Off by default,
+  and on in `QUEBEC_ALL_ELECTRIC`. It matters when the heat stops for hours:
+  against EnergyPlus on 23 Québec fleet dwellings, the air node alone puts the
+  indoor drop after an 8-hour outage at about twice the measured 11 °C. Air
+  2.0 kWh/°C, mass 12 kWh/°C, 1.4 °C/kW between them, half the envelope
+  conductance and half the sunlight through the mass put it at 10.8 °C against
+  EnergyPlus's 11.3 °C, fitted jointly with the metered homes' year
+  (`projects/ev_hosting_flex/CALIBRATION.md`, "Building-mass re-base"). Only
+  the Euler integrator runs it.
 - **Outages** — `simulate_buildings(..., outage=(start, end))` cuts power
   and appliance load for the window; when it ends every thermostat that has
   been calling draws at once. `measure_cold_load_pickup` compares that run
   with the same fleet run without the outage: indoor drop, pickup peak per
   home for groups of each size, recovery time and the energy repaid. The
   pickup peak in kW is set by installed capacity, so the ratio to normal load
-  rises as the weather warms (1.6 at −25 °C, 2.3 at −10 °C, 3.2 at 0 °C for
-  groups of 60 on the Québec dwelling with its mass), and a transformer should
+  rises as the weather warms (1.6 at −25 °C, 2.2 at −10 °C, 3.2 at 0 °C for
+  groups of 60 on `QUEBEC_ALL_ELECTRIC` after a 4-hour outage), and a transformer should
   be judged on the kW, not the ratio. A feeder restored in stages is one
   window per section: `generate_restoration_fleet`
   (`gridalyn.assets.datagen.agents.restoration`) runs each section through its
