@@ -146,6 +146,18 @@ Study stage scripts reach all of this through `project_script()`; see
 | `SUPPORTED_CONTRACT_VERSIONS`, `UnsupportedContractVersionError` | The extension contract versions the engine accepts; any other is rejected at registration. |
 | `WorkspaceRoot`, `ProjectDir` | Distinct `NewType`s over `Path` for the workspace root and a study's directory, so mypy rejects one where the other is required. `BaseArtifactDir` (`gridalyn.foundation.platform.roots`) types `ArtifactLayout.base`. |
 
+Every per-role registry (power-flow backends, surrogates, policies, channel
+models, network adapters, observation producers and semantic capabilities)
+subclasses one mechanism, `RoleRegistry` in
+`gridalyn/foundation/platform/role_registry.py`. It covers explicit-ID
+registration with `replace`, `source` and `version`, descriptors listed in ID
+order, and a located error naming the registered IDs. Registration runs its
+checks in one order for every role: the contract version, the role's own rule,
+the source, then the duplicate ID. Semantic capabilities skip the first check,
+because their descriptors declare no contract version. A role registry adds
+only what its role needs, such as the surrogate's required error bound. The registries themselves are listed on
+[Simulation](simulation.md) and [Twin](twin.md).
+
 `gridalyn.foundation.data` resolves the bundled tutorial files:
 `get_dataset_path(filename)` and `list_available_datasets()`. Production
 studies declare their inputs in `project.yaml` instead.
