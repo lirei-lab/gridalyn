@@ -1,0 +1,3080 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../report-schema/">
+      
+      
+        <link rel="next" href="../ontology/digital-twin/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../_static/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Semantic Graph - Gridalyn</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#semantic-graph" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Gridalyn" class="md-header__button md-logo" aria-label="Gridalyn" data-md-component="logo">
+      
+  <img src="../../_static/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Gridalyn
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Semantic Graph
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/lirei-lab/gridalyn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/what-is-gridalyn/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../components/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Gridalyn" class="md-nav__button md-logo" aria-label="Gridalyn" data-md-component="logo">
+      
+  <img src="../../_static/logo.png" alt="logo">
+
+    </a>
+    Gridalyn
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/lirei-lab/gridalyn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/what-is-gridalyn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Is Gridalyn?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/reading-the-outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reading The Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/studies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Studies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/foundation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Twin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/assets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/interfaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/build-your-own-project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build Your Own Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/build-a-twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build A Twin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/synthetic-network-from-geojson/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Synthetic Networks From GeoJSON
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/feed-measured-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feed Measured Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/reports-and-figures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Governed Reports And Figures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproduce A Published Result
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/open-the-dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open The Dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/write-an-extension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write An Extension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow-yaml/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project And Workflow YAML
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../report-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report And Run-Manifest Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Graph
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profile-and-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile And Capabilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profile And Capabilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flexibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flexibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generated-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generated Artifacts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-and-edge-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node And Edge Schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main Relationships
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-and-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build And Validate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#export-to-a-graph-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export To A Graph Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ontology
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ontology
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/digital-twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital-Twin Vocabulary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ontology/flexint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flexint Vocabulary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../standards-alignment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards Alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifact-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifact Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/module-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/developer-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/testing-and-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing And Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operator Verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releasing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profile-and-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile And Capabilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profile And Capabilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flexibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flexibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generated-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generated Artifacts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-and-edge-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node And Edge Schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main Relationships
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-and-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build And Validate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#export-to-a-graph-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export To A Graph Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="semantic-graph">Semantic Graph</h1>
+<p>The semantic graph is an index over the twin's Parquet tables. It does not
+replace them as the analytical source of truth: it adds stable entity IDs,
+ontology types, relationship axioms and a validation report, so the same assets
+can be queried as a graph: in Python through <code>SemanticGraphRepository</code>, or in
+a graph database after a Cypher export.</p>
+<h2 id="profile-and-capabilities">Profile And Capabilities</h2>
+<p>The profile the build writes is:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>instances/default/digital_twin/semantic/profile_north_america.json
+</span></code></pre></div>
+<p>The profile is North America-first and <strong>model-first</strong>: a core that is always
+emitted carries the generic grid model, and everything else is an
+<strong>on-demand capability</strong> a project declares
+(<code>build_semantic_graph(capabilities=...)</code>, <code>gridalyn semantic build
+--semantic-capabilities</code>, or <code>gridalyn twin build --capabilities</code>, which passes
+its semantic subset on).</p>
+<p>A capability is a declaration registered by explicit ID in
+<code>gridalyn/twin/semantic/registry.py</code> (its namespaces, semantic types,
+relationships with their axioms, scenario count rules and the standards it
+claims), not a branch in the orchestrator. Declaring a capability that is not
+registered raises <code>UnknownSemanticCapabilityError</code>, naming the registered set. A
+host registers its own with <code>register_semantic_capability_extension</code>, and a
+study can declare an extension that contributes one through
+<code>spec.inputs.extensions</code>
+(<a href="../../guides/write-an-extension/#rules-for-a-semantic-capability">Write An Extension</a>).
+Every graph manifest records the capabilities it was built with.</p>
+<p>The composed profile lists the standards it draws on under
+<code>primary_standards</code>, by concern. This table is that field for the core and
+each registered capability:</p>
+<table>
+<thead>
+<tr>
+<th>Declared by</th>
+<th>Concern</th>
+<th>Standards</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>core</td>
+<td><code>grid_topology</code></td>
+<td>IEC CIM, IEC 61970, IEC 61968, CIM100</td>
+</tr>
+<tr>
+<td>core</td>
+<td><code>buildings</code></td>
+<td>ASHRAE 223, Brick Schema</td>
+</tr>
+<tr>
+<td>core</td>
+<td><code>metering</code></td>
+<td>Green Button, NAESB ESPI</td>
+</tr>
+<tr>
+<td><code>flexibility</code></td>
+<td><code>building_flexibility</code></td>
+<td>EFOnt</td>
+</tr>
+<tr>
+<td><code>flexibility</code></td>
+<td><code>ev_charging</code></td>
+<td>Brick Schema</td>
+</tr>
+<tr>
+<td><code>flexibility</code></td>
+<td><code>flexibility_market</code></td>
+<td>gridalyn flexint</td>
+</tr>
+<tr>
+<td><code>agent_interaction</code></td>
+<td><code>agent_interaction</code></td>
+<td>gridalyn flexint, FIPA ACL</td>
+</tr>
+<tr>
+<td><code>agent_interaction</code></td>
+<td><code>demand_response</code></td>
+<td>OpenADR 3.1.0</td>
+</tr>
+<tr>
+<td><code>agent_interaction</code></td>
+<td><code>role_model</code></td>
+<td>USEF 2021</td>
+</tr>
+<tr>
+<td><code>metering</code></td>
+<td><code>usage_points</code></td>
+<td>IEC 61968-9</td>
+</tr>
+</tbody>
+</table>
+<p>A claimed standard is not the same as an emitted type. The core emits <code>cim:</code>,
+<code>brick:</code> and <code>dt:</code> types only: the <code>s223:</code> (ASHRAE 223) and <code>gb:</code> (Green
+Button) namespaces are bound in the profile but no type is emitted under
+either, and Green Button ESPI appears only as the <code>source_standard</code> of
+<code>dt:TimeSeriesDataset</code> nodes. SAREF is not in the profile.</p>
+<p>Composition refuses a namespace prefix bound to two IRIs, a relationship
+declared with two predicates, and a relationship that names a type no active
+declaration lists. The identifiers these standards publish (namespaces,
+versions, term spellings) are verified, with sources, in
+<a href="../standards-alignment/">Standards Alignment</a>.</p>
+<h3 id="flexibility">Flexibility</h3>
+<p><code>capabilities={"flexibility"}</code> adds the flexibility-market layer, generated from
+<code>instances/default/digital_twin/flexibility/provider_registry.parquet</code>, and an
+EFOnt crosswalk for building flexibility:</p>
+<ul>
+<li>Brick's <code>Electric_Vehicle_Charging_Station</code> for EV charging equipment. IEEE
+  2030.5 defines no EVSE type and publishes no RDF namespace, so it is a
+  crosswalk (an <code>EndDevice</code> with <code>PEVInfo</code>), not a prefix;</li>
+<li><code>flexint:</code> (<code>https://w3id.org/gridalyn/ontology/flexint#</code>), gridalyn's own
+  vocabulary, for curtailment contracts (one <code>flexint:CurtailmentContract</code>
+  class whose <code>contract_mode</code> property is <code>soft</code> or <code>hard</code>) and for the market
+  entities: aggregators, portfolios, providers, offers and constraint zones.
+  The market entity model is gridalyn's own because OpenADR and IEEE 2030.5
+  describe messages and device interoperability, not a locational market. The
+  layer still links to standards-backed assets: providers implement
+  curtailment contracts, offers target constraint zones, and each constraint
+  zone resolves to a CIM <code>PowerTransformer</code>, <code>ACLineSegment</code> or
+  <code>ConnectivityNode</code>;</li>
+<li>EFOnt (the LBNL Energy Flexibility Ontology) as a crosswalk, not as the
+  network or market ontology: CIM owns grid topology, Brick owns buildings and
+  EV charging stations, <code>flexint:</code> owns contracts and the market. For every
+  soft curtailment contract (<code>contract_mode: soft</code>) the graph creates an
+  <code>efont:ThermallyActivatedBuildingSystem</code> resource, an
+  <code>efont:FlexibleOperation</code> (the operating envelope or setpoint adjustment),
+  an <code>efont:EnergyFlexibility</code> node for the delivered flexibility, and an
+  <code>efont:EnergyFlexibilityKPI</code> node for <code>MaximumReducedDemand</code>. EFOnt describes
+  building flexibility; it does not model network deliverability or market
+  clearing.</li>
+</ul>
+<h3 id="agent-interaction">Agent Interaction</h3>
+<p><code>capabilities={"agent_interaction"}</code> reads the message log
+<code>gridalyn.operations.interaction</code> writes (<code>--interaction-log</code>) and emits:</p>
+<ul>
+<li>the agents, parties and functional roles a protocol run recorded. The
+  semantic layer sits below operations and never imports it, so the role table
+  and the log columns the emitter reads are restated in the capability and
+  pinned against their sources by <code>tests/test_agent_interaction_capability.py</code>;</li>
+<li>one summary node per conversation: message counts by outcome, the window it
+  spans, the message types and acts exchanged. Never a protocol state: only a
+  replay in <code>operations</code> can decide one, and the graph states nothing it has
+  not computed;</li>
+<li><code>flexint:DemandResponseProgram</code> and <code>flexint:DemandResponseEvent</code>, gridalyn's
+  own terms whose <code>aligns_with</code> property names the OpenADR 3.1.0 object each
+  renders, carrying 3.1.0's own payload spellings (<code>programID</code>, the event
+  window, the import cap). The OpenADR Alliance publishes no RDF, so no
+  <code>openadr:</code> IRI is emitted;</li>
+<li>a conversation records the <code>constraint_id</code> its request named, not a zone node
+  id the log cannot know. <code>query_agents_answering_constraint</code> joins on that
+  property: which agents answered the request for a given constraint.</li>
+</ul>
+<h3 id="metering">Metering</h3>
+<p><code>capabilities={"metering"}</code> records where a reading is attributed. It reads a
+deployment's metering-point table (<code>--metering-points</code>), which has one row per point:
+<code>usage_point_id</code>, the twin <code>load_id</code> it meters, and optionally <code>quantity</code>,
+<code>resolution_minutes</code>, <code>source_dataset</code>. It emits one <code>cim:UsagePoint</code> per row
+with one <code>METERS</code> edge to that load's <code>cim:EnergyConsumer</code>. The core graph
+already reaches the bus from there (<code>CONNECTED_TO</code>), so which bus a measurement
+belongs to is read off the model instead of being written down a second time.</p>
+<ul>
+<li>Both terms are IEC 61968-9's own: <code>UsagePoint</code>, and its <code>Equipments</code>
+  association to the equipment connecting the point to the grid. No <code>dt:</code>
+  predicate is minted, and no <code>EndDevice</code> is emitted: the capability knows no
+  serial, model or install date.</li>
+<li>CIM allows a usage point many equipments; <code>METERS</code> is held to exactly one,
+  because a reading that cannot be attributed to one load cannot be placed on
+  one bus. A repeated point, a load the twin does not carry, or an identifier
+  another node already holds is refused at build, naming the offender.</li>
+<li>No instance this repository ships is metered, so the table is absent and the
+  capability emits nothing.</li>
+</ul>
+<h3 id="deprecated-terms">Deprecated Terms</h3>
+<p>Graphs built before gridalyn's namespaces moved to <code>w3id.org</code> carry retired
+terms (<code>cls:</code>, <code>dt:</code> on <code>gridalyn.local</code>, <code>ieee2030_5:EVSE</code>, and CIM18 <code>cim:</code>
+IRIs). <code>resolve_deprecated_term</code> in <code>gridalyn/twin/semantic/profile.py</code> maps
+each retired type and predicate to its replacement, and a repository query by a
+retired type warns and filters by the property its name used to encode. CIM18
+spellings are read at ingest by <code>resolve_ingest_iri</code> for the four classes the
+core emits, and refused for any other. Each vocabulary page lists its retired
+terms.</p>
+<h2 id="generated-artifacts">Generated Artifacts</h2>
+<p>The graph build writes:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>instances/default/digital_twin/semantic/nodes.parquet
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>instances/default/digital_twin/semantic/edges.parquet
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>instances/default/digital_twin/semantic/graph_manifest.json
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>instances/default/digital_twin/semantic/validation_report.json
+</span></code></pre></div>
+<p>The graph uses stable IDs such as:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>building:123
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>bus:45
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>scenario:S4
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>contract:S4:building:123:soft_cls
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>energy_flexibility:S4:building:123:soft_cls
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>aggregator:S4:soft_cls
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>portfolio:S4:soft_cls
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>provider:S4:building:123:soft_cls
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>offer:S4:building:123:soft_cls
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>constraint-zone:S4:transformer:64
+</span></code></pre></div>
+<p>An id is <code>&lt;kind&gt;:&lt;id&gt;</code>, and its kind is never a prefix the profile binds: an id
+such as <code>efont:resource:...</code> reads as a term of EFOnt and would expand to an IRI
+inside EFOnt's namespace, which gridalyn does not own. The validator refuses
+such ids. The flexibility capability minted four kinds that way until
+2026-09-23; they are now <code>flexibility_resource:</code>, <code>flexible_operation:</code>,
+<code>energy_flexibility:</code> and <code>flexibility_kpi:</code>, each named for the EFOnt class the
+node carries.</p>
+<h2 id="node-and-edge-schema">Node And Edge Schema</h2>
+<p>Two Parquet tables, one join. An edge is not a property of a node but a
+row that names two of them, which is what lets the graph be rebuilt from the
+canonical twin tables rather than incrementally mutated.</p>
+<pre class="mermaid"><code>erDiagram
+    NODE ||--o{ EDGE : "referenced as source_id"
+    NODE ||--o{ EDGE : "referenced as target_id"
+
+    NODE {
+        string node_id PK
+        string labels "semicolon-joined"
+        string semantic_type
+        string semantic_uri
+        string source_standard
+        string source_table "lineage"
+        string source_id "lineage"
+        string name "nullable"
+        string scenario_id "nullable"
+        string properties "JSON"
+    }
+
+    EDGE {
+        string edge_id PK
+        string source_id FK
+        string target_id FK
+        string relationship_type
+        string semantic_uri
+        string source_standard
+        string source_table "lineage"
+        string scenario_id "nullable"
+        string properties "JSON"
+    }</code></pre>
+<p><code>labels</code> is always a <code>;</code>-joined string (<code>ACLineSegment;GridAsset</code>), and
+<code>properties</code> a JSON object serialized as a string. Lineage back to the twin
+tables differs by table: a node records <code>source_table</code> and <code>source_id</code>; on an
+edge, <code>source_id</code> is the start node, so an edge records its <code>source_table</code> and,
+unless it carries properties of its own (such as the <code>terminal</code> of a <code>CONNECTS</code> or
+<code>FEEDS</code> edge), its source row's id under <code>source_id</code> inside <code>properties</code>.</p>
+<h2 id="main-relationships">Main Relationships</h2>
+<p>Every relationship type maps to one predicate, and declares the semantic
+types its edges may start and end at. The builder refuses an edge whose
+predicate is not its relationship's declared one; the validator checks domain,
+range and per-source cardinality on the materialized graph. The declarations
+live in code (<code>CORE_RELATIONSHIPS</code> in <code>gridalyn/twin/semantic/profile.py</code> and
+<code>FLEXIBILITY_CAPABILITY</code> in <code>gridalyn/twin/semantic/capabilities/flexibility.py</code>,
+and likewise for the other capabilities beside it) and are rendered into the
+profile JSON under <code>relationships</code>. This table is checked against them by
+<code>tests/test_semantic_axioms.py</code>.</p>
+<p><strong>These are constraints, not inferences.</strong> The published vocabularies state
+domain and range as <code>schema:domainIncludes</code> and <code>schema:rangeIncludes</code>, which
+entail nothing, and gridalyn runs no reasoner: an edge never gives its
+endpoints a type they did not already have. The check is closed-world instead:
+an endpoint whose declared type is not in the relationship's domain or range is
+a validation error, so the graph is held to its declarations, never extended
+by them. A reader bringing OWL semantics to the <code>dt:</code> and <code>flexint:</code> pages
+should not expect the entailments <code>rdfs:domain</code> and <code>rdfs:range</code> would give.</p>
+<table>
+<thead>
+<tr>
+<th>Relationship</th>
+<th>Predicate</th>
+<th>Domain → range</th>
+<th>Per source</th>
+<th>Declared by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONNECTED_TO</code></td>
+<td><code>dt:connectedTo</code></td>
+<td><code>EnergyConsumer</code> → <code>ConnectivityNode</code></td>
+<td>exactly 1</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>CONNECTS</code></td>
+<td><code>dt:connects</code></td>
+<td><code>ACLineSegment</code> → <code>ConnectivityNode</code></td>
+<td>exactly 2</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>FEEDS</code></td>
+<td><code>dt:feeds</code></td>
+<td><code>PowerTransformer</code> → <code>ConnectivityNode</code></td>
+<td>exactly 2</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>HAS_LOAD</code></td>
+<td><code>dt:hasLoad</code></td>
+<td><code>Building</code> → <code>EnergyConsumer</code></td>
+<td>exactly 1</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>INCLUDES_ASSET</code></td>
+<td><code>dt:includesAsset</code></td>
+<td><code>Scenario</code> → <code>Building</code> (core); <code>Electric_Vehicle_Charging_Station</code> / <code>CurtailmentContract</code> / <code>FlexibilityAggregator</code> / <code>FlexibilityProvider</code> (flexibility)</td>
+<td>—</td>
+<td>core, flexibility</td>
+</tr>
+<tr>
+<td><code>OBSERVES</code></td>
+<td><code>dt:observes</code></td>
+<td><code>TimeSeriesDataset</code> → <code>Scenario</code></td>
+<td>—</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>PRODUCED</code></td>
+<td><code>dt:produced</code></td>
+<td><code>SimulationRun</code> → <code>TimeSeriesDataset</code></td>
+<td>—</td>
+<td>core</td>
+</tr>
+<tr>
+<td><code>AGGREGATES</code></td>
+<td><code>flexint:aggregates</code></td>
+<td><code>FlexibilityAggregator</code> → <code>FlexibilityProvider</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>ALLOWS</code></td>
+<td><code>efont:allows</code></td>
+<td><code>ThermallyActivatedBuildingSystem</code> → <code>FlexibleOperation</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>CONSTRAINT_ZONE_FOR</code></td>
+<td><code>flexint:constraintZoneFor</code></td>
+<td><code>ConstraintZone</code> → <code>PowerTransformer</code> / <code>ACLineSegment</code> / <code>ConnectivityNode</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>DESCRIBES_FLEXIBILITY</code></td>
+<td><code>flexint:describesFlexibility</code></td>
+<td><code>CurtailmentContract</code> → <code>EnergyFlexibility</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>ENABLES</code></td>
+<td><code>efont:enables</code></td>
+<td><code>FlexibleOperation</code> → <code>EnergyFlexibility</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>ENABLES_CONTRACT</code></td>
+<td><code>flexint:enablesContract</code></td>
+<td><code>Electric_Vehicle_Charging_Station</code> → <code>CurtailmentContract</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>HAS_EVSE</code></td>
+<td><code>dt:hasEVSE</code></td>
+<td><code>Building</code> → <code>Electric_Vehicle_Charging_Station</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>HAS_FLEXIBILITY_RESOURCE</code></td>
+<td><code>dt:hasFlexibilityResource</code></td>
+<td><code>Building</code> / <code>FlexibilityProvider</code> → <code>ThermallyActivatedBuildingSystem</code> / <code>ScenarioDevice</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>IMPLEMENTS_CONTRACT</code></td>
+<td><code>flexint:implementsContract</code></td>
+<td><code>FlexibilityProvider</code> → <code>CurtailmentContract</code></td>
+<td>exactly 1</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>INCLUDES_PROVIDER</code></td>
+<td><code>flexint:includesProvider</code></td>
+<td><code>FlexibilityPortfolio</code> → <code>FlexibilityProvider</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>LOCATED_IN_CONSTRAINT_ZONE</code></td>
+<td><code>flexint:locatedInConstraintZone</code></td>
+<td><code>FlexibilityProvider</code> → <code>ConstraintZone</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>MANAGES_PORTFOLIO</code></td>
+<td><code>flexint:managesPortfolio</code></td>
+<td><code>FlexibilityAggregator</code> → <code>FlexibilityPortfolio</code></td>
+<td>exactly 1</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>OFFERS</code></td>
+<td><code>flexint:offers</code></td>
+<td><code>FlexibilityProvider</code> → <code>FlexibilityOffer</code></td>
+<td>exactly 1</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>PARTICIPATES_IN</code></td>
+<td><code>flexint:participatesIn</code></td>
+<td><code>Building</code> → <code>CurtailmentContract</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>QUANTIFIES</code></td>
+<td><code>efont:Quantifies</code></td>
+<td><code>EnergyFlexibilityKPI</code> → <code>EnergyFlexibility</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>TARGETS_CONSTRAINT</code></td>
+<td><code>flexint:targetsConstraint</code></td>
+<td><code>FlexibilityOffer</code> → <code>ConstraintZone</code></td>
+<td>—</td>
+<td>flexibility</td>
+</tr>
+<tr>
+<td><code>ACTS_FOR</code></td>
+<td><code>flexint:actsFor</code></td>
+<td><code>Agent</code> → <code>Party</code></td>
+<td>exactly 1</td>
+<td>agent_interaction</td>
+</tr>
+<tr>
+<td><code>FOLLOWS_EVENT</code></td>
+<td><code>flexint:followsEvent</code></td>
+<td><code>Conversation</code> → <code>DemandResponseEvent</code></td>
+<td>—</td>
+<td>agent_interaction</td>
+</tr>
+<tr>
+<td><code>PARTICIPATES_IN_CONVERSATION</code></td>
+<td><code>flexint:participatesInConversation</code></td>
+<td><code>Agent</code> → <code>Conversation</code></td>
+<td>—</td>
+<td>agent_interaction</td>
+</tr>
+<tr>
+<td><code>PLAYS_ROLE</code></td>
+<td><code>flexint:playsRole</code></td>
+<td><code>Agent</code> → <code>Role</code></td>
+<td>—</td>
+<td>agent_interaction</td>
+</tr>
+<tr>
+<td><code>SCHEDULES_EVENT</code></td>
+<td><code>flexint:schedulesEvent</code></td>
+<td><code>DemandResponseProgram</code> → <code>DemandResponseEvent</code></td>
+<td>—</td>
+<td>agent_interaction</td>
+</tr>
+<tr>
+<td><code>METERS</code></td>
+<td><code>cim:UsagePoint.Equipments</code></td>
+<td><code>UsagePoint</code> → <code>EnergyConsumer</code></td>
+<td>exactly 1</td>
+<td>metering</td>
+</tr>
+</tbody>
+</table>
+<p><code>CONNECTS</code>, <code>CONNECTED_TO</code> and <code>FEEDS</code> are local shortcuts for CIM's path
+through a <code>Terminal</code> (<code>Terminal.ConductingEquipment</code>,
+<code>Terminal.ConnectivityNode</code>), which this graph collapses. The <code>dt:</code> and
+<code>flexint:</code> terms are documented in
+<a href="../ontology/digital-twin/">Digital-Twin Vocabulary</a> and
+<a href="../ontology/flexint/">Flexint Vocabulary</a>.</p>
+<h2 id="build-and-validate">Build And Validate</h2>
+<p>Generate the graph from the workspace root. It reads the built twin (the
+base tables and the scenario asset registry), and those are not committed: on a
+fresh clone run <code>gridalyn twin build</code> first, or <code>semantic build</code> stops naming the
+missing base tables and <code>semantic validate</code> reports every scenario count as
+zero. Building rewrites the committed instance under <code>instances/default</code>;
+<code>git checkout -- instances/</code> restores it.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>semantic<span class="w"> </span>build<span class="w"> </span>--semantic-capabilities<span class="w"> </span>flexibility
+</span></code></pre></div>
+<p>Validate it:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>gridalyn<span class="w"> </span>semantic<span class="w"> </span>validate
+</span></code></pre></div>
+<p>Every <code>semantic build</code> flag has a default under the active instance
+(<code>GRIDALYN_INSTANCE</code>, default <code>default</code>, rooted at <code>GRIDALYN_WORKSPACE_ROOT</code> or
+the current directory):</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--profile</code></td>
+<td><code>north_america</code></td>
+</tr>
+<tr>
+<td><code>--root</code></td>
+<td><code>.</code> — the root recorded paths are relative to</td>
+</tr>
+<tr>
+<td><code>--base-dir</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/base</code></td>
+</tr>
+<tr>
+<td><code>--scenario-dir</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/scenarios</code></td>
+</tr>
+<tr>
+<td><code>--flexibility-dir</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/flexibility</code></td>
+</tr>
+<tr>
+<td><code>--timeseries-dir</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/timeseries</code></td>
+</tr>
+<tr>
+<td><code>--out-dir</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/semantic</code></td>
+</tr>
+<tr>
+<td><code>--interaction-log</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/operations/message_log.parquet</code>; a missing file is an empty log</td>
+</tr>
+<tr>
+<td><code>--metering-points</code></td>
+<td><code>instances/&lt;instance&gt;/digital_twin/observations/metering_points.parquet</code>; a missing file is an empty table</td>
+</tr>
+<tr>
+<td><code>--semantic-capabilities</code></td>
+<td>when omitted, <code>flexibility</code> (the legacy default); given with no value, the core only</td>
+</tr>
+</tbody>
+</table>
+<p><code>semantic validate</code> takes <code>--root</code>, <code>--semantic-dir</code> and <code>--scenario-dir</code>, with
+the same defaults.</p>
+<p>The validator checks the graph against the profile it was <strong>built</strong> with: the
+capabilities <code>graph_manifest.json</code> records. A manifest without that record is
+validated against the legacy <code>flexibility</code> default, and the report says so. It
+checks that:</p>
+<ul>
+<li>the Parquet beside the manifest is the Parquet the manifest describes: the
+  build records each artifact's size, SHA-256 and row count under
+  <code>artifact_digests</code>, and a file that no longer matches, or a <code>node_count</code> /
+  <code>edge_count</code> the frame does not carry, is an error, never a pass. A manifest
+  without the record is validated with a warning saying the files could not be
+  checked;</li>
+<li>all edge endpoints exist, and node and edge IDs are unique;</li>
+<li>every semantic type and relationship is declared by the profile, in a bound
+  namespace;</li>
+<li>every edge carries its relationship's declared predicate IRI;</li>
+<li>every edge starts inside its relationship's domain and ends inside its range;</li>
+<li>declared per-source cardinalities hold (every building has exactly one load,
+  every load connects to exactly one bus, every line and transformer to two);</li>
+<li>scenario counts match the scenario registry through the count rules the
+  active capabilities declare (a count the profile has no rule for is
+  reported, never silently skipped);</li>
+<li>power, voltage and current properties carry an explicit unit.</li>
+</ul>
+<h2 id="query-repository">Query Repository</h2>
+<p><code>SemanticGraphRepository</code> (<code>gridalyn/twin/semantic/repository.py</code>) is the read
+API for code that needs graph answers instead of raw node and edge tables. It
+is public surface for researchers and applications that consume the
+materialized graph; gridalyn's own pipeline does not call it, by design. The
+example reads the graph <a href="#build-and-validate">Build And Validate</a> writes.</p>
+<p><div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">gridalyn.twin</span><span class="w"> </span><span class="kn">import</span> <span class="n">SemanticGraphRepository</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">repo</span> <span class="o">=</span> <span class="n">SemanticGraphRepository</span><span class="o">.</span><span class="n">from_parquet</span><span class="p">(</span><span class="s2">"instances/default/digital_twin/semantic"</span><span class="p">)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">node</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="s2">"aggregator:S0:soft_cls"</span><span class="p">)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s2">"semantic_type"</span><span class="p">],</span> <span class="n">node</span><span class="p">[</span><span class="s2">"scenario_id"</span><span class="p">])</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">assets</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">assets_in_scenario</span><span class="p">(</span><span class="s2">"S0"</span><span class="p">,</span> <span class="n">semantic_type</span><span class="o">=</span><span class="s2">"flexint:FlexibilityAggregator"</span><span class="p">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">assets</span><span class="p">),</span> <span class="s2">"aggregators in scenario S0"</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>flexint:FlexibilityAggregator S0
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>1 aggregators in scenario S0
+</span></code></pre></div></p>
+<p>The full read surface: <code>get_node(node_id)</code>, <code>neighbors(node_id,
+relationship_type=None, *, direction="out", scenario_id=None)</code>,
+<code>get_asset_context(node_id)</code>, <code>assets_in_scenario(scenario_id,
+semantic_type=None)</code>, <code>timeseries_for_asset(asset_id, *, scenario_id=None)</code>,
+<code>resolve_path(node_id, relationship_types)</code>.</p>
+<p><code>resolve_path</code> follows outgoing relationships hop by hop (<code>("METERS",
+"CONNECTED_TO")</code> takes a usage point to its bus) and resolves only when every
+hop reaches exactly one node. A hop that reaches none, or several, raises
+naming the hop, the node it left from and the relationships that node does
+carry: returning the first of several matches would turn a modelling error
+into a silently wrong answer.</p>
+<p>The <code>metering</code> capability adds two queries over the whole graph at once, in
+<code>gridalyn.twin.semantic.capabilities.metering</code>:</p>
+<ul>
+<li><code>query_metered_buses(repository)</code> returns <code>usage_point_id → bus_id</code>. That is
+  the mapping <code>EntityJoin.from_mapping</code> takes, so the measured-state ingest's
+  join is read off the model instead of written down a second time. The
+  semantic package never imports the observation package to do it. The join
+  stays configuration, never inference: the operator declares which load a
+  point meters; which bus that load sits on is the model's own fact.</li>
+<li><code>query_metered_transformers(repository)</code> returns <code>usage_point_id →
+  transformer_id</code>. It cannot be a fixed sequence of hops: a <code>FEEDS</code> edge points
+  a transformer at its own two terminal buses, and a load bus is reached from
+  the low-voltage terminal only through a chain of line segments. So it walks
+  <code>CONNECTS</code> outward from the metered bus, never across a transformer, to the
+  nearest bus that is some transformer's <code>lv_bus_id</code> terminal. An islanded bus,
+  a bus on the supply side only, and two transformers equally near through a
+  meshed tie are each refused, naming the usage points.</li>
+</ul>
+<p>The repository keeps the graph useful without making it the numerical source of
+truth: Parquet reports and time series remain the analytical layer, and the
+graph answers relationship questions — which assets belong to a scenario, what
+a node's neighbors are, which bus a meter reads.</p>
+<h2 id="export-to-a-graph-database">Export To A Graph Database</h2>
+<p><code>FederatedGraphAdapter.to_falkor_batches</code>
+(<code>gridalyn/twin/db/federated_graph_adapter.py</code>) turns <code>nodes.parquet</code> and
+<code>edges.parquet</code> into Cypher <code>UNWIND … MERGE</code> batches for FalkorDB or another
+Cypher store. It needs no graph-database runtime. gridalyn does not connect to,
+load, or query a graph database: loading the batches, and checking the loaded
+counts against <code>graph_manifest.json</code>, are steps outside the repository. It
+reads the files <a href="#build-and-validate">Build And Validate</a> writes.</p>
+<p><div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">gridalyn.twin.db.federated_graph_adapter</span><span class="w"> </span><span class="kn">import</span> <span class="n">FederatedGraphAdapter</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">adapter</span> <span class="o">=</span> <span class="n">FederatedGraphAdapter</span><span class="o">.</span><span class="n">from_parquet</span><span class="p">(</span><span class="s2">"instances/default/digital_twin/semantic"</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">batches</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">to_falkor_batches</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="s2">"nodes"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"cypher"</span><span class="p">])</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="s2">"edges"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"cypher"</span><span class="p">])</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>UNWIND $props AS p
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>MERGE (n:SemanticAsset:ACLineSegment:GridAsset {node_id: p.node_id})
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>SET n += p
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>UNWIND $props AS e
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>MATCH (source:SemanticAsset {node_id: e.source_id})
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>MATCH (target:SemanticAsset {node_id: e.target_id})
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>MERGE (source)-[r:SEMANTIC_RELATION {edge_id: e.edge_id}]-&gt;(target)
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>SET r += e
+</span></code></pre></div></p>
+<p>What the export emits, and therefore what a query against the loaded graph can
+use:</p>
+<ul>
+<li>every node carries the label <code>SemanticAsset</code>, the local name of its
+  <code>semantic_type</code> (<code>flexint:ConstraintZone</code> → <code>ConstraintZone</code>), and each entry
+  of its <code>labels</code> column, made Cypher-safe;</li>
+<li>every edge is a <code>SEMANTIC_RELATION</code>; its relationship is the
+  <code>relationship_type</code> property, not the edge type;</li>
+<li>node and edge properties are the Parquet columns. <code>properties</code> stays one JSON
+  string, so its keys are not individually queryable once loaded.</li>
+</ul>
+<p>For example, the number of offers targeting each constraint zone:</p>
+<div class="language-cypher highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">o</span><span class="p">:</span><span class="n">FlexibilityOffer</span><span class="p">)</span><span class="o">-[</span><span class="n">r</span><span class="p">:</span><span class="n">SEMANTIC_RELATION</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">z</span><span class="p">:</span><span class="n">ConstraintZone</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">relationship_type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'TARGETS_CONSTRAINT'</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">RETURN</span><span class="w"> </span><span class="n">z</span><span class="p">.</span><span class="n">node_id</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">(</span><span class="n">o</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">offers</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">offers</span><span class="w"> </span><span class="k">DESC</span>
+</span></code></pre></div>
+<p>Validate the Parquet graph before exporting it: a node without a
+<code>semantic_type</code> has no label to merge on, and the export refuses it.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/lirei-lab/gridalyn" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
