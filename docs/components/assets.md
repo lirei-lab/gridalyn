@@ -138,6 +138,17 @@ are drawn per dwelling so that a fleet has realistic diversity.
   EnergyPlus's 11.3 °C, fitted jointly with the metered homes' year
   (`projects/ev_hosting_flex/CALIBRATION.md`, "Building-mass re-base"). Only
   the Euler integrator runs it.
+- **Spread between dwellings** — `ThermalArchetype(conductance_quantiles=...)`
+  gives each dwelling a multiplier on its envelope conductance (the inverse
+  of `R`), drawn from a piecewise-linear quantile function the caller states
+  as `(probability, multiplier)` knots. Quantiles rather than a distribution
+  family, because metered homes spread with a long low tail (supplementary
+  heat, small or empty homes) that a normal `R` cannot produce. The draw has
+  a stream of its own, so turning it on moves no other sampled value, and the
+  default (no knots) draws nothing. With `design_outdoor_c` set, each heater is
+  sized on the conductance its dwelling ends up with. `ev_hosting_flex` fits
+  the knots to the January heating of the metered homes; its
+  `projects/ev_hosting_flex/CALIBRATION.md` carries the fit.
 - **Outages** — `simulate_buildings(..., outage=(start, end))` cuts power
   and appliance load for the window; when it ends every thermostat that has
   been calling draws at once. `measure_cold_load_pickup` compares that run
