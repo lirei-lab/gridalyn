@@ -81,17 +81,11 @@ A component the role refuses at registration raises that registry's own
 `ValueError`: an unsupported `contract_version`, or a surrogate with no error
 bound.
 
-| Declared role | What `factory()` returns | Selected by |
-| --- | --- | --- |
-| `powerflow_backend` | A backend factory (usually the class) carrying a `DESCRIPTOR: PowerFlowBackendDescriptor` | `spec.simulation.powerflowBackend`, `powerflowBackendByStage` |
-| `surrogate` | A surrogate factory carrying a `DESCRIPTOR: SurrogateDescriptor` with an error bound | `spec.simulation.surrogate` |
-| `channel_model` | A channel-model factory carrying a `DESCRIPTOR: ChannelModelDescriptor` | `spec.simulation.channelModel.id` |
-| `policy` | A policy factory carrying a `DESCRIPTOR: PolicyDescriptor` | the stage, by ID |
-| `network_adapter` | An adapter factory declaring its `adapter_id` | the stage, by ID |
-| `observation_producer` | The producer callable, carrying a `DESCRIPTOR: ObservationProducerDescriptor` | the stage, by ID |
-| `semantic_capability` | The `SemanticCapability` itself | the stage's graph build, by ID |
-| `interaction_protocol` | Refused with a `ValueError`. The protocol set in `gridalyn/operations/interaction/conversations.py` is closed: a conversation's legality must not depend on what is installed. | |
-| Any other role | Loaded into the generic extension registry and recorded in `provenance.extensions`. No role registry sees it. | |
+[Extension Roles](../reference/extension-roles.md) lists, for every role,
+what `factory()` must return, its descriptor, the `project.yaml` key that
+selects it and where a run records it, generated from the code. The role
+`interaction_protocol` is refused, and any other role name is recorded in
+`provenance.extensions` but reaches no role registry.
 
 A contribution is registered under `source="entry_point"` and the extension's
 `version`. Contributing the same extension twice is a no-op. An ID already
@@ -219,27 +213,16 @@ generic registry with `source="entry_point"`. A study declares its IDs in
 
 ## Register from host code
 
-Every role registry has a public host API that registers into the role's
-shared default registry, with `source="host"`:
-
-| Role | Registry | Host registration API | Exported from |
-| --- | --- | --- | --- |
-| Power-flow backend | `PowerFlowBackendRegistry` | `register_powerflow_backend_extension` | `gridalyn.simulation` |
-| Surrogate | `SurrogateRegistry` | `register_surrogate_extension` | `gridalyn.simulation` |
-| Voltage-control policy | `PolicyRegistry` | `register_policy_extension` | `gridalyn.simulation` |
-| Channel model | `ChannelModelRegistry` | `register_channel_model_extension` | `gridalyn.simulation` |
-| Observation producer | `ObservationProducerRegistry` | `register_observation_producer_extension` | `gridalyn.twin` |
-| Network adapter | `NetworkAdapterRegistry` | `register_network_adapter_extension` | `gridalyn.twin` |
-| Semantic capability | `SemanticCapabilityRegistry` | `register_semantic_capability_extension` | `gridalyn.twin` |
-
-The first six take a factory and a role descriptor (the observation-producer
-API takes the producer callable itself, since a producer has nothing to
-instantiate). Their descriptors carry `contract_version`, and each registry
-rejects an unsupported version at registration with a located
-`UnsupportedContractVersionError` naming the supported versions. The semantic
-capability API takes the `SemanticCapability` itself and a required `version`.
-Every API accepts an optional `registry=` to target a specific registry
-instance.
+Every role registry has a public host API, `register_<role>_extension`, that
+registers into the role's shared default registry with `source="host"`.
+[Extension Roles](../reference/extension-roles.md) lists each one with its
+import path. The API takes what the role's registry stores: a factory with its
+descriptor, the producer callable for an observation producer, or the
+`SemanticCapability` itself with a required `version`. Every API accepts an
+optional `registry=` to target a specific registry instance. Every API except
+the semantic capability's refuses an unsupported `contract_version` with a
+located `UnsupportedContractVersionError`; a semantic capability declares no
+contract version.
 
 A host registration lives in the process that made it. A workflow stage is a
 separate process, so it sees a host-registered component only if the stage

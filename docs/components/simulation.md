@@ -86,7 +86,7 @@ both the simulated producer and the measured-ingest path.
 | `SurrogateRegistry` | `gridalyn.simulation` | `network_impact_tabular_v1` | `provenance.surrogate` in the run manifest |
 | `PolicyRegistry` | `gridalyn.simulation` | none; the caller names one | not recorded in the run manifest |
 | `ChannelModelRegistry` | `gridalyn.simulation` | `ideal` | `provenance.channel_model` in the run manifest, with its parameters and seed, when a study declares `spec.simulation.channelModel` |
-| `ObservationProducerRegistry` | `gridalyn.twin` | none; the caller names one | `NetworkObservation.provenance` on each observation |
+| `ObservationProducerRegistry` | `gridalyn.twin` | none; the caller names one | not by ID; each observation's `NetworkObservation.provenance` states whether its values are `simulated` or `measured` |
 
 <!-- END GENERATED: simulation-registries -->
 
@@ -114,6 +114,11 @@ Every ID each shared default registry holds, the default in bold:
 
 Both tables are generated from the live registries by
 `tools/generate_registry_reference.py`, and a test fails when they are stale.
+
+What an extension must be to serve each of these roles, and the
+`project.yaml` key that selects it, is on
+[Extension Roles](../reference/extension-roles.md), together with the roles
+that live in `gridalyn.twin`.
 
 The functions around each registry follow one naming pattern:
 `default_<role>_registry()` returns the shared instance and

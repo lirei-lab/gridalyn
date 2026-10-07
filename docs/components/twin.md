@@ -115,6 +115,10 @@ physical control) is a non-goal.
 
 ## What is registered
 
+Adapters, observation producers and semantic capabilities are roles an
+extension can also serve; [Extension Roles](../reference/extension-roles.md)
+lists what each requires.
+
 Network source adapters, the default in bold (the adapter a base is exported
 with when its twin instance names none):
 

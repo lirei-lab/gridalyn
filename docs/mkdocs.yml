@@ -59,6 +59,7 @@ nav:
       - Python API: reference/python-api.md
       - Project And Workflow YAML: reference/workflow-yaml.md
       - Report And Run-Manifest Schema: reference/report-schema.md
+      - Extension Roles: reference/extension-roles.md
       - Semantic Graph: reference/semantic-graph.md
       - Ontology:
           - Digital-Twin Vocabulary: reference/ontology/digital-twin.md

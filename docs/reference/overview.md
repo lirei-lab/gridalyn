@@ -11,6 +11,7 @@ artifact rule, or validation behavior.
 | [CLI Reference](cli.md) | Canonical `gridalyn` commands and command groups. |
 | [Python API Reference](python-api.md) | Auto-generated docstring reference for the seven layer facades. |
 | [Project And Workflow YAML](workflow-yaml.md) | Every field of `project.yaml` (`StudyProject`) and `workflow.yaml` (`Workflow`), generated from their JSON Schemas; path rules and the stage graph. |
+| [Extension Roles](extension-roles.md) | Every role an extension can serve: its component, descriptor, registry, host API, `project.yaml` selector, contract versions and where a run records it, generated from the code. |
 | [Report And Run-Manifest Schema](report-schema.md) | The platform report, run manifest, regression baseline and regression report formats. |
 | [Semantic Model And Graph](semantic-graph.md) | Node/edge schema, ontology profile, query API, graph artifacts, and the Cypher export for a graph database. |
 | [Digital-Twin Vocabulary](./ontology/digital-twin.md) | Terms of gridalyn's `dt:` vocabulary, generated from its declarations. |
