@@ -9,8 +9,9 @@ A component reaches a role in one of two ways, and they do not reach the same
 places:
 
 - **Declared by a study.** The study lists an installed extension in
-  `spec.inputs.extensions`. Only the `semantic_capability` role is routed from
-  there into a role registry.
+  `spec.inputs.extensions`. The runner, and every stage of the run, routes it
+  to the registry of the role it declares, so the study selects it by ID like a
+  shipped component.
 - **Registered by host code.** A script, notebook or embedding application
   calls `register_<role>_extension(...)`. That reaches the role registry of the
   process that makes the call, and no other.
@@ -64,37 +65,54 @@ pins both runs.
 
 ## What a declaration reaches
 
-Before any stage runs, the runner resolves the study's declared extensions and
+The runner resolves the study's declared extensions before any stage runs and
 hands each to the registry of the role it declares
 (`gridalyn/projects/extension_roles.py`). A declaration that cannot be honoured
-fails the run up front.
+fails the run up front. Each stage runs as its own process and inherits nothing
+the runner registered, so `project_script()` resolves the same declarations
+again before it returns. A stage then resolves a declared component by ID,
+through `script.powerflow_backend()` or any other resolver, exactly as it
+resolves a shipped one.
 
-| Declared role | What happens |
-| --- | --- |
-| `semantic_capability` | The factory's `SemanticCapability` is registered in the default semantic capability registry, so a graph build resolves it by ID exactly as it resolves a shipped capability. |
-| `interaction_protocol` | Refused with a `ValueError`. The protocol set in `gridalyn/operations/interaction/conversations.py` is closed: a conversation's legality must not depend on what is installed. |
-| Any other role | Loaded into the generic extension registry and recorded in `provenance.extensions`. No role registry sees it. |
+The extension's `factory()` returns what that role's registry stores, and the
+registry checks it. A component the registry cannot identify (one with no
+`DESCRIPTOR`, say) is a located `TypeError` naming the extension and its role.
+A component the role refuses at registration raises that registry's own
+`ValueError`: an unsupported `contract_version`, or a surrogate with no error
+bound.
 
-The last row matters for backends. A `powerflow_backend` extension declared in
-`spec.inputs.extensions` is recorded, but the study cannot select it: the
-runner resolves `spec.simulation.powerflowBackend` against the power-flow
-backend registry, which holds only the shipped backends and host
-registrations made in the same process. Naming such an ID fails before any
-stage runs:
+| Declared role | What `factory()` returns | Selected by |
+| --- | --- | --- |
+| `powerflow_backend` | A backend factory (usually the class) carrying a `DESCRIPTOR: PowerFlowBackendDescriptor` | `spec.simulation.powerflowBackend`, `powerflowBackendByStage` |
+| `surrogate` | A surrogate factory carrying a `DESCRIPTOR: SurrogateDescriptor` with an error bound | `spec.simulation.surrogate` |
+| `channel_model` | A channel-model factory carrying a `DESCRIPTOR: ChannelModelDescriptor` | `spec.simulation.channelModel.id` |
+| `policy` | A policy factory carrying a `DESCRIPTOR: PolicyDescriptor` | the stage, by ID |
+| `network_adapter` | An adapter factory declaring its `adapter_id` | the stage, by ID |
+| `observation_producer` | The producer callable, carrying a `DESCRIPTOR: ObservationProducerDescriptor` | the stage, by ID |
+| `semantic_capability` | The `SemanticCapability` itself | the stage's graph build, by ID |
+| `interaction_protocol` | Refused with a `ValueError`. The protocol set in `gridalyn/operations/interaction/conversations.py` is closed: a conversation's legality must not depend on what is installed. | |
+| Any other role | Loaded into the generic extension registry and recorded in `provenance.extensions`. No role registry sees it. | |
+
+A contribution is registered under `source="entry_point"` and the extension's
+`version`. Contributing the same extension twice is a no-op. An ID already
+held by a different source or version is refused, because one ID names one
+declaration.
+
+Declared-only still holds. A `powerflow_backend` extension that is installed
+but not declared is never loaded, so naming its ID fails before any stage
+runs:
 
 ```text
 ValueError: <project>/project.yaml: spec.simulation.powerflowBackend names an unregistered backend 'acme_backend' (registered: lightsim2grid, pandapower_native)
 ```
 
+`tests/test_extension_role_routing.py` runs that case and the declared one end
+to end. When the backend is declared, the stage solves with it and the manifest
+records it in `provenance.powerflow_backend` with `extension_source:
+entry_point`.
+
 ### Rules for a semantic capability
 
-- **Registered where the build happens.** Each stage runs as its own process
-  and inherits nothing the runner registered, so a stage that builds a graph
-  calls `script.resolve_extensions()` first. The call is a no-op for a study
-  that declares nothing.
-- **One ID, one declaration.** Registering the same extension twice in one
-  process is a no-op. A capability ID already held by a different source or
-  version is refused.
 - **Checked, not trusted.** A factory that returns anything but a
   `gridalyn.twin.semantic.vocabulary.SemanticCapability` is a located
   `TypeError`. The capability's emitter is held to the same profile as a
@@ -118,7 +136,8 @@ The example shows each piece:
 - `examples/extensions/feeder_criticality/study/project.yaml` declares
   `spec.inputs.extensions: [feeder_criticality]`;
 - `examples/extensions/feeder_criticality/study/scripts/build_semantic_graph.py`
-  calls `script.resolve_extensions()` before it builds.
+  calls `script.resolve_extensions()` to report what was contributed. The
+  `project_script()` call before it has already routed it.
 
 ## Author an extension
 
@@ -141,8 +160,8 @@ current directory):
   reads: `descriptor`, an `ExtensionDescriptor` declaring `extension_id`,
   `role`, `name`, `version` and `contract_version`; and `factory`, a callable
   returning the role's component. The scaffolded factory returns `None`, a
-  placeholder to replace: left as is, a declared `semantic_capability`
-  extension fails routing with the `TypeError` above. An extension that needs
+  placeholder to replace: left as is, an extension declared with any routed
+  role fails routing with the `TypeError` above. An extension that needs
   an optional capability also declares `REQUIRED_CAPABILITIES`, a tuple of
   capability names such as `("sim",)`.
 - `pyproject.toml`, which wires the entry point: under
@@ -152,8 +171,7 @@ current directory):
 - `test_<name>.py`, a smoke test that the descriptor's `contract_version` is
   supported and the factory is callable.
 
-`--role` defaults to `powerflow_backend`, which a declaration does not route
-(see the table above). `--force` overwrites an existing directory, and a name
+`--role` defaults to `powerflow_backend`. `--force` overwrites an existing directory, and a name
 containing path separators is refused with a located error.
 
 `examples/extensions/hello_world/` is a committed, unmodified scaffold with
