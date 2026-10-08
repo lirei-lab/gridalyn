@@ -1,0 +1,31 @@
+/* Code rendering: keep shell commands and plain-text output readable without
+   a horizontal scrollbar, and keep the copy button off the first line. */
+
+/* Wrap commands and plain-text output. Structured languages (python, yaml,
+   json) keep their indentation and scroll instead. `copy` still copies the
+   unwrapped source. */
+.md-typeset .language-bash pre > code,
+.md-typeset .language-sh pre > code,
+.md-typeset .language-shell pre > code,
+.md-typeset .language-console pre > code,
+.md-typeset .language-text pre > code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Reserve room for the copy button so it never covers code. */
+.md-typeset pre > code {
+  padding-right: 2.6em;
+}
+
+/* Inline code: never split a short token like `min_voltage_pu` across lines,
+   but let a long path break at any point rather than overflow the column. */
+.md-typeset :not(pre) > code {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* Output block that directly follows a command reads as its result. */
+.md-typeset .highlight + .highlight {
+  margin-top: -0.6em;
+}
