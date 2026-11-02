@@ -167,6 +167,33 @@ are drawn per dwelling so that a fleet has realistic diversity.
   transformers: after 4 hours at −25 °C every transformer runs near 130 % of
   nameplate for hours, and staging trims the feeder-head peak but not the
   transformers', because each is switched back with all its homes at once.
+- **Pickup through time** — `measure_cold_load_pickup` reads one number per
+  group; a planner who cannot simulate every restoration needs the whole curve.
+  `measure_pickup_curve` takes the same two runs and the installed heating
+  capacity of each dwelling, and returns for each group size the multiplier
+  (group load over the same group's load without the outage) at every step
+  after restoration, one row per random group, together with how long the
+  group stayed at or above 95 % of its installed capacity and when it returned to within a
+  tolerance of the reference. A group that never returns inside the run is
+  reported as `inf`, not as a finite time. The outage end must fall on the
+  `resample` grid, and a group size larger than the fleet is measured at the
+  fleet size. `fit_delayed_exponential` fits the curve with the delayed
+  exponential of the restoration literature, a plateau at `peak_multiplier`
+  for `undiversified_hours` and then a return to 1 with time constant
+  `decay_hours`, and returns the fit with its root-mean-square error.
+  `ClpuSurface` tabulates those three parameters over the axes a study swept,
+  such as outdoor temperature or outage length: a `linear` axis interpolates
+  between swept levels, an `exact` axis accepts only a swept level, and a
+  point outside the swept range raises with the axis and value rather than
+  extrapolating. A point whose interpolation gives weight to a cell whose fit
+  failed raises too, naming the cell, rather than returning NaN; at a swept
+  node beside a failed cell the surface returns that node's value. The
+  surface carries the held-out error of its own predictions in
+  `holdout_rmse`. The `cold_load_pickup_feeder` study fits the model to its
+  own measured pickup and pins 9 of the 12 fitted parameters (three for each
+  of four group sizes); the one-home plateau and decay and the six-home decay
+  time are reported and not pinned, because they are not stable across draw
+  counts.
 - **Other agents** — `make_dhw_tank_fleet` generates thermostatic electric
   hot-water tanks with staggered reheats; `make_cold_coupled_ev_fleet`
   generates EV charging load; `EVCharger` is a stateful *actuator* for
