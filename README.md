@@ -138,6 +138,7 @@ red build rather than a silent drift:
 | `ev_hosting_flex` | operator-verified | The flagship: EV hosting capacity and flexibility on a Québec all-electric distribution feeder. |
 | `admm_thermal_consensus` | operator-verified | Distributed ADMM coordination of cold-climate electric heating, on the same Québec calibration. |
 | `measured_shadow_feeder` | operator-verified | A week of measured per-home power fed into a feeder through the semantic graph, compared with the synthetic generator. |
+| `cold_load_pickup_surface` | operator-verified | Cold load pickup after a winter outage as a fitted surface over outage length, temperature, restoration hour, group size, fleet heterogeneity and thermal model. |
 | `minimal_grid_project` and the other small studies | CI fixture | The studies CI runs end to end on every push and checks against their baselines. |
 
 Operator-verified studies run too long, or need data too private, for CI; an

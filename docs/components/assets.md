@@ -185,15 +185,34 @@ are drawn per dwelling so that a fleet has realistic diversity.
   such as outdoor temperature or outage length: a `linear` axis interpolates
   between swept levels, an `exact` axis accepts only a swept level, and a
   point outside the swept range raises with the axis and value rather than
-  extrapolating. A point whose interpolation gives weight to a cell whose fit
-  failed raises too, naming the cell, rather than returning NaN; at a swept
-  node beside a failed cell the surface returns that node's value. The
+  extrapolating. A point whose interpolation gives weight to a cell with no
+  value raises too, naming the point, rather than returning NaN: a cell
+  whose fit failed, or one a study left empty because the value was not
+  observed inside its window. At a swept node beside such a cell the surface
+  returns that node's value. The
   surface carries the held-out error of its own predictions in
   `holdout_rmse`. The `cold_load_pickup_feeder` study fits the model to its
   own measured pickup and pins 9 of the 12 fitted parameters (three for each
   of four group sizes); the one-home plateau and decay and the six-home decay
   time are reported and not pinned, because they are not stable across draw
   counts.
+- **Settling and undershoot** — thermostats that came back on together cycle
+  together for a while, so a pickup curve can cross the band around 1 on its
+  way down, leave it again and only later stay. The first entry to the band
+  is then not a time a planner can rely on. `settling_hours(hours,
+  multiplier)` returns the earliest time after which every observed step is
+  within `tolerance` of 1 (10 % by default), and asks that the last
+  `sustain_minutes` of the window (30 by default) be inside the band; a curve
+  that does not end inside it, or a window shorter than that, gives `inf`,
+  never a finite number. The latest finite value it can return is the start
+  of that last sustain window, 11.5 h for a 12 h window of 15-minute means,
+  so a value there reads "at or beyond the end of the window", not a settling
+  time. `undershoot_min_multiplier(hours, multiplier)` returns how low the
+  load falls once it first drops below its reference, or NaN if it never
+  does: after a synchronised pickup the fleet can draw less than it would
+  have before it settles. Both read one curve, such as a row of
+  `measure_pickup_curve`'s output, and are exported from
+  `gridalyn.assets.datagen.agents`.
 - **Other agents** — `make_dhw_tank_fleet` generates thermostatic electric
   hot-water tanks with staggered reheats; `make_cold_coupled_ev_fleet`
   generates EV charging load; `EVCharger` is a stateful *actuator* for

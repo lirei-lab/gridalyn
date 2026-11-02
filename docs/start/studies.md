@@ -50,6 +50,7 @@ minutes; the third is the studies that take hours.
 
 | Study | Run time | Tier | Extras | What it is |
 | --- | --- | --- | --- | --- |
+| `cold_load_pickup_surface` | hours | operator-verified | none | Cold load pickup as a surface over outage duration, outdoor temperature, restoration hour, fleet heterogeneity and thermal model; each cell is measured on the same Québec all-electric fleet against the same evening without the outage. |
 | `ev_hosting_flex` | hours | operator-verified | `sim` | EV hosting capacity and flexibility across a 540-transformer distribution fleet, with the transformer rating convention as a declared axis. |
 
 <!-- END GENERATED: study-inventory -->
