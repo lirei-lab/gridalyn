@@ -81,6 +81,11 @@ A component the role refuses at registration raises that registry's own
 `ValueError`: an unsupported `contract_version`, or a surrogate with no error
 bound.
 
+A component must be deterministic: the same inputs and settings give an
+identical result, and any randomness comes only from a `seed` parameter named on
+its factory, supplied from a stream the study declares. See
+[Determinism](../reference/extension-roles.md#determinism).
+
 [Extension Roles](../reference/extension-roles.md) lists, for every role,
 what `factory()` must return, its descriptor, the `project.yaml` key that
 selects it and where a run records it, generated from the code. The role

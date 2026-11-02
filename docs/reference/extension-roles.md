@@ -24,15 +24,15 @@ semantic capability is its own descriptor.
 
 <!-- BEGIN GENERATED: extension-role-contracts by tools/generate_registry_reference.py; do not edit by hand -->
 
-| Role | Component | Descriptor | Contract versions |
-| --- | --- | --- | --- |
-| `channel_model` | a factory returning `gridalyn.simulation.ChannelModel` | `gridalyn.simulation.ChannelModelDescriptor` | `1` |
-| `network_adapter` | a factory returning `gridalyn.twin.NetworkSourceAdapter` | `gridalyn.twin.NetworkAdapterDescriptor` | `1` |
-| `observation_producer` | `gridalyn.twin.observation.registry.ObservationProducer` | `gridalyn.twin.ObservationProducerDescriptor` | `1` |
-| `policy` | a factory returning `gridalyn.simulation.policies.Policy` | `gridalyn.simulation.policies.PolicyDescriptor` | `1` |
-| `powerflow_backend` | a factory returning `gridalyn.simulation.PowerFlowBackend` | `gridalyn.simulation.PowerFlowBackendDescriptor` | `1` |
-| `semantic_capability` | `gridalyn.twin.semantic.vocabulary.SemanticCapability` | `gridalyn.twin.semantic.vocabulary.SemanticCapability` | none; the declaration is versioned instead |
-| `surrogate` | a factory returning `gridalyn.simulation.Surrogate` | `gridalyn.simulation.SurrogateDescriptor` | `1` |
+| Role | Component | Descriptor | Contract versions | Shipped entries that draw randomness |
+| --- | --- | --- | --- | --- |
+| `channel_model` | a factory returning `gridalyn.simulation.ChannelModel` | `gridalyn.simulation.ChannelModelDescriptor` | `1` | `bernoulli_loss`, `burst_outage`, `fixed_outage` |
+| `network_adapter` | a factory returning `gridalyn.twin.NetworkSourceAdapter` | `gridalyn.twin.NetworkAdapterDescriptor` | `1` | none |
+| `observation_producer` | `gridalyn.twin.observation.registry.ObservationProducer` | `gridalyn.twin.ObservationProducerDescriptor` | `1` | none |
+| `policy` | a factory returning `gridalyn.simulation.policies.Policy` | `gridalyn.simulation.policies.PolicyDescriptor` | `1` | none |
+| `powerflow_backend` | a factory returning `gridalyn.simulation.PowerFlowBackend` | `gridalyn.simulation.PowerFlowBackendDescriptor` | `1` | none |
+| `semantic_capability` | `gridalyn.twin.semantic.vocabulary.SemanticCapability` | `gridalyn.twin.semantic.vocabulary.SemanticCapability` | none; the declaration is versioned instead | none |
+| `surrogate` | a factory returning `gridalyn.simulation.Surrogate` | `gridalyn.simulation.SurrogateDescriptor` | `1` | none |
 
 <!-- END GENERATED: extension-role-contracts -->
 
@@ -72,8 +72,9 @@ of them:
 - **Explicit IDs only.** Nothing is discovered: no plugin scan, no environment
   variable. A component is resolvable only once something registered it, and an
   installed extension that the study does not declare is never loaded.
-- **One check order.** Registration checks the contract version, then the
-  role's own rule, then the source, then whether the ID is taken. A failed
+- **One check order.** Registration checks the contract version, then that a
+  `seed` parameter has no default, then the role's own rule, then the source,
+  then whether the ID is taken. A failed
   check leaves the registry unchanged.
 - **Attributed.** Each registration records its source: `core` for what
   gridalyn ships, `host` for host code, `entry_point` for a declared
@@ -86,6 +87,44 @@ of them:
   a `TypeError` when it carries no `DESCRIPTOR`, a `ValueError` for a network
   adapter that declares no ID. Routing a declared extension reports either as a
   `TypeError` naming the extension and its role.
+
+## Determinism
+
+Every role carries one obligation, stated on its contract: the same inputs and
+the same settings must give an identical result. That is what lets a study's
+results be re-run and matched against its baselines, and it holds for an
+external component as it does for a shipped one.
+
+A component that draws randomness does so only from a `seed` parameter named on
+its factory (or, for an observation producer, on the callable).
+`RoleRegistry.draws_randomness(id)` reads that name from the signature, so the
+parameter must be spelled out: a seed behind `**kwargs` or a wrapper cannot be
+seen, and the platform cannot supply or record it. The parameter may have no
+default, and registration refuses one that has. A default would let a call
+site that bypasses the study's seed draw with a value the manifest does not
+record.
+
+The seed always comes from a named stream in `spec.simulation.seeds`, which the
+manifest records under `provenance.seeds`. How the component gets it depends on
+how it is selected:
+
+| Selected by | Where the stream is named | Recorded in |
+| --- | --- | --- |
+| `spec.simulation.powerflowBackend`, `powerflowBackendByStage` or `surrogate` | `spec.simulation.seedStreams.<role>`; `script.powerflow_backend()` and `script.surrogate()` pass the seed | `seed_stream` and `seed` in the role's provenance record |
+| `spec.simulation.channelModel` | `spec.simulation.channelModel.seedStream`; `script.channel_model()` passes the seed | `seed_stream` and `parameters.seed` in `provenance.channel_model` |
+| A stage, by ID | The stage reads `script.simulation_seed(stream)` and passes it | `provenance.seeds` only |
+
+For the first two rows the rule is checked before any stage runs: a selected
+component that draws randomness with no stream is refused, and so is a stream
+given to components that draw none. A stage cannot pass `seed=` to those
+accessors at run time. A call site that resolves a backend or surrogate by ID
+without going through them passes no seed: the SDK functions that take a
+`backend_id`, `ProjectComponents.consume`, and a study's own helper that calls
+`resolve_powerflow_backend` directly. A component that draws randomness fails
+there with its factory's `TypeError`, because its seed has no default.
+
+Registration cannot observe whether a component honours this. It reads the
+signature, not the behaviour.
 
 ## Where roles differ
 
