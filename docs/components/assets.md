@@ -77,8 +77,10 @@ are drawn per dwelling so that a fleet has realistic diversity.
       (`internal_gain_fraction = 0.6`) and carries the building-mass node
       below, with `R` refitted to 5.4 alongside them against the metered
       Hydro-Québec homes. The fit and its residuals are recorded in
-      `projects/ev_hosting_flex/CALIBRATION.md`, "Building-mass re-base". The
-      default archetype keeps no internal gains and no mass, as before.
+      `projects/ev_hosting_flex/CALIBRATION.md`, "Building-mass re-base". Its
+      homes also differ from one another, as the metered ones do (the spread
+      between dwellings, below), and each heater is sized to its own home.
+      The default archetype keeps no internal gains, no mass and no spread.
 
     Neither is wrong, so a figure quoted from either belongs with the archetype
     it came from. A re-parameterised archetype consumes the same random draws
@@ -91,7 +93,9 @@ are drawn per dwelling so that a fleet has realistic diversity.
     −25 °C. The floor applies after the draw, so every other sampled value is
     unchanged. It is opt-in, through `design_outdoor_c` and
     `heater_sizing_margin` on `ThermalArchetype`, so an archetype stated
-    explicitly, `QUEBEC_ALL_ELECTRIC` included, samples exactly as before.
+    explicitly samples exactly as before unless it sets them.
+    `QUEBEC_ALL_ELECTRIC` does: 1.3 times the loss at −30 °C, never below its
+    13 kW floor.
 
 - **Controller** — `simulate_buildings(..., control=...)`:
   `"proportional"` (default) is a quantized 10-level law that reproduces
@@ -146,16 +150,17 @@ are drawn per dwelling so that a fleet has realistic diversity.
   heat, small or empty homes) that a normal `R` cannot produce. The draw has
   a stream of its own, so turning it on moves no other sampled value, and the
   default (no knots) draws nothing. With `design_outdoor_c` set, each heater is
-  sized on the conductance its dwelling ends up with. `ev_hosting_flex` fits
-  the knots to the January heating of the metered homes; its
-  `projects/ev_hosting_flex/CALIBRATION.md` carries the fit.
+  sized on the conductance its dwelling ends up with. The knots are fitted to
+  the January heating of the metered homes
+  (`projects/ev_hosting_flex/CALIBRATION.md` carries the fit), and
+  `QUEBEC_ALL_ELECTRIC` carries them as `QUEBEC_CONDUCTANCE_QUANTILES`.
 - **Outages** — `simulate_buildings(..., outage=(start, end))` cuts power
   and appliance load for the window; when it ends every thermostat that has
   been calling draws at once. `measure_cold_load_pickup` compares that run
   with the same fleet run without the outage: indoor drop, pickup peak per
   home for groups of each size, recovery time and the energy repaid. The
   pickup peak in kW is set by installed capacity, so the ratio to normal load
-  rises as the weather warms (1.6 at −25 °C, 2.2 at −10 °C, 3.2 at 0 °C for
+  rises as the weather warms (1.7 at −25 °C, 2.4 at −10 °C, 3.3 at 0 °C for
   groups of 60 on `QUEBEC_ALL_ELECTRIC` after a 4-hour outage), and a transformer should
   be judged on the kW, not the ratio. A feeder restored in stages is one
   window per section: `generate_restoration_fleet`
@@ -164,9 +169,10 @@ are drawn per dwelling so that a fleet has realistic diversity.
   staged restoration, a simultaneous one and the no-outage reference differ by
   their windows alone. The `cold_load_pickup_feeder` study (see
   [The Studies](../start/studies.md)) solves that through a feeder of 75 kVA
-  transformers: after 4 hours at −25 °C every transformer runs near 130 % of
-  nameplate for hours, and staging trims the feeder-head peak but not the
-  transformers', because each is switched back with all its homes at once.
+  transformers: after 4 hours at −25 °C every transformer passes nameplate,
+  the worst near 147 %, yet no hottest spot passes 70 °C against its 110 °C
+  limit; staging trims the feeder-head peak but not the transformers', because
+  each is switched back with all its homes at once.
 - **Pickup through time** — `measure_cold_load_pickup` reads one number per
   group; a planner who cannot simulate every restoration needs the whole curve.
   `measure_pickup_curve` takes the same two runs and the installed heating
