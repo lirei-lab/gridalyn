@@ -308,7 +308,7 @@ full record's `partial_runs_since`.
 | `input_hashes` | file records of the pinned inputs that exist: `tmy_csv` (`inputs/tmy_trois_rivieres.csv`) and `regression_baseline` (`baselines/results_baseline.json`) |
 | `extensions` | one record per registered extension (`extension_id`, `role`, `name`, `version`, `contract_version`, `source`, `entry_point_group`, `module_hash`); `[]` when none is registered |
 | `channel_model` | only when the study declares `spec.simulation.channelModel`: its descriptor, `parameters` with the seed resolved, `seed_stream`, `declared_source` and `registered` ids |
-| `market_engine` | only when the study declares `spec.simulation.marketEngine`: the engine's descriptor (`market_engine_id`, `name`, `mechanism`, `provider_types`, `inputs`, `settles`, `contract_version`), `declared_source`, `registered` ids; `extension_id`, `extension_source` and `extension_version` when an extension serves it; `seed_stream` and `seed` when it draws randomness |
+| `market_engine` | only when the study declares `spec.simulation.marketEngine`: the engine's descriptor (`market_engine_id`, `name`, `mechanism`, `provider_types`, `clearing_methods`, `operation_type`, `inputs`, `settles`, `contract_version`), `declared_source`, `registered` ids; `extension_id`, `extension_source` and `extension_version` when an extension serves it; `seed_stream` and `seed` when it draws randomness |
 
 `declared_source` says whether a value was declared in `project.yaml` or taken
 from the registry default. A backend, surrogate or channel model served by an

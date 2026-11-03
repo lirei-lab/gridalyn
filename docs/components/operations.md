@@ -16,9 +16,9 @@ reused by every study that needs a market rather than rewritten per study.
 | --- | --- |
 | `gridalyn.operations` | The facade: clearing, allocation, domain records, constraints, settlement, KPIs, verification, operation runs, DER voltage dispatch, the prosumer real-time market, and the most used interaction names. Names resolve on first access. |
 | `gridalyn.operations.interaction` | All of agent interaction. `Conversation`, `ROLE_ALIGNMENT`, `DemandResponseProgram`, `DemandResponseEvent`, the payload builders and the interaction vocabularies are importable only from here, not from the facade. |
-| `gridalyn.operations.vocabulary` | The closed vocabularies below, with their `parse_*` guards. Not re-exported by the facade. |
+| `gridalyn.operations.vocabulary` | The vocabularies below, with their `parse_*` and `parse_declared_*` guards. Not re-exported by the facade. |
 
-## Closed vocabularies
+## Vocabularies
 
 Each vocabulary below is a `Literal` type with a `parse_*` runtime
 guard in `gridalyn/operations/vocabulary.py`. The frozen dataclasses call the
@@ -26,20 +26,30 @@ guards on construction, so an unknown value is refused whether it arrives
 through typed code or a table row, with a `ValueError` naming the field, the
 value found and the accepted set.
 
-| Type | Accepted values | Carried by |
-| --- | --- | --- |
-| `ProviderType` | `soft_cls_building`, `hard_cls_ev` | `FlexibilityOffer`, `DispatchInstruction`, the providers frame |
-| `DispatchAction` | `soft_cls_limit`, `hard_cls_interrupt` | `DispatchInstruction` |
-| `ClearingMethod` | `surrogate`, `topology` | `build_locational_clearing`, `FlexibilityOperationContext`, `OperationRun` |
-| `MarketRole` | `dso_flexibility_clearing` | `FlexibilityOperationContext` |
-| `OperationType` | `flexibility_clearing` | `OperationRun` |
-| `OperationStatus` | `completed` | `OperationRun.status` |
+Four of them are open to [market engines](#market-engines): a record that
+carries one also accepts the terms a registered engine declares, through the
+`parse_declared_*` guards, so its field is a plain `str`. The `Literal` type and
+the plain `parse_*` guard stay the shipped set, for code that acts only on the
+shipped terms.
 
-`DISPATCH_ACTION_BY_PROVIDER_TYPE` maps each provider type to exactly one
-action: `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` →
-`hard_cls_interrupt`. Clearing refuses a provider of an unknown type before it
-can be selected. Widening a set is a deliberate edit to that module, made
-together with the producer that writes the new value.
+| Type | Shipped values | Open to registered engines | Carried by |
+| --- | --- | --- | --- |
+| `ProviderType` | `soft_cls_building`, `hard_cls_ev` | on `DispatchInstruction` | `FlexibilityOffer`, `DispatchInstruction`, the providers frame |
+| `DispatchAction` | `soft_cls_limit`, `hard_cls_interrupt` | yes | `DispatchInstruction` |
+| `ClearingMethod` | `surrogate`, `topology` | on the context and the run | `build_locational_clearing`, `FlexibilityOperationContext`, `OperationRun` |
+| `MarketRole` | `dso_flexibility_clearing` | no | `FlexibilityOperationContext` |
+| `OperationType` | `flexibility_clearing` | yes | `OperationRun` |
+| `OperationStatus` | `completed` | no | `OperationRun.status` |
+
+`DISPATCH_ACTION_BY_PROVIDER_TYPE` maps each shipped provider type to exactly
+one action: `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` →
+`hard_cls_interrupt`. An engine's provider types extend that map, one action
+each. The locational clearing, the offer book and the aggregator portfolios
+stay on the shipped provider types: clearing ranks soft building flexibility
+before hard EV interruption and has no rank for anything else, so it refuses a
+provider of any other type before it can be selected. Widening a shipped set is
+a deliberate edit to that module, made together with the producer that writes
+the new value.
 
 ## Market engines
 
@@ -59,6 +69,15 @@ descriptor names and returns a `MarketOutcome`:
 - `settlement`: one `SettlementRecord` row per instruction, or `None` for an
   engine that does not settle;
 - `report`: the engine's report, plus any further tables it names in `frames`.
+
+An engine's descriptor also declares its own terms: each provider type it
+dispatches with the action an instruction to it carries, the clearing methods it
+records, and its operation type. Once the engine is registered, a
+`DispatchInstruction`, a `FlexibilityOperationContext` and an `OperationRun`
+accept those terms alongside the [shipped ones](#vocabularies); a term no
+registered engine declares is still refused. Registration refuses an engine
+that would send a known provider type a different action, and a clearing method
+that is not lowercase, the form the operation context records.
 
 gridalyn ships one engine, `locational_clearing`: the locational clearing
 below, run through the validation, dispatch and settlement steps of
