@@ -27,6 +27,7 @@ semantic capability is its own descriptor.
 | Role | Component | Descriptor | Contract versions | Shipped entries that draw randomness |
 | --- | --- | --- | --- | --- |
 | `channel_model` | a factory returning `gridalyn.simulation.ChannelModel` | `gridalyn.simulation.ChannelModelDescriptor` | `1` | `bernoulli_loss`, `burst_outage`, `fixed_outage` |
+| `market_engine` | a factory returning `gridalyn.operations.MarketEngine` | `gridalyn.operations.MarketEngineDescriptor` | `1` | none |
 | `network_adapter` | a factory returning `gridalyn.twin.NetworkSourceAdapter` | `gridalyn.twin.NetworkAdapterDescriptor` | `1` | none |
 | `observation_producer` | `gridalyn.twin.observation.registry.ObservationProducer` | `gridalyn.twin.ObservationProducerDescriptor` | `1` | none |
 | `policy` | a factory returning `gridalyn.simulation.policies.Policy` | `gridalyn.simulation.policies.PolicyDescriptor` | `1` | none |
@@ -47,6 +48,7 @@ the supported versions. There is no fallback.
 | Role | Registry | Host registration | Selected in `project.yaml` | Recorded as |
 | --- | --- | --- | --- | --- |
 | `channel_model` | `gridalyn.simulation.ChannelModelRegistry` | `gridalyn.simulation.register_channel_model_extension` | `spec.simulation.channelModel.id` | `provenance.channel_model` in the run manifest, with its parameters and seed, when a study declares `spec.simulation.channelModel` |
+| `market_engine` | `gridalyn.operations.engines.MarketEngineRegistry` | `gridalyn.operations.register_market_engine_extension` | `spec.simulation.marketEngine` | `provenance.market_engine` in the run manifest, when a study declares `spec.simulation.marketEngine` |
 | `network_adapter` | `gridalyn.twin.NetworkAdapterRegistry` | `gridalyn.twin.register_network_adapter_extension` | none; a stage names the ID | `adapter_id` in the base's `metadata.json` |
 | `observation_producer` | `gridalyn.twin.ObservationProducerRegistry` | `gridalyn.twin.register_observation_producer_extension` | none; a stage names the ID | not by ID; each observation's `NetworkObservation.provenance` states whether its values are `simulated` or `measured` |
 | `policy` | `gridalyn.simulation.PolicyRegistry` | `gridalyn.simulation.register_policy_extension` | none; a stage names the ID | not recorded in the run manifest |

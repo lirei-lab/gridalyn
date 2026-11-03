@@ -41,6 +41,33 @@ action: `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` →
 can be selected. Widening a set is a deliberate edit to that module, made
 together with the producer that writes the new value.
 
+## Market engines
+
+A market engine clears, dispatches and settles flexibility. It is a role, like
+a power-flow backend: engines are registered by explicit ID, a study selects
+one in `spec.simulation.marketEngine`, and a stage resolves it with
+`script.market_engine()`. An external package can register its own engine the
+same way, and `provenance.market_engine` records which engine served a run.
+
+Markets read different inputs, so the contract fixes what an engine returns,
+not what it reads. `clear(**inputs)` takes the keyword inputs the engine's
+descriptor names and returns a `MarketOutcome`:
+
+- `events`: one row per constraint event, with the relief required, the
+  relief selected and the shortfall, in kW;
+- `dispatch`: one `DispatchInstruction` row per instruction;
+- `settlement`: one `SettlementRecord` row per instruction, or `None` for an
+  engine that does not settle;
+- `report`: the engine's report, plus any further tables it names in `frames`.
+
+gridalyn ships one engine, `locational_clearing`: the locational clearing
+below, run through the validation, dispatch and settlement steps of
+`run_flexibility_clearing_operation`. Its report is the clearing's own report
+plus the operation context. The KPIs, portfolios and constraint summary that
+the full operation adds to its report, described below, are not part of it. The contract, the registry and the
+`project.yaml` key are listed with every other role on
+[Extension Roles](../reference/extension-roles.md).
+
 ## Locational clearing
 
 `gridalyn/operations/clearing/` holds two modules: `selection.py` picks
