@@ -98,13 +98,37 @@ registered engine declares is still refused. Registration refuses an engine
 that would send a known provider type a different action, and a clearing method
 that is not lowercase, the form the operation context records.
 
-gridalyn ships one engine, `locational_clearing`: the locational clearing
-below, run through the validation, dispatch and settlement steps of
-`run_flexibility_clearing_operation`. Its report is the clearing's own report
-plus the operation context. The KPIs, portfolios and constraint summary that
-the full operation adds to its report, described below, are not part of it;
-`build_operational_kpi_report` of its outcome gives the same KPIs the full
-operation reports. The contract, the registry and the
+gridalyn ships two engines:
+
+- `locational_clearing`: the locational clearing below, run through the
+  validation, dispatch and settlement steps of
+  `run_flexibility_clearing_operation`. Its report is the clearing's own report
+  plus the operation context. The KPIs, portfolios and constraint summary that
+  the full operation adds to its report, described below, are not part of it;
+  `build_operational_kpi_report` of its outcome gives the same KPIs the full
+  operation reports.
+- `prosumer_realtime`: the [prosumer real-time market](#other-operations),
+  run unchanged. It declares the provider type `prosumer_battery`, sent
+  `battery_discharge`, the clearing method
+  `rolling_horizon_uniform_price_auction` and the operation type
+  `prosumer_realtime_market`. Its inputs are `prosumers`, `build_feeder`,
+  `config` and `scenario_id`.
+
+  The market works in MW and $/MWh, and the engine converts to kW and USD:
+    - Each interval whose forecast import exceeds the limit is one event on
+      the constraint `feeder_head_import_limit`.
+    - Each battery that cleared in it gets one instruction, paid the
+      interval's uniform price on the energy it delivered, and each
+      instruction settles at that payment.
+    - A prosumer without an `aggregator_id` is assigned the scenario's
+      unassigned aggregator, as `build_dispatch_instructions` assigns a
+      provider without one.
+
+  The report holds the market's summary and the operation context. The
+  market's own tables, in its own units, are in `frames`: `clearing`,
+  `battery_dispatch`, `forecast`, `offers` and `powerflow`.
+
+The contract, the registry and the
 `project.yaml` key are listed with every other role on
 [Extension Roles](../reference/extension-roles.md).
 
@@ -317,8 +341,10 @@ artifacts as such an outcome and records it that way.
   `ProsumerRealtimeMarketResult` (clearing, dispatch, forecast, offers and power
   flow tables) from a `ProsumerRealtimeMarketConfig`;
   `build_prosumer_realtime_market_summary` and
-  `write_prosumer_market_dispatch_figure` report it. The
-  `prosumer_battery_market` study uses it.
+  `write_prosumer_market_dispatch_figure` report it. It is also served as the
+  [market engine](#market-engines) `prosumer_realtime`, which is how the
+  `prosumer_battery_market` study runs it, through
+  `spec.simulation.marketEngine`.
 
 ## Agent interaction
 
