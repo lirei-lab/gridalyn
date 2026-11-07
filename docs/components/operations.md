@@ -6,31 +6,124 @@
 much headroom it has left. `operations` answers the economic question sitting
 on top of that: which flexibility providers get called on, at what price, to
 relieve a constraint, and how the result is dispatched, settled, scored and
-checked afterward. Providers, aggregators, locational clearing, dispatch,
-settlement, KPIs and the messages agents exchange are a platform layer here,
-reused by every study that needs a market rather than rewritten per study.
+checked afterward.
+
+The layer has two parts, and this page keeps them apart:
+
+- **A contract** that any market satisfies, whether gridalyn ships it or an
+  external package registers it. It covers the records a round produces, the
+  vocabularies they use, the market-engine role, and what reads a market's
+  result.
+- **Implementations** of that contract: the market engines gridalyn ships
+  and the studies that use them, plus the operations that are not markets and the
+  messages agents exchange around a round.
 
 ## Where to import from
 
 | Import path | What it holds |
 | --- | --- |
-| `gridalyn.operations` | The facade: clearing, allocation, domain records, constraints, settlement, KPIs, verification, operation runs, DER voltage dispatch, the prosumer real-time market, and the most used interaction names. Names resolve on first access. |
+| `gridalyn.operations` | The facade: the market-engine contract (`MarketEngine`, `MarketEngineDescriptor`, `MarketOutcome`) and the functions that register and resolve engines, clearing, allocation, domain records, constraints, settlement, KPIs, verification, operation runs, DER voltage dispatch, the prosumer real-time market, and the most used interaction names. Names resolve on first access. |
+| `gridalyn.operations.engines` | The market-engine role: `MarketEngine`, `MarketEngineDescriptor`, `MarketOutcome`, the registry, and the shipped engines `LocationalClearingEngine` and `ProsumerRealtimeEngine`. |
 | `gridalyn.operations.interaction` | All of agent interaction. `Conversation`, `ROLE_ALIGNMENT`, `DemandResponseProgram`, `DemandResponseEvent`, the payload builders and the interaction vocabularies are importable only from here, not from the facade. |
 | `gridalyn.operations.vocabulary` | The vocabularies below, with their `parse_*` and `parse_declared_*` guards. Not re-exported by the facade. |
 
-## Vocabularies
+## The market contract
 
-Each vocabulary below is a `Literal` type with a `parse_*` runtime
-guard in `gridalyn/operations/vocabulary.py`. The frozen dataclasses call the
-guards on construction, so an unknown value is refused whether it arrives
-through typed code or a table row, with a `ValueError` naming the field, the
-value found and the accepted set.
+### Market engines
 
-Four of them are open to [market engines](#market-engines): a record that
-carries one also accepts the terms a registered engine declares, through the
-`parse_declared_*` guards, so its field is a plain `str`. The `Literal` type and
-the plain `parse_*` guard stay the shipped set, for code that acts only on the
-shipped terms.
+A market engine clears, dispatches and settles flexibility. It is a role, like
+a power-flow backend: a `MarketEngine` has a `descriptor` and one method,
+`clear(**inputs)`, which returns a `MarketOutcome`. The same inputs must give
+the same outcome; an engine that draws randomness names a `seed` parameter on
+its factory and draws only from it.
+
+Markets read different inputs: a locational merit order reads requirement,
+provider and impact tables, a real-time auction reads prosumers, a feeder and a
+forecast configuration. So the contract fixes what an engine returns, not what
+it reads. Each engine names the keyword inputs it requires in its descriptor,
+and `MarketEngineDescriptor.check_inputs` names any a caller left out before
+anything runs.
+
+The `MarketEngineDescriptor` states what the engine is:
+
+- `market_engine_id`, `name`, `mechanism` (for example `merit_order` or
+  `uniform_price`) and `contract_version`;
+- `provider_types`: each provider type the engine dispatches, mapped to the
+  dispatch action an instruction to it carries;
+- `clearing_methods`: the clearing methods it records on its operation context;
+- `operation_type`: the operation type a run of it records, or `None` when its
+  rounds are not recorded as operation runs;
+- `inputs`: the keyword inputs `clear` requires;
+- `settles`: whether it closes out what it dispatched with settlement records.
+
+The `MarketOutcome` is the round, in the domain records below and in kW:
+
+- `context`: the `FlexibilityOperationContext` the round was recorded under,
+  with its operation ID, scenario, clearing method, step length and governance
+  IDs;
+- `events`: one row per constraint event, with the relief required, the relief
+  selected and the shortfall;
+- `dispatch`: one `DispatchInstruction` row per instruction;
+- `settlement`: one `SettlementRecord` row per instruction, or `None` for an
+  engine that does not settle;
+- `report`: the engine's report, a JSON-native mapping;
+- `frames`: further tables the engine produced, by name. Nothing downstream may
+  require one.
+
+An outcome whose frames lack the contract's columns, or whose context is not a
+`FlexibilityOperationContext`, is refused with a `ValueError` naming the field.
+
+### Records
+
+The domain records are frozen dataclasses in `gridalyn/operations/domain.py`,
+each with a `build_*` function that produces a DataFrame of them:
+
+| Record | Built by | What it is |
+| --- | --- | --- |
+| `FlexibilityOffer` | `build_provider_offers` | What one provider offers into a round. |
+| `AggregatorPortfolio` | `build_aggregator_portfolios` | The providers an aggregator represents in a scenario. |
+| `DispatchInstruction` | `build_dispatch_instructions` | A cleared selection as an instruction, with the dispatch action its provider type maps to. |
+| `SettlementRecord` | `build_settlement_records` | The financial close-out of one instruction. |
+
+`FlexibilityOperationContext` (`gridalyn/operations/contracts.py`) is the
+identity and governance scope of one round: operation ID, scenario, clearing
+method, time step, market role and semantic profile. `build_operation_context`
+builds it from the locational requirement, provider and impact tables; an
+engine that reads other inputs constructs it directly, with a clearing method it
+declares.
+
+Constraints live in `gridalyn/operations/constraints.py`. `NetworkConstraint`
+is the record of one active constraint that flexibility can clear, and
+`build_network_constraint_set` / `summarize_network_constraints` build and
+summarize a set of them. `NetworkConstraintModel` is different: it is a
+`typing.Protocol`, the interface a network model offers to dispatch and market
+simulation: a `p_limit_kw`, a `thermal_model` and a
+`probabilistic_constraint_check(p_mean_kw, p_std_kw, *, ambient_c, epsilon)`
+method. Any object with those members satisfies it.
+
+`resolve_constraint_element(constraint_id, model)` turns a constraint ID into a
+reference. It finds the element a `transformer:`, `line:` or `bus:` ID names in
+a twin `NetworkModel`, with columns found through the twin schema's declared
+roles. It checks that the model declares the CIM class the prefix implies, and
+it returns a `ConstraintElement` with that class and the model's
+`model_version_id`. An ID that names nothing, or names something else, raises a
+located `ValueError`. A `FlexRequest` carries its `constraint_id` as a string;
+this check keeps it a reference.
+
+### Vocabularies
+
+Each vocabulary below is a `Literal` type with a `parse_*` runtime guard in
+`gridalyn/operations/vocabulary.py`. The frozen dataclasses call the guards on
+construction, so an unknown value is refused whether it arrives through typed
+code or a table row, with a `ValueError` naming the field, the value found and
+the accepted set.
+
+Four of them are part of what a market engine *is*, so an engine declares its
+own terms in its descriptor. A record that carries one of them also accepts the
+terms a registered engine declares, through the `parse_declared_*` guards, so
+its field is a plain `str`. A term that no registered engine declares is still
+refused. The `Literal` type and the plain `parse_*` guard stay the shipped set,
+for code that acts only on the shipped terms.
 
 | Type | Shipped values | Open to registered engines | Carried by |
 | --- | --- | --- | --- |
@@ -41,104 +134,97 @@ shipped terms.
 | `OperationType` | `flexibility_clearing` | yes | `OperationRun` |
 | `OperationStatus` | `completed` | no | `OperationRun.status` |
 
+`MarketRole` and `OperationStatus` stay closed by design: the platform, not an
+engine, gives them their meaning.
+
 `DISPATCH_ACTION_BY_PROVIDER_TYPE` maps each shipped provider type to exactly
 one action: `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` →
 `hard_cls_interrupt`. An engine's provider types extend that map, one action
-each. An offer accepts them too, so any engine's round can be written as
-[`flex_trading` messages](#agent-interaction). The locational clearing and the
-aggregator portfolios stay on the shipped provider types: clearing ranks soft
-building flexibility before hard EV interruption and has no rank for anything
-else, so it refuses a provider of any other type before it can be selected. Widening a shipped set is
-a deliberate edit to that module, made together with the producer that writes
-the new value.
+each, and registration refuses an engine that would send a known provider type
+a different action. It also refuses a clearing method that is not lowercase,
+the form the operation context records.
 
-## Market engines
+The locational clearing and the aggregator portfolios stay on the shipped
+provider types: clearing ranks soft building flexibility before hard EV
+interruption and has no rank for anything else, so it refuses a provider of any
+other type before it can be selected. Widening a shipped set is a deliberate
+edit to that module, made together with the producer that writes the new value.
 
-A market engine clears, dispatches and settles flexibility. It is a role, like
-a power-flow backend: engines are registered by explicit ID, a study selects
-one in `spec.simulation.marketEngine`, and a stage resolves it with
-`script.market_engine()`. An external package can register its own engine the
-same way, and `provenance.market_engine` records which engine served a run.
+### What reads an outcome
 
-Markets read different inputs, so the contract fixes what an engine returns,
-not what it reads. `clear(**inputs)` takes the keyword inputs the engine's
-descriptor names and returns a `MarketOutcome`:
+Whatever reads a market's result reads its `MarketOutcome`, so it works the
+same for every engine, shipped or registered:
 
-- `context`: the `FlexibilityOperationContext` the round was recorded under,
-  with its operation ID, scenario, clearing method, step length and governance
-  IDs. An engine whose inputs are not the locational requirement, provider and
-  impact tables builds it directly rather than through `build_operation_context`;
-- `events`: one row per constraint event, with the relief required, the
-  relief selected and the shortfall, in kW;
-- `dispatch`: one `DispatchInstruction` row per instruction;
-- `settlement`: one `SettlementRecord` row per instruction, or `None` for an
-  engine that does not settle;
-- `report`: the engine's report, plus any further tables it names in `frames`.
-
-Whatever reads a market's result reads that outcome, so it works the same for
-every engine:
-
-- `build_operational_kpi_report(outcome, constraints=)` scores the round. A
-  KPI the engine does not produce is `None`, not zero: the settlement total and
-  cost per MWh for an engine that does not settle, and the soft and hard
-  selected energy for events that do not split relief that way;
+- `build_operational_kpi_report(outcome, constraints=)`
+  (`gridalyn/operations/settlement.py`) scores the round against the
+  constraints it cleared. A KPI the engine does not produce is `None`, not zero:
+  the settlement total and cost per MWh for an engine that does not settle, and
+  the soft and hard selected energy for events that do not split relief that
+  way.
 - `build_market_operation_run(outcome, descriptor=, input_artifacts=,
-  output_artifacts=, kpi_report=)` records it as an `OperationRun`, with the
-  operation type the descriptor declares. An engine that declares none is not
-  recorded as a run;
+  output_artifacts=, kpi_report=)` (`gridalyn/operations/runs.py`) records it
+  as an `OperationRun`, with the operation type the descriptor declares. An
+  engine that declares none is not recorded as a run.
 - `build_flex_trading_messages(outcome, offers=, operator=)` writes it as
   [`flex_trading` messages](#agent-interaction).
 
-An engine's descriptor also declares its own terms: each provider type it
-dispatches with the action an instruction to it carries, the clearing methods it
-records, and its operation type. Once the engine is registered, a
-`DispatchInstruction`, a `FlexibilityOperationContext` and an `OperationRun`
-accept those terms alongside the [shipped ones](#vocabularies); a term no
-registered engine declares is still refused. Registration refuses an engine
-that would send a known provider type a different action, and a clearing method
-that is not lowercase, the form the operation context records.
+`OperationRun` is the traceable record of one operation execution: its type,
+status, clearing method, input and output artifacts, KPI report and governance
+IDs. `build_operation_run`, `validate_operation_run` and `write_operation_run`
+build, check and write it, and `OperationRunValidation` is the check's result.
 
-gridalyn ships two engines:
+## Registering and selecting an engine
 
-- `locational_clearing`: the locational clearing below, run through the
-  validation, dispatch and settlement steps of
-  `run_flexibility_clearing_operation`. Its report is the clearing's own report
-  plus the operation context. The KPIs, portfolios and constraint summary that
-  the full operation adds to its report, described below, are not part of it;
-  `build_operational_kpi_report` of its outcome gives the same KPIs the full
-  operation reports.
-- `prosumer_realtime`: the [prosumer real-time market](#other-operations),
-  run unchanged. It declares the provider type `prosumer_battery`, sent
-  `battery_discharge`, the clearing method
-  `rolling_horizon_uniform_price_auction` and the operation type
-  `prosumer_realtime_market`. Its inputs are `prosumers`, `build_feeder`,
-  `config` and `scenario_id`.
+Engines are resolved by explicit ID only; there is no discovery, and no default
+engine, because a market is a choice a study makes:
 
-  The market works in MW and $/MWh, and the engine converts to kW and USD:
-    - Each interval whose forecast import exceeds the limit is one event on
-      the constraint `feeder_head_import_limit`.
-    - Each battery that cleared in it gets one instruction, paid the
-      interval's uniform price on the energy it delivered, and each
-      instruction settles at that payment.
-    - A prosumer without an `aggregator_id` is assigned the scenario's
-      unassigned aggregator, as `build_dispatch_instructions` assigns a
-      provider without one.
+- A study selects one in `spec.simulation.marketEngine`, and a stage resolves
+  it with `script.market_engine()`. Settings passed there go to the engine's
+  factory; a seed comes from the study, never from the call.
+- An external package registers its own engine through
+  `register_market_engine_extension(factory, descriptor=)`, from host code or
+  through a `spec.inputs.extensions` declaration. Once registered, the terms its
+  descriptor declares are accepted by the records above.
+- `resolve_market_engine(market_engine_id)` resolves one from the shared
+  registry outside a study.
+- The run manifest's `provenance.market_engine` records the descriptor of the
+  engine a study declares, which IDs were registered, and the extension that
+  served it when it is not a shipped one.
 
-  The report holds the market's summary and the operation context. The
-  market's own tables, in its own units, are in `frames`: `clearing`,
-  `battery_dispatch`, `forecast`, `offers` and `powerflow`.
-
-The contract, the registry and the
-`project.yaml` key are listed with every other role on
+The role's registry, host function, `project.yaml` key and provenance are
+listed with every other role on
 [Extension Roles](../reference/extension-roles.md).
+[Write An Extension](../guides/write-an-extension.md) walks through authoring,
+installing and declaring one.
 
-## Locational clearing
+## Shipped engines
+
+gridalyn ships two engines, both registered as core.
+
+| Engine ID | Mechanism | Provider type → action | Clearing method | Operation type | Study that clears with it |
+| --- | --- | --- | --- | --- | --- |
+| `locational_clearing` | `merit_order` | `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` → `hard_cls_interrupt` | `surrogate`, `topology` | `flexibility_clearing` | none yet; `ev_hosting_flex` calls the selection core directly |
+| `prosumer_realtime` | `uniform_price` | `prosumer_battery` → `battery_discharge` | `rolling_horizon_uniform_price_auction` | `prosumer_realtime_market` | `prosumer_battery_market` |
+
+### Locational clearing
+
+The `locational_clearing` engine (`LocationalClearingEngine`) clears each
+constraint event by merit order over the providers that relieve it. Its inputs
+are `requirements`, `providers`, `impact`, `scenario_id` and `dt_h`. It runs
+the validation, dispatch and settlement steps of
+`run_flexibility_clearing_operation` around the selection core below, and its
+report is the clearing's own report plus the operation context.
+
+`ev_hosting_flex` uses the selection core. Its stage
+`projects/ev_hosting_flex/scripts/pipeline/analyze_locational_contracts.py`
+calls `build_locational_clearing` directly, and the study records the module
+through `clearingEngine: selection` rather than `spec.simulation.marketEngine`.
 
 `gridalyn/operations/clearing/` holds two modules: `selection.py` picks
 providers for each constraint event, and `allocation.py` maps an aggregate
 target back onto per-load matrices.
 
-**The selection contract.**
+**The selection core.**
 `build_locational_clearing(*, requirements, providers, impact, scenario_id,
 dt_h, clearing_method="surrogate", max_selected_providers_per_event=1000,
 provider_availability=None)`
@@ -217,13 +303,16 @@ provider_id     provider_type  selected_kw
         30.0                30.0           0.0
 ```
 
-**The full operation.** `run_flexibility_clearing_operation` takes the same
-arguments plus `model_version_id` and `study_run_id`. It builds a
-`FlexibilityOperationContext`, validates the three frames with
-`validate_flexibility_operation_inputs` (raising `ValueError` on failure),
-clears with `build_locational_clearing`, and adds to the report the dispatch
-instructions, settlement records, aggregator portfolios, network constraints
-and operational KPIs derived from the result.
+**The full operation.** `run_flexibility_clearing_operation` takes the
+selection core's arguments except `provider_availability`, plus
+`model_version_id` and `study_run_id`. It runs the same validation, clearing,
+dispatch and settlement steps as the engine. Its report also carries an input
+summary, the operation context's governance IDs, the input validation, counts
+of the dispatch, settlement and aggregator-portfolio records, a summary of the
+network constraints, and the operational KPIs. The engine leaves those out
+because they read the outcome rather than produce it:
+`build_operational_kpi_report` of the engine's outcome gives the same KPIs the
+full operation reports.
 
 **Inputs and outputs around the core.** `build_constraint_requirements` turns
 transformer loading above a limit into the requirements frame.
@@ -242,47 +331,21 @@ headroom. `apply_spatial_cls` applies aggregate soft and hard targets to
 building and EV load matrices and returns a `SpatialClsResult` with the managed
 loads and the curtailed and delivered kilowatts of each kind.
 
-## Records, dispatch and settlement
+**Artifacts.** `materialize_flexibility_operation_artifacts(*, root,
+project_id, scenario_id, ...)` reads the provider registry and the locational
+clearing events and selections from the instance's flexibility directory,
+assembles a `MarketOutcome` from them (it does not re-run the clearing), and
+writes, under the project's `outputs/`:
 
-The domain records are frozen dataclasses in `gridalyn/operations/domain.py`,
-each with a `build_*` function that produces a DataFrame of them:
+- `network_constraints`, `flexibility_offers`, `dispatch_instructions` and
+  `settlement_records` as parquet;
+- `reports/operational_kpi_report.json`, a platform report (see
+  [Report And Run-Manifest Schema](../reference/report-schema.md));
+- an operations catalog and an `operation_run.json`, built with
+  `build_market_operation_run` and the locational engine's descriptor.
 
-| Record | Built by | What it is |
-| --- | --- | --- |
-| `FlexibilityOffer` | `build_provider_offers` | What one provider offers into a round. |
-| `AggregatorPortfolio` | `build_aggregator_portfolios` | The providers an aggregator represents in a scenario. |
-| `DispatchInstruction` | `build_dispatch_instructions` | A cleared selection as an instruction, with the dispatch action its provider type maps to. |
-| `SettlementRecord` | `build_settlement_records` | The financial close-out of one instruction. |
+**Checking a locational round.**
 
-`FlexibilityOperationContext` (`gridalyn/operations/contracts.py`) is the
-identity and governance scope of one clearing operation (operation id,
-scenario, clearing method, time step, market role, semantic profile), built by
-`build_operation_context`.
-
-Constraints live in `gridalyn/operations/constraints.py`. `NetworkConstraint`
-is the record of one active constraint that flexibility can clear, and
-`build_network_constraint_set` / `summarize_network_constraints` build and
-summarize a set of them. `NetworkConstraintModel` is different: it is a
-`typing.Protocol`, the interface a network model offers to dispatch and market
-simulation: a `p_limit_kw`, a `thermal_model` and a
-`probabilistic_constraint_check(p_mean_kw, p_std_kw, *, ambient_c, epsilon)`
-method. Any object with those members satisfies it.
-
-`resolve_constraint_element(constraint_id, model)` turns a constraint id into a
-reference. It finds the element a `transformer:`, `line:` or `bus:` id names in
-a twin `NetworkModel`, with columns found through the twin schema's declared
-roles. It checks that the model declares the CIM class the prefix implies, and
-it returns a `ConstraintElement` with that class and the model's
-`model_version_id`. An id that names nothing, or names something else, raises a
-located `ValueError`. A `FlexRequest` carries its `constraint_id` as a string;
-this check keeps it a reference.
-
-## KPIs, scorecards and verification
-
-- **KPIs.** `build_operational_kpi_report` (`gridalyn/operations/settlement.py`)
-  scores a round from its `MarketOutcome` (events, dispatch instructions,
-  settlement records and operation context) and its constraints, the same way
-  for every study and every [market engine](#market-engines).
 - **Scorecard.** `build_flexibility_clearing_scorecard` compares the policies
   of one scenario (unmanaged, aggregate CLS and the clearing variants whose
   reports it is given) from their pandapower-validated reports, and
@@ -299,57 +362,74 @@ this check keeps it a reference.
 - **Consistency.** `validate_cls_output_consistency` checks that the JSON and
   parquet artifacts of one CLS run describe the same run.
 
-## Operation artifacts and runs
+### Prosumer real-time market
 
-`materialize_flexibility_operation_artifacts(*, root, project_id, scenario_id,
-...)` reads the provider registry and the locational clearing events and
-selections from the instance's flexibility directory and writes, under the
-project's `outputs/`:
+The `prosumer_realtime` engine (`ProsumerRealtimeEngine`) clears a feeder's
+import limit from prosumer battery offers, interval by interval. Its inputs are
+`prosumers`, `build_feeder`, `config` and `scenario_id`. The
+`prosumer_battery_market` study declares it in `spec.simulation.marketEngine`
+and runs it through `script.market_engine()`.
 
-- `network_constraints`, `flexibility_offers`, `dispatch_instructions` and
-  `settlement_records` as parquet;
-- `reports/operational_kpi_report.json`, a platform report (see
-  [Report And Run-Manifest Schema](../reference/report-schema.md));
-- an operations catalog and an `operation_run.json`.
+**The market.** `run_prosumer_realtime_market(*, prosumers, build_feeder,
+config)` (`gridalyn/operations/prosumer_realtime.py`) runs a rolling-horizon
+uniform-price auction for prosumer batteries. For each interval:
 
-`OperationRun` (`gridalyn/operations/runs.py`) is that traceable record of one
-operation execution: its type, status, clearing method, input and output
-artifacts, KPI report and governance ids. `build_operation_run`,
-`validate_operation_run` and `write_operation_run` build, check and write it,
-and `OperationRunValidation` is the check's result.
-`build_market_operation_run` builds it from a market engine's outcome and
-descriptor; the materializer reads the locational round back from its parquet
-artifacts as such an outcome and records it that way.
+1. `build_interval_forecast` issues a forecast;
+2. `clear_prosumer_interval` clears that interval's battery offers against the
+   import limit;
+3. `run_prosumer_powerflow` verifies the feeder.
 
-## Other operations
+It returns a `ProsumerRealtimeMarketResult` (clearing, dispatch, forecast,
+offers and power flow tables) from a `ProsumerRealtimeMarketConfig`.
+`build_prosumer_realtime_market_summary` and
+`write_prosumer_market_dispatch_figure` report it.
 
-- **DER voltage dispatch** (`gridalyn/operations/der_voltage.py`).
-  `run_der_voltage_dispatch(build_feeder, der_assets, config)` solves a
-  linearized, voltage-constrained PV and battery dispatch and verifies it with
-  an AC power flow at full PV output and at the optimized setpoints. It needs
-  `cvxpy`, from the `ops` extra. `DERVoltageDispatchConfig` holds the voltage
-  band and weights, `DERVoltageDispatchResult` the tables and both network
-  observations; `summarize_der_voltage_dispatch` and
-  `write_der_voltage_dispatch_figure` report it. The `der_voltage_optimization`
-  study uses it.
-- **Prosumer real-time market** (`gridalyn/operations/prosumer_realtime.py`).
-  `run_prosumer_realtime_market(*, prosumers, build_feeder, config)` runs a
-  rolling-horizon uniform-price auction for prosumer batteries: for each
-  interval, `build_interval_forecast` issues a forecast,
-  `clear_prosumer_interval` clears that interval's battery offers against the
-  import limit, and `run_prosumer_powerflow` verifies the feeder. It returns a
-  `ProsumerRealtimeMarketResult` (clearing, dispatch, forecast, offers and power
-  flow tables) from a `ProsumerRealtimeMarketConfig`;
-  `build_prosumer_realtime_market_summary` and
-  `write_prosumer_market_dispatch_figure` report it. It is also served as the
-  [market engine](#market-engines) `prosumer_realtime`, which is how the
-  `prosumer_battery_market` study runs it, through
-  `spec.simulation.marketEngine`.
+**The engine.** It runs the market unchanged. The market works in MW and
+$/MWh, and the engine converts to kW and USD:
+
+- Each interval whose forecast import exceeds the limit is one event on the
+  constraint `feeder_head_import_limit`.
+- Each battery that cleared in it gets one instruction, paid the interval's
+  uniform price on the energy it delivered, and each instruction settles at
+  that payment.
+- A prosumer without an `aggregator_id` is assigned the scenario's unassigned
+  aggregator, as `build_dispatch_instructions` assigns a provider without one.
+
+The report holds the market's summary and the operation context. The market's
+own tables, in its own units, are in `frames`: `clearing`, `battery_dispatch`,
+`forecast`, `offers` and `powerflow`.
+
+## Operations that are not market engines
+
+**DER voltage dispatch** (`gridalyn/operations/der_voltage.py`) is an
+optimal dispatch, not a market: it has no offers, no prices and no settlement,
+so it does not return a `MarketOutcome`.
+
+- `run_der_voltage_dispatch(build_feeder, der_assets, config)` solves a
+  linearized, voltage-constrained PV and battery dispatch.
+- It verifies the result with an AC power flow at full PV output and at the
+  optimized setpoints.
+- It needs `cvxpy`, from the `ops` extra.
+- `DERVoltageDispatchConfig` holds the voltage band and weights, and
+  `DERVoltageDispatchResult` holds the tables and both network observations.
+- `summarize_der_voltage_dispatch` and `write_der_voltage_dispatch_figure`
+  report it.
+
+The `der_voltage_optimization` study uses it.
 
 ## Agent interaction
 
 `gridalyn.operations.interaction` models the messages agents exchange around
-flexibility and demand response.
+flexibility and demand response. The `dr_agent_interaction` and
+`flex_trading_congestion` studies use it.
+
+**The protocol set is closed by design.** Unlike market engines, an interaction
+protocol cannot be registered by an extension, and a declaration that claims
+the `interaction_protocol` role is refused. A protocol decides which message
+may follow which, so a conversation's legality must not depend on what happens
+to be installed. A new market does not need a new protocol: any engine's round
+is written onto `flex_trading` (see
+[A cleared round can be written as messages](#a-cleared-round-can-be-written-as-messages)).
 
 **Roles, kept apart from parties.** `AgentRef` names an agent, the party it
 acts for and the role it plays, so one utility can be a distribution operator
@@ -454,7 +534,8 @@ message type can still carry `flexint:` payload fields. It also names the
 standard message types the run never used. `summarize_interaction` includes it
 under `standard_conformance`, so every interaction report carries it.
 
-**A cleared round can be written as messages.**
+### A cleared round can be written as messages
+
 `build_flex_trading_messages(outcome, offers=, operator=)` turns the
 `MarketOutcome` of an already-cleared round, from any market engine, into
 `flex_trading` messages, and `run_message_transcript` delivers them. An engine
@@ -468,11 +549,14 @@ uv run python - <<'EOF'
 import pkgutil
 
 import gridalyn.operations.clearing as clearing
+from gridalyn.operations.engines import default_market_engine_registry
 from gridalyn.operations.interaction import PROTOCOLS
 from gridalyn.operations.vocabulary import DISPATCH_ACTION_BY_PROVIDER_TYPE
 
 print(sorted(module.name for module in pkgutil.iter_modules(clearing.__path__)))
 print(DISPATCH_ACTION_BY_PROVIDER_TYPE)
+for descriptor in default_market_engine_registry().list_descriptors():
+    print(descriptor.market_engine_id, dict(descriptor.provider_types))
 for protocol_id, spec in sorted(PROTOCOLS.items()):
     print(protocol_id, spec.initial, spec.states)
 EOF
@@ -480,11 +564,14 @@ EOF
 ```text
 ['allocation', 'selection']
 {'soft_cls_building': 'soft_cls_limit', 'hard_cls_ev': 'hard_cls_interrupt'}
+locational_clearing {'soft_cls_building': 'soft_cls_limit', 'hard_cls_ev': 'hard_cls_interrupt'}
+prosumer_realtime {'prosumer_battery': 'battery_discharge'}
 dr_program idle ('idle', 'notified', 'active', 'completed', 'cancelled', 'opted_out')
 flex_trading idle ('idle', 'requested', 'offered', 'revoked', 'ordered', 'acknowledged', 'settled')
 ```
 
-The output is the clearing modules, the provider-to-action map and both
+The output is the clearing modules, the shipped provider-to-action map, the
+registered market engines with the provider types each declares, and both
 protocols' initial and full state sets, read from the code rather than from
 this page.
 
