@@ -34,7 +34,7 @@ shipped terms.
 
 | Type | Shipped values | Open to registered engines | Carried by |
 | --- | --- | --- | --- |
-| `ProviderType` | `soft_cls_building`, `hard_cls_ev` | on `DispatchInstruction` | `FlexibilityOffer`, `DispatchInstruction`, the providers frame |
+| `ProviderType` | `soft_cls_building`, `hard_cls_ev` | on `DispatchInstruction` and `FlexibilityOffer` | `FlexibilityOffer`, `DispatchInstruction`, the providers frame |
 | `DispatchAction` | `soft_cls_limit`, `hard_cls_interrupt` | yes | `DispatchInstruction` |
 | `ClearingMethod` | `surrogate`, `topology` | on the context and the run | `build_locational_clearing`, `FlexibilityOperationContext`, `OperationRun` |
 | `MarketRole` | `dso_flexibility_clearing` | no | `FlexibilityOperationContext` |
@@ -44,10 +44,11 @@ shipped terms.
 `DISPATCH_ACTION_BY_PROVIDER_TYPE` maps each shipped provider type to exactly
 one action: `soft_cls_building` → `soft_cls_limit`, `hard_cls_ev` →
 `hard_cls_interrupt`. An engine's provider types extend that map, one action
-each. The locational clearing, the offer book and the aggregator portfolios
-stay on the shipped provider types: clearing ranks soft building flexibility
-before hard EV interruption and has no rank for anything else, so it refuses a
-provider of any other type before it can be selected. Widening a shipped set is
+each. An offer accepts them too, so any engine's round can be written as
+[`flex_trading` messages](#agent-interaction). The locational clearing and the
+aggregator portfolios stay on the shipped provider types: clearing ranks soft
+building flexibility before hard EV interruption and has no rank for anything
+else, so it refuses a provider of any other type before it can be selected. Widening a shipped set is
 a deliberate edit to that module, made together with the producer that writes
 the new value.
 
@@ -63,12 +64,30 @@ Markets read different inputs, so the contract fixes what an engine returns,
 not what it reads. `clear(**inputs)` takes the keyword inputs the engine's
 descriptor names and returns a `MarketOutcome`:
 
+- `context`: the `FlexibilityOperationContext` the round was recorded under,
+  with its operation ID, scenario, clearing method, step length and governance
+  IDs. An engine whose inputs are not the locational requirement, provider and
+  impact tables builds it directly rather than through `build_operation_context`;
 - `events`: one row per constraint event, with the relief required, the
   relief selected and the shortfall, in kW;
 - `dispatch`: one `DispatchInstruction` row per instruction;
 - `settlement`: one `SettlementRecord` row per instruction, or `None` for an
   engine that does not settle;
 - `report`: the engine's report, plus any further tables it names in `frames`.
+
+Whatever reads a market's result reads that outcome, so it works the same for
+every engine:
+
+- `build_operational_kpi_report(outcome, constraints=)` scores the round. A
+  KPI the engine does not produce is `None`, not zero: the settlement total and
+  cost per MWh for an engine that does not settle, and the soft and hard
+  selected energy for events that do not split relief that way;
+- `build_market_operation_run(outcome, descriptor=, input_artifacts=,
+  output_artifacts=, kpi_report=)` records it as an `OperationRun`, with the
+  operation type the descriptor declares. An engine that declares none is not
+  recorded as a run;
+- `build_flex_trading_messages(outcome, offers=, operator=)` writes it as
+  [`flex_trading` messages](#agent-interaction).
 
 An engine's descriptor also declares its own terms: each provider type it
 dispatches with the action an instruction to it carries, the clearing methods it
@@ -83,7 +102,9 @@ gridalyn ships one engine, `locational_clearing`: the locational clearing
 below, run through the validation, dispatch and settlement steps of
 `run_flexibility_clearing_operation`. Its report is the clearing's own report
 plus the operation context. The KPIs, portfolios and constraint summary that
-the full operation adds to its report, described below, are not part of it. The contract, the registry and the
+the full operation adds to its report, described below, are not part of it;
+`build_operational_kpi_report` of its outcome gives the same KPIs the full
+operation reports. The contract, the registry and the
 `project.yaml` key are listed with every other role on
 [Extension Roles](../reference/extension-roles.md).
 
@@ -235,8 +256,9 @@ this check keeps it a reference.
 ## KPIs, scorecards and verification
 
 - **KPIs.** `build_operational_kpi_report` (`gridalyn/operations/settlement.py`)
-  scores a run from its events, dispatch instructions, settlement records and
-  constraints, the same way for every study.
+  scores a round from its `MarketOutcome` (events, dispatch instructions,
+  settlement records and operation context) and its constraints, the same way
+  for every study and every [market engine](#market-engines).
 - **Scorecard.** `build_flexibility_clearing_scorecard` compares the policies
   of one scenario (unmanaged, aggregate CLS and the clearing variants whose
   reports it is given) from their pandapower-validated reports, and
@@ -271,6 +293,9 @@ operation execution: its type, status, clearing method, input and output
 artifacts, KPI report and governance ids. `build_operation_run`,
 `validate_operation_run` and `write_operation_run` build, check and write it,
 and `OperationRunValidation` is the check's result.
+`build_market_operation_run` builds it from a market engine's outcome and
+descriptor; the materializer reads the locational round back from its parquet
+artifacts as such an outcome and records it that way.
 
 ## Other operations
 
@@ -404,10 +429,11 @@ standard message types the run never used. `summarize_interaction` includes it
 under `standard_conformance`, so every interaction report carries it.
 
 **A cleared round can be written as messages.**
-`build_flex_trading_messages(events=, offers=, dispatch=, settlement=,
-operator=)` turns an already-cleared round into `flex_trading` messages, and
-`run_message_transcript` delivers them. It only reads those frames, so clearing
-is identical with and without this step.
+`build_flex_trading_messages(outcome, offers=, operator=)` turns the
+`MarketOutcome` of an already-cleared round, from any market engine, into
+`flex_trading` messages, and `run_message_transcript` delivers them. An engine
+that does not settle sends no `FlexSettlement`. It only reads the outcome, so
+clearing is identical with and without this step.
 
 ## Verifying it
 
