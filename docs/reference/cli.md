@@ -792,7 +792,7 @@ Scaffold a conformant extension package.
 | Argument | Value | Default | Description |
 | --- | --- | --- | --- |
 | `name` | text | required | Extension ID / package name. |
-| `--role` | text | `powerflow_backend` | Role the extension serves (default: powerflow_backend). |
+| `--role` | one of `channel_model`, `market_engine`, `network_adapter`, `observation_producer`, `policy`, `powerflow_backend`, `provenance_only`, `semantic_capability`, `surrogate` | `powerflow_backend` | Role the extension serves (default: powerflow_backend). |
 | `--target` | text |  | Directory to write the package into (default: current directory). |
 | `--force` | flag |  | Overwrite an already-existing package directory. |
 

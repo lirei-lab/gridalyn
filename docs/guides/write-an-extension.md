@@ -170,11 +170,15 @@ current directory):
 - `test_<name>.py`, a smoke test that the descriptor's `contract_version` is
   supported and the factory is callable.
 
-`--role` defaults to `powerflow_backend`. `--force` overwrites an existing directory, and a name
-containing path separators is refused with a located error.
+`--role` defaults to `powerflow_backend` and accepts any role on
+[Extension Roles](../reference/extension-roles.md) except
+`interaction_protocol`, which no extension can serve; any other value is
+refused before anything is written. `--force` overwrites an existing
+directory, and a name containing path separators is refused with a located
+error.
 
 `examples/extensions/hello_world/` is a committed, unmodified scaffold with
-role `data_source`. No role registry serves that role, so the extension only
+role `provenance_only`. No role registry serves that role, so the extension only
 appears in `provenance.extensions`.
 
 ### What a descriptor carries
@@ -182,15 +186,15 @@ appears in `provenance.extensions`.
 | Field | Meaning |
 | --- | --- |
 | `extension_id` | The stable ID the extension resolves by. It is explicit; nothing is discovered ambiently. |
-| `role` | The contract the extension serves. The generic engine treats it as data; routing is the caller's job. |
+| `role` | The contract the extension serves. Registration refuses a role outside the known set, naming every known role; past that check the generic engine treats it as data, and routing is the caller's job. |
 | `name`, `version` | Human-readable identity, recorded in provenance. |
 | `contract_version` | The role-contract version the extension conforms to. An unsupported version is refused at registration; there is no fallback. |
 | `source` | `core` (shipped in gridalyn), `host` (registered at runtime by host code) or `entry_point` (loaded from a declared entry point). |
 | `entry_point_group`, `module_hash` | Where an entry-point extension came from and a hash of its module, stamped by the loader. |
 
 The generic `ExtensionRegistry` (`gridalyn/foundation/platform/extensions.py`)
-stores descriptors and factories by `extension_id` and knows nothing about
-roles. It exposes `register`, `get_descriptor`, `list_descriptors` and
+stores descriptors and factories by `extension_id` and knows the names of the
+roles, not what they mean. It exposes `register`, `get_descriptor`, `list_descriptors` and
 `resolve`, each with located, remediating errors. The engine is stdlib-only,
 so `foundation` stays the bottom layer.
 

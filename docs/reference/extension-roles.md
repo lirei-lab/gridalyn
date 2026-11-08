@@ -151,8 +151,15 @@ differences are registration rules of one registry.
   `gridalyn/operations/interaction/conversations.py` decides which message may
   follow which, and a conversation's legality must not depend on what happens
   to be installed.
-- **Any other role name** is loaded into the generic extension registry and
-  recorded in `provenance.extensions`, but no role registry resolves it.
+- **`provenance_only`** is served by no role registry. An extension that
+  declares it is loaded into the generic extension registry and recorded in
+  `provenance.extensions`, and nothing resolves it.
+
+Any other role name is refused when the extension is registered, with a
+`ValueError` naming every known role, so a misspelt role fails instead of
+silently doing nothing. The known set is `EXTENSION_ROLES` in
+`gridalyn/foundation/platform/extensions.py`: the roles in the tables above,
+plus `interaction_protocol` and `provenance_only`.
 
 ## Stability
 
