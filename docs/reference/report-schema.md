@@ -309,11 +309,12 @@ full record's `partial_runs_since`.
 | `extensions` | one record per registered extension (`extension_id`, `role`, `name`, `version`, `contract_version`, `source`, `entry_point_group`, `module_hash`); `[]` when none is registered |
 | `channel_model` | only when the study declares `spec.simulation.channelModel`: its descriptor, `parameters` with the seed resolved, `seed_stream`, `declared_source` and `registered` ids |
 | `market_engine` | only when the study declares `spec.simulation.marketEngine`: the engine's descriptor (`market_engine_id`, `name`, `mechanism`, `provider_types`, `clearing_methods`, `operation_type`, `inputs`, `settles`, `contract_version`), `declared_source`, `registered` ids; `extension_id`, `extension_source` and `extension_version` when an extension serves it; `seed_stream` and `seed` when it draws randomness |
+| `extension_use` | only when a stage resolved a component an extension serves: one entry per stage and component, with `stage`, `role`, `entry_id`, `extension_id`, `extension_source`, and `extension_version` and `module_hash` when known |
 
 `declared_source` says whether a value was declared in `project.yaml` or taken
-from the registry default. A backend, surrogate or channel model served by an
-extension also records `extension_id`, `extension_source` and, when known,
-`extension_version`.
+from the registry default. A backend, channel model, market engine or surrogate
+served by an extension also records `extension_id`, `extension_source` and,
+when known, `extension_version` and `module_hash`.
 
 ### Study-Run Record
 

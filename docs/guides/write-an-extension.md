@@ -247,12 +247,26 @@ names that backend.
   an entry point in the runner's process before the manifest is written, which
   includes every extension the study declares. A study that declares nothing
   records `extensions: []`.
-- `provenance.powerflow_backend` carries `extension_id`, `extension_source` and,
-  when one was registered, `extension_version` whenever the resolved backend is
-  not a core one; a per-stage backend override records the same keys.
-  `provenance.channel_model` carries them when a study's declared channel model
-  is served by an extension.
-- The other roles do not record extension identity in the manifest.
+- Every role records an extension's identity in one shape: `extension_id` (the
+  extension that contributed the component, or the component's own ID when it
+  was registered through a `register_<role>_extension` host function),
+  `extension_source`, and `extension_version` and
+  `module_hash` when known. A shipped component records none of these keys.
+- Where a study declares the role, the record carries that identity:
+  `provenance.powerflow_backend` (and each per-stage override in its
+  `by_stage`), `provenance.channel_model`, `provenance.market_engine`, and
+  `provenance.surrogate` once exactly one surrogate answered.
+- `provenance.extension_use` lists every stage that resolved a component an
+  extension serves through its role registry, whatever the role, including
+  policies, observation producers, network adapters and semantic capabilities,
+  which a study does not declare in `spec.simulation`. Each entry names the
+  `stage`, the `role`, the `entry_id` the stage resolved and the identity
+  above. The key is absent when no stage resolved one.
+- An entry records resolution, not influence. A component constructed and
+  never called is listed (a stage helper builds the declared backend and
+  surrogate whether or not it solves or predicts), and building a semantic
+  profile resolves every registered capability. A component a stage imports
+  and calls directly, without its registry, is not listed.
 
 ## Extensible capabilities
 

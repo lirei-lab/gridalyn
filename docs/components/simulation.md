@@ -84,7 +84,7 @@ both the simulated producer and the measured-ingest path.
 | --- | --- | --- | --- |
 | `PowerFlowBackendRegistry` | `gridalyn.simulation` | `pandapower_native` | `provenance.powerflow_backend` in the run manifest |
 | `SurrogateRegistry` | `gridalyn.simulation` | `network_impact_tabular_v1` | `provenance.surrogate` in the run manifest |
-| `PolicyRegistry` | `gridalyn.simulation` | none; the caller names one | not recorded in the run manifest |
+| `PolicyRegistry` | `gridalyn.simulation` | none; the caller names one | a shipped policy is not recorded in the run manifest; one an extension serves is, in `provenance.extension_use` |
 | `ChannelModelRegistry` | `gridalyn.simulation` | `ideal` | `provenance.channel_model` in the run manifest, with its parameters and seed, when a study declares `spec.simulation.channelModel` |
 | `ObservationProducerRegistry` | `gridalyn.twin` | none; the caller names one | not by ID; each observation's `NetworkObservation.provenance` states whether its values are `simulated` or `measured` |
 

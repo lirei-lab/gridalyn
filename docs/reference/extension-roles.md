@@ -51,7 +51,7 @@ the supported versions. There is no fallback.
 | `market_engine` | `gridalyn.operations.engines.MarketEngineRegistry` | `gridalyn.operations.register_market_engine_extension` | `spec.simulation.marketEngine` | `provenance.market_engine` in the run manifest, when a study declares `spec.simulation.marketEngine` |
 | `network_adapter` | `gridalyn.twin.NetworkAdapterRegistry` | `gridalyn.twin.register_network_adapter_extension` | none; a stage names the ID | `adapter_id` in the base's `metadata.json` |
 | `observation_producer` | `gridalyn.twin.ObservationProducerRegistry` | `gridalyn.twin.register_observation_producer_extension` | none; a stage names the ID | not by ID; each observation's `NetworkObservation.provenance` states whether its values are `simulated` or `measured` |
-| `policy` | `gridalyn.simulation.PolicyRegistry` | `gridalyn.simulation.register_policy_extension` | none; a stage names the ID | not recorded in the run manifest |
+| `policy` | `gridalyn.simulation.PolicyRegistry` | `gridalyn.simulation.register_policy_extension` | none; a stage names the ID | a shipped policy is not recorded in the run manifest; one an extension serves is, in `provenance.extension_use` |
 | `powerflow_backend` | `gridalyn.simulation.PowerFlowBackendRegistry` | `gridalyn.simulation.register_powerflow_backend_extension` | `spec.simulation.powerflowBackend`, per stage `spec.simulation.powerflowBackendByStage` | `provenance.powerflow_backend` in the run manifest |
 | `semantic_capability` | `gridalyn.twin.semantic.registry.SemanticCapabilityRegistry` | `gridalyn.twin.register_semantic_capability_extension` | none; a stage names the ID | `capabilities` in the semantic graph's manifest |
 | `surrogate` | `gridalyn.simulation.SurrogateRegistry` | `gridalyn.simulation.register_surrogate_extension` | `spec.simulation.surrogate` | `provenance.surrogate` in the run manifest |
@@ -64,6 +64,15 @@ before any stage runs, and `project_script()` routes it again in each stage
 process, so a stage resolves it by ID like a shipped component. Host code
 reaches a role through its host registration function instead, and that
 registration lives only in the process that makes it.
+
+Whatever the role, a component an extension serves also reaches the run
+manifest: each stage that resolves one through its registry (`create`,
+`resolve`, `implementation`) adds an entry to `provenance.extension_use`,
+naming the stage, the role, the ID it resolved and the extension's identity
+(`extension_id`, `extension_source`, and `extension_version` and `module_hash`
+when known). An entry records that the stage resolved the component, not that
+its results depend on it. A run that resolves only shipped components records
+no such key.
 
 ## What every role shares
 
